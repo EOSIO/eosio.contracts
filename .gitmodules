@@ -1,0 +1,6 @@
+[submodule "deps/eosio.token"]
+	path = deps/eosio.token
+	url = https://github.com/eosio/eosio.token
+[submodule "deps/eosio.exchange"]
+	path = deps/eosio.exchange
+	url = git@github.com:eosio/eosio.exchange

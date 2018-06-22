@@ -1,6 +1,11 @@
 #include <eosio.system/eosio.system.hpp>
-#include <eosio.system/exchange_state.hpp>
 #include <eosiolib/dispatcher.hpp>
+
+#include "producer_pay.cpp"
+#include "delegate_bandwidth.cpp"
+#include "voting.cpp"
+#include "exchange_state.cpp"
+
 
 namespace eosiosystem {
 
