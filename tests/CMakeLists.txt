@@ -11,23 +11,30 @@ find_package(LLVM 4.0 REQUIRED CONFIG)
 link_directories(${LLVM_LIBRARY_DIR})
 
 set( CMAKE_CXX_STANDARD 14 )
-
-find_package(Boost 1.67 REQUIRED)
-#add_subdirectory(contracts)
+configure_file(${CMAKE_SOURCE_DIR}/eosio.system_tester.hpp.in ${CMAKE_SOURCE_DIR}/eosio.system_tester.hpp)
+find_package(Boost 1.67 REQUIRED COMPONENTS date_time filesystem system chrono iostreams date_time)
 
 file(GLOB UNIT_TESTS "*.cpp")
 
-find_library(libtester eosio_testing /usr/local/lib)
-find_library(libchain eosio_chain /usr/local/lib)
-find_library(libfc fc /usr/local/lib)
-find_library(libwasm WASM /usr/local/lib)
-find_library(libwast WAST /usr/local/lib)
-find_library(libir IR /usr/local/lib)
-find_library(libruntime Runtime /usr/local/lib)
-find_library(libsoftfloat softfloat /usr/local/lib)
+find_library(libtester eosio_testing )
+find_library(libchain eosio_chain ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(libfc fc ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(libbinaryen binaryen ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(libwasm WASM ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(libwast WAST ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(libir IR     ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(libplatform Platform ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(liblogging Logging ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(libruntime Runtime ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(libsoftfloat softfloat ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(liboscrypto crypto ${OPENSSL_INSTALL_LIB})
+find_library(libosssl ssl ${OPENSSL_INSTALL_LIB})
+find_library(libchainbase chainbase ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(libbuiltins builtins ${EOSIO_INSTALL_PREFIX}/lib)
+find_library(libsecp256k1 secp256k1 ${SECP256K1_INSTALL_LIB})
 
 add_executable( unit_test ${UNIT_TESTS} )
-target_link_libraries( unit_test ${LLVM} ${libchain} ${libtester} ${libfc} ${libir} ${libwast} ${libwasm} ${libruntime} ${libsoftfloat} ${PLATFORM_SPECIFIC_LIBS}
+target_link_libraries( unit_test ${LLVM} ${libchain} ${libtester} ${libfc} ${libir} ${libplatform} ${libbinaryen} ${libwast} ${libwasm} ${libruntime} ${libsoftfloat} ${liboscrypto} ${libosssl} ${liblogging} ${libchainbase} ${libbuiltins} ${libsecp256k1} ${PLATFORM_SPECIFIC_LIBS}
     LLVMX86Disassembler
     LLVMX86AsmParser
     LLVMX86AsmPrinter
@@ -35,6 +42,7 @@ target_link_libraries( unit_test ${LLVM} ${libchain} ${libtester} ${libfc} ${lib
 
     LLVMSelectionDAG
 
+    LLVMDebugInfoDWARF
     LLVMAsmPrinter
     LLVMMCParser
     LLVMX86Info
@@ -50,18 +58,22 @@ target_link_libraries( unit_test ${LLVM} ${libchain} ${libtester} ${libfc} ${lib
     LLVMAnalysis
     LLVMTarget
     LLVMMC
-
     LLVMCore
     LLVMSupport
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_CHRONO_LIBRARY}
+    ${Boost_IOSTREAMS_LIBRARY}
+    ${Boost_DATE_TIME_LIBRARY}
    )
 
 target_include_directories( unit_test PUBLIC
                             ${Boost_INCLUDE_DIRS}
-                            /usr/local/include
-                            /usr/local/include/eosio/wasm-jit/Include
-                            /usr/local/include/eosio/softfloat/include
+                            ${OPENSSL_INSTALL_PREFIX}/include
+                            ${EOSIO_INSTALL_PREFIX}/include
+                            ${EOSIO_INSTALL_PREFIX}/include/eosio/wasm-jit/Include
+                            ${EOSIO_INSTALL_PREFIX}/include/eosio/softfloat/include
                             ${CMAKE_CURRENT_BINARY_DIR}/include )
-                         #add_dependencies(unit_test asserter test_api test_api_mem test_api_db test_ram_limit test_api_multi_index exchange eosio.token proxy identity identity_test stltest infinite eosio.system eosio.token eosio.bios test.inline multi_index_test noop dice eosio.msig payloadless tic_tac_toe deferred_test)
 
 #Manually run unit_test for all supported runtimes
 #To run unit_test with all log from blockchain displayed, put --verbose after --, i.e. unit_test -- --verbose

@@ -152,11 +152,11 @@ namespace eosiosystem {
       set_resource_limits( res_itr->owner, res_itr->ram_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
    }
 
-
-   /**
-    *  While buying ram uses the current market price according to the bancor-algorithm, selling ram only
-    *  refunds the purchase price to the account. In this way there is no profit to be made through buying
-    *  and selling ram.
+  /**
+    *  The system contract now buys and sells RAM allocations at prevailing market prices.
+    *  This may result in traders buying RAM today in anticipation of potential shortages
+    *  tomorrow. Overall this will result in the market balancing the supply and demand
+    *  for RAM over time.
     */
    void system_contract::sellram( account_name account, int64_t bytes ) {
       require_auth( account );
@@ -207,6 +207,9 @@ namespace eosiosystem {
    {
       require_auth( from );
       eosio_assert( stake_net_delta != asset(0) || stake_cpu_delta != asset(0), "should stake non-zero amount" );
+      eosio_assert( std::abs( (stake_net_delta + stake_cpu_delta).amount )
+                     >= std::max( std::abs( stake_net_delta.amount ), std::abs( stake_cpu_delta.amount ) ),
+                    "net and cpu deltas cannot be opposite signs" );
 
       account_name source_stake_from = from;
       if ( transfer ) {
@@ -273,8 +276,14 @@ namespace eosiosystem {
          auto net_balance = stake_net_delta;
          auto cpu_balance = stake_cpu_delta;
          bool need_deferred_trx = false;
-         if ( req != refunds_tbl.end() ) { //need to update refund
-            refunds_tbl.modify( req, 0, [&]( refund_request& r ) {
+         // net and cpu are same sign by assertions in delegatebw and undelegatebw
+         // redundant assertion also at start of changebw to protect against misuse of changebw
+         bool is_undelegating = (net_balance.amount + cpu_balance.amount ) < 0;
+         bool is_delegating_to_self = (!transfer && from == receiver);
+
+         if( is_delegating_to_self || is_undelegating ) {
+            if ( req != refunds_tbl.end() ) { //need to update refund
+               refunds_tbl.modify( req, 0, [&]( refund_request& r ) {
                   if ( net_balance < asset(0) || cpu_balance < asset(0) ) {
                      r.request_time = now();
                   }
@@ -293,6 +302,7 @@ namespace eosiosystem {
                      cpu_balance = asset(0);
                   }
                });
+
             eosio_assert( asset(0) <= req->net_amount, "negative net refund amount" ); //should never happen
             eosio_assert( asset(0) <= req->cpu_amount, "negative cpu refund amount" ); //should never happen
 
@@ -317,6 +327,7 @@ namespace eosiosystem {
                });
             need_deferred_trx = true;
          } // else stake increase requested with no existing row in refunds_tbl -> nothing to do with refunds_tbl
+         }
 
          if ( need_deferred_trx ) {
             eosio::transaction out;
@@ -366,7 +377,7 @@ namespace eosiosystem {
       eosio_assert( stake_cpu_quantity >= asset(0), "must stake a positive amount" );
       eosio_assert( stake_net_quantity >= asset(0), "must stake a positive amount" );
       eosio_assert( stake_net_quantity + stake_cpu_quantity > asset(0), "must stake a positive amount" );
-
+      eosio_assert( !transfer || from != receiver, "cannot use transfer flag if delegating to self" );
       changebw( from, receiver, stake_net_quantity, stake_cpu_quantity, transfer);
    } // delegatebw
 
