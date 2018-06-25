@@ -3,4 +3,4 @@
 	url = https://github.com/eosio/eosio.token
 [submodule "deps/eosio.exchange"]
 	path = deps/eosio.exchange
-	url = git@github.com:eosio/eosio.exchange
+	url = https://github.com/eosio/eosio.exchange
