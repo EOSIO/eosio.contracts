@@ -152,6 +152,7 @@ namespace eosiosystem {
       set_resource_limits( res_itr->owner, res_itr->ram_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
    }
 
+
   /**
     *  The system contract now buys and sells RAM allocations at prevailing market prices.
     *  This may result in traders buying RAM today in anticipation of potential shortages
@@ -173,6 +174,8 @@ namespace eosiosystem {
           /// the cast to int64_t of bytes is safe because we certify bytes is <= quota which is limited by prior purchases
           tokens_out = es.convert( asset(bytes,S(0,RAM)), CORE_SYMBOL);
       });
+      
+      eosio_assert( tokens_out.amount > 1, "token amount received from selling ram is too low" );
 
       _gstate.total_ram_bytes_reserved -= static_cast<decltype(_gstate.total_ram_bytes_reserved)>(bytes); // bytes > 0 is asserted above
       _gstate.total_ram_stake          -= tokens_out.amount;
@@ -187,7 +190,10 @@ namespace eosiosystem {
 
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.ram),N(active)},
                                                        { N(eosio.ram), account, asset(tokens_out), std::string("sell ram") } );
-      auto fee = tokens_out.amount / 200;
+
+      auto fee = ( tokens_out.amount + 199 ) / 200; /// .5% fee (round up)
+      // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
+
       if( fee > 0 ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {account,N(active)},
             { account, N(eosio.ramfee), asset(fee), std::string("sell ram fee") } );
@@ -276,6 +282,8 @@ namespace eosiosystem {
          auto net_balance = stake_net_delta;
          auto cpu_balance = stake_cpu_delta;
          bool need_deferred_trx = false;
+         
+         
          // net and cpu are same sign by assertions in delegatebw and undelegatebw
          // redundant assertion also at start of changebw to protect against misuse of changebw
          bool is_undelegating = (net_balance.amount + cpu_balance.amount ) < 0;
@@ -303,17 +311,17 @@ namespace eosiosystem {
                   }
                });
 
-            eosio_assert( asset(0) <= req->net_amount, "negative net refund amount" ); //should never happen
-            eosio_assert( asset(0) <= req->cpu_amount, "negative cpu refund amount" ); //should never happen
+               eosio_assert( asset(0) <= req->net_amount, "negative net refund amount" ); //should never happen
+               eosio_assert( asset(0) <= req->cpu_amount, "negative cpu refund amount" ); //should never happen
 
-            if ( req->net_amount == asset(0) && req->cpu_amount == asset(0) ) {
-               refunds_tbl.erase( req );
-               need_deferred_trx = false;
-            } else {
-               need_deferred_trx = true;
-            }
-         } else if ( net_balance < asset(0) || cpu_balance < asset(0) ) { //need to create refund
-            refunds_tbl.emplace( from, [&]( refund_request& r ) {
+               if ( req->net_amount == asset(0) && req->cpu_amount == asset(0) ) {
+                  refunds_tbl.erase( req );
+                  need_deferred_trx = false;
+               } else {
+                  need_deferred_trx = true;
+               }
+            } else if ( net_balance < asset(0) || cpu_balance < asset(0) ) { //need to create refund
+               refunds_tbl.emplace( from, [&]( refund_request& r ) {
                   r.owner = from;
                   if ( net_balance < asset(0) ) {
                      r.net_amount = -net_balance;
@@ -325,15 +333,16 @@ namespace eosiosystem {
                   } // else r.cpu_amount = 0 by default constructor
                   r.request_time = now();
                });
-            need_deferred_trx = true;
-         } // else stake increase requested with no existing row in refunds_tbl -> nothing to do with refunds_tbl
-         }
+               need_deferred_trx = true;
+            } // else stake increase requested with no existing row in refunds_tbl -> nothing to do with refunds_tbl
+         } /// end if is_delegating_to_self || is_undelegating
 
          if ( need_deferred_trx ) {
             eosio::transaction out;
             out.actions.emplace_back( permission_level{ from, N(active) }, _self, N(refund), from );
             out.delay_sec = refund_delay;
-            out.send( from, receiver, true );
+            cancel_deferred( from ); // TODO: Remove this line when replacing deferred trxs is fixed
+            out.send( from, from, true );
          } else {
             cancel_deferred( from );
          }

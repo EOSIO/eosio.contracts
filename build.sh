@@ -14,16 +14,15 @@ fi
 
 mkdir -p bin/${CONTRACT_NAME}
 ### BUILD THE CONTRACT
-EOSCLANG="${PREFIX}/wasm/bin/clang++ -I/usr/local/include/libc++/upstream/include -I/usr/local/include/musl/upstream/include -I/usr/local/include -Ideps/eosio.token/include -Ideps/eosio.exchange/include -I${BOOST}"
+EOSCLANG="${PREFIX}/wasm/bin/clang++ -I/usr/local/include/libc++/upstream/include -I/usr/local/include/musl/upstream/include -I/usr/local/include -Ideps/eosio.token/include -I${BOOST}"
 LINK="${PREFIX}/wasm/bin/llvm-link -only-needed "
 LLC="${PREFIX}/wasm/bin/llc -thread-model=single --asm-verbose=false"
 S2W="/usr/local/bin/eosio-s2wasm "
 W2W="/usr/local/bin/eosio-wast2wasm "
 
-deps=( "eosio.token" ) # "eosio.exchange" )
+deps=( "eosio.token" )
 
 for dep in "${deps[@]}"; do
-   echo "building ${dep}"
    pushd ./deps/${dep} &> /dev/null
    ./build.sh notests
    popd &> /dev/null
