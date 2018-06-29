@@ -6,6 +6,7 @@
 
 #include <eosio/testing/tester.hpp>
 #include <eosio/chain/abi_serializer.hpp>
+#include "contracts.hpp"
 
 #include <fc/variant_object.hpp>
 #include <fstream>
@@ -43,11 +44,8 @@ public:
 
 
       produce_blocks( 100 );
-      
-      //const auto eosio_token = read_wasm("../deps/eosio.token/bin/eosio.token/eosio.token.wasm");
-      //const auto eosio_token_abi = read_abi("../deps/eosio.token/bin/eosio.token/eosio.token.abi");
-      set_code( N(eosio.token), read_wasm("${CONTRACT_DIR}/deps/eosio.token/bin/eosio.token/eosio.token.wasm") );
-      set_abi( N(eosio.token), read_abi("${CONTRACT_DIR}/deps/eosio.token/bin/eosio.token/eosio.token.abi").data() ); 
+      set_code( N(eosio.token), contracts::token_wasm());
+      set_abi( N(eosio.token), contracts::token_abi().data() ); 
       {
          const auto& accnt = control->db().get<account_object,by_name>( N(eosio.token) );
          abi_def abi;
@@ -58,9 +56,8 @@ public:
       create_currency( N(eosio.token), config::system_account_name, core_from_string("10000000000.0000") );
       issue(config::system_account_name,      core_from_string("1000000000.0000"));
       BOOST_REQUIRE_EQUAL( core_from_string("1000000000.0000"), get_balance( "eosio" ) );
-
-      set_code( config::system_account_name, read_wasm("${CONTRACT_DIR}/bin/eosio.system/eosio.system.wasm") );
-      set_abi( config::system_account_name, read_abi("${CONTRACT_DIR}/bin/eosio.system/eosio.system.abi").data() );
+      set_code( config::system_account_name, contracts::system_wasm() );
+      set_abi( config::system_account_name, contracts::system_abi().data() );
 
       {
          const auto& accnt = control->db().get<account_object,by_name>( config::system_account_name );
@@ -396,7 +393,7 @@ public:
       vector<char> data = get_row_by_account( config::system_account_name, account, N(refunds), account );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "refund_request", data );
    }
-#if 0
+
    abi_serializer initialize_multisig() {
       abi_serializer msig_abi_ser;
       {
@@ -409,9 +406,9 @@ public:
                                                ("account", "eosio.msig")
                                                ("is_priv", 1)
          );
-
-         set_code( N(eosio.msig), eosio_msig_wast );
-         set_abi( N(eosio.msig), eosio_msig_abi );
+         
+         set_code( N(eosio.msig), contracts::msig_wasm() );
+         set_abi( N(eosio.msig), contracts::msig_abi().data() );
 
          produce_blocks();
          const auto& accnt = control->db().get<account_object,by_name>( N(eosio.msig) );
@@ -421,7 +418,7 @@ public:
       }
       return msig_abi_ser;
    }
-#endif
+
    //helper function
 
    vector<name> active_and_vote_producers() {

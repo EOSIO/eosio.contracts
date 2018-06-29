@@ -1686,7 +1686,6 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::uni
 
 } FC_LOG_AND_RETHROW()
 
-#if 0
 BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) try {
    //install multisig contract
    abi_serializer msig_abi_ser = initialize_multisig();
@@ -1709,7 +1708,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
       prod_perms.push_back( { name(x), config::active_name } );
    }
    //prepare system contract with different hash (contract differs in one byte)
-   string eosio_system_wast2 = eosio_system_wast;
+   string eosio_system_wast2 = contracts::system_wast();
    string msg = "producer votes must be unique and sorted";
    auto pos = eosio_system_wast2.find(msg);
    BOOST_REQUIRE( pos != std::string::npos );
@@ -1792,7 +1791,6 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
    produce_blocks( 250 );
 
 } FC_LOG_AND_RETHROW()
-#endif
 
 BOOST_FIXTURE_TEST_CASE(producer_onblock_check, eosio_system_tester) try {
 
@@ -2448,7 +2446,6 @@ BOOST_FIXTURE_TEST_CASE( vote_producers_in_and_out, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-#if 0
 BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
    //install multisig contract
    abi_serializer msig_abi_ser = initialize_multisig();
@@ -2539,7 +2536,6 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( params.max_transaction_lifetime, active_params.max_transaction_lifetime );
 
 } FC_LOG_AND_RETHROW()
-#endif
 
 BOOST_FIXTURE_TEST_CASE( setram_effect, eosio_system_tester ) try {
 
