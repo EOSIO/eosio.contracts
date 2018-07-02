@@ -3,15 +3,6 @@
 CONTRACT_NAME="eosio.token"
 unamestr=`uname`
 
-if [[ "${unamestr}" == 'Darwin' ]]; then
-   PREFIX=/usr/local
-   OPENSSL=/usr/local/opt/openssl
-else
-   PREFIX=~/opt
-   BOOST=~/opt/boost/include
-   OPENSSL=/usr/include/openssl
-fi
-
 mkdir -p bin/${CONTRACT_NAME}
 ### BUILD THE CONTRACT
 EOSCLANG="${PREFIX}/wasm/bin/clang++ -I/usr/local/include/libc++/upstream/include -I/usr/local/include/musl/upstream/include -I/usr/local/include -I${BOOST}"

@@ -1,7 +1,7 @@
 #! /bin/bash
 
 CONTRACT_NAME="eosio.system"
-PREFIX=$1
+
 mkdir -p bin/${CONTRACT_NAME}
 ### BUILD THE CONTRACT
 EOSCLANG="${PREFIX}/wasm/bin/clang++ -I/usr/local/include/libc++/upstream/include -I/usr/local/include/musl/upstream/include -I/usr/local/include -I../eosio.token/include -I${BOOST}"

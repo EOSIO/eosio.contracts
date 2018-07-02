@@ -1,7 +1,6 @@
 #! /bin/bash
 
 CONTRACT_NAME="eosio.msig"
-PREFIX=$1
 
 mkdir -p bin/${CONTRACT_NAME}
 ### BUILD THE CONTRACT
