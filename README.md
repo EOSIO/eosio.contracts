@@ -14,7 +14,7 @@ Dependencies:
 To build the contracts and the unit tests:
 * First, ensure that your __eos__ is compiled to the symbol that you are wanting to target.
 * Second, make sure that you have ```sudo make install```ed __eos__.
-* Then just run the ```build.sh``` in the top directory to build all the contracts and the unit tests for these contracts.
+* Then just run the ```build.sh``` in the top directory to build all the contracts and the unit tests for these contracts. If you want to skip building the unit tests, the option ```notests``` can be given to ```build.sh```.
 * Or, you can run the ```build.sh``` in a given contract folder to only build that contract.
 
 After build:

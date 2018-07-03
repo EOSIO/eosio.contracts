@@ -1,4 +1,10 @@
-#file(GLOB COMMON_SOURCES "common/*.cpp")
+cmake_minimum_required( VERSION 3.5 )
+project( EOSIO_CONTRACTS_TESTS )
+set( VERSION_MAJOR 1 )
+set( VERSION_MINOR 0 )
+set( VERSION_PATCH 6 )
+
+enable_testing()
 
 find_package( Gperftools QUIET )
 if( GPERFTOOLS_FOUND )
@@ -11,9 +17,26 @@ find_package(LLVM 4.0 REQUIRED CONFIG)
 link_directories(${LLVM_LIBRARY_DIR})
 
 set( CMAKE_CXX_STANDARD 14 )
+set( CMAKE_CXX_EXTENSIONS ON )
+set( CXX_STANDARD_REQUIRED ON )
 
+if ( APPLE )
+   set( CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-deprecated-declarations" )
+else ( APPLE )
+   set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+   set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libstdc++ -static-libgcc")
+endif ( APPLE )
+
+set( Boost_USE_STATIC_LIBS ON CACHE STRING "ON or OFF" )
 configure_file(${CMAKE_SOURCE_DIR}/contracts.hpp.in ${CMAKE_SOURCE_DIR}/contracts.hpp)
-find_package(Boost 1.67 REQUIRED COMPONENTS date_time filesystem system chrono iostreams date_time)
+find_package(Boost 1.67 REQUIRED COMPONENTS 
+	date_time 
+	filesystem 
+	system 
+	chrono 
+	iostreams 
+	date_time 
+	unit_test_framework)
 
 file(GLOB UNIT_TESTS "*.cpp")
 
@@ -35,7 +58,25 @@ find_library(libbuiltins builtins ${EOSIO_INSTALL_PREFIX}/lib)
 find_library(libsecp256k1 secp256k1 ${SECP256K1_INSTALL_LIB})
 
 add_executable( unit_test ${UNIT_TESTS} )
-target_link_libraries( unit_test ${LLVM} ${libchain} ${libtester} ${libfc} ${libir} ${libplatform} ${libbinaryen} ${libwast} ${libwasm} ${libruntime} ${libsoftfloat} ${liboscrypto} ${libosssl} ${liblogging} ${libchainbase} ${libbuiltins} ${libsecp256k1} ${PLATFORM_SPECIFIC_LIBS}
+target_link_libraries( unit_test 
+    ${LLVM} 
+    ${libchain} 
+    ${libfc} 
+    ${libbinaryen} 
+    ${libwast} 
+    ${libwasm} 
+    ${libruntime} 
+    ${libplatform} 
+    ${libir} 
+    ${libsoftfloat} 
+    ${liboscrypto} 
+    ${libosssl} 
+    ${liblogging} 
+    ${libchainbase} 
+    ${libbuiltins} 
+    ${libsecp256k1} 
+    ${libtester} 
+
     LLVMX86Disassembler
     LLVMX86AsmParser
     LLVMX86AsmPrinter
@@ -66,6 +107,7 @@ target_link_libraries( unit_test ${LLVM} ${libchain} ${libtester} ${libfc} ${lib
     ${Boost_CHRONO_LIBRARY}
     ${Boost_IOSTREAMS_LIBRARY}
     ${Boost_DATE_TIME_LIBRARY}
+    ${PLATFORM_SPECIFIC_LIBS}
    )
 
 target_include_directories( unit_test PUBLIC
