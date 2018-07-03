@@ -2,6 +2,8 @@
 
 ## Version : 1.0.0
 
+This is a collection of contracts offered as examples for various systems which are useful when depoying, managing, and/or using an EOSIO blockchain.  They are provided for educational purposes.
+
 This repo houses the following contracts
    * [eosio.system](https://github.com/eosio/eosio.contracts/tree/master/eosio.system)
    * [eosio.token](https://github.com/eosio/eosio.contracts/tree/master/eosio.token)
@@ -12,7 +14,7 @@ Dependencies:
 * [eos v1.0.8](https://github.com/eosio/eos/tree/v1.0.8)
 
 To build the contracts and the unit tests:
-* First, ensure that your __eos__ is compiled to the symbol that you are wanting to target.
+* First, ensure that your __eos__ is compiled to the core symbol for the EOSIO blockchain that intend to deploy to.
 * Second, make sure that you have ```sudo make install```ed __eos__.
 * Then just run the ```build.sh``` in the top directory to build all the contracts and the unit tests for these contracts. If you want to skip building the unit tests, the option ```notests``` can be given to ```build.sh```.
 * Or, you can run the ```build.sh``` in a given contract folder to only build that contract.
