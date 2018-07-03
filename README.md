@@ -2,20 +2,21 @@
 
 ## Version : 1.0.0
 
-This is a collection of contracts offered as examples for various systems which are useful when depoying, managing, and/or using an EOSIO blockchain.  They are provided for educational purposes.
+The design of the EOSIO blockchain calls for a number of smart contracts that are run at a priviledged permission level in order to support functions such as block producer registration and voting, token staking for CPU and network bandwidth, RAM purchasing, token transfer, multi-sig, etc.  These smart contracts are referred to as the system, token, msig and sudo contracts.
 
-This repo houses the following contracts
+This repository contains examples of these priviledged contracts that are useful when depoying, managing, and/or using an EOSIO blockchain.  They are provided for reference purposes:
+
    * [eosio.system](https://github.com/eosio/eosio.contracts/tree/master/eosio.system)
    * [eosio.token](https://github.com/eosio/eosio.contracts/tree/master/eosio.token)
    * [eosio.msig](https://github.com/eosio/eosio.contracts/tree/master/eosio.msig)
    * [eosio.sudo](https://github.com/eosio/eosio.contracts/tree/master/eosio.sudo)
 
 Dependencies:
-* [eos v1.0.8](https://github.com/eosio/eos/tree/v1.0.8)
+* [eosio v1.0.8](https://github.com/eosio/eos/tree/v1.0.8)
 
 To build the contracts and the unit tests:
-* First, ensure that your __eos__ is compiled to the core symbol for the EOSIO blockchain that intend to deploy to.
-* Second, make sure that you have ```sudo make install```ed __eos__.
+* First, ensure that your __eosio__ is compiled to the core symbol for the EOSIO blockchain that intend to deploy to.
+* Second, make sure that you have ```sudo make install```ed __eosio__.
 * Then just run the ```build.sh``` in the top directory to build all the contracts and the unit tests for these contracts. If you want to skip building the unit tests, the option ```notests``` can be given to ```build.sh```.
 * Or, you can run the ```build.sh``` in a given contract folder to only build that contract.
 
