@@ -14,10 +14,12 @@ namespace eosiosystem {
     _voters(_self,_self),
     _producers(_self,_self),
     _global(_self,_self),
+    _global2(_self,_self),
     _rammarket(_self,_self)
    {
       //print( "construct system\n" );
-      _gstate = _global.exists() ? _global.get() : get_default_parameters();
+      _gstate  = _global.exists() ? _global.get() : get_default_parameters();
+      _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
 
       auto itr = _rammarket.find(S(4,RAMCORE));
 
@@ -46,9 +48,8 @@ namespace eosiosystem {
 
 
    system_contract::~system_contract() {
-      //print( "destruct system\n" );
       _global.set( _gstate, _self );
-      //eosio_exit(0);
+      _global2.set( _gstate2, _self );
    }
 
    void system_contract::setram( uint64_t max_ram_size ) {
@@ -70,7 +71,55 @@ namespace eosiosystem {
       });
 
       _gstate.max_ram_size = max_ram_size;
-      _global.set( _gstate, _self );
+   }
+
+   void system_contract::update_ram_supply() {
+      if( _gstate2.last_block_num <= _gstate2.last_ram_increase ) return;
+
+      auto itr = _rammarket.find(S(4,RAMCORE));
+      auto new_ram = (_gstate2.last_block_num.slot - _gstate2.last_ram_increase.slot)*_gstate2.new_ram_per_block;
+      _gstate.max_ram_size += new_ram;
+
+      /**
+       *  Increase or decrease the amount of ram for sale based upon the change in max
+       *  ram size.
+       */
+      _rammarket.modify( itr, 0, [&]( auto& m ) {
+         m.base.balance.amount += new_ram;
+         m.base.weight = 500;
+         m.quote.weight = 500;
+      });
+      _gstate2.last_ram_increase = _gstate2.last_block_num;
+   }
+
+   /**
+    *  Sets the rate of increase of RAM in bytes per block. It is capped by the uint16_t to 
+    *  a maximum rate of 3 TB per year. 
+    *
+    *  If update_ram_supply hasn't been called for the most recent block, then new ram will
+    *  be allocated at the old rate up to the present block before switching the rate.
+    *
+    *  This method will also resync the bancor connector balances
+    *  and weights to the actual CORE_SYMBOL held in the eosio.ram account.
+    */
+   void system_contract::setramrate( uint16_t bytes_per_block ) {
+      _gstate2.new_ram_per_block = bytes_per_block;
+      if( _gstate2.last_ram_increase == block_timestamp() ) {
+         _gstate2.last_ram_increase = _gstate2.last_block_num;
+      } else {
+         update_ram_supply();
+      }
+
+      auto itr = _rammarket.find(S(4,RAMCORE));
+
+      /**
+       * Resync the connector state with the eosio.ram CORE token balance.
+       */
+      _rammarket.modify( itr, 0, [&]( auto& m ) {
+         m.quote.balance = eosio::token(N(eosio.token)).get_balance(N(eosio.ram),eosio::symbol_type(system_token_symbol).name());
+         m.base.weight = 500; /// use a connector weight of 50% which minimizes volatility
+         m.quote.weight = 500;/// use a connector weight of 50% which minimizes volatility
+      });
    }
 
    void system_contract::setparams( const eosio::blockchain_parameters& params ) {

@@ -240,7 +240,14 @@
          {"name":"max_inline_action_size",              "type":"uint32"},
          {"name":"max_inline_action_depth",             "type":"uint16"},
          {"name":"max_authority_depth",                 "type":"uint16"}
-
+      ]
+    },{
+      "name": "eosio_global_state2",
+      "fields": [
+         {"name":"new_ram_per_block",   "type":"uint16"},
+         {"name":"last_ram_increase",   "type":"block_timestamp"},
+         {"name":"last_block_num",      "type":"block_timestamp"},
+         {"name":"revision",            "type":"uint8_t"}
       ]
     },{
       "name": "eosio_global_state",
@@ -293,6 +300,12 @@
       "base": "",
       "fields": [
         {"name":"max_ram_size",     "type":"uint64"}
+      ]
+    },{
+      "name": "setramrate",
+      "base": "",
+      "fields": [
+        {"name":"bytes_per_block",   "type":"uint16"}
       ]
     },{
       "name": "regproxy",
@@ -532,6 +545,12 @@
     },{
       "name": "global",
       "type": "eosio_global_state",
+      "index_type": "i64",
+      "key_names" : [],
+      "key_types" : []
+    },{
+      "name": "global2",
+      "type": "eosio_global_state2",
       "index_type": "i64",
       "key_names" : [],
       "key_types" : []
