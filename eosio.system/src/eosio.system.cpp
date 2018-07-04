@@ -103,6 +103,8 @@ namespace eosiosystem {
     *  and weights to the actual CORE_SYMBOL held in the eosio.ram account.
     */
    void system_contract::setramrate( uint16_t bytes_per_block ) {
+      require_auth( _self );
+
       _gstate2.new_ram_per_block = bytes_per_block;
       if( _gstate2.last_ram_increase == block_timestamp() ) {
          _gstate2.last_ram_increase = _gstate2.last_block_num;
