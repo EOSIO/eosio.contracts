@@ -8,7 +8,7 @@ contracts=( "eosio.token"
 unamestr=`uname`
 if [[ "${unamestr}" == 'Darwin' ]]; then
    PREFIX=/usr/local
-   BOOST=/usr/local
+   BOOST=/usr/local/include
    OPENSSL=/usr/local/opt/openssl
 else
    PREFIX=~/opt
@@ -47,14 +47,11 @@ else
 	esac
 fi
 
-
-CXX_COMPILER=clang++-4.0
-
-EOSIO_PREFIX=/usr/local
+EOSIO_PREFIX=/usr/local/eosio
 
 export BOOST=${BOOST}
 export PREFIX=${PREFIX}
-export INSTALL_PREFIX=/usr/local
+export INSTALL_PREFIX=/usr/local/eosio
 
 ### Build all the contracts
 
