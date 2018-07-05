@@ -86,8 +86,6 @@ namespace eosiosystem {
        */
       _rammarket.modify( itr, 0, [&]( auto& m ) {
          m.base.balance.amount += new_ram;
-         m.base.weight = 500;
-         m.quote.weight = 500;
       });
       _gstate2.last_ram_increase = _gstate2.last_block_num;
    }
@@ -111,17 +109,6 @@ namespace eosiosystem {
       } else {
          update_ram_supply();
       }
-
-      auto itr = _rammarket.find(S(4,RAMCORE));
-
-      /**
-       * Resync the connector state with the eosio.ram CORE token balance.
-       */
-      _rammarket.modify( itr, 0, [&]( auto& m ) {
-         m.quote.balance = eosio::token(N(eosio.token)).get_balance(N(eosio.ram),eosio::symbol_type(system_token_symbol).name());
-         m.base.weight = 500; /// use a connector weight of 50% which minimizes volatility
-         m.quote.weight = 500;/// use a connector weight of 50% which minimizes volatility
-      });
    }
 
    void system_contract::setparams( const eosio::blockchain_parameters& params ) {
