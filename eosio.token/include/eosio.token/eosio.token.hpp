@@ -31,7 +31,7 @@ namespace eosio {
                         asset        quantity,
                         string       memo );
 
-         void close( account_name owner, symbol_name symbol );
+         void close( account_name owner, symbol_type symbol );
 
          inline asset get_supply( symbol_name sym )const;
          
