@@ -94,11 +94,9 @@ public:
 
    action_result close( account_name owner,
                         const string& symbolname ) {
-      auto symb = eosio::chain::symbol::from_string(symbolname);
-      auto symbol_code = symb.to_symbol_code().value;
       return push_action( owner, N(close), mvo()
            ( "owner", owner )
-           ( "symbol", symbol_code.to_string() )
+           ( "symbol", "0,CERO" )
       );
    }
 
