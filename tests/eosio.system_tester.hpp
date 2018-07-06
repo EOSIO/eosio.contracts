@@ -4,6 +4,8 @@
  */
 #pragma once
 
+#define CORE_SYMBOL_NAME "EOS"
+
 #include <eosio/testing/tester.hpp>
 #include <eosio/chain/abi_serializer.hpp>
 #include "contracts.hpp"
