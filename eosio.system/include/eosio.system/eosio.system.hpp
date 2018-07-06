@@ -70,10 +70,11 @@ namespace eosiosystem {
       uint16_t          new_ram_per_block = 0;  
       block_timestamp   last_ram_increase;
       block_timestamp   last_block_num;
+      double            reserved = 0;
       uint8_t           revision = 0; ///< used to track version updates in the future.
 
 
-      EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)(revision) )
+      EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)(reserved)(revision) )
    };
 
    struct producer_info {

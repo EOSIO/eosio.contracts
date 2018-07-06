@@ -247,6 +247,7 @@
          {"name":"new_ram_per_block",   "type":"uint16"},
          {"name":"last_ram_increase",   "type":"block_timestamp_type"},
          {"name":"last_block_num",      "type":"block_timestamp_type"},
+         {"name":"reserved",            "type":"float64"},
          {"name":"revision",            "type":"uint8"}
       ]
     },{
