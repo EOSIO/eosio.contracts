@@ -40,9 +40,13 @@ find_package(Boost 1.67 REQUIRED COMPONENTS
 
 file(GLOB UNIT_TESTS "*.cpp")
 
-find_library(libtester eosio_testing )
+find_library(libtester eosio_testing ${EOSIO_INSTALL_PREFIX}/lib)
 find_library(libchain eosio_chain ${EOSIO_INSTALL_PREFIX}/lib)
-find_library(libfc fc ${EOSIO_INSTALL_PREFIX}/lib)
+if ( "${CMAKE_BUILD_TYPE}" EQUAL "Debug" )
+   find_library(libfc fc_debug ${EOSIO_INSTALL_PREFIX}/lib)
+else()
+   find_library(libfc fc ${EOSIO_INSTALL_PREFIX}/lib)
+endif()
 find_library(libbinaryen binaryen ${EOSIO_INSTALL_PREFIX}/lib)
 find_library(libwasm WASM ${EOSIO_INSTALL_PREFIX}/lib)
 find_library(libwast WAST ${EOSIO_INSTALL_PREFIX}/lib)
