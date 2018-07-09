@@ -109,6 +109,8 @@ namespace eosiosystem {
       } else {
          update_ram_supply();
       }
+      
+      _global2.set( _gstate2, _self );
    }
 
    void system_contract::setparams( const eosio::blockchain_parameters& params ) {

@@ -1380,7 +1380,6 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
 } FC_LOG_AND_RETHROW()
 
 
-
 BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
 
    auto within_one = [](int64_t a, int64_t b) -> bool { return std::abs( a - b ) <= 1; };
@@ -2584,6 +2583,30 @@ BOOST_FIXTURE_TEST_CASE( setram_effect, eosio_system_tester ) try {
    }
 
 } FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
+
+   const uint64_t init_max_ram_size = 64ll*1024 * 1024 * 1024;
+
+   BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+   produce_blocks(20);
+   BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+   transfer( config::system_account_name, "alice1111111", core_from_string("1000.0000"), config::system_account_name );
+   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
+   produce_block();
+   BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+
+   BOOST_REQUIRE_EQUAL( success(), push_action(config::system_account_name, N(setramrate), mvo()("bytes_per_block", 1000)) );
+   BOOST_REQUIRE_EQUAL( 1000, get_global_state2()["new_ram_per_block"].as<uint16_t>() );
+   produce_blocks(100);
+   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
+   BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+   produce_blocks(100);
+   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
+   BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_AUTO_TEST_SUITE_END()
 
 void translate_fc_exception(const fc::exception &e) {
