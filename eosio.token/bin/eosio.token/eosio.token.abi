@@ -29,6 +29,13 @@
         {"name":"memo", "type":"string"}
      ]
   },{
+     "name": "close",
+     "base": "",
+     "fields": [
+        {"name":"owner", "type":"account_name"},
+        {"name":"symbol", "type":"symbol"},
+     ]
+  },{
       "name": "account",
       "base": "",
       "fields": [
@@ -55,6 +62,10 @@
     }, {
       "name": "create",
       "type": "create",
+      "ricardian_contract": ""
+    }, {
+      "name": "close",
+      "type": "close",
       "ricardian_contract": ""
     }
 
