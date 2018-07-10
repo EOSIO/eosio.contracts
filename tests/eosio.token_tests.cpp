@@ -92,6 +92,14 @@ public:
       );
    }
 
+   action_result close( account_name owner,
+                        const string& symbolname ) {
+      return push_action( owner, N(close), mvo()
+           ( "owner", owner )
+           ( "symbol", "0,CERO" )
+      );
+   }
+
    abi_serializer abi_ser;
 };
 
@@ -260,6 +268,34 @@ BOOST_FIXTURE_TEST_CASE( transfer_tests, eosio_token_tester ) try {
       transfer( N(alice), N(bob), asset::from_string("-1000 CERO"), "hola" )
    );
 
+
+} FC_LOG_AND_RETHROW()
+
+
+BOOST_FIXTURE_TEST_CASE( close_tests, eosio_token_tester ) try {
+
+   auto token = create( N(alice), asset::from_string("1000 CERO"));
+
+   auto alice_balance = get_account(N(alice), "0,CERO");
+   BOOST_REQUIRE_EQUAL(true, alice_balance.is_null() );
+
+   BOOST_REQUIRE_EQUAL( success(), issue( N(alice), N(alice), asset::from_string("1000 CERO"), "hola" ) );
+
+   alice_balance = get_account(N(alice), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
+      ("balance", "1000 CERO")
+   );
+
+   BOOST_REQUIRE_EQUAL( success(), transfer( N(alice), N(bob), asset::from_string("1000 CERO"), "hola" ) );
+
+   alice_balance = get_account(N(alice), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
+      ("balance", "0 CERO")
+   );
+
+   BOOST_REQUIRE_EQUAL( success(), close( N(alice), "0,CERO" ) );
+   alice_balance = get_account(N(alice), "0,CERO");
+   BOOST_REQUIRE_EQUAL(true, alice_balance.is_null() );
 
 } FC_LOG_AND_RETHROW()
 
