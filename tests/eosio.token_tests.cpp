@@ -80,6 +80,14 @@ public:
       );
    }
 
+   action_result retire( account_name issuer, asset quantity, string memo ) {
+      return push_action( issuer, N(retire), mvo()
+           ( "quantity", quantity)
+           ( "memo", memo)
+      );
+
+   }
+
    action_result transfer( account_name from,
                   account_name to,
                   asset        quantity,
@@ -222,6 +230,63 @@ BOOST_FIXTURE_TEST_CASE( issue_tests, eosio_token_tester ) try {
       issue( N(alice), N(alice), asset::from_string("1.000 TKN"), "hola" )
    );
 
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( retire_tests, eosio_token_tester ) try {
+
+   auto token = create( N(alice), asset::from_string("1000.000 TKN"));
+   produce_blocks(1);
+
+   BOOST_REQUIRE_EQUAL( success(), issue( N(alice), N(alice), asset::from_string("500.000 TKN"), "hola" ) );
+
+   auto stats = get_stats("3,TKN");
+   REQUIRE_MATCHING_OBJECT( stats, mvo()
+      ("supply", "500.000 TKN")
+      ("max_supply", "1000.000 TKN")
+      ("issuer", "alice")
+   );
+
+   auto alice_balance = get_account(N(alice), "3,TKN");
+   REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
+      ("balance", "500.000 TKN")
+   );
+
+   BOOST_REQUIRE_EQUAL( success(), retire( N(alice), asset::from_string("200.000 TKN"), "hola" ) );
+   stats = get_stats("3,TKN");
+   REQUIRE_MATCHING_OBJECT( stats, mvo()
+      ("supply", "300.000 TKN")
+      ("max_supply", "1000.000 TKN")
+      ("issuer", "alice")
+   );
+   alice_balance = get_account(N(alice), "3,TKN");
+   REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
+      ("balance", "300.000 TKN")
+   );
+
+   //should fail to retire more than current supply
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("overdrawn balance"), retire( N(alice), asset::from_string("500.000 TKN"), "hola" ) );
+
+   BOOST_REQUIRE_EQUAL( success(), transfer( N(alice), N(bob), asset::from_string("200.000 TKN"), "hola" ) );
+   //should fail to retire since tokens are not on the issuer's balance
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("overdrawn balance"), retire( N(alice), asset::from_string("300.000 TKN"), "hola" ) );
+   //transfer tokens back
+   BOOST_REQUIRE_EQUAL( success(), transfer( N(bob), N(alice), asset::from_string("200.000 TKN"), "hola" ) );
+
+   BOOST_REQUIRE_EQUAL( success(), retire( N(alice), asset::from_string("300.000 TKN"), "hola" ) );
+   stats = get_stats("3,TKN");
+   REQUIRE_MATCHING_OBJECT( stats, mvo()
+      ("supply", "0.000 TKN")
+      ("max_supply", "1000.000 TKN")
+      ("issuer", "alice")
+   );
+   alice_balance = get_account(N(alice), "3,TKN");
+   REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
+      ("balance", "0.000 TKN")
+   );
+
+   //trying to retire tokens with zero supply
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("overdrawn balance"), retire( N(alice), asset::from_string("1.000 TKN"), "hola" ) );
 
 } FC_LOG_AND_RETHROW()
 
