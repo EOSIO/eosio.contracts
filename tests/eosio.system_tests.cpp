@@ -1696,7 +1696,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
          action act;
          act.account = N(eosio.msig);
          act.name = name;
-         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data );
 
          return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111) );
    };
@@ -1735,7 +1735,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
                   )
                   })
          );
-      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver());
    }
 
    BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
@@ -2456,7 +2456,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
          action act;
          act.account = N(eosio.msig);
          act.name = name;
-         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data );
 
          return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111) );
    };
@@ -2492,7 +2492,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
                   )
                   })
          );
-      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver());
    }
 
    BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
