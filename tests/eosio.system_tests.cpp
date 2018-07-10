@@ -68,7 +68,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
    wdump((init_bytes)(bought_bytes)(bytes) );
 
    BOOST_REQUIRE_EQUAL( true, total["ram_bytes"].as_uint64() == init_bytes );
-   BOOST_REQUIRE_EQUAL( core_from_string("99901248.0041"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("99901248.0048"), get_balance( "alice1111111" ) );
 
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
@@ -79,7 +79,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("10.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("10.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("30.0000") ) );
-   BOOST_REQUIRE_EQUAL( core_from_string("99900688.0041"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("99900688.0048"), get_balance( "alice1111111" ) );
 
    auto newtotal = get_total_stake( "alice1111111" );
 
@@ -88,8 +88,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
    wdump((newbytes)(bytes)(bought_bytes) );
 
    BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", bought_bytes ) );
-   BOOST_REQUIRE_EQUAL( core_from_string("99901242.4179"), get_balance( "alice1111111" ) );
-
+   BOOST_REQUIRE_EQUAL( core_from_string("99901242.4187"), get_balance( "alice1111111" ) );
 
    newtotal = get_total_stake( "alice1111111" );
    auto startbytes = newtotal["ram_bytes"].as_uint64();
@@ -103,7 +102,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100000.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100000.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("300000.0000") ) );
-   BOOST_REQUIRE_EQUAL( core_from_string("49301242.4179"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("49301242.4187"), get_balance( "alice1111111" ) );
 
    auto finaltotal = get_total_stake( "alice1111111" );
    auto endbytes = finaltotal["ram_bytes"].as_uint64();
@@ -113,7 +112,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", bought_bytes ) );
 
-   BOOST_REQUIRE_EQUAL( core_from_string("99396507.4142"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("99396507.4158"), get_balance( "alice1111111" ) );
 
 } FC_LOG_AND_RETHROW()
 
