@@ -120,7 +120,7 @@ namespace eosiosystem {
       // quant_after_fee.amount should be > 0 if quant.amount > 1.
       // If quant.amount == 1, then quant_after_fee.amount == 0 and the next inline transfer will fail causing the buyram action to fail.
 
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {payer,N(active)},
+      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{payer,N(active)},{N(eosio.ram),N(active)}},
          { payer, N(eosio.ram), quant_after_fee, std::string("buy ram") } );
 
       if( fee.amount > 0 ) {
@@ -193,12 +193,11 @@ namespace eosiosystem {
       });
       set_resource_limits( res_itr->owner, res_itr->ram_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
 
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.ram),N(active)},
+      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{N(eosio.ram),N(active)},{account,N(active)}},
                                                        { N(eosio.ram), account, asset(tokens_out), std::string("sell ram") } );
 
       auto fee = ( tokens_out.amount + 199 ) / 200; /// .5% fee (round up)
       // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
-
       if( fee > 0 ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {account,N(active)},
             { account, N(eosio.ramfee), asset(fee), std::string("sell ram fee") } );
