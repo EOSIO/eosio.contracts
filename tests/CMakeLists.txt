@@ -2,7 +2,7 @@ cmake_minimum_required( VERSION 3.5 )
 project( EOSIO_CONTRACTS_TESTS )
 set( VERSION_MAJOR 1 )
 set( VERSION_MINOR 0 )
-set( VERSION_PATCH 6 )
+set( VERSION_PATCH 0 )
 
 enable_testing()
 
@@ -40,9 +40,13 @@ find_package(Boost 1.67 REQUIRED COMPONENTS
 
 file(GLOB UNIT_TESTS "*.cpp")
 
-find_library(libtester eosio_testing )
+find_library(libtester eosio_testing ${EOSIO_INSTALL_PREFIX}/lib)
 find_library(libchain eosio_chain ${EOSIO_INSTALL_PREFIX}/lib)
-find_library(libfc fc ${EOSIO_INSTALL_PREFIX}/lib)
+if ( "${CMAKE_BUILD_TYPE}" EQUAL "Debug" )
+   find_library(libfc fc_debug ${EOSIO_INSTALL_PREFIX}/lib)
+else()
+   find_library(libfc fc ${EOSIO_INSTALL_PREFIX}/lib)
+endif()
 find_library(libbinaryen binaryen ${EOSIO_INSTALL_PREFIX}/lib)
 find_library(libwasm WASM ${EOSIO_INSTALL_PREFIX}/lib)
 find_library(libwast WAST ${EOSIO_INSTALL_PREFIX}/lib)
@@ -113,6 +117,7 @@ target_link_libraries( unit_test
 target_include_directories( unit_test PUBLIC
                             ${Boost_INCLUDE_DIRS}
                             ${OPENSSL_INSTALL_PREFIX}/include
+                            ${EOSIO_INSTALL_PREFIX}
                             ${EOSIO_INSTALL_PREFIX}/include
                             ${EOSIO_INSTALL_PREFIX}/include/eosio/wasm-jit/Include
                             ${EOSIO_INSTALL_PREFIX}/include/eosio/softfloat/include
