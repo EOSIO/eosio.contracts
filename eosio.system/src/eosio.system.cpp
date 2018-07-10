@@ -96,9 +96,6 @@ namespace eosiosystem {
     *
     *  If update_ram_supply hasn't been called for the most recent block, then new ram will
     *  be allocated at the old rate up to the present block before switching the rate.
-    *
-    *  This method will also resync the bancor connector balances
-    *  and weights to the actual CORE_SYMBOL held in the eosio.ram account.
     */
    void system_contract::setramrate( uint16_t bytes_per_block ) {
       require_auth( _self );
