@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.5)
 project(eosio_contracts VERSION 1.0.0)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+   set(TEST_BUILD_TYPE "Debug")
+   set(CMAKE_BUILD_TYPE "Release")
+else()
+   set(TEST_BUILD_TYPE ${CMAKE_BUILD_TYPE})
+endif()
 if(CXX_COMPILER STREQUAL "" OR NOT CXX_COMPILER)
    set(CXX_COMPILER ${CMAKE_CXX_COMPILER})
 endif()
