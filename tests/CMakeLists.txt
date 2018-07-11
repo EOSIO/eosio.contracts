@@ -117,6 +117,7 @@ target_link_libraries( unit_test
 target_include_directories( unit_test PUBLIC
                             ${Boost_INCLUDE_DIRS}
                             ${OPENSSL_INSTALL_PREFIX}/include
+                            ${EOSIO_INSTALL_PREFIX}
                             ${EOSIO_INSTALL_PREFIX}/include
                             ${EOSIO_INSTALL_PREFIX}/include/eosio/wasm-jit/Include
                             ${EOSIO_INSTALL_PREFIX}/include/eosio/softfloat/include

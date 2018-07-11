@@ -2615,6 +2615,36 @@ BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( error("missing authority of eosio"),
                         push_action( "alice1111111", N(setramrate), mvo()("bytes_per_block", rate) ) );
+  
+} FC_LOG_AND_RETHROW()
+  
+BOOST_FIXTURE_TEST_CASE( eosioram_ramusage, eosio_system_tester ) try {
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+   BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+
+   const asset initial_ram_balance = get_balance(N(eosio.ram));
+   const asset initial_ramfee_balance = get_balance(N(eosio.ramfee));
+   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("1000.0000") ) );
+
+   BOOST_REQUIRE_EQUAL( false, get_row_by_account( N(eosio.token), N(alice1111111), N(accounts), symbol().to_symbol_code() ).empty() );
+
+   //remove row
+   base_tester::push_action( N(eosio.token), N(close), N(alice1111111), mvo()
+                             ( "owner", "alice1111111" )
+                             ( "symbol", symbol() )
+   );
+   BOOST_REQUIRE_EQUAL( true, get_row_by_account( N(eosio.token), N(alice1111111), N(accounts), symbol().to_symbol_code() ).empty() );
+
+   auto rlm = control->get_resource_limits_manager();
+   auto eosioram_ram_usage = rlm.get_account_ram_usage(N(eosio.ram));
+   auto alice_ram_usage = rlm.get_account_ram_usage(N(alice1111111));
+   //std::cout << "Sellram" << std::endl;
+   BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", 2048 ) );
+
+   //make sure that ram was billed to alice, not to eosio.ram
+   BOOST_REQUIRE_EQUAL( true, alice_ram_usage < rlm.get_account_ram_usage(N(alice1111111)) );
+   BOOST_REQUIRE_EQUAL( eosioram_ram_usage, rlm.get_account_ram_usage(N(eosio.ram)) );
 
 } FC_LOG_AND_RETHROW()
 

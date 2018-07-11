@@ -29,6 +29,20 @@
         {"name":"memo", "type":"string"}
      ]
   },{
+     "name": "retire",
+     "base": "",
+     "fields": [
+        {"name":"quantity", "type":"asset"},
+        {"name":"memo", "type":"string"}
+     ]
+  },{
+     "name": "close",
+     "base": "",
+     "fields": [
+        {"name":"owner", "type":"account_name"},
+        {"name":"symbol", "type":"symbol"},
+     ]
+  },{
       "name": "account",
       "base": "",
       "fields": [
@@ -52,9 +66,17 @@
       "name": "issue",
       "type": "issue",
       "ricardian_contract": ""
+    },{
+      "name": "retire",
+      "type": "retire",
+      "ricardian_contract": ""
     }, {
       "name": "create",
       "type": "create",
+      "ricardian_contract": ""
+    }, {
+      "name": "close",
+      "type": "close",
       "ricardian_contract": ""
     }
 
