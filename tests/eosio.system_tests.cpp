@@ -1707,17 +1707,17 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
    for ( auto& x : producer_names ) {
       prod_perms.push_back( { name(x), config::active_name } );
    }
-   //prepare system contract with different hash (contract differs in one byte)
-   string eosio_system_wast2 = wasm_to_wast(contracts::system_wasm(), true);
-   string msg = "producer votes must be unique and sorted";
-   auto pos = eosio_system_wast2.find(msg);
-   BOOST_REQUIRE( pos != std::string::npos );
-   msg[0] = 'P';
-   eosio_system_wast2.replace( pos, msg.size(), msg );
 
    transaction trx;
    {
-      auto code = contracts::system_wasm(); //wast_to_wasm( eosio_system_wast2 );
+      //prepare system contract with different hash (contract differs in one byte)
+      auto code = contracts::system_wasm();
+      string msg = "producer votes must be unique and sorted";
+      auto it = std::search( code.begin(), code.end(), msg.begin(), msg.end() );
+      BOOST_REQUIRE( it != code.end() );
+      msg[0] = 'P';
+      std::copy( msg.begin(), msg.end(), it );
+
       variant pretty_trx = fc::mutable_variant_object()
          ("expiration", "2020-01-01T00:30")
          ("ref_block_num", 2)
