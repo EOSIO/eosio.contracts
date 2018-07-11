@@ -16,7 +16,7 @@ The following unpriviledged contract(s) are also part of the system.
 
 Dependencies:
 * [eosio v1.0.8](https://github.com/eosio/eos/tree/v1.0.8)
-* [eosio.wasmsdk v1.0](https://github.com/eosio/eosio.wasmsdk/tree/v1.0)
+* [eosio.wasmsdk v1.0.0](https://github.com/eosio/eosio.wasmsdk/tree/v1.0.0)
 
 To build the contracts and the unit tests:
 * First, ensure that your __eosio__ is compiled to the core symbol for the EOSIO blockchain that intend to deploy to.
