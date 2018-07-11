@@ -68,7 +68,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
    wdump((init_bytes)(bought_bytes)(bytes) );
 
    BOOST_REQUIRE_EQUAL( true, total["ram_bytes"].as_uint64() == init_bytes );
-   BOOST_REQUIRE_EQUAL( core_from_string("99901248.0041"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("99901248.0048"), get_balance( "alice1111111" ) );
 
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
@@ -79,7 +79,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("10.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("10.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("30.0000") ) );
-   BOOST_REQUIRE_EQUAL( core_from_string("99900688.0041"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("99900688.0048"), get_balance( "alice1111111" ) );
 
    auto newtotal = get_total_stake( "alice1111111" );
 
@@ -88,8 +88,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
    wdump((newbytes)(bytes)(bought_bytes) );
 
    BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", bought_bytes ) );
-   BOOST_REQUIRE_EQUAL( core_from_string("99901242.4179"), get_balance( "alice1111111" ) );
-
+   BOOST_REQUIRE_EQUAL( core_from_string("99901242.4187"), get_balance( "alice1111111" ) );
 
    newtotal = get_total_stake( "alice1111111" );
    auto startbytes = newtotal["ram_bytes"].as_uint64();
@@ -103,7 +102,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100000.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100000.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("300000.0000") ) );
-   BOOST_REQUIRE_EQUAL( core_from_string("49301242.4179"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("49301242.4187"), get_balance( "alice1111111" ) );
 
    auto finaltotal = get_total_stake( "alice1111111" );
    auto endbytes = finaltotal["ram_bytes"].as_uint64();
@@ -113,7 +112,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", bought_bytes ) );
 
-   BOOST_REQUIRE_EQUAL( core_from_string("99396507.4142"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("99396507.4158"), get_balance( "alice1111111" ) );
 
 } FC_LOG_AND_RETHROW()
 
@@ -1380,7 +1379,6 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
 } FC_LOG_AND_RETHROW()
 
 
-
 BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
 
    auto within_one = [](int64_t a, int64_t b) -> bool { return std::abs( a - b ) <= 1; };
@@ -1707,17 +1705,17 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
    for ( auto& x : producer_names ) {
       prod_perms.push_back( { name(x), config::active_name } );
    }
-   //prepare system contract with different hash (contract differs in one byte)
-   string eosio_system_wast2 = contracts::system_wast();
-   string msg = "producer votes must be unique and sorted";
-   auto pos = eosio_system_wast2.find(msg);
-   BOOST_REQUIRE( pos != std::string::npos );
-   msg[0] = 'P';
-   eosio_system_wast2.replace( pos, msg.size(), msg );
 
    transaction trx;
    {
-      auto code = wast_to_wasm( eosio_system_wast2 );
+      //prepare system contract with different hash (contract differs in one byte)
+      auto code = contracts::system_wasm();
+      string msg = "producer votes must be unique and sorted";
+      auto it = std::search( code.begin(), code.end(), msg.begin(), msg.end() );
+      BOOST_REQUIRE( it != code.end() );
+      msg[0] = 'P';
+      std::copy( msg.begin(), msg.end(), it );
+
       variant pretty_trx = fc::mutable_variant_object()
          ("expiration", "2020-01-01T00:30")
          ("ref_block_num", 2)
@@ -2584,6 +2582,72 @@ BOOST_FIXTURE_TEST_CASE( setram_effect, eosio_system_tester ) try {
    }
 
 } FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
+
+   const uint64_t init_max_ram_size = 64ll*1024 * 1024 * 1024;
+
+   BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+   produce_blocks(20);
+   BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+   transfer( config::system_account_name, "alice1111111", core_from_string("1000.0000"), config::system_account_name );
+   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
+   produce_blocks(3);
+   BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+   const uint16_t rate = 1000;
+   BOOST_REQUIRE_EQUAL( success(), push_action( config::system_account_name, N(setramrate), mvo()("bytes_per_block", rate) ) );
+   BOOST_REQUIRE_EQUAL( rate, get_global_state2()["new_ram_per_block"].as<uint16_t>() );
+   // last time update_ram_supply called is in buyram, num of blocks since then is 1 + 3 = 4
+   uint64_t cur_ram_size = get_global_state()["max_ram_size"].as_uint64();
+   BOOST_REQUIRE_EQUAL( init_max_ram_size + 4 * rate, get_global_state()["max_ram_size"].as_uint64() );
+   produce_blocks(10);
+   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
+   BOOST_REQUIRE_EQUAL( cur_ram_size + 11 * rate, get_global_state()["max_ram_size"].as_uint64() );
+   cur_ram_size = get_global_state()["max_ram_size"].as_uint64();
+   produce_blocks(5);
+   BOOST_REQUIRE_EQUAL( cur_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+   BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", 100 ) );
+   BOOST_REQUIRE_EQUAL( cur_ram_size + 6 * rate, get_global_state()["max_ram_size"].as_uint64() );
+   cur_ram_size = get_global_state()["max_ram_size"].as_uint64();
+   produce_blocks();
+   BOOST_REQUIRE_EQUAL( success(), buyrambytes( "alice1111111", "alice1111111", 100 ) );
+   BOOST_REQUIRE_EQUAL( cur_ram_size + 2 * rate, get_global_state()["max_ram_size"].as_uint64() );
+
+   BOOST_REQUIRE_EQUAL( error("missing authority of eosio"),
+                        push_action( "alice1111111", N(setramrate), mvo()("bytes_per_block", rate) ) );
+  
+} FC_LOG_AND_RETHROW()
+  
+BOOST_FIXTURE_TEST_CASE( eosioram_ramusage, eosio_system_tester ) try {
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+   BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+
+   const asset initial_ram_balance = get_balance(N(eosio.ram));
+   const asset initial_ramfee_balance = get_balance(N(eosio.ramfee));
+   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("1000.0000") ) );
+
+   BOOST_REQUIRE_EQUAL( false, get_row_by_account( N(eosio.token), N(alice1111111), N(accounts), symbol().to_symbol_code() ).empty() );
+
+   //remove row
+   base_tester::push_action( N(eosio.token), N(close), N(alice1111111), mvo()
+                             ( "owner", "alice1111111" )
+                             ( "symbol", symbol() )
+   );
+   BOOST_REQUIRE_EQUAL( true, get_row_by_account( N(eosio.token), N(alice1111111), N(accounts), symbol().to_symbol_code() ).empty() );
+
+   auto rlm = control->get_resource_limits_manager();
+   auto eosioram_ram_usage = rlm.get_account_ram_usage(N(eosio.ram));
+   auto alice_ram_usage = rlm.get_account_ram_usage(N(alice1111111));
+   //std::cout << "Sellram" << std::endl;
+   BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", 2048 ) );
+
+   //make sure that ram was billed to alice, not to eosio.ram
+   BOOST_REQUIRE_EQUAL( true, alice_ram_usage < rlm.get_account_ram_usage(N(alice1111111)) );
+   BOOST_REQUIRE_EQUAL( eosioram_ram_usage, rlm.get_account_ram_usage(N(eosio.ram)) );
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_AUTO_TEST_SUITE_END()
 
 void translate_fc_exception(const fc::exception &e) {

@@ -386,7 +386,11 @@ public:
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global), N(global) );
       if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state", data );
+   }
 
+   fc::variant get_global_state2() {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global2), N(global2) );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state2", data );
    }
 
    fc::variant get_refund_request( name account ) {
