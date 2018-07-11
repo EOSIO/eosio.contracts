@@ -1,19 +1,26 @@
 #! /bin/bash
 
-contracts=( "eosio.token"
-            "eosio.system"
-            "eosio.msig"
-            "eosio.sudo" )
+printf "\t=========== Building eosio.contracts ===========\n\n"
+
+RED='\033[0;31m'
+NC='\033[0m'
+
+#if [ ! -d "/usr/local/eosio" ]; then
+#   printf "${RED}Error, please ensure that eosio is installed correctly!\n\n${NC}"
+#   exit -1
+#fi
+
+if [ ! -d "/usr/local/eosio.wasmsdk" ]; then
+   printf "${RED}Error, please ensure that eosio.wasmsdk is installed correctly!\n\n${NC}"
+   exit -1
+fi
 
 unamestr=`uname`
 if [[ "${unamestr}" == 'Darwin' ]]; then
-   PREFIX=/usr/local
-   BOOST=/usr/local/include
-   OPENSSL=/usr/local/opt/openssl
+   BOOST=/usr/local
+   CXX_COMPILER=g++
 else
-   PREFIX=~/opt
-   BOOST=~/opt/boost/include
-   OPENSSL=/usr/include/openssl
+   BOOST=~/opt/boost
 	OS_NAME=$( cat /etc/os-release | grep ^NAME | cut -d'=' -f2 | sed 's/\"//gI' )
 
 	case "$OS_NAME" in
@@ -47,35 +54,9 @@ else
 	esac
 fi
 
-EOSIO_PREFIX=/usr/local/eosio
-
-export BOOST=${BOOST}
-export PREFIX=${PREFIX}
-export INSTALL_PREFIX=/usr/local/eosio
-
-### Build all the contracts
-
-for contract in "${contracts[@]}"; do
-   pushd ${contract} &> /dev/null
-   echo "Building ${contract}..."
-   CONTRACT_NAME="${contract}"
-   ./build.sh
-   popd &> /dev/null
-done
-
-
-if [ "$1" == "notests" ]; then
-   exit 0
-fi
-
-### Build the unit tests
-root_dir=`pwd`
-pushd tests &> /dev/null
+CORES=`getconf _NPROCESSORS_ONLN`
 mkdir -p build
 pushd build &> /dev/null
-cmake -DCMAKE_CXX_COMPILER="${CXX_COMPILER}" -DROOT_DIR="${root_dir}" -DEOSIO_INSTALL_PREFIX="${EOSIO_PREFIX}" -DOPENSSL_INSTALL_PREFIX="${OPENSSL}" -DSECP256K1_INSTALL_LIB="${EOSIO_PREFIX}" -DBOOST_ROOT="${BOOST}" ../
-make -j8
-cp unit_test ../../
-popd &> /dev/null
-rm -r build
+cmake -DCXX_COMPILER="${CXX_COMPILER}" -DBOOST_ROOT="${BOOST}" -DEOSIO_INSTALL_PREFIX=/usr/local ../
+make -j${CORES}
 popd &> /dev/null
