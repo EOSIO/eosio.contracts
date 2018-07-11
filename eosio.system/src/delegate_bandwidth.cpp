@@ -86,6 +86,7 @@ namespace eosiosystem {
     *  This action will buy an exact amount of ram and bill the payer the current market price.
     */
    void system_contract::buyrambytes( account_name payer, account_name receiver, uint32_t bytes ) {
+      
       auto itr = _rammarket.find(S(4,RAMCORE));
       auto tmp = *itr;
       auto eosout = tmp.convert( asset(bytes,S(0,RAM)), CORE_SYMBOL );
@@ -105,6 +106,8 @@ namespace eosiosystem {
    void system_contract::buyram( account_name payer, account_name receiver, asset quant )
    {
       require_auth( payer );
+      update_ram_supply();
+
       eosio_assert( quant.amount > 0, "must purchase a positive amount" );
 
       auto fee = quant;
@@ -161,6 +164,8 @@ namespace eosiosystem {
     */
    void system_contract::sellram( account_name account, int64_t bytes ) {
       require_auth( account );
+      update_ram_supply();
+
       eosio_assert( bytes > 0, "cannot sell negative byte" );
 
       user_resources_table  userres( _self, account );
