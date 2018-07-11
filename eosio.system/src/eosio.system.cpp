@@ -63,8 +63,7 @@ namespace eosiosystem {
       auto itr = _rammarket.find(S(4,RAMCORE));
 
       /**
-       *  Increase or decrease the amount of ram for sale based upon the change in max
-       *  ram size.
+       *  Increase the amount of ram for sale based upon the change in max ram size.
        */
       _rammarket.modify( itr, 0, [&]( auto& m ) {
          m.base.balance.amount += delta;
@@ -81,8 +80,7 @@ namespace eosiosystem {
       _gstate.max_ram_size += new_ram;
 
       /**
-       *  Increase or decrease the amount of ram for sale based upon the change in max
-       *  ram size.
+       *  Increase the amount of ram for sale based upon the change in max ram size.
        */
       _rammarket.modify( itr, 0, [&]( auto& m ) {
          m.base.balance.amount += new_ram;

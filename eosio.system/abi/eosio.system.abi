@@ -491,7 +491,7 @@
    },{
       "name": "setramrate",
       "type": "setramrate",
-      "ricardian_contract": "Sets the number of new bytes of ram to create per block and resyncs bancor connector balances and weights to eosio.ram and 50% CRR"
+      "ricardian_contract": "Sets the number of new bytes of ram to create per block and resyncs bancor base connector balance"
    },{
       "name": "bidname",
       "type": "bidname",
