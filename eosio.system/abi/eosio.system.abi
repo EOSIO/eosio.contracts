@@ -363,6 +363,12 @@
         {"name":"producer", "type":"account_name"}
       ]
     },{
+      "name": "updtrevision",
+      "base": "",
+      "fields": [
+        {"name":"revision", "type":"uint8"}
+      ]
+    },{
       "name": "set_account_limits",
       "base": "",
       "fields": [
@@ -527,6 +533,10 @@
    },{
       "name": "rmvproducer",
       "type": "rmvproducer",
+      "ricardian_contract": ""
+   },{
+      "name": "updtrevision",
+      "type": "updtrevision",
       "ricardian_contract": ""
    },{
       "name": "setalimits",

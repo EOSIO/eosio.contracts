@@ -128,6 +128,12 @@ namespace eosiosystem {
          });
    }
 
+   void system_contract::updtrevision( uint8_t revision ) {
+      require_auth( _self );
+      eosio_assert( revision == _gstate2.revision + 1, "can only increment revision by one" );
+      _gstate2.revision = revision;
+   }
+
    void system_contract::bidname( account_name bidder, account_name newname, asset bid ) {
       require_auth( bidder );
       eosio_assert( eosio::name_suffix(newname) == newname, "you can only bid on top-level suffix" );
@@ -223,7 +229,7 @@ EOSIO_ABI( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)
      // eosio.system.cpp
-     (setram)(setramrate)(setparams)(setpriv)(rmvproducer)(bidname)
+     (setram)(setramrate)(setparams)(setpriv)(rmvproducer)(updtrevision)(bidname)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

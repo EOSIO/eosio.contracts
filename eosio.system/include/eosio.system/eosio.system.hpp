@@ -245,6 +245,8 @@ namespace eosiosystem {
          void setpriv( account_name account, uint8_t ispriv );
 
          void rmvproducer( account_name producer );
+         
+         void updtrevision( uint8_t revision );
 
          void bidname( account_name bidder, account_name newname, asset bid );
       private:
