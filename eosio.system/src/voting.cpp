@@ -40,24 +40,40 @@ namespace eosiosystem {
       require_auth( producer );
 
       auto prod = _producers.find( producer );
+      const auto ct = current_time();
 
       if ( prod != _producers.end() ) {
          _producers.modify( prod, producer, [&]( producer_info& info ){
-               info.producer_key = producer_key;
-               info.is_active    = true;
-               info.url          = url;
-               info.location     = location;
+            info.producer_key = producer_key;
+            info.is_active    = true;
+            info.url          = url;
+            info.location     = location;
+            if ( info.last_claim_time == 0 )
+               info.last_claim_time = ct;
+         });
+
+         auto prod2 = _producers2.find( producer );
+         if ( prod2 == _producers2.end() ) {
+            _producers2.emplace( producer, [&]( producer_info2& info ){
+               info.owner                     = producer;
+               info.last_votepay_share_update = prod->last_claim_time;
             });
+         }
       } else {
          _producers.emplace( producer, [&]( producer_info& info ){
-               info.owner         = producer;
-               info.total_votes   = 0;
-               info.producer_key  = producer_key;
-               info.is_active     = true;
-               info.url           = url;
-               info.location      = location;
+            info.owner           = producer;
+            info.total_votes     = 0;
+            info.producer_key    = producer_key;
+            info.is_active       = true;
+            info.url             = url;
+            info.location        = location;
+            info.last_claim_time = ct;
+         });
+         _producers2.emplace( producer, [&]( producer_info2& info ){
+            info.owner = producer;
          });
       }
+
    }
 
    void system_contract::unregprod( const account_name producer ) {
@@ -66,8 +82,15 @@ namespace eosiosystem {
       const auto& prod = _producers.get( producer, "producer not found" );
 
       _producers.modify( prod, 0, [&]( producer_info& info ){
-            info.deactivate();
+         info.deactivate();
       });
+
+      auto prod2 = _producers2.find( producer );
+      if ( prod2 == _producers2.end() ) {
+         _producers2.emplace( producer, [&]( producer_info2& info ){
+            info.owner = producer;
+         });
+      }
    }
 
    void system_contract::update_elected_producers( block_timestamp block_time ) {
@@ -204,6 +227,7 @@ namespace eosiosystem {
          auto pitr = _producers.find( pd.first );
          if( pitr != _producers.end() ) {
             eosio_assert( !voting || pitr->active() || !pd.second.second /* not from new set */, "producer is not currently registered" );
+            double init_total_votes = pitr->total_votes;
             _producers.modify( pitr, 0, [&]( auto& p ) {
                p.total_votes += pd.second.first;
                if ( p.total_votes < 0 ) { // floating point arithmetics can give small negative numbers
@@ -212,6 +236,18 @@ namespace eosiosystem {
                _gstate.total_producer_vote_weight += pd.second.first;
                //eosio_assert( p.total_votes >= 0, "something bad happened" );
             });
+            auto prod2 = _producers2.find( pd.first );
+            if( prod2 != _producers2.end() ) {
+               _producers2.modify( prod2, 0, [&]( auto& p ) {
+                  auto ct = current_time();
+                  if( ct - pitr->last_claim_time < 3 * useconds_per_day ) {
+                     double delta_votepay_share = init_total_votes * ( double(ct - p.last_votepay_share_update) / 1E6 );
+                     p.votepay_share           += delta_votepay_share;
+                     _gstate2.total_producer_votepay_share += delta_votepay_share;
+                  }
+                  p.last_votepay_share_update = ct;
+               });
+            }
          } else {
             eosio_assert( !pd.second.second /* not from new set */, "producer is not registered" ); //data corruption
          }
@@ -272,10 +308,23 @@ namespace eosiosystem {
             auto delta = new_weight - voter.last_vote_weight;
             for ( auto acnt : voter.producers ) {
                auto& pitr = _producers.get( acnt, "producer not found" ); //data corruption
+               double init_total_votes = pitr.total_votes;
                _producers.modify( pitr, 0, [&]( auto& p ) {
-                     p.total_votes += delta;
-                     _gstate.total_producer_vote_weight += delta;
+                  p.total_votes += delta;
+                  _gstate.total_producer_vote_weight += delta;
                });
+               auto prod2 = _producers2.find( acnt );
+               if ( prod2 != _producers2.end() ) {
+                  _producers2.modify( prod2, 0, [&]( auto& p ) {
+                     auto ct = current_time();
+                     if( ct - pitr.last_claim_time < 3 * useconds_per_day ) {
+                        double delta_votepay_share = init_total_votes * ( double(ct - p.last_votepay_share_update) / 1E6 );
+                        p.votepay_share           += delta_votepay_share;
+                        _gstate2.total_producer_votepay_share += delta_votepay_share;
+                     }
+                     p.last_votepay_share_update = ct;
+                  });
+               }
             }
          }
       }
