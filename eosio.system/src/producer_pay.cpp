@@ -67,7 +67,7 @@ namespace eosiosystem {
 
    using namespace eosio;
    void system_contract::claimrewards( const account_name& owner ) {
-      require_auth(owner);
+      require_auth( owner );
 
       const auto& prod = _producers.get( owner );
       eosio_assert( prod.active(), "producer does not have an active key" );
@@ -75,9 +75,19 @@ namespace eosiosystem {
       eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
                     "cannot claim rewards until the chain is activated (at least 15% of all tokens participate in voting)" );
 
-      auto ct = current_time();
+      const auto ct = current_time();
 
       eosio_assert( ct - prod.last_claim_time > useconds_per_day, "already claimed rewards within past day" );
+
+      if ( _producers2.find( owner ) == _producers2.end() ) {
+         _producers2.emplace( owner, [&]( producer_info2& info  ) {
+            info.owner = owner;
+            if ( prod.last_claim_time > 0 )
+               info.last_votepay_share_update = prod.last_claim_time;
+            else
+               info.last_votepay_share_update = ct;
+         });
+      }
 
       const asset token_supply   = token( N(eosio.token)).get_supply(symbol_type(system_token_symbol).name() );
       const auto usecs_since_last_fill = ct - _gstate.last_pervote_bucket_fill;
@@ -85,13 +95,13 @@ namespace eosiosystem {
       if( usecs_since_last_fill > 0 && _gstate.last_pervote_bucket_fill > 0 ) {
          auto new_tokens = static_cast<int64_t>( (continuous_rate * double(token_supply.amount) * double(usecs_since_last_fill)) / double(useconds_per_year) );
 
-         auto to_producers       = new_tokens / 5;
-         auto to_savings         = new_tokens - to_producers;
-         auto to_per_block_pay   = to_producers / 4;
-         auto to_per_vote_pay    = to_producers - to_per_block_pay;
+         auto to_producers     = new_tokens / 5;
+         auto to_savings       = new_tokens - to_producers;
+         auto to_per_block_pay = to_producers / 4;
+         auto to_per_vote_pay  = to_producers - to_per_block_pay;
 
          INLINE_ACTION_SENDER(eosio::token, issue)( N(eosio.token), {{N(eosio),N(active)}},
-                                                    {N(eosio), asset(new_tokens), std::string("issue tokens for producer pay and savings")} );
+                                                    { N(eosio), asset(new_tokens), std::string("issue tokens for producer pay and savings") } );
 
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio),N(active)},
                                                        { N(eosio), N(eosio.saving), asset(to_savings), "unallocated inflation" } );
@@ -108,24 +118,58 @@ namespace eosiosystem {
          _gstate.last_pervote_bucket_fill = ct;
       }
 
+      auto prod2 = _producers2.find( owner );
+      if ( prod2 == _producers2.end() ) {
+         prod2 = _producers2.emplace( owner, [&]( producer_info2& info  ) {
+               info.owner = owner;
+               if ( prod.last_claim_time > 0 )
+                  info.last_votepay_share_update = prod.last_claim_time;
+               else
+                  info.last_votepay_share_update = ct;
+            });
+      }
+
       int64_t producer_per_block_pay = 0;
       if( _gstate.total_unpaid_blocks > 0 ) {
          producer_per_block_pay = (_gstate.perblock_bucket * prod.unpaid_blocks) / _gstate.total_unpaid_blocks;
       }
+
+      /// New metric to be used in pervote pay calculation. Instead of vote weight ratio, we combine vote weight and
+      /// time duration the vote weight has been held into one metric.
+      double delta_votepay_share    = prod.total_votes * ( double(current_time() - prod2->last_votepay_share_update) / 1000000 );
+      double producer_votepay_share = prod2->votepay_share + delta_votepay_share;
+      double total_votepay_share    = _gstate2.total_producer_votepay_share + delta_votepay_share;
+
       int64_t producer_per_vote_pay = 0;
-      if( _gstate.total_producer_vote_weight > 0 ) {
-         producer_per_vote_pay  = int64_t((_gstate.pervote_bucket * prod.total_votes ) / _gstate.total_producer_vote_weight);
+      if( _gstate2.revision > 0 ) {
+         if( total_votepay_share > 0 ) {
+            producer_per_vote_pay  = int64_t((producer_votepay_share * _gstate.pervote_bucket) / total_votepay_share);
+            if( producer_per_vote_pay > _gstate.pervote_bucket )
+               producer_per_vote_pay = _gstate.pervote_bucket;
+         }
+      } else {
+         if( _gstate.total_producer_vote_weight > 0 ) {
+            producer_per_vote_pay  = int64_t((_gstate.pervote_bucket * prod.total_votes) / _gstate.total_producer_vote_weight);
+         }
       }
+
       if( producer_per_vote_pay < min_pervote_daily_pay ) {
          producer_per_vote_pay = 0;
       }
+      
       _gstate.pervote_bucket      -= producer_per_vote_pay;
       _gstate.perblock_bucket     -= producer_per_block_pay;
       _gstate.total_unpaid_blocks -= prod.unpaid_blocks;
 
       _producers.modify( prod, 0, [&](auto& p) {
-          p.last_claim_time = ct;
-          p.unpaid_blocks = 0;
+         p.last_claim_time = ct;
+         p.unpaid_blocks = 0;
+      });
+
+      _producers2.modify( prod2, 0, [&](auto& p) {
+         p.last_votepay_share_update = ct;
+         _gstate2.total_producer_votepay_share -= p.votepay_share;
+         p.votepay_share = 0;
       });
 
       if( producer_per_block_pay > 0 ) {
