@@ -13,6 +13,7 @@ namespace eosiosystem {
    :native(s),
     _voters(_self,_self),
     _producers(_self,_self),
+    _producers2(_self,_self),
     _global(_self,_self),
     _global2(_self,_self),
     _rammarket(_self,_self)

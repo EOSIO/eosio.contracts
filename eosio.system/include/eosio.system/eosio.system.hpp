@@ -97,6 +97,17 @@ namespace eosiosystem {
                         (unpaid_blocks)(last_claim_time)(location) )
    };
 
+   struct producer_info2 {
+      account_name    owner;
+      double          votepay_share = 0;
+      uint64_t        last_votepay_share_update = 0;
+         
+      uint64_t primary_key()const { return owner; }
+         
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
+   };
+
    struct voter_info {
       account_name                owner = 0; /// the voter
       account_name                proxy = 0; /// the proxy set by the voter, if any
@@ -134,6 +145,7 @@ namespace eosiosystem {
    typedef eosio::multi_index< N(producers), producer_info,
                                indexed_by<N(prototalvote), const_mem_fun<producer_info, double, &producer_info::by_votes>  >
                                >  producers_table;
+   typedef eosio::multi_index< N(producers2), producer_info2 > producers_table2;
 
    typedef eosio::singleton<N(global), eosio_global_state> global_state_singleton;
    typedef eosio::singleton<N(global2), eosio_global_state2> global_state2_singleton;
@@ -146,12 +158,12 @@ namespace eosiosystem {
       private:
          voters_table            _voters;
          producers_table         _producers;
+         producers_table2        _producers2;
          global_state_singleton  _global;
          global_state2_singleton _global2;
-
-         eosio_global_state     _gstate;
-         eosio_global_state2    _gstate2;
-         rammarket              _rammarket;
+         eosio_global_state      _gstate;
+         eosio_global_state2     _gstate2;
+         rammarket               _rammarket;
 
       public:
          system_contract( account_name s );
