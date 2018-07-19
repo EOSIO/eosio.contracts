@@ -77,6 +77,14 @@ namespace eosiosystem {
                         (total_producer_votepay_share)(revision) )
    };
 
+   struct eosio_global_state3 {
+      eosio_global_state3() { }
+      uint64_t   last_vpay_state_update = 0;
+      double     total_vpay_share_change_rate = 0;
+
+      EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
+   };
+
    struct producer_info {
       account_name          owner;
       double                total_votes = 0;
@@ -149,6 +157,7 @@ namespace eosiosystem {
 
    typedef eosio::singleton<N(global), eosio_global_state> global_state_singleton;
    typedef eosio::singleton<N(global2), eosio_global_state2> global_state2_singleton;
+   typedef eosio::singleton<N(global3), eosio_global_state3> global_state3_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -161,8 +170,10 @@ namespace eosiosystem {
          producers_table2        _producers2;
          global_state_singleton  _global;
          global_state2_singleton _global2;
+         global_state3_singleton _global3;
          eosio_global_state      _gstate;
          eosio_global_state2     _gstate2;
+         eosio_global_state3     _gstate3;
          rammarket               _rammarket;
 
       public:

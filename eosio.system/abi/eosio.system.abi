@@ -251,6 +251,12 @@
          {"name":"revision",                     "type":"uint8"}
       ]
     },{
+      "name": "eosio_global_state3",
+      "fields": [
+         {"name":"last_vpay_state_update",       "type":"uint64"},
+         {"name":"total_vpay_share_change_rate", "type":"float64"}
+      ]
+    },{
       "name": "eosio_global_state",
       "base": "blockchain_parameters",
       "fields": [
@@ -580,6 +586,12 @@
     },{
       "name": "global2",
       "type": "eosio_global_state2",
+      "index_type": "i64",
+      "key_names" : [],
+      "key_types" : []
+    },{
+      "name": "global3",
+      "type": "eosio_global_state3",
       "index_type": "i64",
       "key_names" : [],
       "key_types" : []

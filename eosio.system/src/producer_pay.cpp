@@ -136,14 +136,15 @@ namespace eosiosystem {
 
       /// New metric to be used in pervote pay calculation. Instead of vote weight ratio, we combine vote weight and
       /// time duration the vote weight has been held into one metric.
-      double delta_votepay_share    = prod.total_votes * ( double(current_time() - prod2->last_votepay_share_update) / 1000000 );
-      double producer_votepay_share = prod2->votepay_share + delta_votepay_share;
-      double total_votepay_share    = _gstate2.total_producer_votepay_share + delta_votepay_share;
+      double delta_votepay_share       = prod.total_votes * ( double(current_time() - prod2->last_votepay_share_update) / 1E6 );
+      double delta_total_votepay_share = _gstate3.total_vpay_share_change_rate * (double(ct - _gstate3.last_vpay_state_update)/1E6) ;
+      double votepay_share             = prod2->votepay_share + delta_votepay_share;
+      double total_votepay_share       = _gstate2.total_producer_votepay_share + delta_total_votepay_share;
 
       int64_t producer_per_vote_pay = 0;
       if( _gstate2.revision > 0 ) {
          if( total_votepay_share > 0 ) {
-            producer_per_vote_pay  = int64_t((producer_votepay_share * _gstate.pervote_bucket) / total_votepay_share);
+            producer_per_vote_pay  = int64_t((votepay_share * _gstate.pervote_bucket) / total_votepay_share);
             if( producer_per_vote_pay > _gstate.pervote_bucket )
                producer_per_vote_pay = _gstate.pervote_bucket;
          }
@@ -169,6 +170,7 @@ namespace eosiosystem {
       _producers2.modify( prod2, 0, [&](auto& p) {
          p.last_votepay_share_update = ct;
          _gstate2.total_producer_votepay_share -= p.votepay_share;
+         _gstate3.last_vpay_state_update = ct;
          p.votepay_share = 0;
       });
 
