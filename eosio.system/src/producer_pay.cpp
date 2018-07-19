@@ -49,7 +49,7 @@ namespace eosiosystem {
          if( (timestamp.slot - _gstate.last_name_close.slot) > blocks_per_day ) {
             name_bid_table bids(_self,_self);
             auto idx = bids.get_index<N(highbid)>();
-            auto highest = idx.begin();
+            auto highest = idx.lower_bound( std::numeric_limits<uint64_t>::max()/2 );
             if( highest != idx.end() &&
                 highest->high_bid > 0 &&
                 highest->last_bid_time < (current_time() - useconds_per_day) &&
