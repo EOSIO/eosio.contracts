@@ -397,6 +397,11 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state2", data );
    }
 
+   fc::variant get_global_state3() {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global3), N(global3) );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state3", data );
+   }
+
    fc::variant get_refund_request( name account ) {
       vector<char> data = get_row_by_account( config::system_account_name, account, N(refunds), account );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "refund_request", data );

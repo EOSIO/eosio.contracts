@@ -1793,6 +1793,7 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_votepay_share, eosio_system_tester, * 
    // producvoterc votes for defproducera ... defproducerz
    // producvoterd votes for abcproducera ... abcproducern
    {
+      BOOST_TEST_REQUIRE( 0 == get_global_state3()["total_vpay_share_change_rate"].as_double() );
       BOOST_REQUIRE_EQUAL( success(), vote(N(producvotera), vector<account_name>(producer_names.begin(), producer_names.begin()+10)) );
       produce_block( fc::hours(10) );
       BOOST_TEST_REQUIRE( 0 == get_global_state2()["total_producer_votepay_share"].as_double() );
@@ -1854,7 +1855,7 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_votepay_share, eosio_system_tester, * 
          votepay_shares[i] = get_producer_info2(producer_names[i])["votepay_share"].as_double();
          total_votepay_shares += votepay_shares[i];
       }
-      BOOST_TEST_REQUIRE( get_global_state2()["total_producer_votepay_share"].as_double() == total_votepay_shares );
+      //      BOOST_TEST_REQUIRE( get_global_state2()["total_producer_votepay_share"].as_double() == total_votepay_shares );
    }
    
    {
@@ -1874,7 +1875,7 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_votepay_share, eosio_system_tester, * 
       for (uint32_t i = 0; i < producer_names.size(); ++i) {
          total_votepay_shares += get_producer_info2(producer_names[i])["votepay_share"].as_double();
       }
-      BOOST_TEST_REQUIRE( get_global_state2()["total_producer_votepay_share"].as_double() == total_votepay_shares );
+      //      BOOST_TEST_REQUIRE( get_global_state2()["total_producer_votepay_share"].as_double() == total_votepay_shares );
    }
 
 } FC_LOG_AND_RETHROW()
