@@ -518,6 +518,7 @@ public:
          trx.sign( get_private_key( config::system_account_name, "active" ), control->get_chain_id()  );
          trx.sign( get_private_key( N(producer1111), "active" ), control->get_chain_id()  );
          push_transaction( trx );
+         produce_block();
       }
    }
 

@@ -2367,6 +2367,21 @@ BOOST_FIXTURE_TEST_CASE( multiple_namebids, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( namebid_pending_winner, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+   produce_block( fc::hours(14*24) );    //wait 14 day for name auction activation
+   transfer( config::system_account_name, N(alice1111111), core_from_string("10000.0000") );
+   transfer( config::system_account_name, N(bob111111111), core_from_string("10000.0000") );
+
+   BOOST_REQUIRE_EQUAL( success(), bidname( "alice1111111", "prefa", core_from_string( "50.0000" ) ));
+   BOOST_REQUIRE_EQUAL( success(), bidname( "bob111111111", "prefb", core_from_string( "30.0000" ) ));
+   produce_block( fc::hours(100) ); //should close "perfa"
+   produce_block( fc::hours(100) ); //should close "perfb"
+
+   //despite "perfa" account hasn't been created, we should be able to create "perfb" account
+   create_account_with_resources( N(prefb), N(bob111111111) );
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE( vote_producers_in_and_out, eosio_system_tester ) try {
 
    const asset net = core_from_string("80.0000");
