@@ -240,7 +240,15 @@
          {"name":"max_inline_action_size",              "type":"uint32"},
          {"name":"max_inline_action_depth",             "type":"uint16"},
          {"name":"max_authority_depth",                 "type":"uint16"}
-
+      ]
+    },{
+      "name": "eosio_global_state2",
+      "fields": [
+         {"name":"new_ram_per_block",   "type":"uint16"},
+         {"name":"last_ram_increase",   "type":"block_timestamp_type"},
+         {"name":"last_block_num",      "type":"block_timestamp_type"},
+         {"name":"reserved",            "type":"float64"},
+         {"name":"revision",            "type":"uint8"}
       ]
     },{
       "name": "eosio_global_state",
@@ -293,6 +301,12 @@
       "base": "",
       "fields": [
         {"name":"max_ram_size",     "type":"uint64"}
+      ]
+    },{
+      "name": "setramrate",
+      "base": "",
+      "fields": [
+        {"name":"bytes_per_block",   "type":"uint16"}
       ]
     },{
       "name": "regproxy",
@@ -475,6 +489,10 @@
       "type": "setram",
       "ricardian_contract": ""
    },{
+      "name": "setramrate",
+      "type": "setramrate",
+      "ricardian_contract": "Sets the number of new bytes of ram to create per block and resyncs bancor base connector balance"
+   },{
       "name": "bidname",
       "type": "bidname",
       "ricardian_contract": ""
@@ -532,6 +550,12 @@
     },{
       "name": "global",
       "type": "eosio_global_state",
+      "index_type": "i64",
+      "key_names" : [],
+      "key_types" : []
+    },{
+      "name": "global2",
+      "type": "eosio_global_state2",
       "index_type": "i64",
       "key_names" : [],
       "key_types" : []

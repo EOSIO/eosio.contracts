@@ -64,6 +64,7 @@ find_library(libsecp256k1 secp256k1 ${SECP256K1_INSTALL_LIB})
 add_executable( unit_test ${UNIT_TESTS} )
 target_link_libraries( unit_test 
     ${LLVM} 
+    ${libtester}    
     ${libchain} 
     ${libfc} 
     ${libbinaryen} 
@@ -79,7 +80,6 @@ target_link_libraries( unit_test
     ${libchainbase} 
     ${libbuiltins} 
     ${libsecp256k1} 
-    ${libtester} 
 
     LLVMX86Disassembler
     LLVMX86AsmParser

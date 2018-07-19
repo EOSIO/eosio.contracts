@@ -61,6 +61,22 @@ namespace eosiosystem {
                                 (last_producer_schedule_size)(total_producer_vote_weight)(last_name_close) )
    };
 
+   /**
+    * Defines new global state parameters added after version 1.0
+    */
+   struct eosio_global_state2 {
+      eosio_global_state2(){}
+
+      uint16_t          new_ram_per_block = 0;  
+      block_timestamp   last_ram_increase;
+      block_timestamp   last_block_num;
+      double            reserved = 0;
+      uint8_t           revision = 0; ///< used to track version updates in the future.
+
+
+      EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)(reserved)(revision) )
+   };
+
    struct producer_info {
       account_name          owner;
       double                total_votes = 0;
@@ -120,6 +136,7 @@ namespace eosiosystem {
                                >  producers_table;
 
    typedef eosio::singleton<N(global), eosio_global_state> global_state_singleton;
+   typedef eosio::singleton<N(global2), eosio_global_state2> global_state2_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -127,11 +144,13 @@ namespace eosiosystem {
 
    class system_contract : public native {
       private:
-         voters_table           _voters;
-         producers_table        _producers;
-         global_state_singleton _global;
+         voters_table            _voters;
+         producers_table         _producers;
+         global_state_singleton  _global;
+         global_state2_singleton _global2;
 
          eosio_global_state     _gstate;
+         eosio_global_state2    _gstate2;
          rammarket              _rammarket;
 
       public:
@@ -200,6 +219,7 @@ namespace eosiosystem {
          void unregprod( const account_name producer );
 
          void setram( uint64_t max_ram_size );
+         void setramrate( uint16_t bytes_per_block );
 
          void voteproducer( const account_name voter, const account_name proxy, const std::vector<account_name>& producers );
 
@@ -217,6 +237,7 @@ namespace eosiosystem {
          void bidname( account_name bidder, account_name newname, asset bid );
       private:
          void update_elected_producers( block_timestamp timestamp );
+         void update_ram_supply();
 
          // Implementation details:
 
