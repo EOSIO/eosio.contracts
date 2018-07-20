@@ -1805,11 +1805,13 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_votepay_share, eosio_system_tester, * 
       const auto& info  = get_producer_info(producer_names[0]);
       const auto& info2 = get_producer_info2(producer_names[0]);
       BOOST_TEST_REQUIRE( ((info2["last_votepay_share_update"].as_uint64() - init_update)/double(1E6)) * init_votes == info2["votepay_share"].as_double() );
-      BOOST_TEST_REQUIRE( info2["votepay_share"].as_double() * 10, get_global_state2()["total_producer_votepay_share"].as_double() );
+      BOOST_TEST_REQUIRE( info2["votepay_share"].as_double() * 10 == get_global_state2()["total_producer_votepay_share"].as_double() );
+
       BOOST_TEST_REQUIRE( 0 == get_producer_info2(producer_names[11])["votepay_share"].as_double() );
       produce_block( fc::hours(13) );
       BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterc), vector<account_name>(producer_names.begin(), producer_names.begin()+26)) );
       BOOST_REQUIRE( 0 < get_producer_info2(producer_names[11])["votepay_share"].as_double() );
+      produce_block( fc::hours(1) );
       BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterd), vector<account_name>(producer_names.begin()+26, producer_names.end())) );
       BOOST_TEST_REQUIRE( 0 == get_producer_info2(producer_names[26])["votepay_share"].as_double() );
    }
@@ -1840,24 +1842,35 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_votepay_share, eosio_system_tester, * 
          vote_shares[i] = get_producer_info(producer_names[i])["total_votes"].as_double();
          total_votes += vote_shares[i];
       }
-      BOOST_TEST( total_votes == get_global_state()["total_producer_vote_weight"].as_double() );
-      std::for_each(vote_shares.begin(), vote_shares.end(), [total_votes](double& x) { x /= total_votes; });
-      
+      BOOST_TEST_REQUIRE( total_votes == get_global_state()["total_producer_vote_weight"].as_double() );
+      BOOST_TEST_REQUIRE( total_votes == get_global_state3()["total_vpay_share_change_rate"].as_double() );
+      BOOST_REQUIRE_EQUAL( get_producer_info2(producer_names.back())["last_votepay_share_update"].as_uint64(),
+                           get_global_state3()["last_vpay_state_update"].as_uint64() );
+
+      std::for_each( vote_shares.begin(), vote_shares.end(), [total_votes](double& x) { x /= total_votes; } );
       BOOST_TEST_REQUIRE( double(1) == std::accumulate(vote_shares.begin(), vote_shares.end(), double(0)) );
       BOOST_TEST_REQUIRE( double(3./71.) == vote_shares.front() );
       BOOST_TEST_REQUIRE( double(1./71.) == vote_shares.back() );
    }
-   
+
    std::vector<double> votepay_shares(producer_names.size());
    {
-      double total_votepay_shares = 0;
-      for (uint32_t i = 0; i < producer_names.size(); ++i) {
-         votepay_shares[i] = get_producer_info2(producer_names[i])["votepay_share"].as_double();
-         total_votepay_shares += votepay_shares[i];
+      const auto& gs3 = get_global_state3();
+      double total_votepay_shares          = 0;
+      double expected_total_votepay_shares = 0;
+      for (uint32_t i = 0; i < producer_names.size() ; ++i) {
+         const auto& info  = get_producer_info(producer_names[i]);
+         const auto& info2 = get_producer_info2(producer_names[i]);
+         votepay_shares[i] = info2["votepay_share"].as_double();
+         total_votepay_shares          += votepay_shares[i];
+         expected_total_votepay_shares += votepay_shares[i];
+         expected_total_votepay_shares += info["total_votes"].as_double() * double( ( gs3["last_vpay_state_update"].as_uint64() - 
+                                                                                      info2["last_votepay_share_update"].as_uint64() ) / 1E6 );
       }
-      //      BOOST_TEST_REQUIRE( get_global_state2()["total_producer_votepay_share"].as_double() == total_votepay_shares );
+      BOOST_TEST( expected_total_votepay_shares > total_votepay_shares );
+      BOOST_TEST_REQUIRE( expected_total_votepay_shares == get_global_state2()["total_producer_votepay_share"].as_double() );
    }
-   
+
    {
       const uint32_t prod_index = 15;
       const account_name prod_name = producer_names[prod_index];
@@ -1871,11 +1884,18 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_votepay_share, eosio_system_tester, * 
       BOOST_TEST_REQUIRE( 0 == get_producer_info2(prod_name)["votepay_share"].as_double() );
       BOOST_REQUIRE_EQUAL( get_producer_info(prod_name)["last_claim_time"].as_uint64(),
                            get_producer_info2(prod_name)["last_votepay_share_update"].as_uint64() );
-      double total_votepay_shares = 0;
+      BOOST_REQUIRE_EQUAL( get_producer_info(prod_name)["last_claim_time"].as_uint64(),
+                           get_global_state3()["last_vpay_state_update"].as_uint64() );
+      const auto& gs3 = get_global_state3();
+      double expected_total_votepay_shares = 0;
       for (uint32_t i = 0; i < producer_names.size(); ++i) {
-         total_votepay_shares += get_producer_info2(producer_names[i])["votepay_share"].as_double();
+         const auto& info  = get_producer_info(producer_names[i]);
+         const auto& info2 = get_producer_info2(producer_names[i]);
+         expected_total_votepay_shares += info2["votepay_share"].as_double();
+         expected_total_votepay_shares += info["total_votes"].as_double() * double( ( gs3["last_vpay_state_update"].as_uint64() -
+                                                                                      info2["last_votepay_share_update"].as_uint64() ) / 1E6 );
       }
-      //      BOOST_TEST_REQUIRE( get_global_state2()["total_producer_votepay_share"].as_double() == total_votepay_shares );
+      BOOST_TEST_REQUIRE( expected_total_votepay_shares == get_global_state2()["total_producer_votepay_share"].as_double() );
    }
 
 } FC_LOG_AND_RETHROW()
