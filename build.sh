@@ -57,6 +57,6 @@ fi
 CORES=`getconf _NPROCESSORS_ONLN`
 mkdir -p build
 pushd build &> /dev/null
-cmake -DCXX_COMPILER="${CXX_COMPILER}" -DBOOST_ROOT="${BOOST}" -DEOSIO_INSTALL_PREFIX=/usr/local ../ -DCMAKE_BUILD_TYPE=Debug
+cmake -DCXX_COMPILER="${CXX_COMPILER}" -DBOOST_ROOT="${BOOST}" -DEOSIO_INSTALL_PREFIX=/usr/local ../
 make -j${CORES}
 popd &> /dev/null
