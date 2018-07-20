@@ -28,14 +28,14 @@ else ( APPLE )
 endif ( APPLE )
 
 set( Boost_USE_STATIC_LIBS ON CACHE STRING "ON or OFF" )
-configure_file(${CMAKE_SOURCE_DIR}/contracts.hpp.in ${CMAKE_SOURCE_DIR}/contracts.hpp)
-find_package(Boost 1.67 REQUIRED COMPONENTS 
-	date_time 
-	filesystem 
-	system 
-	chrono 
-	iostreams 
-	date_time 
+configure_file(${CMAKE_SOURCE_DIR}/include/contracts.hpp.in ${CMAKE_BINARY_DIR}/include/contracts.hpp)
+find_package(Boost 1.67 REQUIRED COMPONENTS
+	date_time
+	filesystem
+	system
+	chrono
+	iostreams
+	date_time
 	unit_test_framework)
 
 file(GLOB UNIT_TESTS "*.cpp")
@@ -62,24 +62,24 @@ find_library(libbuiltins builtins ${EOSIO_INSTALL_PREFIX}/lib)
 find_library(libsecp256k1 secp256k1 ${SECP256K1_INSTALL_LIB})
 
 add_executable( unit_test ${UNIT_TESTS} )
-target_link_libraries( unit_test 
-    ${LLVM} 
-    ${libtester}    
-    ${libchain} 
-    ${libfc} 
-    ${libbinaryen} 
-    ${libwast} 
-    ${libwasm} 
-    ${libruntime} 
-    ${libplatform} 
-    ${libir} 
-    ${libsoftfloat} 
-    ${liboscrypto} 
-    ${libosssl} 
-    ${liblogging} 
-    ${libchainbase} 
-    ${libbuiltins} 
-    ${libsecp256k1} 
+target_link_libraries( unit_test
+    ${LLVM}
+    ${libtester}
+    ${libchain}
+    ${libfc}
+    ${libbinaryen}
+    ${libwast}
+    ${libwasm}
+    ${libruntime}
+    ${libplatform}
+    ${libir}
+    ${libsoftfloat}
+    ${liboscrypto}
+    ${libosssl}
+    ${liblogging}
+    ${libchainbase}
+    ${libbuiltins}
+    ${libsecp256k1}
 
     LLVMX86Disassembler
     LLVMX86AsmParser
@@ -117,10 +117,10 @@ target_link_libraries( unit_test
 target_include_directories( unit_test PUBLIC
                             ${Boost_INCLUDE_DIRS}
                             ${OPENSSL_INSTALL_PREFIX}/include
-                            ${EOSIO_INSTALL_PREFIX}
                             ${EOSIO_INSTALL_PREFIX}/include
-                            ${EOSIO_INSTALL_PREFIX}/include/eosio/wasm-jit/Include
-                            ${EOSIO_INSTALL_PREFIX}/include/eosio/softfloat/include
+                            ${EOSIO_INSTALL_PREFIX}/include/eosio
+                            ${EOSIO_INSTALL_PREFIX}/include/eosio/wasm-jit
+                            ${EOSIO_INSTALL_PREFIX}/include/eosio/softfloat
                             ${CMAKE_CURRENT_BINARY_DIR}/include )
 
 #Manually run unit_test for all supported runtimes
