@@ -2639,12 +2639,57 @@ BOOST_FIXTURE_TEST_CASE( eosioram_ramusage, eosio_system_tester ) try {
    auto rlm = control->get_resource_limits_manager();
    auto eosioram_ram_usage = rlm.get_account_ram_usage(N(eosio.ram));
    auto alice_ram_usage = rlm.get_account_ram_usage(N(alice1111111));
-   //std::cout << "Sellram" << std::endl;
+
    BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", 2048 ) );
 
    //make sure that ram was billed to alice, not to eosio.ram
    BOOST_REQUIRE_EQUAL( true, alice_ram_usage < rlm.get_account_ram_usage(N(alice1111111)) );
    BOOST_REQUIRE_EQUAL( eosioram_ram_usage, rlm.get_account_ram_usage(N(eosio.ram)) );
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
+   active_and_vote_producers();
+
+   auto rlm = control->get_resource_limits_manager();
+   int64_t ram_bytes_orig, net_weight, cpu_weight;
+   rlm.get_account_limits( N(alice1111111), ram_bytes_orig, net_weight, cpu_weight );
+
+   /*
+    * It seems impossible to write this test, because buyrambytes action doesn't give you exact amount of bytes requested
+    *
+   //check that it's possible to create account bying required_bytes(2724) + userres table(112) + userres row(160) - ram_gift_bytes(1400)
+   create_account_with_resources( N(abcdefghklmn), N(alice1111111), 2724 + 112 + 160 - 1400 );
+
+   //check that one byte less is not enough
+   BOOST_REQUIRE_THROW( create_account_with_resources( N(abcdefghklmn), N(alice1111111), 2724 + 112 + 160 - 1400 - 1 ),
+                        ram_usage_exceeded );
+   */
+
+   //check that stake/unstake keeps the gift
+   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+   BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+   int64_t ram_bytes_after_stake;
+   rlm.get_account_limits( N(alice1111111), ram_bytes_after_stake, net_weight, cpu_weight );
+   BOOST_REQUIRE_EQUAL( ram_bytes_orig, ram_bytes_after_stake );
+
+   BOOST_REQUIRE_EQUAL( success(), unstake( "eosio", "alice1111111", core_from_string("20.0000"), core_from_string("10.0000") ) );
+   int64_t ram_bytes_after_unstake;
+   rlm.get_account_limits( N(alice1111111), ram_bytes_after_unstake, net_weight, cpu_weight );
+   BOOST_REQUIRE_EQUAL( ram_bytes_orig, ram_bytes_after_unstake );
+
+   uint64_t ram_gift = 1400;
+
+   int64_t ram_bytes;
+   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("1000.0000") ) );
+   rlm.get_account_limits( N(alice1111111), ram_bytes, net_weight, cpu_weight );
+   auto userres = get_total_stake( N(alice1111111) );
+   BOOST_REQUIRE_EQUAL( userres["ram_bytes"].as_uint64() + ram_gift, ram_bytes );
+
+   BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", 1024 ) );
+   rlm.get_account_limits( N(alice1111111), ram_bytes, net_weight, cpu_weight );
+   userres = get_total_stake( N(alice1111111) );
+   BOOST_REQUIRE_EQUAL( userres["ram_bytes"].as_uint64() + ram_gift, ram_bytes );
 
 } FC_LOG_AND_RETHROW()
 
