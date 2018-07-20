@@ -192,7 +192,7 @@ namespace eosiosystem {
       userres.modify( res_itr, account, [&]( auto& res ) {
           res.ram_bytes -= bytes;
       });
-      set_resource_limits( res_itr->owner, res_itr->ram_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
+      set_resource_limits( res_itr->owner, res_itr->ram_bytes + ram_gift_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
 
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{N(eosio.ram),N(active)},{account,N(active)}},
                                                        { N(eosio.ram), account, asset(tokens_out), std::string("sell ram") } );
@@ -274,7 +274,7 @@ namespace eosiosystem {
          int64_t ram_bytes, net, cpu;
          get_resource_limits( receiver, ram_bytes, net, cpu );
 
-         set_resource_limits( receiver, ram_bytes, tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
+         set_resource_limits( receiver, std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ), tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
 
          if ( tot_itr->net_weight == asset(0) && tot_itr->cpu_weight == asset(0)  && tot_itr->ram_bytes == 0 ) {
             totals_tbl.erase( tot_itr );

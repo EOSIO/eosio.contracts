@@ -2678,6 +2678,19 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    rlm.get_account_limits( N(alice1111111), ram_bytes_after_unstake, net_weight, cpu_weight );
    BOOST_REQUIRE_EQUAL( ram_bytes_orig, ram_bytes_after_unstake );
 
+   uint64_t ram_gift = 1400;
+
+   int64_t ram_bytes;
+   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("1000.0000") ) );
+   rlm.get_account_limits( N(alice1111111), ram_bytes, net_weight, cpu_weight );
+   auto userres = get_total_stake( N(alice1111111) );
+   BOOST_REQUIRE_EQUAL( userres["ram_bytes"].as_uint64() + ram_gift, ram_bytes );
+
+   BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", 1024 ) );
+   rlm.get_account_limits( N(alice1111111), ram_bytes, net_weight, cpu_weight );
+   userres = get_total_stake( N(alice1111111) );
+   BOOST_REQUIRE_EQUAL( userres["ram_bytes"].as_uint64() + ram_gift, ram_bytes );
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
