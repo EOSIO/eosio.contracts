@@ -423,8 +423,6 @@ public:
       return msig_abi_ser;
    }
 
-   //helper function
-
    vector<name> active_and_vote_producers() {
       //stake more than 15% of total EOS supply to activate chain
       transfer( "eosio", "alice1111111", core_from_string("650000000.0000"), "eosio" );
