@@ -138,19 +138,19 @@ public:
          action act;
          act.account = N(eosio.msig);
          act.name = name;
-         act.data = abi_ser.variant_to_binary( action_type_name, data );
+         act.data = abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
          //std::cout << "test:\n" << fc::to_hex(act.data.data(), act.data.size()) << " size = " << act.data.size() << std::endl;
 
          return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : 0 );
       */
    }
 
-   transaction reqauth( account_name from, const vector<permission_level>& auths );
+   transaction reqauth( account_name from, const vector<permission_level>& auths, const fc::microseconds& max_serialization_time );
 
    abi_serializer abi_ser;
 };
 
-transaction eosio_msig_tester::reqauth( account_name from, const vector<permission_level>& auths ) {
+transaction eosio_msig_tester::reqauth( account_name from, const vector<permission_level>& auths, const fc::microseconds& max_serialization_time ) {
    fc::variants v;
    for ( auto& level : auths ) {
       v.push_back(fc::mutable_variant_object()
@@ -174,14 +174,14 @@ transaction eosio_msig_tester::reqauth( account_name from, const vector<permissi
                })
       );
    transaction trx;
-   abi_serializer::from_variant(pretty_trx, trx, get_resolver());
+   abi_serializer::from_variant(pretty_trx, trx, get_resolver(), max_serialization_time);
    return trx;
 }
 
 BOOST_AUTO_TEST_SUITE(eosio_msig_tests)
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {
-   auto trx = reqauth("alice", {permission_level{N(alice), config::active_name}} );
+   auto trx = reqauth("alice", {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
 
    push_action( N(alice), N(propose), mvo()
                   ("proposer",      "alice")
@@ -222,7 +222,7 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {
 
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_unapprove, eosio_msig_tester ) try {
-   auto trx = reqauth("alice", {permission_level{N(alice), config::active_name}} );
+   auto trx = reqauth("alice", {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
 
    push_action( N(alice), N(propose), mvo()
                   ("proposer",      "alice")
@@ -256,7 +256,7 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_unapprove, eosio_msig_tester ) try {
 
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_by_two, eosio_msig_tester ) try {
-   auto trx = reqauth("alice", vector<permission_level>{ { N(alice), config::active_name }, { N(bob), config::active_name } } );
+   auto trx = reqauth("alice", vector<permission_level>{ { N(alice), config::active_name }, { N(bob), config::active_name } }, abi_serializer_max_time );
    push_action( N(alice), N(propose), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
@@ -304,7 +304,7 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_by_two, eosio_msig_tester ) try {
 
 
 BOOST_FIXTURE_TEST_CASE( propose_with_wrong_requested_auth, eosio_msig_tester ) try {
-   auto trx = reqauth("alice", vector<permission_level>{ { N(alice), config::active_name },  { N(bob), config::active_name } } );
+   auto trx = reqauth("alice", vector<permission_level>{ { N(alice), config::active_name },  { N(bob), config::active_name } }, abi_serializer_max_time );
    //try with not enough requested auth
    BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(propose), mvo()
                                              ("proposer",      "alice")
@@ -345,7 +345,7 @@ BOOST_FIXTURE_TEST_CASE( big_transaction, eosio_msig_tester ) try {
       );
 
    transaction trx;
-   abi_serializer::from_variant(pretty_trx, trx, get_resolver());
+   abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
 
    push_action( N(alice), N(propose), mvo()
                   ("proposer",      "alice")
@@ -451,7 +451,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
       );
 
    transaction trx;
-   abi_serializer::from_variant(pretty_trx, trx, get_resolver());
+   abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
 
    // propose action
    push_action( N(alice), N(propose), mvo()
@@ -562,7 +562,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
       );
 
    transaction trx;
-   abi_serializer::from_variant(pretty_trx, trx, get_resolver());
+   abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
 
    // propose action
    push_action( N(alice), N(propose), mvo()
