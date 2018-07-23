@@ -241,13 +241,13 @@ namespace eosiosystem {
             });
             auto prod2 = _producers2.find( pd.first );
             if( prod2 != _producers2.end() ) {
-               update_global = true;
                _producers2.modify( prod2, 0, [&]( auto& p ) {
                   if ( ct - pitr->last_claim_time < 3 * useconds_per_day ) {
-                     double delta_votepay_share             = init_total_votes * double( (ct - p.last_votepay_share_update) / 1E6 );
-                     p.votepay_share                       += delta_votepay_share;
-                     p.last_votepay_share_update            = ct;
-                     delta_change_rate                     += pd.second.first;
+                     update_global               = true;
+                     double delta_votepay_share  = init_total_votes * double( (ct - p.last_votepay_share_update) / 1E6 );
+                     p.votepay_share            += delta_votepay_share;
+                     p.last_votepay_share_update = ct;
+                     delta_change_rate          += pd.second.first;
                   }
                });
             }
@@ -327,13 +327,13 @@ namespace eosiosystem {
                });
                auto prod2 = _producers2.find( acnt );
                if ( prod2 != _producers2.end() ) {
-                  update_global = true;
                   _producers2.modify( prod2, 0, [&]( auto& p ) {
                      if ( ct - pitr.last_claim_time < 3 * useconds_per_day ) {
-                        double delta_votepay_share             = init_total_votes * double( (ct - p.last_votepay_share_update) / 1E6 );
-                        p.votepay_share                       += delta_votepay_share;
-                        p.last_votepay_share_update            = ct;
-                        delta_change_rate                     += delta;
+                        update_global               = true;
+                        double delta_votepay_share  = init_total_votes * double( (ct - p.last_votepay_share_update) / 1E6 );
+                        p.votepay_share            += delta_votepay_share;
+                        p.last_votepay_share_update = ct;
+                        delta_change_rate          += delta;
                      }
                   });
                }
