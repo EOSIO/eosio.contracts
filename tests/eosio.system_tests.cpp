@@ -1698,9 +1698,12 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::uni
       const uint32_t prod_index = 2;
       const auto prod_name = producer_names[prod_index];
       
-      const auto     initial_prod_info         = get_producer_info(prod_name); 
+      const auto     initial_prod_info         = get_producer_info(prod_name);
+      const auto     initial_prod_info2        = get_producer_info2(prod_name);
       const auto     initial_global_state      = get_global_state();
       const double   initial_tot_votepay_share = get_global_state2()["total_producer_votepay_share"].as_double();
+      const double   initial_tot_vpay_rate     = get_global_state3()["total_vpay_share_change_rate"].as_double();
+      const uint64_t initial_vpay_state_update = get_global_state3()["last_vpay_state_update"].as_uint64();
       const uint64_t initial_bucket_fill_time  = initial_global_state["last_pervote_bucket_fill"].as_uint64();
       const int64_t  initial_pervote_bucket    = initial_global_state["pervote_bucket"].as<int64_t>();
       const int64_t  initial_perblock_bucket   = initial_global_state["perblock_bucket"].as<int64_t>();
@@ -1709,12 +1712,15 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::uni
       const asset    initial_balance           = get_balance(prod_name);
       const uint32_t initial_unpaid_blocks     = initial_prod_info["unpaid_blocks"].as<uint32_t>();
       const uint64_t initial_claim_time        = initial_prod_info["last_claim_time"].as_uint64();
-      
+      const uint64_t initial_prod_update_time  = initial_prod_info2["last_votepay_share_update"].as_uint64();
+
       BOOST_TEST_REQUIRE( 0 == get_producer_info2(prod_name)["votepay_share"].as_double() );
       BOOST_REQUIRE_EQUAL( success(), push_action(prod_name, N(claimrewards), mvo()("owner", prod_name) ) );
       
       const auto     prod_info         = get_producer_info(prod_name);
+      const auto     prod_info2        = get_producer_info2(prod_name);
       const auto     global_state      = get_global_state();
+      const uint64_t vpay_state_update = get_global_state3()["last_vpay_state_update"].as_uint64();
       const uint64_t bucket_fill_time  = global_state["last_pervote_bucket_fill"].as_uint64();
       const int64_t  pervote_bucket    = global_state["pervote_bucket"].as<int64_t>();
       const int64_t  perblock_bucket   = global_state["perblock_bucket"].as<int64_t>();
@@ -1723,24 +1729,27 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::uni
       const asset    balance           = get_balance(prod_name);
       const uint32_t unpaid_blocks     = prod_info["unpaid_blocks"].as<uint32_t>();
       const uint64_t claim_time        = prod_info["last_claim_time"].as_uint64();
+      const uint64_t prod_update_time  = prod_info2["last_votepay_share_update"].as_uint64();
       
-      const uint64_t usecs_between_fills = bucket_fill_time - initial_bucket_fill_time;
-      const uint64_t secs_between_claims = (claim_time - initial_claim_time) / 1000000;
-      const double   votepay_share       = secs_between_claims * prod_info["total_votes"].as_double();
-      const double   tot_votepay_share   = initial_tot_votepay_share + votepay_share;
+      const uint64_t usecs_between_fills         = bucket_fill_time - initial_bucket_fill_time;
+      const double   secs_between_global_updates = (vpay_state_update - initial_vpay_state_update) / 1E6;
+      const double   secs_between_prod_updates   = (prod_update_time - initial_prod_update_time) / 1E6;
+      const double   votepay_share               = initial_prod_info2["votepay_share"].as_double() + secs_between_prod_updates * prod_info["total_votes"].as_double();
+      const double   tot_votepay_share           = initial_tot_votepay_share + initial_tot_vpay_rate * secs_between_global_updates;
       
       const int64_t expected_perblock_bucket = int64_t( double(initial_supply.get_amount()) * double(usecs_between_fills) * (0.25 * cont_rate/ 5.) / usecs_per_year )
          + initial_perblock_bucket;
       const int64_t expected_pervote_bucket  = int64_t( double(initial_supply.get_amount()) * double(usecs_between_fills) * (0.75 * cont_rate/ 5.) / usecs_per_year )
          + initial_pervote_bucket;
-      const int64_t from_perblock_bucket = initial_unpaid_blocks * expected_perblock_bucket / initial_tot_unpaid_blocks ;
-      const int64_t from_pervote_bucket  = int64_t( ( votepay_share / tot_votepay_share ) * expected_pervote_bucket );
+      const int64_t from_perblock_bucket = initial_unpaid_blocks * expected_perblock_bucket / initial_tot_unpaid_blocks;
+      const int64_t from_pervote_bucket  = int64_t( ( votepay_share * expected_pervote_bucket ) / tot_votepay_share );
       
       const double expected_supply_growth = initial_supply.get_amount() * double(usecs_between_fills) * cont_rate / usecs_per_year;
       BOOST_REQUIRE_EQUAL( int64_t(expected_supply_growth), supply.get_amount() - initial_supply.get_amount() );
-      
-      BOOST_REQUIRE_EQUAL( expected_pervote_bucket - from_pervote_bucket, pervote_bucket );
-      BOOST_REQUIRE_EQUAL( from_perblock_bucket + from_pervote_bucket, balance.get_amount() - initial_balance.get_amount() );
+      BOOST_REQUIRE_EQUAL( claim_time, vpay_state_update );
+      BOOST_REQUIRE( 100 * 10000 < from_pervote_bucket );
+      BOOST_CHECK_EQUAL( expected_pervote_bucket - from_pervote_bucket, pervote_bucket );
+      BOOST_CHECK_EQUAL( from_perblock_bucket + from_pervote_bucket, balance.get_amount() - initial_balance.get_amount() );
       BOOST_TEST_REQUIRE( 0 == get_producer_info2(prod_name)["votepay_share"].as_double() );
    }
 
