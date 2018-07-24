@@ -79,16 +79,6 @@ namespace eosiosystem {
 
       eosio_assert( ct - prod.last_claim_time > useconds_per_day, "already claimed rewards within past day" );
 
-      if ( _producers2.find( owner ) == _producers2.end() ) {
-         _producers2.emplace( owner, [&]( producer_info2& info  ) {
-            info.owner = owner;
-            if ( prod.last_claim_time > 0 )
-               info.last_votepay_share_update = prod.last_claim_time;
-            else
-               info.last_votepay_share_update = ct;
-         });
-      }
-
       const asset token_supply   = token( N(eosio.token)).get_supply(symbol_type(system_token_symbol).name() );
       const auto usecs_since_last_fill = ct - _gstate.last_pervote_bucket_fill;
 

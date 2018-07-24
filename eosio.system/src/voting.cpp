@@ -56,7 +56,7 @@ namespace eosiosystem {
          if ( prod2 == _producers2.end() ) {
             _producers2.emplace( producer, [&]( producer_info2& info ){
                info.owner                     = producer;
-               info.last_votepay_share_update = prod->last_claim_time;
+               info.last_votepay_share_update = ct;
             });
          }
       } else {
@@ -70,7 +70,8 @@ namespace eosiosystem {
             info.last_claim_time = ct;
          });
          _producers2.emplace( producer, [&]( producer_info2& info ){
-            info.owner = producer;
+            info.owner                     = producer;
+            info.last_votepay_share_update = ct;
          });
       }
 
@@ -80,17 +81,9 @@ namespace eosiosystem {
       require_auth( producer );
 
       const auto& prod = _producers.get( producer, "producer not found" );
-
       _producers.modify( prod, 0, [&]( producer_info& info ){
          info.deactivate();
       });
-
-      auto prod2 = _producers2.find( producer );
-      if ( prod2 == _producers2.end() ) {
-         _producers2.emplace( producer, [&]( producer_info2& info ){
-            info.owner = producer;
-         });
-      }
    }
 
    void system_contract::update_elected_producers( block_timestamp block_time ) {

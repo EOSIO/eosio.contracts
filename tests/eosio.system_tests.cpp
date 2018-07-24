@@ -1796,7 +1796,7 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_votepay_share, eosio_system_tester, * 
          wdump((p));
          BOOST_TEST_REQUIRE(0 == get_producer_info(p)["total_votes"].as_double());
          BOOST_TEST_REQUIRE(0 == get_producer_info2(p)["votepay_share"].as_double());
-         BOOST_TEST_REQUIRE(0 == get_producer_info2(p)["last_votepay_share_update"].as_uint64());
+         BOOST_REQUIRE(0 < get_producer_info2(p)["last_votepay_share_update"].as_uint64());
       }
    }
 
@@ -2015,7 +2015,7 @@ BOOST_FIXTURE_TEST_CASE(votepay_transition, eosio_system_tester, * boost::unit_t
          BOOST_REQUIRE_EQUAL( success(), regproducer(p) );
          BOOST_TEST_REQUIRE(0 == get_producer_info(p)["total_votes"].as_double());
          BOOST_TEST_REQUIRE(0 == get_producer_info2(p)["votepay_share"].as_double());
-         BOOST_TEST_REQUIRE(0 == get_producer_info2(p)["last_votepay_share_update"].as_uint64());
+         BOOST_REQUIRE(0 < get_producer_info2(p)["last_votepay_share_update"].as_uint64());
       }
    }
 
@@ -2038,13 +2038,13 @@ BOOST_FIXTURE_TEST_CASE(votepay_transition, eosio_system_tester, * boost::unit_t
                                                                                                                   N(producers2) ) );
    BOOST_REQUIRE( !tbl );
    BOOST_REQUIRE_EQUAL( success(), regproducer(N(defproducera)) );
-   BOOST_REQUIRE_EQUAL( get_producer_info(N(defproducera))["last_claim_time"].as_uint64(),
-                        get_producer_info2(N(defproducera))["last_votepay_share_update"].as_uint64() );
+   BOOST_REQUIRE( get_producer_info(N(defproducera))["last_claim_time"].as_uint64() < get_producer_info2(N(defproducera))["last_votepay_share_update"].as_uint64() );
 
    create_account_with_resources( N(defproducer1), config::system_account_name, core_from_string("1.0000"), false, net, cpu );
    BOOST_REQUIRE_EQUAL( success(), regproducer(N(defproducer1)) );
    BOOST_REQUIRE( 0 < get_producer_info(N(defproducer1))["last_claim_time"].as_uint64() );
-   BOOST_REQUIRE_EQUAL( 0, get_producer_info2(N(defproducer1))["last_votepay_share_update"].as_uint64() );
+   BOOST_REQUIRE_EQUAL( get_producer_info(N(defproducer1))["last_claim_time"].as_uint64(),
+                        get_producer_info2(N(defproducer1))["last_votepay_share_update"].as_uint64() );
    
 } FC_LOG_AND_RETHROW()
 
