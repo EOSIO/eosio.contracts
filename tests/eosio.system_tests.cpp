@@ -1921,7 +1921,7 @@ BOOST_FIXTURE_TEST_CASE(votepay_share_proxy, eosio_system_tester, * boost::unit_
    
    const asset net = core_from_string("80.0000");
    const asset cpu = core_from_string("80.0000");
-   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount) };
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount) };
    for (const auto& a: accounts) {
       create_account_with_resources( a, config::system_account_name, core_from_string("1.0000"), false, net, cpu );
       transfer( config::system_account_name, a, core_from_string("1000.0000"), config::system_account_name );
@@ -1929,13 +1929,15 @@ BOOST_FIXTURE_TEST_CASE(votepay_share_proxy, eosio_system_tester, * boost::unit_
    const auto alice = accounts[0];
    const auto bob   = accounts[1];
    const auto carol = accounts[2];
+   const auto emily = accounts[3];
    
    // alice becomes a proxy
    BOOST_REQUIRE_EQUAL( success(), push_action( alice, N(regproxy), mvo()("proxy", alice)("isproxy", true) ) );
    REQUIRE_MATCHING_OBJECT( proxy( alice ), get_voter_info( alice ) );
 
-   // carol becomes a producer
+   // carol and emily become producers
    BOOST_REQUIRE_EQUAL( success(), regproducer( carol, 1) );
+   BOOST_REQUIRE_EQUAL( success(), regproducer( emily, 1) );
 
    // bob chooses alice as a proxy 
    BOOST_REQUIRE_EQUAL( success(), stake( bob, core_from_string("100.0002"), core_from_string("50.0001") ) );
@@ -2004,6 +2006,18 @@ BOOST_FIXTURE_TEST_CASE(votepay_share_proxy, eosio_system_tester, * boost::unit_
    BOOST_TEST_REQUIRE( total_votes == get_global_state3()["total_vpay_share_change_rate"].as_double() );
    BOOST_TEST_REQUIRE( 0 == get_producer_info2(carol)["votepay_share"].as_double() );
    BOOST_TEST_REQUIRE( 0 == get_global_state2()["total_producer_votepay_share"].as_double() );
+
+   produce_block( fc::hours(1) );
+   
+   last_update_time = get_producer_info2(carol)["last_votepay_share_update"].as_uint64();
+   BOOST_REQUIRE_EQUAL( success(), vote( bob, { carol, emily } ) );
+   cur_info2 = get_producer_info2(carol);
+   expected_votepay_share = double( (cur_info2["last_votepay_share_update"].as_uint64() - last_update_time) / 1E6 ) * total_votes;
+   BOOST_TEST_REQUIRE( expected_votepay_share == cur_info2["votepay_share"].as_double() );
+   BOOST_TEST_REQUIRE( 0 == get_producer_info2(emily)["votepay_share"].as_double() );
+   BOOST_TEST_REQUIRE( expected_votepay_share == get_global_state2()["total_producer_votepay_share"].as_double() );
+   BOOST_TEST_REQUIRE( get_producer_info(carol)["total_votes"].as_double() ==
+                       get_global_state3()["total_vpay_share_change_rate"].as_double() );
 
 } FC_LOG_AND_RETHROW()
 
