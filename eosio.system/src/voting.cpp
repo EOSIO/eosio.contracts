@@ -217,8 +217,10 @@ namespace eosiosystem {
       }
       
       const auto ct = current_time();
-      bool update_global       = false;
-      double delta_change_rate = 0;
+      bool   update_global_time        = false;
+      bool   update_global_share       = false;
+      double delta_change_rate         = 0;
+      double total_inactive_vpay_share = 0;
       for( const auto& pd : producer_deltas ) {
          auto pitr = _producers.find( pd.first );
          if( pitr != _producers.end() ) {
@@ -234,17 +236,17 @@ namespace eosiosystem {
             });
             auto prod2 = _producers2.find( pd.first );
             if( prod2 != _producers2.end() ) {
+               update_global_time = true;
                _producers2.modify( prod2, 0, [&]( auto& p ) {
-                  const uint64_t last_claim_plus_3days = pitr->last_claim_time + 3 * useconds_per_day;   
+                  const uint64_t last_claim_plus_3days = pitr->last_claim_time + 3 * useconds_per_day;
                   if ( ct < last_claim_plus_3days ) {
-                     update_global              = true;
+                     update_global_share        = true;
                      double delta_votepay_share = init_total_votes * double( (ct - p.last_votepay_share_update) / 1E6 );
                      p.votepay_share           += delta_votepay_share;
                      delta_change_rate         += pd.second.first;
                   } else if ( last_claim_plus_3days > p.last_votepay_share_update ) {
-                     update_global              = true;
-                     double delta_votepay_share = init_total_votes * double( (ct - p.last_votepay_share_update) / 1E6 );
-                     p.votepay_share           += delta_votepay_share;
+                     total_inactive_vpay_share += p.votepay_share;
+                     p.votepay_share            = 0;
                      delta_change_rate         -= init_total_votes;
                   }
                   p.last_votepay_share_update = ct;
@@ -254,11 +256,13 @@ namespace eosiosystem {
             eosio_assert( !pd.second.second /* not from new set */, "producer is not registered" ); //data corruption
          }
       }
-      if ( update_global ) {
+      if ( update_global_share ) {
          _gstate2.total_producer_votepay_share += _gstate3.total_vpay_share_change_rate * double( (ct - _gstate3.last_vpay_state_update) / 1E6 ) ;
-         _gstate3.total_vpay_share_change_rate += delta_change_rate; 
       }
-      _gstate3.last_vpay_state_update = ct;
+      _gstate2.total_producer_votepay_share -= total_inactive_vpay_share;
+      _gstate3.total_vpay_share_change_rate += delta_change_rate;
+      if ( update_global_time ) 
+         _gstate3.last_vpay_state_update = ct;
 
       _voters.modify( voter, 0, [&]( auto& av ) {
          av.last_vote_weight = new_vote_weight;
@@ -313,9 +317,11 @@ namespace eosiosystem {
             propagate_weight_change( proxy );
          } else {
             auto delta = new_weight - voter.last_vote_weight;
-            bool update_global = false;
             const auto ct = current_time();
-            double delta_change_rate = 0;
+            bool   update_global_time        = false;
+            bool   update_global_share       = false;
+            double delta_change_rate         = 0;
+            double total_inactive_vpay_share = 0;
             for ( auto acnt : voter.producers ) {
                auto& pitr = _producers.get( acnt, "producer not found" ); //data corruption
                const double init_total_votes = pitr.total_votes;
@@ -325,28 +331,30 @@ namespace eosiosystem {
                });
                auto prod2 = _producers2.find( acnt );
                if ( prod2 != _producers2.end() ) {
+                  update_global_time = true;
                   _producers2.modify( prod2, 0, [&]( auto& p ) {
                      const uint64_t last_claim_plus_3days = pitr.last_claim_time + 3 * useconds_per_day;
                      if ( ct < last_claim_plus_3days ) {
-                        update_global              = true;
+                        update_global_share        = true;
                         double delta_votepay_share = init_total_votes * double( (ct - p.last_votepay_share_update) / 1E6 );
                         p.votepay_share           += delta_votepay_share;
                         delta_change_rate         += delta;
                      } else if ( last_claim_plus_3days > p.last_votepay_share_update ) {
-                        update_global              = true;
-                        double delta_votepay_share = init_total_votes * double( (ct - p.last_votepay_share_update) / 1E6 );
-                        p.votepay_share           += delta_votepay_share;
+                        total_inactive_vpay_share += p.votepay_share;
+                        p.votepay_share            = 0;
                         delta_change_rate         -= init_total_votes;
                      }
                      p.last_votepay_share_update = ct;
-                  });
+                  });     
                }
             }
-            if ( update_global ) {
+            if ( update_global_share ) {
                _gstate2.total_producer_votepay_share += _gstate3.total_vpay_share_change_rate * double( (ct - _gstate3.last_vpay_state_update) / 1E6 ) ;
-               _gstate3.total_vpay_share_change_rate += delta_change_rate;
             }
-            _gstate3.last_vpay_state_update = ct;
+            _gstate2.total_producer_votepay_share -= total_inactive_vpay_share;
+            _gstate3.total_vpay_share_change_rate += delta_change_rate;
+            if ( update_global_time )
+               _gstate3.last_vpay_state_update = ct;
          }
       }
       _voters.modify( voter, 0, [&]( auto& v ) {
