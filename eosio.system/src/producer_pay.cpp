@@ -110,12 +110,9 @@ namespace eosiosystem {
       auto prod2 = _producers2.find( owner );
       if ( prod2 == _producers2.end() ) {
          prod2 = _producers2.emplace( owner, [&]( producer_info2& info  ) {
-               info.owner = owner;
-               if ( prod.last_claim_time > 0 )
-                  info.last_votepay_share_update = prod.last_claim_time;
-               else
-                  info.last_votepay_share_update = ct;
-            });
+            info.owner                     = owner;
+            info.last_votepay_share_update = ct;
+         });
       }
 
       int64_t producer_per_block_pay = 0;
@@ -125,14 +122,13 @@ namespace eosiosystem {
 
       /// New metric to be used in pervote pay calculation. Instead of vote weight ratio, we combine vote weight and
       /// time duration the vote weight has been held into one metric.
-
       const uint64_t last_claim_plus_3days = prod.last_claim_time + 3 * useconds_per_day;
       double delta_votepay_share       = 0;
       double delta_total_votepay_share = 0;
       double votepay_share             = 0;
       double total_votepay_share       = 0;
       
-      if( ct < last_claim_plus_3days || ( ct >= last_claim_plus_3days && last_claim_plus_3days < prod2->last_votepay_share_update ) ) {
+      if( ct < last_claim_plus_3days || ( ct >= last_claim_plus_3days && last_claim_plus_3days > prod2->last_votepay_share_update ) ) {
          delta_votepay_share       = prod.total_votes * double( (ct - prod2->last_votepay_share_update) / 1E6 );
          delta_total_votepay_share = _gstate3.total_vpay_share_change_rate * double( (ct - _gstate3.last_vpay_state_update) / 1E6) ;
          votepay_share             = prod2->votepay_share + delta_votepay_share;
@@ -160,7 +156,7 @@ namespace eosiosystem {
       _gstate.perblock_bucket     -= producer_per_block_pay;
       _gstate.total_unpaid_blocks -= prod.unpaid_blocks;
 
-      if( ct > prod2->last_votepay_share_update && prod2->last_votepay_share_update > last_claim_plus_3days ) {
+      if( ct >= prod2->last_votepay_share_update && prod2->last_votepay_share_update > last_claim_plus_3days ) {
          _gstate3.total_vpay_share_change_rate += prod.total_votes;
       }
 
