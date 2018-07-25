@@ -7,20 +7,16 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 else()
    set(TEST_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
-if(CXX_COMPILER STREQUAL "" OR NOT CXX_COMPILER)
-   set(CXX_COMPILER ${CMAKE_CXX_COMPILER})
+
+if(EOSIO_ROOT STREQUAL "" OR NOT EOSIO_ROOT)
+   set(EOSIO_ROOT "/usr/local/eosio")
+endif()
+if(EOSIO_WASMSDK_ROOT STREQUAL "" OR NOT EOSIO_WASMSDK_ROOT)
+   set(EOSIO_WASMSDK_ROOT "/usr/local")
+   set(WASM_ROOT "/usr/local")
 endif()
 
-if(EOSIO_INSTALL_PREFIX STREQUAL "" OR NOT EOSIO_INSTALL_PREFIX)
-   set(EOSIO_INSTALL_PREFIX "/usr/local")
-endif()
-
-# if no wasm root is given use default path
-if(WASM_ROOT STREQUAL "" OR NOT WASM_ROOT)
-   set(WASM_ROOT ${CMAKE_INSTALL_PREFIX})
-endif()
-
-list(APPEND CMAKE_MODULE_PATH ${WASM_ROOT}/lib/cmake)
+list(APPEND CMAKE_MODULE_PATH ${EOSIO_WASMSDK_ROOT}/lib/cmake)
 include(EosioWasmToolchain)
 
 add_subdirectory(eosio.msig)
