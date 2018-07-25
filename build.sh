@@ -18,6 +18,6 @@ fi
 CORES=`getconf _NPROCESSORS_ONLN`
 mkdir -p build
 pushd build &> /dev/null
-cmake ../
+cmake -DEOSIO_ROOT=/Users/judgefudge/master_eos/eos/build ../
 make -j${CORES}
 popd &> /dev/null

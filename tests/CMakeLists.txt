@@ -3,9 +3,12 @@ cmake_minimum_required( VERSION 3.5 )
 list(APPEND CMAKE_MODULE_PATH ${EOSIO_ROOT}/lib/cmake)
 include(EosioTester)
 
-if (NOT "${EOSIO_VERSION}" EQUAL "1.1.0")
-   message(FATAL_ERROR "Incorrect EOSIO version, please use version 1.1.0")
+### check the version of EOSIO
+string(FIND "${EOSIO_VERSION}" "${EOSIO_DEPENDENCY}" output)
+if (NOT "${output}" EQUAL 0)
+   message(FATAL_ERROR "Incorrect EOSIO version, please use version ${EOSIO_DEPENDENCY}.x")
 endif()
+
 
 enable_testing()
 
