@@ -2015,7 +2015,7 @@ BOOST_FIXTURE_TEST_CASE(votepay_share_proxy, eosio_system_tester, * boost::unit_
 
    produce_block( fc::hours(24) );
 
-   // carol claims rewards
+   // carol finally claims rewards
    BOOST_REQUIRE_EQUAL( success(), push_action( carol, N(claimrewards), mvo()("owner", carol) ) );
    BOOST_TEST_REQUIRE( 0           == get_producer_info2(carol)["votepay_share"].as_double() );
    BOOST_TEST_REQUIRE( 0           == get_global_state2()["total_producer_votepay_share"].as_double() );
@@ -2036,10 +2036,30 @@ BOOST_FIXTURE_TEST_CASE(votepay_share_proxy, eosio_system_tester, * boost::unit_
    BOOST_TEST_REQUIRE( expected_votepay_share == get_global_state2()["total_producer_votepay_share"].as_double() );
    BOOST_TEST_REQUIRE( get_producer_info(carol)["total_votes"].as_double() ==
                        get_global_state3()["total_vpay_share_change_rate"].as_double() );
-   BOOST_REQUIRE_EQUAL(cur_info2["last_votepay_share_update"].as_uint64(),
-                       get_global_state3()["last_vpay_state_update"].as_uint64() );
-   BOOST_REQUIRE_EQUAL(cur_info2_emily["last_votepay_share_update"].as_uint64(),
-                       get_global_state3()["last_vpay_state_update"].as_uint64() );
+   BOOST_REQUIRE_EQUAL( cur_info2["last_votepay_share_update"].as_uint64(),
+                        get_global_state3()["last_vpay_state_update"].as_uint64() );
+   BOOST_REQUIRE_EQUAL( cur_info2_emily["last_votepay_share_update"].as_uint64(),
+                        get_global_state3()["last_vpay_state_update"].as_uint64() );
+
+   produce_block( fc::hours(10) );
+
+   // bob chooses alice as proxy
+   // emily still hasn't claimed rewards
+   last_update_time = get_producer_info2(carol)["last_votepay_share_update"].as_uint64();
+   BOOST_REQUIRE_EQUAL( success(), vote( alice, { carol, emily } ) );
+   cur_info2 = get_producer_info2(carol);
+   cur_info2_emily = get_producer_info2(emily);
+
+   expected_votepay_share += double( (cur_info2["last_votepay_share_update"].as_uint64() - last_update_time) / 1E6 ) * total_votes;
+   BOOST_TEST_REQUIRE( expected_votepay_share == cur_info2["votepay_share"].as_double() );
+   BOOST_TEST_REQUIRE( 0                      == cur_info2_emily["votepay_share"].as_double() );
+   BOOST_TEST_REQUIRE( expected_votepay_share == get_global_state2()["total_producer_votepay_share"].as_double() );
+   BOOST_TEST_REQUIRE( get_producer_info(carol)["total_votes"].as_double() ==
+                       get_global_state3()["total_vpay_share_change_rate"].as_double() );
+   BOOST_REQUIRE_EQUAL( cur_info2["last_votepay_share_update"].as_uint64(),
+                        get_global_state3()["last_vpay_state_update"].as_uint64() );
+   BOOST_REQUIRE_EQUAL( cur_info2_emily["last_votepay_share_update"].as_uint64(),
+                        get_global_state3()["last_vpay_state_update"].as_uint64() );
 
 } FC_LOG_AND_RETHROW()
 
