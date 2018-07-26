@@ -2046,7 +2046,7 @@ BOOST_FIXTURE_TEST_CASE(votepay_share_proxy, eosio_system_tester, * boost::unit_
    // bob chooses alice as proxy
    // emily still hasn't claimed rewards
    last_update_time = get_producer_info2(carol)["last_votepay_share_update"].as_uint64();
-   BOOST_REQUIRE_EQUAL( success(), vote( alice, { carol, emily } ) );
+   BOOST_REQUIRE_EQUAL( success(), vote( bob, { }, alice ) );
    cur_info2 = get_producer_info2(carol);
    cur_info2_emily = get_producer_info2(emily);
 
