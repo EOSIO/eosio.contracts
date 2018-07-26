@@ -1939,7 +1939,7 @@ BOOST_FIXTURE_TEST_CASE(votepay_share_proxy, eosio_system_tester, * boost::unit_
    BOOST_REQUIRE_EQUAL( success(), regproducer( carol, 1) );
    BOOST_REQUIRE_EQUAL( success(), regproducer( emily, 1) );
 
-   // bob chooses alice as a proxy 
+   // bob chooses alice as proxy 
    BOOST_REQUIRE_EQUAL( success(), stake( bob, core_from_string("100.0002"), core_from_string("50.0001") ) );
    BOOST_REQUIRE_EQUAL( success(), stake( alice, core_from_string("150.0000"), core_from_string("150.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), vote( bob, { }, alice ) );

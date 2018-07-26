@@ -156,7 +156,7 @@ namespace eosiosystem {
       _gstate.perblock_bucket     -= producer_per_block_pay;
       _gstate.total_unpaid_blocks -= prod.unpaid_blocks;
 
-      if( ct >= prod2->last_votepay_share_update && prod2->last_votepay_share_update > last_claim_plus_3days ) {
+      if( ct >= last_claim_plus_3days && last_claim_plus_3days <= prod2->last_votepay_share_update ) { 
          _gstate3.total_vpay_share_change_rate += prod.total_votes;
       }
 
