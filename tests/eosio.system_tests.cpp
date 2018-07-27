@@ -2063,6 +2063,72 @@ BOOST_FIXTURE_TEST_CASE(votepay_share_proxy, eosio_system_tester, * boost::unit_
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(votepay_share_update_order, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
+
+   cross_15_percent_threshold();
+
+   const asset net = core_from_string("80.0000");
+   const asset cpu = core_from_string("80.0000");
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount) };
+   for (const auto& a: accounts) {
+      create_account_with_resources( a, config::system_account_name, core_from_string("1.0000"), false, net, cpu );
+      transfer( config::system_account_name, a, core_from_string("1000.0000"), config::system_account_name );
+   }
+   const auto alice = accounts[0];
+   const auto bob   = accounts[1];
+   const auto carol = accounts[2];
+   const auto emily = accounts[3];
+
+   BOOST_REQUIRE_EQUAL( success(), regproducer( carol ) );
+   BOOST_REQUIRE_EQUAL( success(), regproducer( emily ) );
+
+   produce_block( fc::hours(24) );
+
+   BOOST_REQUIRE_EQUAL( success(), stake( alice, core_from_string("100.0000"), core_from_string("100.0000") ) );
+   BOOST_REQUIRE_EQUAL( success(), stake( bob,   core_from_string("100.0000"), core_from_string("100.0000") ) );
+
+   BOOST_REQUIRE_EQUAL( success(), vote( alice, { carol, emily } ) );
+   
+
+   BOOST_REQUIRE_EQUAL( success(), push_action( carol, N(claimrewards), mvo()("owner", carol) ) );   
+   produce_block( fc::hours(1) );
+   BOOST_REQUIRE_EQUAL( success(), push_action( emily, N(claimrewards), mvo()("owner", emily) ) );
+
+   produce_block( fc::hours(3 * 24 + 1) );
+
+   {
+      signed_transaction trx;
+      set_transaction_headers(trx);
+      
+      trx.actions.emplace_back( get_action( config::system_account_name, N(claimrewards), { {carol, config::active_name} }, mvo()("owner", carol) ) );
+
+      std::vector<account_name> prods = { carol, emily };
+      trx.actions.emplace_back( get_action( config::system_account_name, N(voteproducer), { {alice, config::active_name} },
+                                            mvo()("voter", alice)("proxy", name(0))("producers", prods) ) );
+
+      trx.actions.emplace_back( get_action( config::system_account_name, N(claimrewards), { {emily, config::active_name} }, mvo()("owner", emily) ) );
+
+      trx.sign( get_private_key( carol, "active" ), control->get_chain_id() );
+      trx.sign( get_private_key( alice, "active" ), control->get_chain_id() );
+      trx.sign( get_private_key( emily, "active" ), control->get_chain_id() );
+      
+      push_transaction( trx );
+   }
+
+   const auto& carol_info  = get_producer_info(carol);
+   const auto& carol_info2 = get_producer_info2(carol);
+   const auto& emily_info  = get_producer_info(emily);
+   const auto& emily_info2 = get_producer_info2(emily);
+   const auto& gs3         = get_global_state3();
+   BOOST_REQUIRE_EQUAL( carol_info2["last_votepay_share_update"].as_uint64(), gs3["last_vpay_state_update"].as_uint64() );
+   BOOST_REQUIRE_EQUAL( emily_info2["last_votepay_share_update"].as_uint64(), gs3["last_vpay_state_update"].as_uint64() );
+   BOOST_TEST_REQUIRE( 0  == carol_info2["votepay_share"].as_double() );
+   BOOST_TEST_REQUIRE( 0  == emily_info2["votepay_share"].as_double() );
+   BOOST_REQUIRE( 0 < carol_info["total_votes"].as_double() );
+   BOOST_TEST_REQUIRE( carol_info["total_votes"].as_double() == emily_info["total_votes"].as_double() );
+   BOOST_TEST_REQUIRE( gs3["total_vpay_share_change_rate"].as_double() == 2 * carol_info["total_votes"].as_double() );
+
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(votepay_transition, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
    
