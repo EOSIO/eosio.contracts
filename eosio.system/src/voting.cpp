@@ -246,6 +246,7 @@ namespace eosiosystem {
                      delta_change_rate         += pd.second.first;
                   } else if ( last_claim_plus_3days > p.last_votepay_share_update ) {
                      total_inactive_vpay_share += p.votepay_share;
+                     total_inactive_vpay_share += init_total_votes * double( (_gstate3.last_vpay_state_update - p.last_votepay_share_update) / 1E6 );
                      p.votepay_share            = 0;
                      delta_change_rate         -= init_total_votes;
                   }
@@ -341,6 +342,7 @@ namespace eosiosystem {
                         delta_change_rate         += delta;
                      } else if ( last_claim_plus_3days > p.last_votepay_share_update ) {
                         total_inactive_vpay_share += p.votepay_share;
+                        total_inactive_vpay_share += init_total_votes * double( (_gstate3.last_vpay_state_update - p.last_votepay_share_update) / 1E6 );
                         p.votepay_share            = 0;
                         delta_change_rate         -= init_total_votes;
                      }
