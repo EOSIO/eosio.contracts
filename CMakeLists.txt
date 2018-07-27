@@ -17,7 +17,6 @@ endif()
 
 if(EOSIO_WASMSDK_ROOT STREQUAL "" OR NOT EOSIO_WASMSDK_ROOT)
    set(EOSIO_WASMSDK_ROOT "/usr/local/eosio.wasmsdk")
-   set(WASM_ROOT "/usr/local/eosio.wasmsdk")
 endif()
 
 list(APPEND CMAKE_MODULE_PATH ${EOSIO_WASMSDK_ROOT}/lib/cmake)
@@ -30,6 +29,7 @@ if (NOT "${output}" EQUAL 0)
    message(FATAL_ERROR "Incorrect EOSIO.WasmSDK version, please use version ${EOSIO_WASMSDK_DEPENDENCY}.x")
 endif()
 
+include_directories(AFTER ${BOOST_ROOT}/include)
 add_subdirectory(eosio.msig)
 add_subdirectory(eosio.sudo)
 add_subdirectory(eosio.system)
