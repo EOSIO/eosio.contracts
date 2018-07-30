@@ -72,6 +72,7 @@ namespace eosiosystem {
       block_timestamp   last_block_num;
       double            reserved = 0;
       uint8_t           revision = 0; ///< used to track version updates in the future.
+      asset             total_seos;
 
 
       EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)(reserved)(revision) )

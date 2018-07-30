@@ -20,6 +20,10 @@ namespace eosiosystem {
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
+      if ( _gstate2.total_seos.amount == 0 ) {
+         asset total_stake = token( N(eosio.token) ).get_balance( N(eosio.stake), CORE_SYMBOL );
+         _gstate2.total_seos = total_stake; //asset( total_stake.amount, S(4, EOS) );
+      }
 
       auto itr = _rammarket.find(S(4,RAMCORE));
 
@@ -199,6 +203,9 @@ namespace eosiosystem {
                eosio_assert( current != bids.end(), "no active bid for name" );
                eosio_assert( current->high_bidder == creator, "only highest bidder can claim" );
                eosio_assert( current->high_bid < 0, "auction for name is not closed yet" );
+               INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.names),N(active)},
+                  { N(eosio.names), N(eosio.stake), asset(-current->high_bid),
+                        std::string("payment for registering account ")+(name{newact}).to_string()  } );
                bids.erase( current );
             } else {
                eosio_assert( creator == suffix, "only suffix may create this account" );

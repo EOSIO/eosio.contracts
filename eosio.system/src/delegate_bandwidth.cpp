@@ -125,7 +125,7 @@ namespace eosiosystem {
 
       if( fee.amount > 0 ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {payer,N(active)},
-                                                       { payer, N(eosio.ramfee), fee, std::string("ram fee") } );
+                                                       { payer, N(eosio.stake), fee, std::string("ram fee") } );
       }
 
       int64_t bytes_out;
@@ -226,6 +226,12 @@ namespace eosiosystem {
          from = receiver;
       }
 
+      asset total_stake_eos = token( N(eosio.token) ).get_balance( N(eosio.stake), CORE_SYMBOL );
+      eosio_assert( _gstate2.total_seos <= total_stake_eos, "More SEOS than EOS on eosio.stake account" );
+      long double seos_price = total_stake_eos.amount > 0 ? (long double)(_gstate2.total_seos.amount) / total_stake_eos.amount : 1.0;
+      asset stake_net_seos = stake_net_delta * seos_price;
+      asset stake_cpu_seos = stake_cpu_delta * seos_price;
+
       // update stake delegated from "from" to "receiver"
       {
          del_bandwidth_table     del_tbl( _self, from);
@@ -234,14 +240,14 @@ namespace eosiosystem {
             itr = del_tbl.emplace( from, [&]( auto& dbo ){
                   dbo.from          = from;
                   dbo.to            = receiver;
-                  dbo.net_weight    = stake_net_delta;
-                  dbo.cpu_weight    = stake_cpu_delta;
+                  dbo.net_weight    = stake_net_seos;
+                  dbo.cpu_weight    = stake_cpu_seos;
                });
          }
          else {
             del_tbl.modify( itr, 0, [&]( auto& dbo ){
-                  dbo.net_weight    += stake_net_delta;
-                  dbo.cpu_weight    += stake_cpu_delta;
+                  dbo.net_weight    += stake_net_seos;
+                  dbo.cpu_weight    += stake_cpu_seos;
                });
          }
          eosio_assert( asset(0) <= itr->net_weight, "insufficient staked net bandwidth" );
@@ -258,17 +264,20 @@ namespace eosiosystem {
          if( tot_itr ==  totals_tbl.end() ) {
             tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
                   tot.owner = receiver;
-                  tot.net_weight    = stake_net_delta;
-                  tot.cpu_weight    = stake_cpu_delta;
+                  tot.net_weight    = stake_net_seos;
+                  tot.cpu_weight    = stake_cpu_seos;
                });
          } else {
             totals_tbl.modify( tot_itr, from == receiver ? from : 0, [&]( auto& tot ) {
-                  tot.net_weight    += stake_net_delta;
-                  tot.cpu_weight    += stake_cpu_delta;
+                  tot.net_weight    += stake_net_seos;
+                  tot.cpu_weight    += stake_cpu_seos;
                });
          }
          eosio_assert( asset(0) <= tot_itr->net_weight, "insufficient staked total net bandwidth" );
          eosio_assert( asset(0) <= tot_itr->cpu_weight, "insufficient staked total cpu bandwidth" );
+
+         //update total Staked EOS
+         _gstate2.total_seos += stake_net_seos + stake_net_seos;
 
          set_resource_limits( receiver, tot_itr->ram_bytes, tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
 
@@ -360,7 +369,7 @@ namespace eosiosystem {
 
       // update voting power
       {
-         asset total_update = stake_net_delta + stake_cpu_delta;
+         asset total_update = stake_net_seos + stake_cpu_seos;
          auto from_voter = _voters.find(from);
          if( from_voter == _voters.end() ) {
             from_voter = _voters.emplace( from, [&]( auto& v ) {

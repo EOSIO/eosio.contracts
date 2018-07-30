@@ -79,8 +79,8 @@ namespace eosio {
    asset token::get_balance( account_name owner, symbol_name sym )const
    {
       accounts accountstable( _self, owner );
-      const auto& ac = accountstable.get( sym );
-      return ac.balance;
+      auto it = accountstable.find( sym );
+      return it != accountstable.end() ? it->balance : asset(0, sym);
    }
 
 } /// namespace eosio
