@@ -60,6 +60,22 @@ namespace eosiosystem {
 
    };
 
+   struct delegated_bandwidth2 {
+      account_name  to;
+      asset         net_weight;
+      asset         cpu_weight;
+      asset         net_refund;
+      asset         cpu_refund;
+      time          refund_time = 0;
+
+      uint64_t  primary_key() const { return to; }
+      uint64_t  by_refund_time() const { return refund_time; }
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( delegated_bandwidth2, (to)(net_weight)(cpu_weight)(net_refund)(cpu_refund)(refund_time) )
+
+   };
+
    struct refund_request {
       account_name  owner;
       time          request_time;
@@ -78,6 +94,8 @@ namespace eosiosystem {
     */
    typedef eosio::multi_index< N(userres), user_resources>      user_resources_table;
    typedef eosio::multi_index< N(delband), delegated_bandwidth> del_bandwidth_table;
+   typedef eosio::multi_index< N(delband2), delegated_bandwidth2,
+                               indexed_by<N(refund_time), const_mem_fun<delegated_bandwidth2, uint64_t, &delegated_bandwidth2::by_refund_time> > > del_bandwidth_table2;
    typedef eosio::multi_index< N(refunds), refund_request>      refunds_table;
 
 
@@ -206,7 +224,7 @@ namespace eosiosystem {
 
    void validate_b1_vesting( int64_t stake ) {
       const int64_t base_time = 1527811200; /// 2018-06-01
-      const int64_t max_claimable = 100'000'000'0000ll;
+      const int64_t max_claimable = 1000000000000ll;
       const int64_t claimable = int64_t(max_claimable * double(now()-base_time) / (10*seconds_per_year) );
 
       eosio_assert( max_claimable - claimable <= stake, "b1 can only claim their tokens over 10 years" );
@@ -383,6 +401,18 @@ namespace eosiosystem {
       }
    }
 
+   void system_contract::delegatebwold( account_name from, account_name receiver,
+                                     asset stake_net_quantity,
+                                     asset stake_cpu_quantity, bool transfer )
+   {
+      require_auth( _self );
+      eosio_assert( stake_cpu_quantity >= asset(0), "must stake a positive amount" );
+      eosio_assert( stake_net_quantity >= asset(0), "must stake a positive amount" );
+      eosio_assert( stake_net_quantity + stake_cpu_quantity > asset(0), "must stake a positive amount" );
+      eosio_assert( !transfer || from != receiver, "cannot use transfer flag if delegating to self" );
+      changebw( from, receiver, stake_net_quantity, stake_cpu_quantity, transfer);
+   }
+
    void system_contract::delegatebw( account_name from, account_name receiver,
                                      asset stake_net_quantity,
                                      asset stake_cpu_quantity, bool transfer )
@@ -391,8 +421,8 @@ namespace eosiosystem {
       eosio_assert( stake_net_quantity >= asset(0), "must stake a positive amount" );
       eosio_assert( stake_net_quantity + stake_cpu_quantity > asset(0), "must stake a positive amount" );
       eosio_assert( !transfer || from != receiver, "cannot use transfer flag if delegating to self" );
-      changebw( from, receiver, stake_net_quantity, stake_cpu_quantity, transfer);
-   } // delegatebw
+      changebw2( from, receiver, stake_net_quantity, stake_cpu_quantity, transfer);
+   }
 
    void system_contract::undelegatebw( account_name from, account_name receiver,
                                        asset unstake_net_quantity, asset unstake_cpu_quantity )
@@ -403,7 +433,22 @@ namespace eosiosystem {
       eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
                     "cannot undelegate bandwidth until the chain is activated (at least 15% of all tokens participate in voting)" );
 
-      changebw( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
+
+      del_bandwidth_table     del_tbl( _self, from);
+      auto itr = del_tbl.find( receiver );
+      if ( itr != del_tbl.end() ) {
+         asset unstake_old_net = std::min( itr->net_weight, unstake_net_quantity );
+         asset unstake_old_cpu = std::min( itr->cpu_weight, unstake_cpu_quantity );
+         if ( unstake_old_net.amount > 0 || unstake_old_cpu.amount > 0 ) {
+            changebw2( from, receiver, -unstake_old_net, -unstake_old_cpu, false);
+         }
+         unstake_net_quantity -= unstake_old_net;
+         unstake_cpu_quantity -= unstake_old_cpu;
+      }
+
+      if ( unstake_net_quantity.amount > 0 || unstake_cpu_quantity.amount > 0 ) {
+         changebw2( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
+      }
    } // undelegatebw
 
 
@@ -424,5 +469,142 @@ namespace eosiosystem {
       refunds_tbl.erase( req );
    }
 
+   void system_contract::changebw2( account_name from, account_name receiver,
+                                   const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
+   {
+      require_auth( from );
+      eosio_assert( stake_net_delta != asset(0) || stake_cpu_delta != asset(0), "should stake non-zero amount" );
+      eosio_assert( std::abs( (stake_net_delta + stake_cpu_delta).amount )
+                     >= std::max( std::abs( stake_net_delta.amount ), std::abs( stake_cpu_delta.amount ) ),
+                    "net and cpu deltas cannot be opposite signs" );
+
+      account_name source_stake_from = from;
+      if ( transfer ) {
+         from = receiver;
+      }
+
+      asset transfer_amount(0);
+
+      {
+         del_bandwidth_table2     del_tbl( _self, from );
+         auto itr = del_tbl.find( receiver );
+         if( itr == del_tbl.end() ) {
+            itr = del_tbl.emplace( from, [&]( auto& dbo ){
+                  dbo.to            = receiver;
+                  dbo.net_weight    = stake_net_delta;
+                  dbo.cpu_weight    = stake_cpu_delta;
+               });
+            transfer_amount = stake_net_delta + stake_cpu_delta;
+         }
+         else {
+            del_tbl.modify( itr, 0, [&]( auto& dbo ){
+                  auto prev_refund_amount = dbo.net_refund + dbo.cpu_refund;
+                  dbo.net_weight    += stake_net_delta;
+                  dbo.net_refund    -= stake_net_delta;
+                  if ( dbo.net_refund.amount < 0 ) {
+                     transfer_amount += -dbo.net_refund;
+                     dbo.net_refund = asset(0);
+                  }
+                  dbo.cpu_weight    += stake_cpu_delta;
+                  dbo.cpu_refund    -= stake_cpu_delta;
+                  if ( dbo.cpu_refund.amount < 0 ) {
+                     transfer_amount += -dbo.cpu_refund;
+                     dbo.cpu_refund = asset(0);
+                  }
+                  auto new_refund_amount = dbo.net_refund + dbo.cpu_refund;
+                  if ( new_refund_amount.amount > 0 ) {
+                     dbo.refund_time = now() + ( (dbo.refund_time - now())*prev_refund_amount + 72*3600*new_refund_amount ) / (prev_refund_amount + new_refund_amount);
+                  } else {
+                     dbo.refund_time = 0;
+                  }
+               });
+         }
+         eosio_assert( asset(0) <= itr->net_weight, "insufficient staked net bandwidth" );
+         eosio_assert( asset(0) <= itr->cpu_weight, "insufficient staked cpu bandwidth" );
+         /* cannot happen here
+         if ( itr->net_weight == asset(0) && itr->cpu_weight == asset(0) && itr->net_refund == asset(0) && itr->cpu_refund == asset(0) ) {
+            del_tbl.erase( itr );
+         }
+         */
+      }
+
+      eosio::print( "transfer: ", transfer_amount, "\n" );
+      if ( 0 < transfer_amount.amount ) {
+         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {source_stake_from, N(active)},
+            { source_stake_from, N(eosio.stake), asset(transfer_amount), std::string("stake bandwidth") } );
+      }
+
+      // update totals of "receiver"
+      {
+         user_resources_table   totals_tbl( _self, receiver );
+         auto tot_itr = totals_tbl.find( receiver );
+         if( tot_itr ==  totals_tbl.end() ) {
+            tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
+                  tot.owner = receiver;
+                  tot.net_weight    = stake_net_delta;
+                  tot.cpu_weight    = stake_cpu_delta;
+               });
+         } else {
+            totals_tbl.modify( tot_itr, from == receiver ? from : 0, [&]( auto& tot ) {
+                  tot.net_weight    += stake_net_delta;
+                  tot.cpu_weight    += stake_cpu_delta;
+               });
+         }
+         eosio_assert( asset(0) <= tot_itr->net_weight, "insufficient staked total net bandwidth" );
+         eosio_assert( asset(0) <= tot_itr->cpu_weight, "insufficient staked total cpu bandwidth" );
+
+         set_resource_limits( receiver, tot_itr->ram_bytes, tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
+
+         if ( tot_itr->net_weight == asset(0) && tot_itr->cpu_weight == asset(0)  && tot_itr->ram_bytes == 0 ) {
+            totals_tbl.erase( tot_itr );
+         }
+      } // tot_itr can be invalid, should go out of scope
+
+      // update voting power
+      {
+         asset total_update = stake_net_delta + stake_cpu_delta;
+         auto from_voter = _voters.find(from);
+         if( from_voter == _voters.end() ) {
+            from_voter = _voters.emplace( from, [&]( auto& v ) {
+                  v.owner  = from;
+                  v.staked = total_update.amount;
+               });
+         } else {
+            _voters.modify( from_voter, 0, [&]( auto& v ) {
+                  v.staked += total_update.amount;
+               });
+         }
+         eosio_assert( 0 <= from_voter->staked, "stake for voting cannot be negative");
+         if( from == N(b1) ) {
+            validate_b1_vesting( from_voter->staked );
+         }
+
+         if( from_voter->producers.size() || from_voter->proxy ) {
+            update_votes( from, from_voter->proxy, from_voter->producers, false );
+         }
+      }
+   }
+
+   void system_contract::refundnew( const account_name owner, const account_name to ) {
+      require_auth( owner );
+
+      del_bandwidth_table2     del_tbl( _self, owner );
+      auto itr = del_tbl.find( to );
+      eosio_assert( itr != del_tbl.end() && (itr->net_refund > asset(0) || itr->cpu_refund > asset(0)) , "refund request not found" );
+      eosio_assert( itr->refund_time < now(), "refund is not available yet" );
+
+      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.stake),N(active)},
+                                                    { N(eosio.stake), owner, itr->net_refund + itr->cpu_refund, std::string("unstake") } );
+
+      if ( itr->net_weight == asset(0) && itr->cpu_weight == asset(0) ) {
+         del_tbl.erase( itr );
+      } else {
+         del_tbl.modify( itr, 0, [&](auto& dbo) {
+            dbo.net_refund = asset(0);
+            dbo.cpu_refund = asset(0);
+            dbo.refund_time = 0;
+         });
+      }
+   }
 
 } //namespace eosiosystem

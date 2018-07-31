@@ -164,13 +164,20 @@ namespace eosiosystem {
          // functions defined in delegate_bandwidth.cpp
 
          /**
-          *  Stakes SYS from the balance of 'from' for the benfit of 'receiver'.
+          *  Stakes system tokens from the balance of 'from' for the benfit of 'receiver'.
           *  If transfer == true, then 'receiver' can unstake to their account
           *  Else 'from' can unstake at any time.
           */
          void delegatebw( account_name from, account_name receiver,
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
+         /**
+          * Version of delegatebw that uses old table structure.
+          * Used only in unit-tests to check transition from old to new structure.
+          * Requires authorization of eosio.
+          */
+         void delegatebwold( account_name from, account_name receiver,
+                             asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
          /**
           *  Decreases the total tokens delegated by from to receiver and/or
@@ -191,7 +198,6 @@ namespace eosiosystem {
          void undelegatebw( account_name from, account_name receiver,
                             asset unstake_net_quantity, asset unstake_cpu_quantity );
 
-
          /**
           * Increases receiver's ram quota based upon current price and quantity of
           * tokens provided. An inline transfer from receiver to system contract of
@@ -211,6 +217,12 @@ namespace eosiosystem {
           *  unstaked tokens belonging to owner
           */
          void refund( account_name owner );
+
+         /**
+          *  This action is called after the delegation-period to claim all pending
+          *  unstaked tokens belonging to owner. New version.
+          */
+         void refundnew( account_name owner, account_name to );
 
          // functions defined in voting.cpp
 
@@ -245,7 +257,10 @@ namespace eosiosystem {
          void changebw( account_name from, account_name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
-         //defined in voting.hpp
+         void changebw2( account_name from, account_name receiver,
+                        asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
+
+      //defined in voting.hpp
          static eosio_global_state get_default_parameters();
 
          void update_votes( const account_name voter, const account_name proxy, const std::vector<account_name>& producers, bool voting );

@@ -265,6 +265,13 @@ public:
       return unstake( acnt, acnt, net, cpu );
    }
 
+   action_result refundnew( const account_name& acnt, const account_name& to = 0 ) {
+      return push_action( name(acnt), N(refundnew), mvo()
+                          ("owner", acnt)
+                          ("to",    (to.value != 0 ? to : acnt))
+      );
+   }
+
    action_result bidname( const account_name& bidder, const account_name& newname, const asset& bid ) {
       return push_action( name(bidder), N(bidname), mvo()
                           ("bidder",  bidder)

@@ -183,6 +183,13 @@
          {"name":"owner", "type":"account_name"}
       ]
     },{
+      "name": "refundnew",
+      "base": "",
+      "fields": [
+         {"name":"owner", "type":"account_name"},
+         {"name":"to",    "type":"account_name"}
+      ]
+    },{
       "name": "delegated_bandwidth",
       "base": "",
       "fields": [
@@ -473,12 +480,20 @@
       "type": "delegatebw",
       "ricardian_contract": ""
    },{
+      "name": "delegatebwold",
+      "type": "delegatebw",
+      "ricardian_contract": ""
+   },{
       "name": "undelegatebw",
       "type": "undelegatebw",
       "ricardian_contract": ""
    },{
       "name": "refund",
       "type": "refund",
+      "ricardian_contract": ""
+   },{
+      "name": "refundnew",
+      "type": "refundnew",
       "ricardian_contract": ""
    },{
       "name": "regproducer",
