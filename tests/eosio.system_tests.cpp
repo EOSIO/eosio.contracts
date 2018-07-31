@@ -5,7 +5,6 @@
 #include <eosio/chain/wast_to_wasm.hpp>
 #include <cstdlib>
 #include <iostream>
-#include <boost/test/included/unit_test.hpp>
 #include <fc/log/logger.hpp>
 #include <eosio/chain/exceptions.hpp>
 #include <Runtime/Runtime.h>
@@ -1696,7 +1695,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
          action act;
          act.account = N(eosio.msig);
          act.name = name;
-         act.data = msig_abi_ser.variant_to_binary( action_type_name, data );
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
 
          return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111) );
    };
@@ -1735,7 +1734,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
                   )
                   })
          );
-      abi_serializer::from_variant(pretty_trx, trx, get_resolver());
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
    }
 
    BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
@@ -2471,7 +2470,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
          action act;
          act.account = N(eosio.msig);
          act.name = name;
-         act.data = msig_abi_ser.variant_to_binary( action_type_name, data );
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
 
          return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111) );
    };
@@ -2507,7 +2506,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
                   )
                   })
          );
-      abi_serializer::from_variant(pretty_trx, trx, get_resolver());
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
    }
 
    BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
@@ -2630,9 +2629,9 @@ BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( error("missing authority of eosio"),
                         push_action( "alice1111111", N(setramrate), mvo()("bytes_per_block", rate) ) );
-  
+
 } FC_LOG_AND_RETHROW()
-  
+
 BOOST_FIXTURE_TEST_CASE( eosioram_ramusage, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
    transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
@@ -2709,29 +2708,3 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
-
-void translate_fc_exception(const fc::exception &e) {
-   std::cerr << "\033[33m" <<  e.to_detail_string() << "\033[0m" << std::endl;
-   BOOST_TEST_FAIL("Caught Unexpected Exception");
-}
-
-boost::unit_test::test_suite* init_unit_test_suite(int argc, char* argv[]) {
-   // Turn off blockchain logging if no --verbose parameter is not added
-   // To have verbose enabled, call "tests/chain_test -- --verbose"
-   bool is_verbose = false;
-   std::string verbose_arg = "--verbose";
-   for (int i = 0; i < argc; i++) {
-      if (verbose_arg == argv[i]) {
-         is_verbose = true;
-         break;
-      }
-   }
-   if(!is_verbose) fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::off);
-
-   // Register fc::exception translator
-   boost::unit_test::unit_test_monitor.template register_exception_translator<fc::exception>(&translate_fc_exception);
-
-   std::srand(time(NULL));
-   std::cout << "Random number generator seeded to " << time(NULL) << std::endl;
-   return nullptr;
-}
