@@ -40,7 +40,7 @@
      "base": "",
      "fields": [
         {"name":"owner", "type":"account_name"},
-        {"name":"symbol", "type":"symbol"},
+        {"name":"symbol", "type":"symbol"}
      ]
   },{
       "name": "account",
