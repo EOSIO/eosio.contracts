@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(eosio_contracts VERSION 1.1.1)
+project(eosio_contracts VERSION 1.2.0)
 
 set(EOSIO_DEPENDENCY "1.1")
 set(EOSIO_WASMSDK_DEPENDENCY "1.1")
