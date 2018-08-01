@@ -67,9 +67,9 @@ namespace eosiosystem {
    struct eosio_global_state2 {
       eosio_global_state2(){}
 
-      uint16_t          new_ram_per_block = 0;  
+      uint16_t          new_ram_per_block = 0;
       block_timestamp   last_ram_increase;
-      block_timestamp   last_block_num;
+      block_timestamp   last_block_num; /* deprecated */
       double            reserved = 0;
       uint8_t           revision = 0; ///< used to track version updates in the future.
 
@@ -236,18 +236,19 @@ namespace eosiosystem {
 
          void bidname( account_name bidder, account_name newname, asset bid );
       private:
-         void update_elected_producers( block_timestamp timestamp );
-         void update_ram_supply();
-
          // Implementation details:
 
-         //defind in delegate_bandwidth.cpp
+         //defined in eosio.system.cpp
+         static eosio_global_state get_default_parameters();
+         static block_timestamp current_block_time();
+         void update_ram_supply();
+
+         //defined in delegate_bandwidth.cpp
          void changebw( account_name from, account_name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
          //defined in voting.hpp
-         static eosio_global_state get_default_parameters();
-
+         void update_elected_producers( block_timestamp timestamp );
          void update_votes( const account_name voter, const account_name proxy, const std::vector<account_name>& producers, bool voting );
 
          // defined in voting.cpp
