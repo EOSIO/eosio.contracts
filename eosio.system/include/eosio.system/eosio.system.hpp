@@ -67,7 +67,7 @@ namespace eosiosystem {
    struct eosio_global_state2 {
       eosio_global_state2(){}
 
-      uint16_t          new_ram_per_block = 0;  
+      uint16_t          new_ram_per_block = 0;
       block_timestamp   last_ram_increase;
       block_timestamp   last_block_num;
       double            total_producer_votepay_share = 0;
@@ -109,9 +109,9 @@ namespace eosiosystem {
       account_name    owner;
       double          votepay_share = 0;
       uint64_t        last_votepay_share_update = 0;
-         
+
       uint64_t primary_key()const { return owner; }
-         
+
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
    };
@@ -256,7 +256,7 @@ namespace eosiosystem {
          void setpriv( account_name account, uint8_t ispriv );
 
          void rmvproducer( account_name producer );
-         
+
          void updtrevision( uint8_t revision );
 
          void bidname( account_name bidder, account_name newname, asset bid );
@@ -277,6 +277,9 @@ namespace eosiosystem {
 
          // defined in voting.cpp
          void propagate_weight_change( const voter_info& voter );
+
+         double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
+                                               /*time_point*/ uint64_t ct, double shares_rate, bool reset_to_zero = false );
    };
 
 } /// eosiosystem
