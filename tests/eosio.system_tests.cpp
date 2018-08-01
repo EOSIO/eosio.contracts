@@ -2608,12 +2608,15 @@ BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
    produce_blocks(3);
    BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
-   const uint16_t rate = 1000;
+   uint16_t rate = 1000;
    BOOST_REQUIRE_EQUAL( success(), push_action( config::system_account_name, N(setramrate), mvo()("bytes_per_block", rate) ) );
    BOOST_REQUIRE_EQUAL( rate, get_global_state2()["new_ram_per_block"].as<uint16_t>() );
-   // last time update_ram_supply called is in buyram, num of blocks since then is 1 + 3 = 4
+   // last time update_ram_supply called is in buyram, num of blocks since then to
+   // the block that includes the setramrate action is 1 + 3 = 4.
+   // However, those 4 blocks were accumulating at a rate of 0, so the max_ram_size should not have changed.
+   BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+   // But with additional blocks, it should start accumulating at the new rate.
    uint64_t cur_ram_size = get_global_state()["max_ram_size"].as_uint64();
-   BOOST_REQUIRE_EQUAL( init_max_ram_size + 4 * rate, get_global_state()["max_ram_size"].as_uint64() );
    produce_blocks(10);
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( cur_ram_size + 11 * rate, get_global_state()["max_ram_size"].as_uint64() );
@@ -2629,6 +2632,16 @@ BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( error("missing authority of eosio"),
                         push_action( "alice1111111", N(setramrate), mvo()("bytes_per_block", rate) ) );
+
+   cur_ram_size = get_global_state()["max_ram_size"].as_uint64();
+   produce_blocks(10);
+   uint16_t old_rate = rate;
+   rate = 5000;
+   BOOST_REQUIRE_EQUAL( success(), push_action( config::system_account_name, N(setramrate), mvo()("bytes_per_block", rate) ) );
+   BOOST_REQUIRE_EQUAL( cur_ram_size + 11 * old_rate, get_global_state()["max_ram_size"].as_uint64() );
+   produce_blocks(5);
+   BOOST_REQUIRE_EQUAL( success(), buyrambytes( "alice1111111", "alice1111111", 100 ) );
+   BOOST_REQUIRE_EQUAL( cur_ram_size + 11 * old_rate + 6 * rate, get_global_state()["max_ram_size"].as_uint64() );
 
 } FC_LOG_AND_RETHROW()
 

@@ -21,7 +21,7 @@ namespace eosiosystem {
       using namespace eosio;
 
       require_auth(N(eosio));
-      _gstate2.last_block_num = timestamp;
+      _gstate2.last_block_num = timestamp; // QUESTION: Should this be removed now that last_block_num is not neeeded?
 
       /** until activated stake crosses this threshold no new rewards are paid */
       if( _gstate.total_activated_stake < min_activated_stake )
