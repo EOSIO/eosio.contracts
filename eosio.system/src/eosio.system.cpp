@@ -47,8 +47,7 @@ namespace eosiosystem {
    }
 
    block_timestamp system_contract::current_block_time() {
-      const /* static */ block_timestamp cbt{ time_point{ microseconds{ static_cast<int64_t>( current_time() ) } } };
-      // static causes linking errors: undefined symbols __cxa_guard_acquire and  __cxa_guard_release
+      const static block_timestamp cbt{ time_point{ microseconds{ static_cast<int64_t>( current_time() ) } } };
       return cbt;
    }
 
