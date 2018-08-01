@@ -5,7 +5,6 @@
 #include <eosio/chain/wast_to_wasm.hpp>
 #include <cstdlib>
 #include <iostream>
-#include <boost/test/included/unit_test.hpp>
 #include <fc/log/logger.hpp>
 #include <eosio/chain/exceptions.hpp>
 #include <Runtime/Runtime.h>
@@ -1696,7 +1695,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
          action act;
          act.account = N(eosio.msig);
          act.name = name;
-         act.data = msig_abi_ser.variant_to_binary( action_type_name, data );
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
 
          return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111) );
    };
@@ -1735,7 +1734,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
                   )
                   })
          );
-      abi_serializer::from_variant(pretty_trx, trx, get_resolver());
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
    }
 
    BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
@@ -2471,7 +2470,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
          action act;
          act.account = N(eosio.msig);
          act.name = name;
-         act.data = msig_abi_ser.variant_to_binary( action_type_name, data );
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
 
          return base_tester::push_action( std::move(act), auth ? uint64_t(signer) : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111) );
    };
@@ -2507,7 +2506,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
                   )
                   })
          );
-      abi_serializer::from_variant(pretty_trx, trx, get_resolver());
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
    }
 
    BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
@@ -2609,12 +2608,15 @@ BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
    produce_blocks(3);
    BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
-   const uint16_t rate = 1000;
+   uint16_t rate = 1000;
    BOOST_REQUIRE_EQUAL( success(), push_action( config::system_account_name, N(setramrate), mvo()("bytes_per_block", rate) ) );
    BOOST_REQUIRE_EQUAL( rate, get_global_state2()["new_ram_per_block"].as<uint16_t>() );
-   // last time update_ram_supply called is in buyram, num of blocks since then is 1 + 3 = 4
+   // last time update_ram_supply called is in buyram, num of blocks since then to
+   // the block that includes the setramrate action is 1 + 3 = 4.
+   // However, those 4 blocks were accumulating at a rate of 0, so the max_ram_size should not have changed.
+   BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+   // But with additional blocks, it should start accumulating at the new rate.
    uint64_t cur_ram_size = get_global_state()["max_ram_size"].as_uint64();
-   BOOST_REQUIRE_EQUAL( init_max_ram_size + 4 * rate, get_global_state()["max_ram_size"].as_uint64() );
    produce_blocks(10);
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( cur_ram_size + 11 * rate, get_global_state()["max_ram_size"].as_uint64() );
@@ -2630,9 +2632,19 @@ BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( error("missing authority of eosio"),
                         push_action( "alice1111111", N(setramrate), mvo()("bytes_per_block", rate) ) );
-  
+
+   cur_ram_size = get_global_state()["max_ram_size"].as_uint64();
+   produce_blocks(10);
+   uint16_t old_rate = rate;
+   rate = 5000;
+   BOOST_REQUIRE_EQUAL( success(), push_action( config::system_account_name, N(setramrate), mvo()("bytes_per_block", rate) ) );
+   BOOST_REQUIRE_EQUAL( cur_ram_size + 11 * old_rate, get_global_state()["max_ram_size"].as_uint64() );
+   produce_blocks(5);
+   BOOST_REQUIRE_EQUAL( success(), buyrambytes( "alice1111111", "alice1111111", 100 ) );
+   BOOST_REQUIRE_EQUAL( cur_ram_size + 11 * old_rate + 6 * rate, get_global_state()["max_ram_size"].as_uint64() );
+
 } FC_LOG_AND_RETHROW()
-  
+
 BOOST_FIXTURE_TEST_CASE( eosioram_ramusage, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
    transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
@@ -2654,7 +2666,7 @@ BOOST_FIXTURE_TEST_CASE( eosioram_ramusage, eosio_system_tester ) try {
    auto rlm = control->get_resource_limits_manager();
    auto eosioram_ram_usage = rlm.get_account_ram_usage(N(eosio.ram));
    auto alice_ram_usage = rlm.get_account_ram_usage(N(alice1111111));
-   //std::cout << "Sellram" << std::endl;
+
    BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", 2048 ) );
 
    //make sure that ram was billed to alice, not to eosio.ram
@@ -2663,30 +2675,49 @@ BOOST_FIXTURE_TEST_CASE( eosioram_ramusage, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
+   active_and_vote_producers();
+
+   auto rlm = control->get_resource_limits_manager();
+   int64_t ram_bytes_orig, net_weight, cpu_weight;
+   rlm.get_account_limits( N(alice1111111), ram_bytes_orig, net_weight, cpu_weight );
+
+   /*
+    * It seems impossible to write this test, because buyrambytes action doesn't give you exact amount of bytes requested
+    *
+   //check that it's possible to create account bying required_bytes(2724) + userres table(112) + userres row(160) - ram_gift_bytes(1400)
+   create_account_with_resources( N(abcdefghklmn), N(alice1111111), 2724 + 112 + 160 - 1400 );
+
+   //check that one byte less is not enough
+   BOOST_REQUIRE_THROW( create_account_with_resources( N(abcdefghklmn), N(alice1111111), 2724 + 112 + 160 - 1400 - 1 ),
+                        ram_usage_exceeded );
+   */
+
+   //check that stake/unstake keeps the gift
+   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+   BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+   int64_t ram_bytes_after_stake;
+   rlm.get_account_limits( N(alice1111111), ram_bytes_after_stake, net_weight, cpu_weight );
+   BOOST_REQUIRE_EQUAL( ram_bytes_orig, ram_bytes_after_stake );
+
+   BOOST_REQUIRE_EQUAL( success(), unstake( "eosio", "alice1111111", core_from_string("20.0000"), core_from_string("10.0000") ) );
+   int64_t ram_bytes_after_unstake;
+   rlm.get_account_limits( N(alice1111111), ram_bytes_after_unstake, net_weight, cpu_weight );
+   BOOST_REQUIRE_EQUAL( ram_bytes_orig, ram_bytes_after_unstake );
+
+   uint64_t ram_gift = 1400;
+
+   int64_t ram_bytes;
+   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("1000.0000") ) );
+   rlm.get_account_limits( N(alice1111111), ram_bytes, net_weight, cpu_weight );
+   auto userres = get_total_stake( N(alice1111111) );
+   BOOST_REQUIRE_EQUAL( userres["ram_bytes"].as_uint64() + ram_gift, ram_bytes );
+
+   BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", 1024 ) );
+   rlm.get_account_limits( N(alice1111111), ram_bytes, net_weight, cpu_weight );
+   userres = get_total_stake( N(alice1111111) );
+   BOOST_REQUIRE_EQUAL( userres["ram_bytes"].as_uint64() + ram_gift, ram_bytes );
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_AUTO_TEST_SUITE_END()
-
-void translate_fc_exception(const fc::exception &e) {
-   std::cerr << "\033[33m" <<  e.to_detail_string() << "\033[0m" << std::endl;
-   BOOST_TEST_FAIL("Caught Unexpected Exception");
-}
-
-boost::unit_test::test_suite* init_unit_test_suite(int argc, char* argv[]) {
-   // Turn off blockchain logging if no --verbose parameter is not added
-   // To have verbose enabled, call "tests/chain_test -- --verbose"
-   bool is_verbose = false;
-   std::string verbose_arg = "--verbose";
-   for (int i = 0; i < argc; i++) {
-      if (verbose_arg == argv[i]) {
-         is_verbose = true;
-         break;
-      }
-   }
-   if(!is_verbose) fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::off);
-
-   // Register fc::exception translator
-   boost::unit_test::unit_test_monitor.template register_exception_translator<fc::exception>(&translate_fc_exception);
-
-   std::srand(time(NULL));
-   std::cout << "Random number generator seeded to " << time(NULL) << std::endl;
-   return nullptr;
-}
