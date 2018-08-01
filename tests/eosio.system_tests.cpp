@@ -116,6 +116,73 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( stake_unstake_old, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   produce_blocks( 10 );
+   produce_block( fc::hours(3*24) );
+
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+
+   BOOST_REQUIRE_EQUAL( core_from_string("1000.0000"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "eosio", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+
+   auto total = get_total_stake("alice1111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("110.0000"), total["cpu_weight"].as<asset>());
+      
+   const auto init_eosio_stake_balance = get_balance( N(eosio.stake) );
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( init_eosio_stake_balance + core_from_string("300.0000"), get_balance( N(eosio.stake) ) );
+   BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+
+   produce_block( fc::hours(3*24-1) );
+   produce_blocks(1);
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( init_eosio_stake_balance + core_from_string("300.0000"), get_balance( N(eosio.stake) ) );
+   //after 3 days funds should be released
+   produce_block( fc::hours(1) );
+   produce_blocks(1);
+
+   BOOST_REQUIRE_EQUAL( core_from_string("1000.0000"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( init_eosio_stake_balance, get_balance( N(eosio.stake) ) );
+
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", "bob111111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+   total = get_total_stake("bob111111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("110.0000"), total["cpu_weight"].as<asset>());
+
+   total = get_total_stake( "alice1111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000").get_amount(), total["net_weight"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( core_from_string("110.0000").get_amount(), total["cpu_weight"].as<asset>().get_amount() );
+
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("300.0000")), get_voter_info( "alice1111111" ) );
+
+   auto bytes = total["ram_bytes"].as_uint64();
+   BOOST_REQUIRE_EQUAL( true, 0 < bytes );
+
+   //unstake from bob111111111
+   BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "bob111111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+   total = get_total_stake("bob111111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("10.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("10.0000"), total["cpu_weight"].as<asset>());
+
+   produce_block( fc::hours(3*24-1) );
+   produce_blocks(1);
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+   //after 3 days funds should be released
+   produce_block( fc::hours(1) );
+   produce_blocks(1);
+
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("0.0000") ), get_voter_info( "alice1111111" ) );
+   produce_blocks(1);
+   BOOST_REQUIRE_EQUAL( core_from_string("1000.0000"), get_balance( "alice1111111" ) );
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE( stake_unstake, eosio_system_tester ) try {
    cross_15_percent_threshold();
 
@@ -131,30 +198,20 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake, eosio_system_tester ) try {
    auto total = get_total_stake("alice1111111");
    BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["net_weight"].as<asset>());
    BOOST_REQUIRE_EQUAL( core_from_string("110.0000"), total["cpu_weight"].as<asset>());
-      
+
    const auto init_eosio_stake_balance = get_balance( N(eosio.stake) );
    BOOST_REQUIRE_EQUAL( success(), stake( "alice1111111", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( init_eosio_stake_balance + core_from_string("300.0000"), get_balance( N(eosio.stake) ) );
    BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
-   /* old:
-   produce_block( fc::hours(3*24-1) );
-   produce_blocks(1);
-   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
-   BOOST_REQUIRE_EQUAL( init_eosio_stake_balance + core_from_string("300.0000"), get_balance( N(eosio.stake) ) );
-   //after 3 days funds should be released
-   produce_block( fc::hours(1) );
-   produce_blocks(1);
-   */
-   // new:
+
    produce_block( fc::hours(3*24-1) );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("refund is not available yet"), refundnew( "alice1111111" ) );
    produce_block( fc::hours(1) );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( success(), refundnew( "alice1111111" ) );
-   //
 
    BOOST_REQUIRE_EQUAL( core_from_string("1000.0000"), get_balance( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( init_eosio_stake_balance, get_balance( N(eosio.stake) ) );
@@ -179,17 +236,7 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake, eosio_system_tester ) try {
    total = get_total_stake("bob111111111");
    BOOST_REQUIRE_EQUAL( core_from_string("10.0000"), total["net_weight"].as<asset>());
    BOOST_REQUIRE_EQUAL( core_from_string("10.0000"), total["cpu_weight"].as<asset>());
-   /*
-   //old:
-   produce_block( fc::hours(3*24-1) );
-   produce_blocks(1);
-   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
-   //after 3 days funds should be released
-   produce_block( fc::hours(1) );
-   produce_blocks(1);
-   */
 
-   //new:
    produce_block( fc::hours(3*24-1) );
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("refund is not available yet"), refundnew( "alice1111111", "bob111111111" ) );
    BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
@@ -199,6 +246,61 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake, eosio_system_tester ) try {
    REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("0.0000") ), get_voter_info( "alice1111111" ) );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_from_string("1000.0000"), get_balance( "alice1111111" ) );
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( stake_unstake_with_transfer_old, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   issue( "eosio", core_from_string("1000.0000"), config::system_account_name );
+   issue( "eosio.stake", core_from_string("1000.0000"), config::system_account_name );
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+
+   //eosio stakes for alice with transfer flag
+
+   transfer( "eosio", "bob111111111", core_from_string("1000.0000"), "eosio" );
+   BOOST_REQUIRE_EQUAL( success(), stake_with_transfer_old( "bob111111111", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+
+   //check that alice has both bandwidth and voting power
+   auto total = get_total_stake("alice1111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("110.0000"), total["cpu_weight"].as<asset>());
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("300.0000")), get_voter_info( "alice1111111" ) );
+
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+
+   //alice stakes for herself
+   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+   //now alice's stake should be equal to transfered from eosio + own stake
+   total = get_total_stake("alice1111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("410.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["cpu_weight"].as<asset>());
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("600.0000")), get_voter_info( "alice1111111" ) );
+
+   //alice can unstake everything (including what was transfered)
+   BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "alice1111111", core_from_string("400.0000"), core_from_string("200.0000") ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+
+   produce_block( fc::hours(3*24-1) );
+   produce_blocks(1);
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+   //after 3 days funds should be released
+
+   produce_block( fc::hours(1) );
+   produce_blocks(1);
+
+   BOOST_REQUIRE_EQUAL( core_from_string("1300.0000"), get_balance( "alice1111111" ) );
+
+   //stake should be equal to what was staked in constructor, voting power should be 0
+   total = get_total_stake("alice1111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("10.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("10.0000"), total["cpu_weight"].as<asset>());
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("0.0000")), get_voter_info( "alice1111111" ) );
+
+   // Now alice stakes to bob with transfer flag
+   BOOST_REQUIRE_EQUAL( success(), stake_with_transfer_old( "alice1111111", "bob111111111", core_from_string("100.0000"), core_from_string("100.0000") ) );
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( stake_unstake_with_transfer, eosio_system_tester ) try {
@@ -237,6 +339,85 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake_with_transfer, eosio_system_tester ) try 
 
    produce_block( fc::hours(3*24-1) );
    produce_blocks(1);
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("refund is not available yet"), refundnew( "alice1111111" ) );
+   //after 3 days funds should be released
+   produce_block( fc::hours(1) );
+   produce_blocks(1);
+   BOOST_REQUIRE_EQUAL( success(), refundnew( "alice1111111" ) );
+
+   BOOST_REQUIRE_EQUAL( core_from_string("1300.0000"), get_balance( "alice1111111" ) );
+
+   //stake should be equal to what was staked in constructor, voting power should be 0
+   total = get_total_stake("alice1111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("10.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("10.0000"), total["cpu_weight"].as<asset>());
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("0.0000")), get_voter_info( "alice1111111" ) );
+
+   // Now alice stakes to bob with transfer flag
+   BOOST_REQUIRE_EQUAL( success(), stake_with_transfer( "alice1111111", "bob111111111", core_from_string("100.0000"), core_from_string("100.0000") ) );
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( stake_to_self_with_transfer_old, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("cannot use transfer flag if delegating to self"),
+                        stake_with_transfer_old( "alice1111111", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") )
+   );
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( stake_to_self_with_transfer, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("cannot use transfer flag if delegating to self"),
+                        stake_with_transfer( "alice1111111", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") )
+   );
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( stake_while_pending_refund_old, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   issue( "eosio", core_from_string("1000.0000"), config::system_account_name );
+   issue( "eosio.stake", core_from_string("1000.0000"), config::system_account_name );
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+
+   //eosio stakes for alice with transfer flag
+
+   transfer( "eosio", "bob111111111", core_from_string("1000.0000"), "eosio" );
+   BOOST_REQUIRE_EQUAL( success(), stake_with_transfer_old( "bob111111111", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+
+   //check that alice has both bandwidth and voting power
+   auto total = get_total_stake("alice1111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("110.0000"), total["cpu_weight"].as<asset>());
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("300.0000")), get_voter_info( "alice1111111" ) );
+
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+
+   //alice stakes for herself
+   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+   //now alice's stake should be equal to transfered from eosio + own stake
+   total = get_total_stake("alice1111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("410.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["cpu_weight"].as<asset>());
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("600.0000")), get_voter_info( "alice1111111" ) );
+
+   //alice can unstake everything (including what was transfered)
+   BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "alice1111111", core_from_string("400.0000"), core_from_string("200.0000") ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+
+   produce_block( fc::hours(3*24-1) );
+   produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
    //after 3 days funds should be released
 
@@ -252,19 +433,7 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake_with_transfer, eosio_system_tester ) try 
    REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("0.0000")), get_voter_info( "alice1111111" ) );
 
    // Now alice stakes to bob with transfer flag
-   BOOST_REQUIRE_EQUAL( success(), stake_with_transfer( "alice1111111", "bob111111111", core_from_string("100.0000"), core_from_string("100.0000") ) );
-
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE( stake_to_self_with_transfer, eosio_system_tester ) try {
-   cross_15_percent_threshold();
-
-   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
-   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
-
-   BOOST_REQUIRE_EQUAL( wasm_assert_msg("cannot use transfer flag if delegating to self"),
-                        stake_with_transfer( "alice1111111", "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") )
-   );
+   BOOST_REQUIRE_EQUAL( success(), stake_with_transfer_old( "alice1111111", "bob111111111", core_from_string("100.0000"), core_from_string("100.0000") ) );
 
 } FC_LOG_AND_RETHROW()
 
@@ -304,12 +473,11 @@ BOOST_FIXTURE_TEST_CASE( stake_while_pending_refund, eosio_system_tester ) try {
 
    produce_block( fc::hours(3*24-1) );
    produce_blocks(1);
-   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("refund is not available yet"), refundnew( "alice1111111" ) );
    //after 3 days funds should be released
-
    produce_block( fc::hours(1) );
    produce_blocks(1);
-
+   BOOST_REQUIRE_EQUAL( success(), refundnew( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( core_from_string("1300.0000"), get_balance( "alice1111111" ) );
 
    //stake should be equal to what was staked in constructor, voting power should be 0
@@ -355,6 +523,28 @@ BOOST_FIXTURE_TEST_CASE( fail_without_auth, eosio_system_tester ) try {
    //REQUIRE_MATCHING_OBJECT( , get_voter_info( "alice1111111" ) );
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( stake_negative_old, eosio_system_tester ) try {
+   issue( "alice1111111", core_from_string("1000.0000"),  config::system_account_name );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("must stake a positive amount"),
+                        stake_old( "alice1111111", core_from_string("-0.0001"), core_from_string("0.0000") )
+   );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("must stake a positive amount"),
+                        stake_old( "alice1111111", core_from_string("0.0000"), core_from_string("-0.0001") )
+   );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("must stake a positive amount"),
+                        stake_old( "alice1111111", core_from_string("00.0000"), core_from_string("00.0000") )
+   );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("must stake a positive amount"),
+                        stake_old( "alice1111111", core_from_string("0.0000"), core_from_string("00.0000") )
+
+   );
+
+   BOOST_REQUIRE_EQUAL( true, get_voter_info( "alice1111111" ).is_null() );
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( stake_negative, eosio_system_tester ) try {
    issue( "alice1111111", core_from_string("1000.0000"),  config::system_account_name );
@@ -379,6 +569,33 @@ BOOST_FIXTURE_TEST_CASE( stake_negative, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( true, get_voter_info( "alice1111111" ).is_null() );
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( unstake_negative_old, eosio_system_tester ) try {
+   issue( "alice1111111", core_from_string("1000.0000"),  config::system_account_name );
+
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", "bob111111111", core_from_string("200.0001"), core_from_string("100.0001") ) );
+
+   auto total = get_total_stake( "bob111111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0001"), total["net_weight"].as<asset>());
+   auto vinfo = get_voter_info("alice1111111" );
+   wdump((vinfo));
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("300.0002") ), get_voter_info( "alice1111111" ) );
+
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("must unstake a positive amount"),
+                        unstake( "alice1111111", "bob111111111", core_from_string("-1.0000"), core_from_string("0.0000") )
+   );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("must unstake a positive amount"),
+                        unstake( "alice1111111", "bob111111111", core_from_string("0.0000"), core_from_string("-1.0000") )
+   );
+
+   //unstake all zeros
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("must unstake a positive amount"),
+                        unstake( "alice1111111", "bob111111111", core_from_string("0.0000"), core_from_string("0.0000") )
+
+   );
+
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( unstake_negative, eosio_system_tester ) try {
    issue( "alice1111111", core_from_string("1000.0000"),  config::system_account_name );
@@ -408,6 +625,36 @@ BOOST_FIXTURE_TEST_CASE( unstake_negative, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( unstake_more_than_at_stake_old, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   issue( "alice1111111", core_from_string("1000.0000"),  config::system_account_name );
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+
+   auto total = get_total_stake( "alice1111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("110.0000"), total["cpu_weight"].as<asset>());
+
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+
+   //trying to unstake more net bandwith than at stake
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient staked net bandwidth"),
+                        unstake( "alice1111111", core_from_string("200.0001"), core_from_string("0.0000") )
+   );
+
+   //trying to unstake more cpu bandwith than at stake
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient staked cpu bandwidth"),
+                        unstake( "alice1111111", core_from_string("0.0000"), core_from_string("100.0001") )
+
+   );
+
+   //check that nothing has changed
+   total = get_total_stake( "alice1111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("110.0000"), total["cpu_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( unstake_more_than_at_stake, eosio_system_tester ) try {
    cross_15_percent_threshold();
@@ -440,6 +687,60 @@ BOOST_FIXTURE_TEST_CASE( unstake_more_than_at_stake, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( delegate_to_another_user_old, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   issue( "alice1111111", core_from_string("1000.0000"),  config::system_account_name );
+
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", "bob111111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+
+   auto total = get_total_stake( "bob111111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("110.0000"), total["cpu_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+   //all voting power goes to alice1111111
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("300.0000") ), get_voter_info( "alice1111111" ) );
+   //but not to bob111111111
+   BOOST_REQUIRE_EQUAL( true, get_voter_info( "bob111111111" ).is_null() );
+
+   //bob111111111 should not be able to unstake what was staked by alice1111111
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient staked cpu bandwidth"),
+                        unstake( "bob111111111", core_from_string("0.0000"), core_from_string("10.0000") )
+
+   );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient staked net bandwidth"),
+                        unstake( "bob111111111", core_from_string("10.0000"),  core_from_string("0.0000") )
+   );
+
+   issue( "carol1111111", core_from_string("1000.0000"),  config::system_account_name );
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "carol1111111", "bob111111111", core_from_string("20.0000"), core_from_string("10.0000") ) );
+   total = get_total_stake( "bob111111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("230.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("120.0000"), total["cpu_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("970.0000"), get_balance( "carol1111111" ) );
+   REQUIRE_MATCHING_OBJECT( voter( "carol1111111", core_from_string("30.0000") ), get_voter_info( "carol1111111" ) );
+
+   //alice1111111 should not be able to unstake money staked by carol1111111
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient staked net bandwidth"),
+                        unstake( "alice1111111", "bob111111111", core_from_string("2001.0000"), core_from_string("1.0000") )
+   );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient staked cpu bandwidth"),
+                        unstake( "alice1111111", "bob111111111", core_from_string("1.0000"), core_from_string("101.0000") )
+
+   );
+
+   total = get_total_stake( "bob111111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("230.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("120.0000"), total["cpu_weight"].as<asset>());
+   //balance should not change after unsuccessfull attempts to unstake
+   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
+   //voting power too
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("300.0000") ), get_voter_info( "alice1111111" ) );
+   REQUIRE_MATCHING_OBJECT( voter( "carol1111111", core_from_string("30.0000") ), get_voter_info( "carol1111111" ) );
+   BOOST_REQUIRE_EQUAL( true, get_voter_info( "bob111111111" ).is_null() );
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( delegate_to_another_user, eosio_system_tester ) try {
    cross_15_percent_threshold();
@@ -496,6 +797,42 @@ BOOST_FIXTURE_TEST_CASE( delegate_to_another_user, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( true, get_voter_info( "bob111111111" ).is_null() );
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( stake_unstake_separate_old, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   issue( "alice1111111", core_from_string("1000.0000"),  config::system_account_name );
+   BOOST_REQUIRE_EQUAL( core_from_string("1000.0000"), get_balance( "alice1111111" ) );
+
+   //everything at once
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", core_from_string("10.0000"), core_from_string("20.0000") ) );
+   auto total = get_total_stake( "alice1111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("20.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("30.0000"), total["cpu_weight"].as<asset>());
+
+   //cpu
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", core_from_string("100.0000"), core_from_string("0.0000") ) );
+   total = get_total_stake( "alice1111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("120.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("30.0000"), total["cpu_weight"].as<asset>());
+
+   //net
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", core_from_string("0.0000"), core_from_string("200.0000") ) );
+   total = get_total_stake( "alice1111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("120.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("230.0000"), total["cpu_weight"].as<asset>());
+
+   //unstake cpu
+   BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", core_from_string("100.0000"), core_from_string("0.0000") ) );
+   total = get_total_stake( "alice1111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("20.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("230.0000"), total["cpu_weight"].as<asset>());
+
+   //unstake net
+   BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", core_from_string("0.0000"), core_from_string("200.0000") ) );
+   total = get_total_stake( "alice1111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("20.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("30.0000"), total["cpu_weight"].as<asset>());
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( stake_unstake_separate, eosio_system_tester ) try {
    cross_15_percent_threshold();
@@ -535,6 +872,47 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake_separate, eosio_system_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 
+BOOST_FIXTURE_TEST_CASE( adding_stake_partial_unstake_old, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   issue( "alice1111111", core_from_string("1000.0000"),  config::system_account_name );
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", "bob111111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("300.0000") ), get_voter_info( "alice1111111" ) );
+
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", "bob111111111", core_from_string("100.0000"), core_from_string("50.0000") ) );
+
+   auto total = get_total_stake( "bob111111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("310.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("160.0000"), total["cpu_weight"].as<asset>());
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("450.0000") ), get_voter_info( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("550.0000"), get_balance( "alice1111111" ) );
+
+   //unstake a share
+   BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "bob111111111", core_from_string("150.0000"), core_from_string("75.0000") ) );
+
+   total = get_total_stake( "bob111111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("160.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("85.0000"), total["cpu_weight"].as<asset>());
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("225.0000") ), get_voter_info( "alice1111111" ) );
+
+   //unstake more
+   BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "bob111111111", core_from_string("50.0000"), core_from_string("25.0000") ) );
+   total = get_total_stake( "bob111111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("110.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("60.0000"), total["cpu_weight"].as<asset>());
+   REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_from_string("150.0000") ), get_voter_info( "alice1111111" ) );
+
+   //combined amount should be available only in 3 days
+   produce_block( fc::days(2) );
+   produce_blocks(1);
+   BOOST_REQUIRE_EQUAL( core_from_string("550.0000"), get_balance( "alice1111111" ) );
+   produce_block( fc::days(1) );
+   produce_blocks(1);
+   BOOST_REQUIRE_EQUAL( core_from_string("850.0000"), get_balance( "alice1111111" ) );
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE( adding_stake_partial_unstake, eosio_system_tester ) try {
    cross_15_percent_threshold();
 
@@ -569,9 +947,11 @@ BOOST_FIXTURE_TEST_CASE( adding_stake_partial_unstake, eosio_system_tester ) try
    //combined amount should be available only in 3 days
    produce_block( fc::days(2) );
    produce_blocks(1);
-   BOOST_REQUIRE_EQUAL( core_from_string("550.0000"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("refund is not available yet"), refundnew( "alice1111111", "bob111111111" ) );
+   //after 3 days funds should be released
    produce_block( fc::days(1) );
    produce_blocks(1);
+   BOOST_REQUIRE_EQUAL( success(), refundnew( "alice1111111", "bob111111111" ) );
    BOOST_REQUIRE_EQUAL( core_from_string("850.0000"), get_balance( "alice1111111" ) );
 
 } FC_LOG_AND_RETHROW()

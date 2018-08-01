@@ -440,7 +440,7 @@ namespace eosiosystem {
          asset unstake_old_net = std::min( itr->net_weight, unstake_net_quantity );
          asset unstake_old_cpu = std::min( itr->cpu_weight, unstake_cpu_quantity );
          if ( unstake_old_net.amount > 0 || unstake_old_cpu.amount > 0 ) {
-            changebw2( from, receiver, -unstake_old_net, -unstake_old_cpu, false);
+            changebw( from, receiver, -unstake_old_net, -unstake_old_cpu, false);
          }
          unstake_net_quantity -= unstake_old_net;
          unstake_cpu_quantity -= unstake_old_cpu;

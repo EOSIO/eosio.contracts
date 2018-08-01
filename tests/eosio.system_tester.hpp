@@ -238,6 +238,47 @@ public:
       return stake( acnt, acnt, net, cpu );
    }
 
+   action_result stake_old( const account_name& from, const account_name& to, const asset& net, const asset& cpu, bool transfer = false ) {
+      string action_type_name = abi_ser.get_action_type(N(delegatebwold));
+
+      action act;
+      act.account = config::system_account_name;
+      act.name = N(delegatebwold);
+      act.data = abi_ser.variant_to_binary( action_type_name, mvo()
+                          ("from",     from)
+                          ("receiver", to)
+                          ("stake_net_quantity", net)
+                          ("stake_cpu_quantity", cpu)
+                          ("transfer", int(transfer) ) );
+
+      signed_transaction trx;
+      act.authorization = vector<permission_level>{ {config::system_account_name, config::active_name}, {from, config::active_name} };
+      trx.actions.emplace_back(std::move(act));
+      set_transaction_headers(trx);
+      trx.sign(get_private_key(config::system_account_name, "active"), control->get_chain_id());
+      if ( config::system_account_name != from.value ) {
+         trx.sign(get_private_key(from, "active"), control->get_chain_id());
+      }
+      try {
+         push_transaction(trx);
+      } catch (const fc::exception& ex) {
+         edump((ex.to_detail_string()));
+         return error(ex.top_message()); // top_message() is assumed by many tests; otherwise they fail
+         //return error(ex.to_detail_string());
+      }
+      produce_block();
+      BOOST_REQUIRE_EQUAL(true, chain_has_transaction(trx.id()));
+      return success();
+   }
+
+   action_result stake_old( const account_name& acnt, const asset& net, const asset& cpu ) {
+      return stake_old( acnt, acnt, net, cpu );
+   }
+
+   action_result stake_with_transfer_old( const account_name& from, const account_name& to, const asset& net, const asset& cpu ) {
+      return stake_old( from, to, net, cpu, true);
+   }
+
    action_result stake_with_transfer( const account_name& from, const account_name& to, const asset& net, const asset& cpu ) {
       return push_action( name(from), N(delegatebw), mvo()
                           ("from",     from)

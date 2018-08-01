@@ -224,7 +224,7 @@ EOSIO_ABI( eosiosystem::system_contract,
      // eosio.system.cpp
      (setram)(setramrate)(setparams)(setpriv)(rmvproducer)(bidname)
      // delegate_bandwidth.cpp
-     (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
+     (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)(delegatebwold)(refundnew)
      // voting.cpp
      (regproducer)(unregprod)(voteproducer)(regproxy)
      // producer_pay.cpp
