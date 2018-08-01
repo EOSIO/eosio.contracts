@@ -87,7 +87,7 @@ namespace eosiosystem {
     *  This action will buy an exact amount of ram and bill the payer the current market price.
     */
    void system_contract::buyrambytes( account_name payer, account_name receiver, uint32_t bytes ) {
-      
+
       auto itr = _rammarket.find(S(4,RAMCORE));
       auto tmp = *itr;
       auto eosout = tmp.convert( asset(bytes,S(0,RAM)), CORE_SYMBOL );
@@ -180,7 +180,7 @@ namespace eosiosystem {
           /// the cast to int64_t of bytes is safe because we certify bytes is <= quota which is limited by prior purchases
           tokens_out = es.convert( asset(bytes,S(0,RAM)), CORE_SYMBOL);
       });
-      
+
       eosio_assert( tokens_out.amount > 1, "token amount received from selling ram is too low" );
 
       _gstate.total_ram_bytes_reserved -= static_cast<decltype(_gstate.total_ram_bytes_reserved)>(bytes); // bytes > 0 is asserted above
@@ -272,7 +272,7 @@ namespace eosiosystem {
          eosio_assert( asset(0) <= tot_itr->cpu_weight, "insufficient staked total cpu bandwidth" );
 
          int64_t ram_bytes, net, cpu;
-         get_resource_limits( receiver, ram_bytes, net, cpu );
+         get_resource_limits( receiver, &ram_bytes, &net, &cpu );
 
          set_resource_limits( receiver, std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ), tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
 
@@ -290,8 +290,8 @@ namespace eosiosystem {
          auto net_balance = stake_net_delta;
          auto cpu_balance = stake_cpu_delta;
          bool need_deferred_trx = false;
-         
-         
+
+
          // net and cpu are same sign by assertions in delegatebw and undelegatebw
          // redundant assertion also at start of changebw to protect against misuse of changebw
          bool is_undelegating = (net_balance.amount + cpu_balance.amount ) < 0;
