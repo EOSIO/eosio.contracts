@@ -248,6 +248,58 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( core_from_string("1000.0000"), get_balance( "alice1111111" ) );
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( unstake_old_and_new, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   produce_blocks( 10 );
+   produce_block( fc::hours(3*24) );
+
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
+   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
+   BOOST_REQUIRE_EQUAL( core_from_string("1000.0000"), get_balance( "alice1111111" ) );
+
+   //stake old
+   BOOST_REQUIRE_EQUAL( success(), stake_old( "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+   auto total = get_total_stake("alice1111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("110.0000"), total["cpu_weight"].as<asset>());
+
+   //stake new
+   BOOST_REQUIRE_EQUAL( success(), stake( "alice1111111", core_from_string("200.0000"), core_from_string("100.0000") ) );
+   total = get_total_stake("alice1111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("410.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string("210.0000"), total["cpu_weight"].as<asset>());
+
+   BOOST_REQUIRE_EQUAL( core_from_string("400.0000"), get_balance( "alice1111111" ) );
+
+   //unstake
+   BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "alice1111111", core_from_string("300.0000"), core_from_string("150.0000") ) );
+
+   //check total stake
+   total = get_total_stake("alice1111111");
+   BOOST_REQUIRE_EQUAL( core_from_string("110.0000"), total["net_weight"].as<asset>());
+   BOOST_REQUIRE_EQUAL( core_from_string( "60.0000"), total["cpu_weight"].as<asset>());
+
+   //check old refund
+   auto refund = get_refund_request( "alice1111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("200.0000"), refund["net_amount"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( core_from_string("100.0000"), refund["cpu_amount"].as<asset>() );
+
+   //check new refund
+   auto delband = get_delegated_bandwidth( "alice1111111", "alice1111111" );
+   BOOST_REQUIRE_EQUAL( core_from_string("100.0000"), delband["net_refund"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( core_from_string( "50.0000"), delband["cpu_refund"].as<asset>() );
+
+   produce_block( fc::hours(3*24-1) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("refund is not available yet"), refundnew( "alice1111111", "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("400.0000"), get_balance( "alice1111111" ) );
+   produce_block( fc::hours(1) );
+   produce_block();
+   BOOST_REQUIRE_EQUAL( success(), refundnew( "alice1111111", "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("850.0000"), get_balance( "alice1111111" ) );
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE( stake_unstake_with_transfer_old, eosio_system_tester ) try {
    cross_15_percent_threshold();
 
