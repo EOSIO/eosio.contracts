@@ -376,6 +376,11 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "user_resources", data );
    }
 
+   fc::variant get_delegated_bandwidth( const account_name& act, const account_name& to ) {
+      vector<char> data = get_row_by_account( config::system_account_name, act, N(delband2), to );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "delegated_bandwidth2", data );
+   }
+
    fc::variant get_voter_info( const account_name& act ) {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(voters), act );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "voter_info", data );

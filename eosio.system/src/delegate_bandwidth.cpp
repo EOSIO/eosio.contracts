@@ -94,8 +94,7 @@ namespace eosiosystem {
     */
    typedef eosio::multi_index< N(userres), user_resources>      user_resources_table;
    typedef eosio::multi_index< N(delband), delegated_bandwidth> del_bandwidth_table;
-   typedef eosio::multi_index< N(delband2), delegated_bandwidth2,
-                               indexed_by<N(refund_time), const_mem_fun<delegated_bandwidth2, uint64_t, &delegated_bandwidth2::by_refund_time> > > del_bandwidth_table2;
+   typedef eosio::multi_index< N(delband2), delegated_bandwidth2> del_bandwidth_table2;
    typedef eosio::multi_index< N(refunds), refund_request>      refunds_table;
 
 
@@ -528,7 +527,6 @@ namespace eosiosystem {
          */
       }
 
-      eosio::print( "transfer: ", transfer_amount, "\n" );
       if ( 0 < transfer_amount.amount ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {source_stake_from, N(active)},
             { source_stake_from, N(eosio.stake), asset(transfer_amount), std::string("stake bandwidth") } );

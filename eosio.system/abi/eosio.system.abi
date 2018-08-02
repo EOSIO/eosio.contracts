@@ -199,6 +199,17 @@
          {"name":"cpu_weight", "type":"asset"}
       ]
     },{
+      "name": "delegated_bandwidth2",
+      "base": "",
+      "fields": [
+         {"name":"to", "type":"account_name"},
+         {"name":"net_weight", "type":"asset"},
+         {"name":"cpu_weight", "type":"asset"}
+         {"name":"net_refund", "type":"asset"},
+         {"name":"cpu_refund", "type":"asset"},
+         {"name":"refund_time", "type":"time_point_sec"}
+      ]
+    },{
       "name": "user_resources",
       "base": "",
       "fields": [
@@ -589,6 +600,12 @@
     },{
       "name": "delband",
       "type": "delegated_bandwidth",
+      "index_type": "i64",
+      "key_names" : ["to"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "delband2",
+      "type": "delegated_bandwidth2",
       "index_type": "i64",
       "key_names" : ["to"],
       "key_types" : ["uint64"]
