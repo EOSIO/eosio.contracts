@@ -61,6 +61,14 @@ namespace eosiosystem {
    };
 
 
+   struct abi_hash {
+      account_name owner;
+      checksum256  hash;
+      auto primary_key()const { return owner; }
+
+      EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
+   };
+
    /*
     * Method parameters commented out to prevent generation of code that parses input data.
     */
@@ -108,5 +116,6 @@ namespace eosiosystem {
 
          void onerror( /*const bytes&*/ ) {}
 
+         void setabi( account_name acnt, const bytes& abi );
    };
 }
