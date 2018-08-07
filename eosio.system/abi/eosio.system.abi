@@ -324,6 +324,13 @@
         {"name":"producers", "type":"account_name[]"}
       ]
     },{
+      "name": "abi_hash",
+      "base": "",
+      "fields": [
+         {"name":"owner",  "type":"account_name"},
+         {"name":"hash",   "type":"checksum256"}
+      ]
+    },{
       "name": "voter_info",
       "base": "",
       "fields": [
@@ -559,6 +566,12 @@
       "index_type": "i64",
       "key_names" : [],
       "key_types" : []
+    },{
+      "name": "abihash",
+      "type": "abi_hash",
+      "index_type": "i64",
+      "key_names" : ["owner"],
+      "key_types" : ["account_name"]
     },{
       "name": "voters",
       "type": "voter_info",

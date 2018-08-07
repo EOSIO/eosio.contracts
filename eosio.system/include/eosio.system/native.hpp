@@ -60,15 +60,6 @@ namespace eosiosystem {
                                      (schedule_version)(new_producers))
    };
 
-
-   struct abi_hash {
-      account_name owner;
-      checksum256  hash;
-      auto primary_key()const { return owner; }
-
-      EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
-   };
-
    /*
     * Method parameters commented out to prevent generation of code that parses input data.
     */
