@@ -5,6 +5,7 @@
 #include <eosio/chain/wast_to_wasm.hpp>
 #include <cstdlib>
 #include <iostream>
+#include <fc/crypto/sha256.hpp>
 #include <fc/log/logger.hpp>
 #include <eosio/chain/exceptions.hpp>
 #include <Runtime/Runtime.h>
@@ -1187,7 +1188,7 @@ BOOST_FIXTURE_TEST_CASE( proxy_actions_affect_producers, eosio_system_tester, * 
 
 BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
 
-   const double continuous_rate = 4.879 / 100.;
+   const double continuous_rate = 0.009758;
    const double usecs_per_year  = 52 * 7 * 24 * 3600 * 1000000ll;
    const double secs_per_year   = 52 * 7 * 24 * 3600;
 
@@ -1255,13 +1256,13 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
       BOOST_REQUIRE_EQUAL(0, initial_perblock_bucket);
       BOOST_REQUIRE_EQUAL(0, initial_pervote_bucket);
 
-      BOOST_REQUIRE_EQUAL(int64_t( ( initial_supply.get_amount() * double(secs_between_fills) * continuous_rate/5. ) / secs_per_year ),
+      BOOST_REQUIRE_EQUAL(int64_t( ( initial_supply.get_amount() * double(secs_between_fills) * continuous_rate ) / secs_per_year ),
                           supply.get_amount() - initial_supply.get_amount());
-      BOOST_REQUIRE_EQUAL(int64_t( ( initial_supply.get_amount() * double(secs_between_fills) * (0.25 * continuous_rate/ 5.) / secs_per_year ) ),
+      BOOST_REQUIRE_EQUAL(int64_t( ( initial_supply.get_amount() * double(secs_between_fills) * (0.25 * continuous_rate) / secs_per_year ) ),
                           balance.get_amount() - initial_balance.get_amount());
 
-      int64_t from_perblock_bucket = int64_t( initial_supply.get_amount() * double(secs_between_fills) * (0.25 * continuous_rate/ 5.) / secs_per_year ) ;
-      int64_t from_pervote_bucket  = int64_t( initial_supply.get_amount() * double(secs_between_fills) * (0.75 * continuous_rate/ 5.) / secs_per_year ) ;
+      int64_t from_perblock_bucket = int64_t( initial_supply.get_amount() * double(secs_between_fills) * (0.25 * continuous_rate) / secs_per_year ) ;
+      int64_t from_pervote_bucket  = int64_t( initial_supply.get_amount() * double(secs_between_fills) * (0.75 * continuous_rate) / secs_per_year ) ;
 
 
       if (from_pervote_bucket >= 100 * 10000) {
@@ -1328,10 +1329,10 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
       BOOST_REQUIRE_EQUAL(claim_time, prod["last_claim_time"].as<uint64_t>());
       auto usecs_between_fills = claim_time - initial_claim_time;
 
-      BOOST_REQUIRE_EQUAL(int64_t( ( double(initial_supply.get_amount()) * double(usecs_between_fills) * (continuous_rate/5) / usecs_per_year ) ),
+      BOOST_REQUIRE_EQUAL(int64_t( ( double(initial_supply.get_amount()) * double(usecs_between_fills) * (continuous_rate) / usecs_per_year ) ),
                           supply.get_amount() - initial_supply.get_amount());
 
-      int64_t to_producer        = int64_t( (double(initial_supply.get_amount()) * double(usecs_between_fills) * continuous_rate) / usecs_per_year ) / 5;
+      int64_t to_producer        = int64_t( (double(initial_supply.get_amount()) * double(usecs_between_fills) * continuous_rate) / usecs_per_year );
       int64_t to_perblock_bucket = to_producer / 4;
       int64_t to_pervote_bucket  = to_producer - to_perblock_bucket;
 
@@ -1355,7 +1356,6 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
       regproducer(N(defproducerb));
       regproducer(N(defproducerc));
       const asset   initial_supply  = get_token_supply();
-      const int64_t initial_savings = get_balance(N(eosio.saving)).get_amount();
       for (uint32_t i = 0; i < 7 * 52; ++i) {
          produce_block(fc::seconds(8 * 3600));
          BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducerc), N(claimrewards), mvo()("owner", "defproducerc")));
@@ -1365,7 +1365,6 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
          BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
       }
       const asset   supply  = get_token_supply();
-      const int64_t savings = get_balance(N(eosio.saving)).get_amount();
       double percent = (supply.get_amount() / double(initial_supply.get_amount() )) - 1;
       idump((percent));
       BOOST_REQUIRE( percent < .01 && percent > 0 );
@@ -2709,6 +2708,23 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    rlm.get_account_limits( N(alice1111111), ram_bytes, net_weight, cpu_weight );
    userres = get_total_stake( N(alice1111111) );
    BOOST_REQUIRE_EQUAL( userres["ram_bytes"].as_uint64() + ram_gift, ram_bytes );
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( setabi, eosio_system_tester ) try {
+   set_abi( N(eosio.token), contracts::token_abi().data() );
+   auto abi_hash = get_row_by_account( N(eosio.system), N(eosio.system), N(abihash), N(eosio.token) ); 
+   auto result = fc::sha256::hash( contracts::token_abi().data(), contracts::token_abi().size() );
+   for ( int i=0; i < abi_hash.size(); i++ ) {
+      BOOST_REQUIRE( abi_hash[i] == result.data()[i] );
+   }
+
+   set_abi( N(eosio.token), contracts::system_abi().data() );
+   abi_hash = get_row_by_account( N(eosio.system), N(eosio.system), N(abihash), N(eosio.token) ); 
+   result = fc::sha256::hash( contracts::system_abi().data(), contracts::system_abi().size() );
+   for ( int i=0; i < abi_hash.size(); i++ ) {
+      BOOST_REQUIRE( abi_hash[i] == result.data()[i] );
+   }
 
 } FC_LOG_AND_RETHROW()
 
