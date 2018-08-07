@@ -142,6 +142,39 @@ namespace eosiosystem {
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
    static constexpr uint64_t     system_token_symbol = CORE_SYMBOL;
 
+   struct rex_pool {
+      asset      total_lent;
+      asset      total_lendable;
+      asset      total_rent;
+      asset      total_rex;
+      uint64_t   loan_num = 0; /// increments with each new loan
+      auto primary_key()const { return 0; }
+   };
+
+   typedef eosio::multi_index< N(regpool), rex_pool > rex_pool_table;
+
+   struct rex_balance {
+      account_name owner;
+      asset        vote_stake; /// the amount of CORE_SYMBOL currently included in owner's vote
+      asset        rex_balance; /// the amount of REX owned by owner
+
+      auto primary_key()const { return owner; }
+   };
+   typedef eosio::multi_index< N(rexbal), rex_balance > rex_balance_table;
+
+   struct rex_loan {
+      account_name        receiver;
+      asset               total_staked;
+      uint64_t            loan_num;
+      
+      eosio::time_point   expiration;
+
+      auto primary_key()const { return loan_num; }
+   };
+
+   typedef eosio::multi_index< N(cpuloan), rex_loan> rex_cpu_loan_table;
+   typedef eosio::multi_index< N(cpunet), rex_loan>  rex_net_loan_table;
+
    class system_contract : public native {
       private:
          voters_table            _voters;
@@ -170,6 +203,24 @@ namespace eosiosystem {
           */
          void delegatebw( account_name from, account_name receiver,
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
+
+
+         /**
+          * Transfers SYS tokens from user balance and credits converts them to REX stake.
+          */
+         void lendrex( account_name from, asset amount );
+
+         /**
+          * Converts REX stake back into SYS tokens at current exchange rate
+          */
+         void unlendrex( account_name from, asset rex  );
+
+         /**
+          * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
+          * after 30 days the rented SYS delegation of CPU or NET will expire.
+          */
+         void rent( account_name from, account_name receiver, asset payment, bool cpu  );
+         void runrex( uint16_t max );
 
 
          /**
