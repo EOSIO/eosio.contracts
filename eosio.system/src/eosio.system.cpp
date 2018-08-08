@@ -235,10 +235,11 @@ namespace eosiosystem {
          rextable.emplace( _self, [&]( auto& rp ){ 
            rex_received.amount = amount.amount * 10000;
 
-           rp.total_lendable = amount;
-           rp.total_lent     = asset( 0, CORE_SYMBOL );
-           rp.total_rent     = asset( 1000000, CORE_SYMBOL ); /// base amount prevents renting profitably until at least a minimum number of CORE_SYMBOL are made available
-           rp.total_rex      = rex_received;
+           rp.total_lendable        = amount;
+           rp.total_lent            = asset( 0, CORE_SYMBOL );
+           rp.total_rent            = asset( 1000000, CORE_SYMBOL ); /// base amount prevents renting profitably until at least a minimum number of CORE_SYMBOL are made available
+           rp.total_rex             = rex_received;
+           rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
          });
       } else {
          const auto S0 = itr->total_lendable.amount;
@@ -251,7 +252,9 @@ namespace eosiosystem {
 
          rextable.modify( itr, 0, [&]( auto& rp ) {
            rp.total_lendable.amount = S1;
-           rp.total_rex.amount = R1;
+           rp.total_rex.amount      = R1;
+           rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
+           eosio_assert( rp.total_unlent.amount >= 0, "programmer error, this should never go negative" );
          });
       }
 
@@ -268,12 +271,15 @@ namespace eosiosystem {
             rb.rex_balance.amount  += rex_received.amount;
          });
       }
+      runrex(2);
    }
 
    /**
     * Converts REX stake back into SYS tokens at current exchange rate
     */
    void system_contract::unlendrex( account_name from, asset rex  ) {
+      runrex(2);
+
       require_auth( from );
 
       rex_pool_table   rextable(_self,_self);
@@ -295,7 +301,9 @@ namespace eosiosystem {
       rextable.modify( itr, 0, [&]( auto& rt ) {
           rt.total_rex.amount      = R1;
           rt.total_lendable.amount = S1;
+          rt.total_unlent.amount = rt.total_lendable.amount - rt.total_lent.amount;
           eosio_assert( rt.total_lendable.amount > rt.total_lent.amount, "unable to unlendrex until loans expire" );
+          eosio_assert( rt.total_unlent.amount >= 0, "programmer error, this should never go negative" );
       });
 
       rbalance.modify( bitr, 0, [&]( auto& rb ) {
@@ -308,10 +316,18 @@ namespace eosiosystem {
 
    }
 
+   /**
+    * Given two connector balances (conin, and conout), and an incoming amount of
+    * in, this function will modify conin and conout and return the delta out.
+    *
+    * @param in - same units as conin
+    * @param conin - the input connector balance
+    * @param conout - the output connector balance
+    */
    int64_t bancor_convert( int64_t& conin, int64_t& conout, int64_t in ) {
-      double T0 = double(conout);
-      double F0 = double(conin);
-      double I  = double(in);
+      const double T0 = double(conout);
+      const double F0 = double(conin);
+      const double I  = double(in);
 
       auto out = int64_t((I*T0) / (I+F0));
 
@@ -323,12 +339,30 @@ namespace eosiosystem {
       return out;
    }
 
+   void system_contract::update_resource_limits( account_name receiver, int64_t delta_cpu, int64_t delta_net ) {
+      user_resources_table   totals_tbl( _self, receiver );
+      auto tot_itr = totals_tbl.find( receiver );
+      eosio_assert( tot_itr !=  totals_tbl.end(), "expected to find resource table" );
+      totals_tbl.modify( tot_itr, 0, [&]( auto& tot ) {
+            tot.cpu_weight.amount    += delta_cpu;
+            tot.net_weight.amount    += delta_net;
+         });
+      eosio_assert( asset(0) <= tot_itr->net_weight, "insufficient staked total net bandwidth" );
+      eosio_assert( asset(0) <= tot_itr->cpu_weight, "insufficient staked total cpu bandwidth" );
+
+      int64_t ram_bytes, net, cpu;
+      get_resource_limits( receiver, &ram_bytes, &net, &cpu );
+      set_resource_limits( receiver, ram_bytes, tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
+   }
+
    /**
     * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
     * after 30 days the rented SYS delegation of CPU or NET will expire.
     */
    void system_contract::rent( account_name from, account_name receiver, asset payment, bool cpu  ) {
       require_auth( from );
+
+      runrex(2);
 
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
                                                     { from, N(eosio.rex), payment, string("rent ") + (cpu ? "CPU" : "NET") } );
@@ -348,36 +382,64 @@ namespace eosiosystem {
 
       if( cpu ) {
          rex_cpu_loan_table cpu_loans(_self,_self);
-         auto citr = cpu_loans.find( receiver );
-         if( citr == cpu_loans.end() ) {
-            cpu_loans.emplace( from, [&]( auto& c ) {
-               c.receiver = receiver;
-               c.total_staked = asset( rented_tokens, CORE_SYMBOL );
-               c.expiration = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
-               c.loan_num   = itr->loan_num;
-            });
-            /// TODO: increase the total staked for CPU 
-         } 
-      }
-      else {
-         rex_cpu_loan_table net_loans(_self,_self);
+
+         cpu_loans.emplace( from, [&]( auto& c ) {
+            c.receiver = receiver;
+            c.total_staked = asset( rented_tokens, CORE_SYMBOL );
+            c.expiration = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
+            c.loan_num   = itr->loan_num;
+         });
+         update_resource_limits( receiver, rented_tokens, 0 );
+      } else {
+         rex_net_loan_table net_loans(_self,_self);
+
+         net_loans.emplace( from, [&]( auto& c ) {
+            c.receiver = receiver;
+            c.total_staked = asset( rented_tokens, CORE_SYMBOL );
+            c.expiration = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
+            c.loan_num   = itr->loan_num;
+         });
+         update_resource_limits( receiver, 0, rented_tokens );
       }
    }
 
+   /**
+    * Perform maitenance operations on expired rex
+    */
    void system_contract::runrex( uint16_t max ) {
+      rex_pool_table   rextable(_self,_self);
+      auto rexi = rextable.begin();
+      eosio_assert( rexi != rextable.end(), "rex system not initialized yet" );
+
+      auto unrent = [&]( int64_t rented_tokens )  {
+         rextable.modify( rexi, 0, [&]( auto& rt ) {
+            int64_t unlent      = rt.total_lendable.amount - rt.total_lent.amount;
+            int64_t rent_earned = bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, rented_tokens ); 
+            rt.total_lent.amount = rt.total_lendable.amount - rt.total_unlent.amount;
+         });
+      };
+
       rex_cpu_loan_table cpu_loans(_self,_self);
       for( uint32_t i = 0; i < max; ++i ) {
          auto itr = cpu_loans.begin();
          if( itr == cpu_loans.end() ) break;
          if( itr->expiration.elapsed.count() > current_time() ) break;
 
-         /// TODO sell total_staked back via bancor and decrease total_lent by staked
-         /// proceeds from "sale" are burnt.
-         /// decrease receiver's CPU weight by itr->total_staked
-         /// remove itr
+         update_resource_limits( itr->receiver, -itr->total_staked.amount, 0 );
+         unrent( itr->total_staked.amount );
+         cpu_loans.erase( itr );
       }
+
       rex_cpu_loan_table net_loans(_self,_self);
-      /// copy pattern from loans...
+      for( uint32_t i = 0; i < max; ++i ) {
+         auto itr = net_loans.begin();
+         if( itr == net_loans.end() ) break;
+         if( itr->expiration.elapsed.count() > current_time() ) break;
+
+         update_resource_limits( itr->receiver, 0, -itr->total_staked.amount );
+         unrent( itr->total_staked.amount );
+         net_loans.erase( itr );
+      }
    }
 
 } /// eosio.system

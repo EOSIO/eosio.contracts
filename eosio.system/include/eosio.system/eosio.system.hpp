@@ -143,10 +143,11 @@ namespace eosiosystem {
    static constexpr uint64_t     system_token_symbol = CORE_SYMBOL;
 
    struct rex_pool {
-      asset      total_lent;
-      asset      total_lendable;
-      asset      total_rent;
-      asset      total_rex;
+      asset      total_lent; /// total EOS in open rex_loans
+      asset      total_unlent; /// total EOS available to be lent (connector)
+      asset      total_rent; /// fees received in exchange for lent  (connector)
+      asset      total_lendable; /// total EOS that have been lent (total_unlent + total_lent)
+      asset      total_rex; /// total number of REX shares allocated to contributors to total_lendable
       uint64_t   loan_num = 0; /// increments with each new loan
       auto primary_key()const { return 0; }
    };
@@ -297,6 +298,7 @@ namespace eosiosystem {
          //defined in delegate_bandwidth.cpp
          void changebw( account_name from, account_name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
+         void update_resource_limits( account_name receiver, int64_t delta_cpu, int64_t delta_net );
 
          //defined in voting.hpp
          void update_elected_producers( block_timestamp timestamp );
