@@ -192,6 +192,45 @@
          {"name":"cpu_weight", "type":"asset"}
       ]
     },{
+      "name": "lendrex",
+      "base": "",
+      "fields": [
+         {"name":"from",   "type":"account_name"},
+         {"name":"amount", "type":"asset"}
+      ]
+    },{
+      "name": "unlendrex",
+      "base": "",
+      "fields": [
+         {"name":"from", "type":"account_name"},
+         {"name":"rex",  "type":"asset"}
+      ]
+    },{
+      "name": "rex_balance",
+      "base": "",
+      "fields": [
+         {"name":"owner",       "type":"account_name"},
+         {"name":"vote_stake",  "type":"asset"},
+         {"name":"rex_balance", "type":"asset"}
+      ]
+    },{
+      "name": "rex_loan",
+      "base": "",
+      "fields": [
+         {"name":"receiver",    "type":"account_name"},
+         {"name":"total_stake", "type":"asset"},
+         {"name":"loan_num",    "type":"uint64"}
+      ]
+    },{
+      "name": "rent",
+      "base": "",
+      "fields": [
+         {"name":"from",     "type":"account_name"},
+         {"name":"receiver", "type":"account_name"},
+         {"name":"payment",  "type":"asset"},
+         {"name":"cpu",      "type":"bool"}
+      ]
+    },{
       "name": "user_resources",
       "base": "",
       "fields": [
@@ -481,6 +520,18 @@
       "type": "refund",
       "ricardian_contract": ""
    },{
+      "name": "lendrex",
+      "type": "lendrex",
+      "ricardian_contract": ""
+   },{
+      "name": "unlendrex",
+      "type": "unlendrex",
+      "ricardian_contract": ""
+   },{
+      "name": "rent",
+      "type": "rent",
+      "ricardian_contract": ""
+   },{
       "name": "regproducer",
       "type": "regproducer",
       "ricardian_contract": ""
@@ -576,6 +627,24 @@
       "type": "delegated_bandwidth",
       "index_type": "i64",
       "key_names" : ["to"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "rexbal",
+      "type": "rex_balance",
+      "index_type": "i64",
+      "key_names" : ["owner"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "cpuloan",
+      "type": "rex_loan",
+      "index_type": "i64",
+      "key_names" : ["loan_num"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "netloan",
+      "type": "rex_loan",
+      "index_type": "i64",
+      "key_names" : ["loan_num"],
       "key_types" : ["uint64"]
     },{
       "name": "rammarket",

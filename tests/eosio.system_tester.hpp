@@ -40,7 +40,7 @@ public:
       produce_blocks( 2 );
 
       create_accounts({ N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake),
-               N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names) });
+               N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(eosio.rex) });
 
 
       produce_blocks( 100 );
@@ -263,6 +263,65 @@ public:
 
    action_result unstake( const account_name& acnt, const asset& net, const asset& cpu ) {
       return unstake( acnt, acnt, net, cpu );
+   }
+
+   action_result lendrex( const account_name& from, const asset& amount ) {
+      return push_action( name(from), N(lendrex), mvo()
+                          ("from",  from)
+                          ("amount", amount)
+      );
+   }
+
+   action_result unlendrex( const account_name& from, const asset& rex ) {
+      return push_action( name(from), N(unlendrex), mvo()
+                          ("from",  from)
+                          ("rex", rex)
+      );
+   }
+
+   action_result rent( const account_name& from, const account_name& receiver, const asset& payment, bool cpu ) {
+      return push_action( name(from), N(rent), mvo()
+                          ("from",  from)
+                          ("receiver", receiver)
+                          ("payment", payment)
+                          ("cpu", cpu)
+      );
+   }
+
+   fc::variant get_last_loan(bool cpu) {
+      vector<char> data;
+      const auto& db = control->db();
+      namespace chain = eosio::chain;
+      auto table = cpu ? N(cpuloan) : N(netloan);
+      const auto* t_id = db.find<eosio::chain::table_id_object, chain::by_code_scope_table>( boost::make_tuple( config::system_account_name, config::system_account_name, table ) );
+      if ( !t_id ) {
+         return fc::variant();
+      }
+
+      const auto& idx = db.get_index<chain::key_value_index, chain::by_scope_primary>();
+
+      auto itr = idx.end();
+      if (itr == idx.begin()) {
+         return fc::variant();
+      }
+      --itr;
+
+      data.resize( itr->value.size() );
+      memcpy( data.data(), itr->value.data(), data.size() );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "rex_loan", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_last_cpu_loan() {
+      return get_last_loan( true );
+   }
+
+   fc::variant get_last_net_loan() {
+      return get_last_loan( false );
+   }
+
+   asset get_rex_balance( const account_name& act ) const {
+      vector<char> data = get_row_by_account( N(eosio), N(eosio), N(rexbal), act );
+      return data.empty() ? asset(0, symbol(N(REX))) : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["rex_balance"].as<asset>();
    }
 
    action_result bidname( const account_name& bidder, const account_name& newname, const asset& bid ) {

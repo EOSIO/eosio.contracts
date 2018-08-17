@@ -302,7 +302,7 @@ namespace eosiosystem {
           rt.total_rex.amount      = R1;
           rt.total_lendable.amount = S1;
           rt.total_unlent.amount = rt.total_lendable.amount - rt.total_lent.amount;
-          eosio_assert( rt.total_lendable.amount > rt.total_lent.amount, "unable to unlendrex until loans expire" );
+          eosio_assert( rt.total_lendable.amount >= rt.total_lent.amount, "unable to unlendrex until loans expire" );// XXX > or >=
           eosio_assert( rt.total_unlent.amount >= 0, "programmer error, this should never go negative" );
       });
 
@@ -430,7 +430,7 @@ namespace eosiosystem {
          cpu_loans.erase( itr );
       }
 
-      rex_cpu_loan_table net_loans(_self,_self);
+      rex_net_loan_table net_loans(_self,_self);
       for( uint32_t i = 0; i < max; ++i ) {
          auto itr = net_loans.begin();
          if( itr == net_loans.end() ) break;
