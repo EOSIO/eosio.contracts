@@ -79,6 +79,13 @@
         {"name":"abi",     "type":"bytes"}
       ]
     },{
+      "name": "abi_hash",
+      "base": "",
+      "fields": [
+         {"name":"owner",  "type":"account_name"},
+         {"name":"hash",   "type":"checksum256"}
+      ]
+    },{
       "name": "updateauth",
       "base": "",
       "fields": [
@@ -225,7 +232,13 @@
       "ricardian_contract": ""
     }
    ],
-   "tables": [],
+   "tables": [{
+      "name": "abihash",
+      "type": "abi_hash",
+      "index_type": "i64",
+      "key_names": ["owner"],
+      "key_types": ["account_name"]
+    }],
    "ricardian_clauses": [],
    "abi_extensions": []
 }
