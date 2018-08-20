@@ -2729,6 +2729,7 @@ BOOST_FIXTURE_TEST_CASE( setabi_bios, TESTER ) try {
    abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>(), abi_serializer_max_time);
    set_code( config::system_account_name, contracts::bios_wasm() );
    set_abi( config::system_account_name, contracts::bios_abi().data() );
+   create_account(N(eosio.token));
    set_abi( N(eosio.token), contracts::token_abi().data() );
    { 
       auto res = get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) ); 
