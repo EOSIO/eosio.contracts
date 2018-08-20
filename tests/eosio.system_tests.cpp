@@ -5,6 +5,7 @@
 #include <eosio/chain/wast_to_wasm.hpp>
 #include <cstdlib>
 #include <iostream>
+#include <fc/crypto/sha256.hpp>
 #include <fc/log/logger.hpp>
 #include <eosio/chain/exceptions.hpp>
 #include <Runtime/Runtime.h>
@@ -2717,6 +2718,23 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    rlm.get_account_limits( N(alice1111111), ram_bytes, net_weight, cpu_weight );
    userres = get_total_stake( N(alice1111111) );
    BOOST_REQUIRE_EQUAL( userres["ram_bytes"].as_uint64() + ram_gift, ram_bytes );
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( setabi, eosio_system_tester ) try {
+   set_abi( N(eosio.token), contracts::token_abi().data() );
+   auto abi_hash = get_row_by_account( N(eosio.system), N(eosio.system), N(abihash), N(eosio.token) ); 
+   auto result = fc::sha256::hash( contracts::token_abi().data(), contracts::token_abi().size() );
+   for ( int i=0; i < abi_hash.size(); i++ ) {
+      BOOST_REQUIRE( abi_hash[i] == result.data()[i] );
+   }
+
+   set_abi( N(eosio.token), contracts::system_abi().data() );
+   abi_hash = get_row_by_account( N(eosio.system), N(eosio.system), N(abihash), N(eosio.token) ); 
+   result = fc::sha256::hash( contracts::system_abi().data(), contracts::system_abi().size() );
+   for ( int i=0; i < abi_hash.size(); i++ ) {
+      BOOST_REQUIRE( abi_hash[i] == result.data()[i] );
+   }
 
 } FC_LOG_AND_RETHROW()
 

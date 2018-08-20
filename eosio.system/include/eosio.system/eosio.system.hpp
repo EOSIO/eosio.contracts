@@ -128,6 +128,15 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(proxied_vote_weight)(is_proxy)(reserved1)(reserved2)(reserved3) )
    };
 
+   struct abi_hash {
+      account_name owner;
+      checksum256  hash;
+      auto primary_key()const { return owner; }
+
+      EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
+   };
+   
+   typedef eosio::multi_index< N(abihash), abi_hash>   abi_hash_table; 
    typedef eosio::multi_index< N(voters), voter_info>  voters_table;
 
 

@@ -60,7 +60,6 @@ namespace eosiosystem {
                                      (schedule_version)(new_producers))
    };
 
-
    /*
     * Method parameters commented out to prevent generation of code that parses input data.
     */
@@ -108,5 +107,6 @@ namespace eosiosystem {
 
          void onerror( /*const bytes&*/ ) {}
 
+         void setabi( account_name acnt, const bytes& abi );
    };
 }
