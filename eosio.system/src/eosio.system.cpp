@@ -220,7 +220,6 @@ namespace eosiosystem {
 
    void native::setabi( account_name acnt, const bytes& abi ) {
       eosio::multi_index< N(abihash), abi_hash>  table(_self,_self);
-
       auto itr = table.find( acnt );
       if( itr == table.end() ) {
          table.emplace( acnt, [&]( auto& row ) {
