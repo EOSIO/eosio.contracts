@@ -1,8 +1,19 @@
 #pragma once
+#include <eosiolib/crypto.h>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/privileged.hpp>
 
 namespace eosio {
+
+   struct abi_hash {
+      account_name owner;
+      checksum256  hash;
+      auto primary_key()const { return owner; }
+
+      EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
+   };
+
+   typedef eosio::multi_index< N(abihash), abi_hash> abi_hash_table; 
 
    class bios : public contract {
       public:
@@ -36,6 +47,21 @@ namespace eosio {
 
          void reqauth( action_name from ) {
             require_auth( from );
+         }
+
+         void setabi( account_name acnt, const bytes& abi ) {
+            abi_hash_table table(_self, _self);
+            auto itr = table.find( acnt );
+            if( itr == table.end() ) {
+               table.emplace( acnt, [&]( auto& row ) {
+                  row.owner = acnt;
+                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash ); 
+               });
+            } else {
+               table.modify( itr, 0, [&]( auto& row ) {
+                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash ); 
+               });
+            }
          }
 
       private:
