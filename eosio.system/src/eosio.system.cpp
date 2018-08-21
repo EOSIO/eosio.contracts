@@ -1,5 +1,6 @@
 #include <eosio.system/eosio.system.hpp>
 #include <eosiolib/dispatcher.hpp>
+#include <eosiolib/crypto.h>
 
 #include "producer_pay.cpp"
 #include "delegate_bandwidth.cpp"
@@ -217,12 +218,27 @@ namespace eosiosystem {
       set_resource_limits( newact, 0, 0, 0 );
    }
 
+   void native::setabi( account_name acnt, const bytes& abi ) {
+      eosio::multi_index< N(abihash), abi_hash>  table(_self,_self);
+      auto itr = table.find( acnt );
+      if( itr == table.end() ) {
+         table.emplace( acnt, [&]( auto& row ) {
+            row.owner= acnt;
+            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash ); 
+         });
+      } else {
+         table.modify( itr, 0, [&]( auto& row ) {
+            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash ); 
+         });
+      }
+   }
+
 } /// eosio.system
 
 
 EOSIO_ABI( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
-     (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)
+     (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
      (setram)(setramrate)(setparams)(setpriv)(rmvproducer)(bidname)
      // delegate_bandwidth.cpp

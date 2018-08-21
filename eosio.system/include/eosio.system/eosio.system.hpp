@@ -161,6 +161,7 @@ namespace eosiosystem {
          void onblock( block_timestamp timestamp, account_name producer );
                       // const block_header& header ); /// only parse first 3 fields of block header
 
+
          // functions defined in delegate_bandwidth.cpp
 
          /**
