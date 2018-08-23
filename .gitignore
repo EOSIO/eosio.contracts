@@ -33,3 +33,6 @@
 
 build/*
 .DS_Store
+
+# CLion IDE files
+.idea/
