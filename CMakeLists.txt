@@ -29,6 +29,17 @@ if (NOT "${output}" EQUAL 0)
    message(FATAL_ERROR "Incorrect EOSIO.WasmSDK version, please use version ${EOSIO_WASMSDK_DEPENDENCY}.x")
 endif()
 
+macro( generate_ricardian_abi name indir outdir )
+   file(GLOB ${name}.rcs "${indir}/*.md")
+   add_custom_command( OUTPUT ${name}.abi
+      COMMAND touch ${name}.abi
+      COMMAND python3 ${EOSIO_WASMSDK_ROOT}/scripts/ricardeos.py import ${indir}/${name}.abi ${outdir}/${name}.abi
+      DEPENDS ${${name}.rcs}
+   )
+   add_custom_target( ${name}_abi ALL DEPENDS ${name}.abi )
+   add_dependencies( ${name}.wasm ${name}_abi )
+endmacro()
+
 include_directories(AFTER ${BOOST_ROOT}/include)
 add_subdirectory(eosio.bios)
 add_subdirectory(eosio.msig)

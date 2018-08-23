@@ -1,4 +1,7 @@
 add_executable(eosio.sudo.wasm ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.sudo.cpp)
+
+generate_ricardian_abi( eosio.sudo ${CMAKE_CURRENT_SOURCE_DIR}/abi ${CMAKE_CURRENT_BINARY_DIR} )
+
 target_include_directories(eosio.sudo.wasm
    PUBLIC 
    ${CMAKE_CURRENT_SOURCE_DIR}/include)

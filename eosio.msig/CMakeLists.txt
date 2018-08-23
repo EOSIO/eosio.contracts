@@ -1,6 +1,7 @@
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/abi/eosio.msig.abi" "${CMAKE_CURRENT_BINARY_DIR}" COPYONLY)
-
 add_executable(eosio.msig.wasm ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.msig.cpp)
+
+generate_ricardian_abi( eosio.msig ${CMAKE_CURRENT_SOURCE_DIR}/abi ${CMAKE_CURRENT_BINARY_DIR} )
+
 target_include_directories(eosio.msig.wasm
    PUBLIC 
    ${CMAKE_CURRENT_SOURCE_DIR}/include)
