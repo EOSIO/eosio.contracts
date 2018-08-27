@@ -300,11 +300,14 @@ public:
 
       const auto& idx = db.get_index<chain::key_value_index, chain::by_scope_primary>();
 
-      auto itr = idx.end();
-      if (itr == idx.begin()) {
+      auto itr = idx.upper_bound( boost::make_tuple( t_id->id, std::numeric_limits<uint64_t>::max() ));
+      if ( itr == idx.begin() ) {
          return fc::variant();
       }
       --itr;
+      if ( itr->t_id != t_id->id ) {
+         return fc::variant();
+      }
 
       data.resize( itr->value.size() );
       memcpy( data.data(), itr->value.data(), data.size() );
@@ -322,6 +325,27 @@ public:
    asset get_rex_balance( const account_name& act ) const {
       vector<char> data = get_row_by_account( N(eosio), N(eosio), N(rexbal), act );
       return data.empty() ? asset(0, symbol(N(REX))) : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["rex_balance"].as<asset>();
+   }
+
+   fc::variant get_rex_pool() const {
+      vector<char> data;
+      const auto& db = control->db();
+      namespace chain = eosio::chain;
+      const auto* t_id = db.find<eosio::chain::table_id_object, chain::by_code_scope_table>( boost::make_tuple( config::system_account_name, config::system_account_name, N(rexpool) ) );
+      if ( !t_id ) {
+         return fc::variant();
+      }
+
+      const auto& idx = db.get_index<chain::key_value_index, chain::by_scope_primary>();
+
+      auto itr = idx.lower_bound( boost::make_tuple( t_id->id, 0 ) );
+      if ( itr == idx.end() || itr->t_id != t_id->id || 0 != itr->primary_key ) {
+         return fc::variant();
+      }
+
+      data.resize( itr->value.size() );
+      memcpy( data.data(), itr->value.data(), data.size() );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "rex_pool", data, abi_serializer_max_time );
    }
 
    action_result bidname( const account_name& bidder, const account_name& newname, const asset& bid ) {

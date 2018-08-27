@@ -152,7 +152,7 @@ namespace eosiosystem {
       auto primary_key()const { return 0; }
    };
 
-   typedef eosio::multi_index< N(regpool), rex_pool > rex_pool_table;
+   typedef eosio::multi_index< N(rexpool), rex_pool > rex_pool_table;
 
    struct rex_balance {
       account_name owner;

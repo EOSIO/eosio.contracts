@@ -214,6 +214,17 @@
          {"name":"rex_balance", "type":"asset"}
       ]
     },{
+      "name": "rex_pool",
+      "base": "",
+      "fields": [
+         {"name":"total_lent",     "type":"asset"},
+         {"name":"total_unlent",   "type":"asset"},
+         {"name":"total_rent",     "type":"asset"},
+         {"name":"total_lendable", "type":"asset"},
+         {"name":"total_rex",      "type":"asset"},
+         {"name":"loan_num",       "type":"uint64"}
+      ]
+    },{
       "name": "rex_loan",
       "base": "",
       "fields": [
@@ -627,6 +638,12 @@
       "type": "delegated_bandwidth",
       "index_type": "i64",
       "key_names" : ["to"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "rexpool",
+      "type": "rex_pool",
+      "index_type": "i64",
+      "key_names" : ["zero"],
       "key_types" : ["uint64"]
     },{
       "name": "rexbal",
