@@ -329,7 +329,7 @@ namespace eosiosystem {
       const double F0 = double(conin);
       const double I  = double(in);
 
-      auto out = int64_t((I*T0) / (I+F0));
+      auto out = int64_t((I*F0) / (T0+I));
 
       if( out < 0 ) out = 0;
 
