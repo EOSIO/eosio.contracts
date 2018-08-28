@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
-project(eosio_contracts VERSION 1.1.1)
+project(eosio_contracts VERSION 1.2.0)
 
-set(EOSIO_DEPENDENCY "1.1")
+set(EOSIO_DEPENDENCY "1.2")
 set(EOSIO_WASMSDK_DEPENDENCY "1.1")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -30,6 +30,7 @@ if (NOT "${output}" EQUAL 0)
 endif()
 
 include_directories(AFTER ${BOOST_ROOT}/include)
+add_subdirectory(eosio.bios)
 add_subdirectory(eosio.msig)
 add_subdirectory(eosio.sudo)
 add_subdirectory(eosio.system)
