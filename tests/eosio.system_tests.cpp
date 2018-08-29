@@ -1969,9 +1969,18 @@ BOOST_FIXTURE_TEST_CASE(votepay_share_invariant, eosio_system_tester, * boost::u
    produce_block( fc::hours(16) );
 
    BOOST_REQUIRE_EQUAL( success(), vote( votb, { prodb } ) );
+   produce_block( fc::hours(2) );
    BOOST_REQUIRE_EQUAL( success(), vote( vota, { proda } ) );
-   BOOST_TEST_REQUIRE( get_global_state2()["total_producer_votepay_share"].as_double() == 
-                       get_producer_info2(prodb)["votepay_share"].as_double() );
+   
+   const auto& info  = get_producer_info(prodb);
+   const auto& info2 = get_producer_info2(prodb);
+   const auto& gs2   = get_global_state2();
+   const auto& gs3   = get_global_state3();
+
+   double expected_total_vpay_share = info2["votepay_share"].as_double() + 
+      info["total_votes"].as_double() * (gs3["last_vpay_state_update"].as_uint64() - info2["last_votepay_share_update"].as_uint64()) / 1E6;
+
+   BOOST_TEST_REQUIRE( expected_total_vpay_share == gs2["total_producer_votepay_share"].as_double() );
 
 } FC_LOG_AND_RETHROW()
 
