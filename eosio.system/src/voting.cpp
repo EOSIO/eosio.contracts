@@ -124,6 +124,23 @@ namespace eosiosystem {
       return double(staked) * std::pow( 2, weight );
    }
 
+   double system_contract::update_total_votepay_share( /*time_point*/ uint64_t ct,
+                                                       double additional_shares_delta,
+                                                       double shares_rate_delta )
+   {
+      double delta_total_votepay_share = 0.0;
+      if( ct > _gstate3.last_vpay_state_update ) {
+         delta_total_votepay_share = _gstate3.total_vpay_share_change_rate
+                                       * double( (ct - _gstate3.last_vpay_state_update) / 1E6 );
+      }
+
+      _gstate2.total_producer_votepay_share += (delta_total_votepay_share + additional_shares_delta);
+      _gstate3.last_vpay_state_update = ct;
+      _gstate3.total_vpay_share_change_rate += shares_rate_delta;
+
+      return _gstate2.total_producer_votepay_share;
+   }
+
    double system_contract::update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
                                                           /*time_point*/ uint64_t ct,
                                                           double shares_rate,
@@ -241,8 +258,6 @@ namespace eosiosystem {
       }
 
       const auto ct = current_time();
-      bool   update_global_time        = false;
-      bool   update_global_share       = false;
       double delta_change_rate         = 0.0;
       double total_inactive_vpay_share = 0.0;
       for( const auto& pd : producer_deltas ) {
@@ -265,9 +280,6 @@ namespace eosiosystem {
                bool updated_after_threshold = (last_claim_plus_3days <= prod2->last_votepay_share_update);
                // Note: update_after_threshold implies cross_threshold
 
-               update_global_time = true;
-               update_global_share = true; //|= !updated_after_threshold;
-
                double new_votepay_share = update_producer_votepay_share( prod2,
                                              ct,
                                              updated_after_threshold ? 0.0 : init_total_votes,
@@ -285,13 +297,8 @@ namespace eosiosystem {
             eosio_assert( !pd.second.second /* not from new set */, "producer is not registered" ); //data corruption
          }
       }
-      //if ( update_global_share ) {
-         _gstate2.total_producer_votepay_share += _gstate3.total_vpay_share_change_rate * double( (ct - _gstate3.last_vpay_state_update) / 1E6 ) - total_inactive_vpay_share;
-      //}
-      //_gstate2.total_producer_votepay_share -= total_inactive_vpay_share;
-      _gstate3.total_vpay_share_change_rate += delta_change_rate;
-      //if ( update_global_time )
-         _gstate3.last_vpay_state_update = ct;
+
+      update_total_votepay_share( ct, -total_inactive_vpay_share, delta_change_rate );
 
       _voters.modify( voter, 0, [&]( auto& av ) {
          av.last_vote_weight = new_vote_weight;
@@ -347,8 +354,6 @@ namespace eosiosystem {
          } else {
             auto delta = new_weight - voter.last_vote_weight;
             const auto ct = current_time();
-            bool   update_global_time        = false;
-            bool   update_global_share       = false;
             double delta_change_rate         = 0;
             double total_inactive_vpay_share = 0;
             for ( auto acnt : voter.producers ) {
@@ -360,8 +365,6 @@ namespace eosiosystem {
                });
                auto prod2 = _producers2.find( acnt );
                if ( prod2 != _producers2.end() ) {
-                  update_global_time = true;
-
                   const uint64_t last_claim_plus_3days = pitr.last_claim_time + 3 * useconds_per_day;
                   bool crossed_threshold       = (last_claim_plus_3days <= ct);
                   bool updated_after_threshold = (last_claim_plus_3days <= prod2->last_votepay_share_update);
@@ -381,13 +384,8 @@ namespace eosiosystem {
                   }
                }
             }
-            //if ( update_global_share ) {
-               _gstate2.total_producer_votepay_share += _gstate3.total_vpay_share_change_rate * double( (ct - _gstate3.last_vpay_state_update) / 1E6 ) - total_inactive_vpay_share;
-            //}
-            //_gstate2.total_producer_votepay_share -= total_inactive_vpay_share;
-            _gstate3.total_vpay_share_change_rate += delta_change_rate;
-            //if ( update_global_time )
-               _gstate3.last_vpay_state_update = ct;
+
+            update_total_votepay_share( ct, -total_inactive_vpay_share, delta_change_rate );
          }
       }
       _voters.modify( voter, 0, [&]( auto& v ) {

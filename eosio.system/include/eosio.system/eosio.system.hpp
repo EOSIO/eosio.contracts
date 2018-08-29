@@ -281,7 +281,10 @@ namespace eosiosystem {
          void propagate_weight_change( const voter_info& voter );
 
          double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
-                                               /*time_point*/ uint64_t ct, double shares_rate, bool reset_to_zero = false );
+                                               /*time_point*/ uint64_t ct,
+                                               double shares_rate, bool reset_to_zero = false );
+         double update_total_votepay_share( /*time_point*/ uint64_t ct,
+                                            double additional_shares_delta = 0.0, double shares_rate_delta = 0.0 );
    };
 
 } /// eosiosystem
