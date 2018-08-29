@@ -1991,8 +1991,6 @@ BOOST_FIXTURE_TEST_CASE(votepay_share_proxy, eosio_system_tester, * boost::unit_
    const auto carol = accounts[2];
    const auto emily = accounts[3];
 
-   wlog("start");
-
    // alice becomes a proxy
    BOOST_REQUIRE_EQUAL( success(), push_action( alice, N(regproxy), mvo()("proxy", alice)("isproxy", true) ) );
    REQUIRE_MATCHING_OBJECT( proxy( alice ), get_voter_info( alice ) );
@@ -2052,12 +2050,11 @@ BOOST_FIXTURE_TEST_CASE(votepay_share_proxy, eosio_system_tester, * boost::unit_
    BOOST_TEST_REQUIRE( expected_votepay_share == cur_info2["votepay_share"].as_double() );
    BOOST_TEST_REQUIRE( expected_votepay_share == get_global_state2()["total_producer_votepay_share"].as_double() );
 
-   produce_block( fc::hours(/*53*/ 54) );
+   produce_block( fc::hours(54) );
 
    // bob votes for carol again
    // carol hasn't claimed rewards in over 3 days
    total_votes = get_producer_info(carol)["total_votes"].as_double();
-   wlog("bob is about to revote for carol");
    BOOST_REQUIRE_EQUAL( success(), vote( bob, { carol } ) );
    BOOST_REQUIRE_EQUAL( get_producer_info2(carol)["last_votepay_share_update"].as_uint64(),
                         get_global_state3()["last_vpay_state_update"].as_uint64() );
