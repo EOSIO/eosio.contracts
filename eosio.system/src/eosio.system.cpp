@@ -1,5 +1,6 @@
 #include <eosio.system/eosio.system.hpp>
 #include <eosiolib/dispatcher.hpp>
+#include <eosiolib/crypto.h>
 
 #include "producer_pay.cpp"
 #include "delegate_bandwidth.cpp"
@@ -49,6 +50,10 @@ namespace eosiosystem {
       return dp;
    }
 
+   block_timestamp system_contract::current_block_time() {
+      const static block_timestamp cbt{ time_point{ microseconds{ static_cast<int64_t>( current_time() ) } } };
+      return cbt;
+   }
 
    system_contract::~system_contract() {
       _global.set( _gstate, _self );
@@ -77,10 +82,12 @@ namespace eosiosystem {
    }
 
    void system_contract::update_ram_supply() {
-      if( _gstate2.last_block_num <= _gstate2.last_ram_increase ) return;
+      auto cbt = current_block_time();
+
+      if( cbt <= _gstate2.last_ram_increase ) return;
 
       auto itr = _rammarket.find(S(4,RAMCORE));
-      auto new_ram = (_gstate2.last_block_num.slot - _gstate2.last_ram_increase.slot)*_gstate2.new_ram_per_block;
+      auto new_ram = (cbt.slot - _gstate2.last_ram_increase.slot)*_gstate2.new_ram_per_block;
       _gstate.max_ram_size += new_ram;
 
       /**
@@ -89,12 +96,12 @@ namespace eosiosystem {
       _rammarket.modify( itr, 0, [&]( auto& m ) {
          m.base.balance.amount += new_ram;
       });
-      _gstate2.last_ram_increase = _gstate2.last_block_num;
+      _gstate2.last_ram_increase = cbt;
    }
 
    /**
-    *  Sets the rate of increase of RAM in bytes per block. It is capped by the uint16_t to 
-    *  a maximum rate of 3 TB per year. 
+    *  Sets the rate of increase of RAM in bytes per block. It is capped by the uint16_t to
+    *  a maximum rate of 3 TB per year.
     *
     *  If update_ram_supply hasn't been called for the most recent block, then new ram will
     *  be allocated at the old rate up to the present block before switching the rate.
@@ -102,12 +109,8 @@ namespace eosiosystem {
    void system_contract::setramrate( uint16_t bytes_per_block ) {
       require_auth( _self );
 
+      update_ram_supply();
       _gstate2.new_ram_per_block = bytes_per_block;
-      if( _gstate2.last_ram_increase == block_timestamp() ) {
-         _gstate2.last_ram_increase = _gstate2.last_block_num;
-      } else {
-         update_ram_supply();
-      }
    }
 
    void system_contract::setparams( const eosio::blockchain_parameters& params ) {
@@ -226,12 +229,27 @@ namespace eosiosystem {
       set_resource_limits( newact, 0, 0, 0 );
    }
 
+   void native::setabi( account_name acnt, const bytes& abi ) {
+      eosio::multi_index< N(abihash), abi_hash>  table(_self,_self);
+      auto itr = table.find( acnt );
+      if( itr == table.end() ) {
+         table.emplace( acnt, [&]( auto& row ) {
+            row.owner= acnt;
+            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash ); 
+         });
+      } else {
+         table.modify( itr, 0, [&]( auto& row ) {
+            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash ); 
+         });
+      }
+   }
+
 } /// eosio.system
 
 
 EOSIO_ABI( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
-     (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)
+     (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
      (setram)(setramrate)(setparams)(setpriv)(rmvproducer)(updtrevision)(bidname)
      // delegate_bandwidth.cpp

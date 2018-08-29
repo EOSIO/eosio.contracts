@@ -10,6 +10,11 @@
 #include <Runtime/Runtime.h>
 
 #include "eosio.system_tester.hpp"
+struct _abi_hash {
+   name owner;
+   fc::sha256 hash;
+};
+FC_REFLECT( _abi_hash, (owner)(hash) );
 
 using namespace eosio_system;
 
@@ -3174,12 +3179,15 @@ BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
    produce_blocks(3);
    BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
-   const uint16_t rate = 1000;
+   uint16_t rate = 1000;
    BOOST_REQUIRE_EQUAL( success(), push_action( config::system_account_name, N(setramrate), mvo()("bytes_per_block", rate) ) );
    BOOST_REQUIRE_EQUAL( rate, get_global_state2()["new_ram_per_block"].as<uint16_t>() );
-   // last time update_ram_supply called is in buyram, num of blocks since then is 1 + 3 = 4
+   // last time update_ram_supply called is in buyram, num of blocks since then to
+   // the block that includes the setramrate action is 1 + 3 = 4.
+   // However, those 4 blocks were accumulating at a rate of 0, so the max_ram_size should not have changed.
+   BOOST_REQUIRE_EQUAL( init_max_ram_size, get_global_state()["max_ram_size"].as_uint64() );
+   // But with additional blocks, it should start accumulating at the new rate.
    uint64_t cur_ram_size = get_global_state()["max_ram_size"].as_uint64();
-   BOOST_REQUIRE_EQUAL( init_max_ram_size + 4 * rate, get_global_state()["max_ram_size"].as_uint64() );
    produce_blocks(10);
    BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", core_from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( cur_ram_size + 11 * rate, get_global_state()["max_ram_size"].as_uint64() );
@@ -3195,6 +3203,16 @@ BOOST_FIXTURE_TEST_CASE( ram_inflation, eosio_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( error("missing authority of eosio"),
                         push_action( "alice1111111", N(setramrate), mvo()("bytes_per_block", rate) ) );
+
+   cur_ram_size = get_global_state()["max_ram_size"].as_uint64();
+   produce_blocks(10);
+   uint16_t old_rate = rate;
+   rate = 5000;
+   BOOST_REQUIRE_EQUAL( success(), push_action( config::system_account_name, N(setramrate), mvo()("bytes_per_block", rate) ) );
+   BOOST_REQUIRE_EQUAL( cur_ram_size + 11 * old_rate, get_global_state()["max_ram_size"].as_uint64() );
+   produce_blocks(5);
+   BOOST_REQUIRE_EQUAL( success(), buyrambytes( "alice1111111", "alice1111111", 100 ) );
+   BOOST_REQUIRE_EQUAL( cur_ram_size + 11 * old_rate + 6 * rate, get_global_state()["max_ram_size"].as_uint64() );
 
 } FC_LOG_AND_RETHROW()
 
@@ -3271,6 +3289,62 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
    userres = get_total_stake( N(alice1111111) );
    BOOST_REQUIRE_EQUAL( userres["ram_bytes"].as_uint64() + ram_gift, ram_bytes );
 
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( setabi_bios, TESTER ) try {
+   abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>(), abi_serializer_max_time);
+   set_code( config::system_account_name, contracts::bios_wasm() );
+   set_abi( config::system_account_name, contracts::bios_abi().data() );
+   create_account(N(eosio.token));
+   set_abi( N(eosio.token), contracts::token_abi().data() );
+   { 
+      auto res = get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) ); 
+      _abi_hash abi_hash;
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer_max_time );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer_max_time);
+      auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::token_abi().data()).template as<abi_def>());
+      auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
+
+      BOOST_REQUIRE( abi_hash.hash == result );
+   }
+
+   set_abi( N(eosio.token), contracts::system_abi().data() );
+   { 
+      auto res = get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) ); 
+      _abi_hash abi_hash;
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer_max_time );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer_max_time);
+      auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>());
+      auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
+
+      BOOST_REQUIRE( abi_hash.hash == result );
+   }
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( setabi, eosio_system_tester ) try {
+   set_abi( N(eosio.token), contracts::token_abi().data() );
+   { 
+      auto res = get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) ); 
+      _abi_hash abi_hash;
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer_max_time );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer_max_time);
+      auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::token_abi().data()).template as<abi_def>());
+      auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
+
+      BOOST_REQUIRE( abi_hash.hash == result );
+   }
+
+   set_abi( N(eosio.token), contracts::system_abi().data() );
+   { 
+      auto res = get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) ); 
+      _abi_hash abi_hash;
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer_max_time );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer_max_time);
+      auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>());
+      auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
+
+      BOOST_REQUIRE( abi_hash.hash == result );
+   }
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
