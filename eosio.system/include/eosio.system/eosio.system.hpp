@@ -70,11 +70,19 @@ namespace eosiosystem {
       uint16_t          new_ram_per_block = 0;
       block_timestamp   last_ram_increase;
       block_timestamp   last_block_num; /* deprecated */
-      double            reserved = 0;
+      double            total_producer_votepay_share = 0;
       uint8_t           revision = 0; ///< used to track version updates in the future.
 
+      EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)
+                        (total_producer_votepay_share)(revision) )
+   };
 
-      EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)(reserved)(revision) )
+   struct eosio_global_state3 {
+      eosio_global_state3() { }
+      uint64_t   last_vpay_state_update = 0;
+      double     total_vpay_share_change_rate = 0;
+
+      EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
    };
 
    struct producer_info {
@@ -95,6 +103,17 @@ namespace eosiosystem {
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
                         (unpaid_blocks)(last_claim_time)(location) )
+   };
+
+   struct producer_info2 {
+      account_name    owner;
+      double          votepay_share = 0;
+      uint64_t        last_votepay_share_update = 0;
+         
+      uint64_t primary_key()const { return owner; }
+         
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
    };
 
    struct voter_info {
@@ -134,9 +153,11 @@ namespace eosiosystem {
    typedef eosio::multi_index< N(producers), producer_info,
                                indexed_by<N(prototalvote), const_mem_fun<producer_info, double, &producer_info::by_votes>  >
                                >  producers_table;
+   typedef eosio::multi_index< N(producers2), producer_info2 > producers_table2;
 
    typedef eosio::singleton<N(global), eosio_global_state> global_state_singleton;
    typedef eosio::singleton<N(global2), eosio_global_state2> global_state2_singleton;
+   typedef eosio::singleton<N(global3), eosio_global_state3> global_state3_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -146,12 +167,14 @@ namespace eosiosystem {
       private:
          voters_table            _voters;
          producers_table         _producers;
+         producers_table2        _producers2;
          global_state_singleton  _global;
          global_state2_singleton _global2;
-
-         eosio_global_state     _gstate;
-         eosio_global_state2    _gstate2;
-         rammarket              _rammarket;
+         global_state3_singleton _global3;
+         eosio_global_state      _gstate;
+         eosio_global_state2     _gstate2;
+         eosio_global_state3     _gstate3;
+         rammarket               _rammarket;
 
       public:
          system_contract( account_name s );
@@ -234,6 +257,8 @@ namespace eosiosystem {
          void setpriv( account_name account, uint8_t ispriv );
 
          void rmvproducer( account_name producer );
+         
+         void updtrevision( uint8_t revision );
 
          void bidname( account_name bidder, account_name newname, asset bid );
       private:

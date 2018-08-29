@@ -338,6 +338,11 @@ public:
       return abi_ser.binary_to_variant( "producer_info", data, abi_serializer_max_time );
    }
 
+   fc::variant get_producer_info2( const account_name& act ) {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(producers2), act );
+      return abi_ser.binary_to_variant( "producer_info2", data, abi_serializer_max_time );
+   }
+
    void create_currency( name contract, name manager, asset maxsupply ) {
       auto act =  mutable_variant_object()
          ("issuer",       manager )
@@ -391,6 +396,11 @@ public:
    fc::variant get_global_state2() {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global2), N(global2) );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state2", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_global_state3() {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global3), N(global3) );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state3", data, abi_serializer_max_time );
    }
 
    fc::variant get_refund_request( name account ) {
