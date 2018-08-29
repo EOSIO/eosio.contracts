@@ -63,29 +63,51 @@ void multisig::approve( account_name proposer, name proposal_name, permission_le
    require_auth( level );
 
    approvals apptable(  _self, proposer );
-   auto& apps = apptable.get( proposal_name, "proposal not found" );
+   auto apps_it = apptable.find( proposal_name );
+   if ( apps_it != apptable.end() ) {
+      auto itr = std::find( apps_it->requested_approvals.begin(), apps_it->requested_approvals.end(), level );
+      eosio_assert( itr != apps_it->requested_approvals.end(), "approval is not on the list of requested approvals" );
 
-   auto itr = std::find( apps.requested_approvals.begin(), apps.requested_approvals.end(), level );
-   eosio_assert( itr != apps.requested_approvals.end(), "approval is not on the list of requested approvals" );
+      apptable.modify( apps_it, proposer, [&]( auto& a ) {
+            a.provided_approvals.push_back( approval{ level, now() } );
+            a.requested_approvals.erase( itr );
+         });
+   } else {
+      old_approvals old_apptable(  _self, proposer );
+      auto& apps = old_apptable.get( proposal_name, "proposal not found" );
 
-   apptable.modify( apps, proposer, [&]( auto& a ) {
-      a.provided_approvals.push_back( level );
-      a.requested_approvals.erase( itr );
-   });
+      auto itr = std::find( apps.requested_approvals.begin(), apps.requested_approvals.end(), level );
+      eosio_assert( itr != apps.requested_approvals.end(), "approval is not on the list of requested approvals" );
+
+      old_apptable.modify( apps, proposer, [&]( auto& a ) {
+            a.provided_approvals.push_back( level );
+            a.requested_approvals.erase( itr );
+         });
+   }
 }
 
 void multisig::unapprove( account_name proposer, name proposal_name, permission_level level ) {
    require_auth( level );
 
    approvals apptable(  _self, proposer );
-   auto& apps = apptable.get( proposal_name, "proposal not found" );
-   auto itr = std::find( apps.provided_approvals.begin(), apps.provided_approvals.end(), level );
-   eosio_assert( itr != apps.provided_approvals.end(), "no approval previously granted" );
-
-   apptable.modify( apps, proposer, [&]( auto& a ) {
-      a.requested_approvals.push_back(level);
-      a.provided_approvals.erase(itr);
-   });
+   auto apps_it = apptable.find( proposal_name );
+   if ( apps_it != apptable.end() ) {
+      auto itr = std::find_if( apps_it->provided_approvals.begin(), apps_it->provided_approvals.end(), [&](const approval& a) { return a.level == level; } );
+      eosio_assert( itr != apps_it->provided_approvals.end(), "no approval previously granted" );
+      apptable.modify( apps_it, proposer, [&]( auto& a ) {
+            a.requested_approvals.push_back( level );
+            a.provided_approvals.erase( itr );
+         });
+   } else {
+      old_approvals old_apptable(  _self, proposer );
+      auto apps = old_apptable.get( proposal_name, "proposal not found" );
+      auto itr = std::find( apps.provided_approvals.begin(), apps.provided_approvals.end(), level );
+      eosio_assert( itr != apps.provided_approvals.end(), "no approval previously granted" );
+      old_apptable.modify( apps, proposer, [&]( auto& a ) {
+            a.requested_approvals.push_back( level );
+            a.provided_approvals.erase( itr );
+         });
+   }
 }
 
 void multisig::cancel( account_name proposer, name proposal_name, account_name canceler ) {
@@ -97,12 +119,19 @@ void multisig::cancel( account_name proposer, name proposal_name, account_name c
    if( canceler != proposer ) {
       eosio_assert( unpack<transaction_header>( prop.packed_transaction ).expiration < eosio::time_point_sec(now()), "cannot cancel until expiration" );
    }
-
-   approvals apptable(  _self, proposer );
-   auto& apps = apptable.get( proposal_name, "proposal not found" );
-
    proptable.erase(prop);
-   apptable.erase(apps);
+
+   //remove from new table
+   approvals apptable(  _self, proposer );
+   auto apps_it = apptable.find( proposal_name );
+   if ( apps_it != apptable.end() ) {
+      apptable.erase(apps_it);
+   } else {
+      old_approvals old_apptable(  _self, proposer );
+      auto apps_it = old_apptable.find( proposal_name );
+      eosio_assert( apps_it != old_apptable.end(), "proposal not found" );
+      old_apptable.erase(apps_it);
+   }
 }
 
 void multisig::exec( account_name proposer, name proposal_name, account_name executer ) {
@@ -110,28 +139,64 @@ void multisig::exec( account_name proposer, name proposal_name, account_name exe
 
    proposals proptable( _self, proposer );
    auto& prop = proptable.get( proposal_name, "proposal not found" );
-
-   approvals apptable(  _self, proposer );
-   auto& apps = apptable.get( proposal_name, "proposal not found" );
-
    transaction_header trx_header;
    datastream<const char*> ds( prop.packed_transaction.data(), prop.packed_transaction.size() );
    ds >> trx_header;
    eosio_assert( trx_header.expiration >= eosio::time_point_sec(now()), "transaction expired" );
 
-   bytes packed_provided_approvals = pack(apps.provided_approvals);
-   auto res = ::check_transaction_authorization( prop.packed_transaction.data(), prop.packed_transaction.size(),
-                                                 (const char*)0, 0,
-                                                 packed_provided_approvals.data(), packed_provided_approvals.size()
-                                               );
-   eosio_assert( res > 0, "transaction authorization failed" );
+   approvals apptable(  _self, proposer );
+   auto apps_it = apptable.find( proposal_name );
+   if ( apps_it != apptable.end() ) {
+      vector<permission_level> approvals;
+      approvals.reserve( apps_it->provided_approvals.size() );
 
+      invalidations inv_table( _self, _self );
+      for ( auto& p : apps_it->provided_approvals ) {
+         auto it = inv_table.find( p.level.actor );
+         if ( it == inv_table.end() || it->last_invalidation_time < p.time ) {
+            approvals.push_back(p.level);
+         }
+      }
+      bytes packed_provided_approvals = pack(approvals);
+      auto res = ::check_transaction_authorization( prop.packed_transaction.data(), prop.packed_transaction.size(),
+                                                    (const char*)0, 0,
+                                                    packed_provided_approvals.data(), packed_provided_approvals.size()
+                                                    );
+      eosio_assert( res > 0, "transaction authorization failed" );
+      apptable.erase(apps_it);
+   } else {
+      old_approvals old_apptable(  _self, proposer );
+      auto& apps = old_apptable.get( proposal_name, "proposal not found" );
+
+      bytes packed_provided_approvals = pack(apps.provided_approvals);
+      auto res = ::check_transaction_authorization( prop.packed_transaction.data(), prop.packed_transaction.size(),
+                                                    (const char*)0, 0,
+                                                    packed_provided_approvals.data(), packed_provided_approvals.size()
+                                                    );
+      eosio_assert( res > 0, "transaction authorization failed" );
+      old_apptable.erase(apps);
+   }
    send_deferred( (uint128_t(proposer) << 64) | proposal_name, executer, prop.packed_transaction.data(), prop.packed_transaction.size() );
 
    proptable.erase(prop);
-   apptable.erase(apps);
+}
+
+void multisig::invalidate( account_name account ) {
+   require_auth( account );
+   invalidations inv_table( _self, _self );
+   auto it = inv_table.find( account );
+   if ( it == inv_table.end() ) {
+      inv_table.emplace( account, [&](auto& i) {
+            i.account = account;
+            i.last_invalidation_time = now();
+         });
+   } else {
+      inv_table.modify( it, account, [&](auto& i) {
+            i.last_invalidation_time = now();
+         });
+   }
 }
 
 } /// namespace eosio
 
-EOSIO_ABI( eosio::multisig, (propose)(approve)(unapprove)(cancel)(exec) )
+EOSIO_ABI( eosio::multisig, (propose)(approve)(unapprove)(cancel)(exec)(invalidate) )

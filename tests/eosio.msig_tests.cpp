@@ -272,6 +272,7 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_by_two, eosio_msig_tester ) try {
    );
 
    //fail because approval by bob is missing
+
    BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
                                           ("proposer",      "alice")
                                           ("proposal_name", "first")
@@ -624,5 +625,47 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
    );
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( propose_approve_invalidate, eosio_msig_tester ) try {
+   auto trx = reqauth("alice", {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx)
+                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+   );
+
+   //fail to execute before approval
+   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+                                          ("proposer",      "alice")
+                                          ("proposal_name", "first")
+                                          ("executer",      "alice")
+                            ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is("transaction authorization failed")
+   );
+
+   //approve
+   push_action( N(alice), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+
+   //invalidate
+   push_action( N(alice), N(invalidate), mvo()
+                  ("account",      "alice")
+   );
+
+   //fail to execute after invalidation
+   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+                                          ("proposer",      "alice")
+                                          ("proposal_name", "first")
+                                          ("executer",      "alice")
+                            ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is("transaction authorization failed")
+   );
+} FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -94,6 +94,12 @@
         {"name":"executer", "type":"account_name"}
       ]
     },{
+      "name": "invalidate",
+      "base": "",
+      "fields": [
+        {"name":"account", "type":"account_name"},
+      ]
+    },{
       "name": "proposal",
       "base": "",
       "fields": [
@@ -107,6 +113,13 @@
         {"name": "proposal_name", "type": "name"},
         {"name": "requested_approvals", "type": "permission_level[]"},
         {"name": "provided_approvals", "type": "permission_level[]"}
+      ]
+    },{
+      "name": "invalidation",
+      "base": "",
+      "fields": [
+        {"name": "account",                "type": "account_name"},
+        {"name": "last_invalidation_time", "type": "uint64"}
       ]
     }
   ],
@@ -122,13 +135,17 @@
       "name": "unapprove",
       "type": "unapprove",
       "ricardian_contract": ""
-    }, {
+    },{
       "name": "cancel",
       "type": "cancel",
       "ricardian_contract": ""
-    }, {
+    },{
       "name": "exec",
       "type": "exec",
+      "ricardian_contract": ""
+    },{
+      "name": "invalidate",
+      "type": "invalidate",
       "ricardian_contract": ""
     }
 
