@@ -100,7 +100,7 @@ void multisig::unapprove( account_name proposer, name proposal_name, permission_
          });
    } else {
       old_approvals old_apptable(  _self, proposer );
-      auto apps = old_apptable.get( proposal_name, "proposal not found" );
+      auto& apps = old_apptable.get( proposal_name, "proposal not found" );
       auto itr = std::find( apps.provided_approvals.begin(), apps.provided_approvals.end(), level );
       eosio_assert( itr != apps.provided_approvals.end(), "no approval previously granted" );
       old_apptable.modify( apps, proposer, [&]( auto& a ) {
