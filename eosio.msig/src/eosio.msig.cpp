@@ -146,36 +146,35 @@ void multisig::exec( account_name proposer, name proposal_name, account_name exe
 
    approvals apptable(  _self, proposer );
    auto apps_it = apptable.find( proposal_name );
+   vector<permission_level> approvals;
+   invalidations inv_table( _self, _self );
    if ( apps_it != apptable.end() ) {
-      vector<permission_level> approvals;
       approvals.reserve( apps_it->provided_approvals.size() );
-
-      invalidations inv_table( _self, _self );
       for ( auto& p : apps_it->provided_approvals ) {
          auto it = inv_table.find( p.level.actor );
          if ( it == inv_table.end() || it->last_invalidation_time < p.time ) {
             approvals.push_back(p.level);
          }
       }
-      bytes packed_provided_approvals = pack(approvals);
-      auto res = ::check_transaction_authorization( prop.packed_transaction.data(), prop.packed_transaction.size(),
-                                                    (const char*)0, 0,
-                                                    packed_provided_approvals.data(), packed_provided_approvals.size()
-                                                    );
-      eosio_assert( res > 0, "transaction authorization failed" );
       apptable.erase(apps_it);
    } else {
       old_approvals old_apptable(  _self, proposer );
       auto& apps = old_apptable.get( proposal_name, "proposal not found" );
-
-      bytes packed_provided_approvals = pack(apps.provided_approvals);
-      auto res = ::check_transaction_authorization( prop.packed_transaction.data(), prop.packed_transaction.size(),
-                                                    (const char*)0, 0,
-                                                    packed_provided_approvals.data(), packed_provided_approvals.size()
-                                                    );
-      eosio_assert( res > 0, "transaction authorization failed" );
+      for ( auto& level : apps.provided_approvals ) {
+         auto it = inv_table.find( level.actor );
+         if ( it == inv_table.end() ) {
+            approvals.push_back( level );
+         }
+      }
       old_apptable.erase(apps);
    }
+   bytes packed_provided_approvals = pack(approvals);
+   auto res = ::check_transaction_authorization( prop.packed_transaction.data(), prop.packed_transaction.size(),
+                                                 (const char*)0, 0,
+                                                 packed_provided_approvals.data(), packed_provided_approvals.size()
+                                                 );
+   eosio_assert( res > 0, "transaction authorization failed" );
+
    send_deferred( (uint128_t(proposer) << 64) | proposal_name, executer, prop.packed_transaction.data(), prop.packed_transaction.size() );
 
    proptable.erase(prop);
