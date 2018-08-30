@@ -13,8 +13,8 @@ namespace eosiosystem {
    const uint32_t seconds_per_year      = 52*7*24*3600;
    const uint32_t blocks_per_day        = 2 * 24 * 3600;
    const uint32_t blocks_per_hour       = 2 * 3600;
-   const uint64_t useconds_per_day      = 24 * 3600 * uint64_t(1000000);
-   const uint64_t useconds_per_year     = seconds_per_year*1000000ll;
+   const int64_t  useconds_per_day      = 24 * 3600 * int64_t(1000000);
+   const int64_t  useconds_per_year     = seconds_per_year*1000000ll;
 
 
    void system_contract::onblock( block_timestamp timestamp, account_name producer ) {
@@ -31,8 +31,8 @@ namespace eosiosystem {
       if( _gstate.total_activated_stake < min_activated_stake )
          return;
 
-      if( _gstate.last_pervote_bucket_fill == 0 )  /// start the presses
-         _gstate.last_pervote_bucket_fill = current_time();
+      if( _gstate.last_pervote_bucket_fill == time_point() )  /// start the presses
+         _gstate.last_pervote_bucket_fill = current_time_point();
 
 
       /**
@@ -57,12 +57,13 @@ namespace eosiosystem {
             auto highest = idx.lower_bound( std::numeric_limits<uint64_t>::max()/2 );
             if( highest != idx.end() &&
                 highest->high_bid > 0 &&
-                highest->last_bid_time < (current_time() - useconds_per_day) &&
-                _gstate.thresh_activated_stake_time > 0 &&
-                (current_time() - _gstate.thresh_activated_stake_time) > 14 * useconds_per_day ) {
-                   _gstate.last_name_close = timestamp;
-                   idx.modify( highest, 0, [&]( auto& b ){
-                         b.high_bid = -b.high_bid;
+                (current_time_point() - highest->last_bid_time) > microseconds(useconds_per_day) &&
+                _gstate.thresh_activated_stake_time > time_point() &&
+                (current_time_point() - _gstate.thresh_activated_stake_time) > microseconds(14 * useconds_per_day)
+            ) {
+               _gstate.last_name_close = timestamp;
+               idx.modify( highest, 0, [&]( auto& b ){
+                  b.high_bid = -b.high_bid;
                });
             }
          }
@@ -79,14 +80,14 @@ namespace eosiosystem {
       eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
                     "cannot claim rewards until the chain is activated (at least 15% of all tokens participate in voting)" );
 
-      const auto ct = current_time();
+      const auto ct = current_time_point();
 
-      eosio_assert( ct - prod.last_claim_time > useconds_per_day, "already claimed rewards within past day" );
+      eosio_assert( ct - prod.last_claim_time > microseconds(useconds_per_day), "already claimed rewards within past day" );
 
       const asset token_supply   = token( N(eosio.token)).get_supply(symbol_type(system_token_symbol).name() );
-      const auto usecs_since_last_fill = ct - _gstate.last_pervote_bucket_fill;
+      const auto usecs_since_last_fill = (ct - _gstate.last_pervote_bucket_fill).count();
 
-      if( usecs_since_last_fill > 0 && _gstate.last_pervote_bucket_fill > 0 ) {
+      if( usecs_since_last_fill > 0 && _gstate.last_pervote_bucket_fill > time_point() ) {
          auto new_tokens = static_cast<int64_t>( (continuous_rate * double(token_supply.amount) * double(usecs_since_last_fill)) / double(useconds_per_year) );
 
          auto to_producers     = new_tokens / 5;
@@ -126,7 +127,7 @@ namespace eosiosystem {
 
       /// New metric to be used in pervote pay calculation. Instead of vote weight ratio, we combine vote weight and
       /// time duration the vote weight has been held into one metric.
-      const uint64_t last_claim_plus_3days = prod.last_claim_time + 3 * useconds_per_day;
+      const auto last_claim_plus_3days = prod.last_claim_time + microseconds(3 * useconds_per_day);
 
       bool crossed_threshold       = (last_claim_plus_3days <= ct);
       bool updated_after_threshold = (last_claim_plus_3days <= prod2->last_votepay_share_update);

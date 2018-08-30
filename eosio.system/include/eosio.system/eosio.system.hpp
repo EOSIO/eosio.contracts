@@ -19,12 +19,14 @@ namespace eosiosystem {
    using eosio::indexed_by;
    using eosio::const_mem_fun;
    using eosio::block_timestamp;
+   using eosio::time_point;
+   using eosio::microseconds;
 
    struct name_bid {
      account_name            newname;
      account_name            high_bidder;
      int64_t                 high_bid = 0; ///< negative high_bid == closed auction waiting to be claimed
-     uint64_t                last_bid_time = 0;
+     time_point              last_bid_time;
 
      auto     primary_key()const { return newname;                          }
      uint64_t by_high_bid()const { return static_cast<uint64_t>(-high_bid); }
@@ -43,12 +45,12 @@ namespace eosiosystem {
       int64_t              total_ram_stake = 0;
 
       block_timestamp      last_producer_schedule_update;
-      uint64_t             last_pervote_bucket_fill = 0;
+      time_point           last_pervote_bucket_fill;
       int64_t              pervote_bucket = 0;
       int64_t              perblock_bucket = 0;
       uint32_t             total_unpaid_blocks = 0; /// all blocks which have been produced but not paid
       int64_t              total_activated_stake = 0;
-      uint64_t             thresh_activated_stake_time = 0;
+      time_point           thresh_activated_stake_time;
       uint16_t             last_producer_schedule_size = 0;
       double               total_producer_vote_weight = 0; /// the sum of all producer votes
       block_timestamp      last_name_close;
@@ -79,8 +81,8 @@ namespace eosiosystem {
 
    struct eosio_global_state3 {
       eosio_global_state3() { }
-      uint64_t   last_vpay_state_update = 0;
-      double     total_vpay_share_change_rate = 0;
+      time_point        last_vpay_state_update;
+      double            total_vpay_share_change_rate = 0;
 
       EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
    };
@@ -92,7 +94,7 @@ namespace eosiosystem {
       bool                  is_active = true;
       std::string           url;
       uint32_t              unpaid_blocks = 0;
-      uint64_t              last_claim_time = 0;
+      time_point            last_claim_time;
       uint16_t              location = 0;
 
       uint64_t primary_key()const { return owner;                                   }
@@ -108,7 +110,7 @@ namespace eosiosystem {
    struct producer_info2 {
       account_name    owner;
       double          votepay_share = 0;
-      uint64_t        last_votepay_share_update = 0;
+      time_point      last_votepay_share_update;
 
       uint64_t primary_key()const { return owner; }
 
@@ -266,6 +268,7 @@ namespace eosiosystem {
 
          //defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
+         static time_point current_time_point();
          static block_timestamp current_block_time();
          void update_ram_supply();
 
@@ -281,9 +284,9 @@ namespace eosiosystem {
          void propagate_weight_change( const voter_info& voter );
 
          double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
-                                               /*time_point*/ uint64_t ct,
+                                               time_point ct,
                                                double shares_rate, bool reset_to_zero = false );
-         double update_total_votepay_share( /*time_point*/ uint64_t ct,
+         double update_total_votepay_share( time_point ct,
                                             double additional_shares_delta = 0.0, double shares_rate_delta = 0.0 );
    };
 

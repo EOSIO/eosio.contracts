@@ -260,7 +260,7 @@
     },{
       "name": "eosio_global_state3",
       "fields": [
-         {"name":"last_vpay_state_update",       "type":"uint64"},
+         {"name":"last_vpay_state_update",       "type":"time_point"},
          {"name":"total_vpay_share_change_rate", "type":"float64"}
       ]
     },{
@@ -271,12 +271,12 @@
          {"name":"total_ram_bytes_reserved",      "type":"uint64"},
          {"name":"total_ram_stake",               "type":"int64"},
          {"name":"last_producer_schedule_update", "type":"block_timestamp_type"},
-         {"name":"last_pervote_bucket_fill",      "type":"uint64"},
+         {"name":"last_pervote_bucket_fill",      "type":"time_point"},
          {"name":"pervote_bucket",                "type":"int64"},
          {"name":"perblock_bucket",               "type":"int64"},
          {"name":"total_unpaid_blocks",           "type":"uint32"},
          {"name":"total_activated_stake",         "type":"int64"},
-         {"name":"thresh_activated_stake_time",   "type":"uint64"},
+         {"name":"thresh_activated_stake_time",   "type":"time_point"},
          {"name":"last_producer_schedule_size",   "type":"uint16"},
          {"name":"total_producer_vote_weight",    "type":"float64"},
          {"name":"last_name_close",               "type":"block_timestamp_type"}
@@ -291,7 +291,7 @@
          {"name":"is_active",       "type":"bool"},
          {"name":"url",             "type":"string"},
          {"name":"unpaid_blocks",   "type":"uint32"},
-         {"name":"last_claim_time", "type":"uint64"},
+         {"name":"last_claim_time", "type":"time_point"},
          {"name":"location",        "type":"uint16"}
       ]
     },{
@@ -300,7 +300,7 @@
       "fields": [
          {"name":"owner",                     "type":"account_name"},
          {"name":"votepay_share",             "type":"float64"},
-         {"name":"last_votepay_share_update", "type":"uint64"}
+         {"name":"last_votepay_share_update", "type":"time_point"}
       ]
     },{
       "name": "regproducer",
@@ -443,7 +443,7 @@
           {"name":"newname", "type":"account_name"},
           {"name":"high_bidder", "type":"account_name"},
           {"name":"high_bid", "type":"int64"},
-          {"name":"last_bid_time", "type":"uint64"}
+          {"name":"last_bid_time", "type":"time_point"}
        ]
     }
    ],

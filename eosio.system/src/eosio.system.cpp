@@ -50,8 +50,13 @@ namespace eosiosystem {
       return dp;
    }
 
+   time_point system_contract::current_time_point() {
+      const static time_point ct{ microseconds{ static_cast<int64_t>( current_time() ) } };
+      return ct;
+   }
+
    block_timestamp system_contract::current_block_time() {
-      const static block_timestamp cbt{ time_point{ microseconds{ static_cast<int64_t>( current_time() ) } } };
+      const static block_timestamp cbt{ current_time_point() };
       return cbt;
    }
 
@@ -163,7 +168,7 @@ namespace eosiosystem {
             b.newname = newname;
             b.high_bidder = bidder;
             b.high_bid = bid.amount;
-            b.last_bid_time = current_time();
+            b.last_bid_time = current_time_point();
          });
       } else {
          eosio_assert( current->high_bid > 0, "this auction has already closed" );
@@ -177,7 +182,7 @@ namespace eosiosystem {
          bids.modify( current, bidder, [&]( auto& b ) {
             b.high_bidder = bidder;
             b.high_bid = bid.amount;
-            b.last_bid_time = current_time();
+            b.last_bid_time = current_time_point();
          });
       }
    }
@@ -235,11 +240,11 @@ namespace eosiosystem {
       if( itr == table.end() ) {
          table.emplace( acnt, [&]( auto& row ) {
             row.owner= acnt;
-            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash ); 
+            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
          });
       } else {
          table.modify( itr, 0, [&]( auto& row ) {
-            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash ); 
+            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
          });
       }
    }

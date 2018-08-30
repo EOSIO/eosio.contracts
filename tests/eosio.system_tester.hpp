@@ -387,6 +387,10 @@ public:
       return get_stats("4," CORE_SYMBOL_NAME)["supply"].as<asset>();
    }
 
+   uint64_t microseconds_since_epoch_of_iso_string( const fc::variant& v ) {
+      return static_cast<uint64_t>( time_point::from_iso_string( v.as_string() ).time_since_epoch().count() );
+   }
+
    fc::variant get_global_state() {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global), N(global) );
       if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
