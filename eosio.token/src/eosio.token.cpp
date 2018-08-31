@@ -136,7 +136,9 @@ void token::add_balance( account_name owner, asset value, account_name ram_payer
    }
 }
 
-void token::close( account_name owner, symbol_type symbol ) {
+void token::close( account_name owner, symbol_type symbol )
+{
+   require_auth( owner );
    accounts acnts( _self, owner );
    auto it = acnts.find( symbol.name() );
    eosio_assert( it != acnts.end(), "Balance row already deleted or never existed. Action won't have any effect." );
