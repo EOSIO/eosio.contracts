@@ -33,10 +33,12 @@ namespace eosio {
                         asset        quantity,
                         string       memo );
 
+         void open( account_name owner, symbol_type symbol, account_name payer );
+
          void close( account_name owner, symbol_type symbol );
 
          inline asset get_supply( symbol_name sym )const;
-         
+
          inline asset get_balance( account_name owner, symbol_name sym )const;
 
       private:

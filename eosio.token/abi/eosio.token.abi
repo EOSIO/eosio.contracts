@@ -36,6 +36,14 @@
         {"name":"memo", "type":"string"}
      ]
   },{
+     "name": "open",
+     "base": "",
+     "fields": [
+        {"name":"owner", "type":"account_name"},
+        {"name":"symbol", "type":"symbol"},
+        {"name":"ram_payer", "type":"account_name"}
+     ]
+  },{
      "name": "close",
      "base": "",
      "fields": [
@@ -73,6 +81,10 @@
     }, {
       "name": "create",
       "type": "create",
+      "ricardian_contract": ""
+    }, {
+      "name": "open",
+      "type": "open",
       "ricardian_contract": ""
     }, {
       "name": "close",
