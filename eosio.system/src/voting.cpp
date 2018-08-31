@@ -58,6 +58,8 @@ namespace eosiosystem {
                info.owner                     = producer;
                info.last_votepay_share_update = ct;
             });
+            update_total_votepay_share( ct, 0.0, prod->total_votes );
+            // When introducing the producer2 table row for the first time, the producer's votes must also be accounted for in the global total_producer_votepay_share at the same time.
          }
       } else {
          _producers.emplace( producer, [&]( producer_info& info ){
@@ -307,7 +309,7 @@ namespace eosiosystem {
                const auto last_claim_plus_3days = pitr->last_claim_time + microseconds(3 * useconds_per_day);
                bool crossed_threshold       = (last_claim_plus_3days <= ct);
                bool updated_after_threshold = (last_claim_plus_3days <= prod2->last_votepay_share_update);
-               // Note: update_after_threshold implies cross_threshold
+               // Note: updated_after_threshold implies cross_threshold
 
                double new_votepay_share = update_producer_votepay_share( prod2,
                                              ct,
@@ -397,7 +399,7 @@ namespace eosiosystem {
                   const auto last_claim_plus_3days = prod.last_claim_time + microseconds(3 * useconds_per_day);
                   bool crossed_threshold       = (last_claim_plus_3days <= ct);
                   bool updated_after_threshold = (last_claim_plus_3days <= prod2->last_votepay_share_update);
-                  // Note: update_after_threshold implies cross_threshold
+                  // Note: updated_after_threshold implies cross_threshold
 
                   double new_votepay_share = update_producer_votepay_share( prod2,
                                                 ct,
