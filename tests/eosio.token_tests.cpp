@@ -100,6 +100,16 @@ public:
       );
    }
 
+   action_result open( account_name owner,
+                       const string& symbolname,
+                       account_name ram_payer    ) {
+      return push_action( ram_payer, N(open), mvo()
+           ( "owner", owner )
+           ( "symbol", "0,CERO" )
+           ( "ram_payer", ram_payer )
+      );
+   }
+
    action_result close( account_name owner,
                         const string& symbolname ) {
       return push_action( owner, N(close), mvo()
@@ -336,6 +346,38 @@ BOOST_FIXTURE_TEST_CASE( transfer_tests, eosio_token_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( open_tests, eosio_token_tester ) try {
+
+   auto token = create( N(alice), asset::from_string("1000 CERO"));
+
+   auto alice_balance = get_account(N(alice), "0,CERO");
+   BOOST_REQUIRE_EQUAL(true, alice_balance.is_null() );
+
+   BOOST_REQUIRE_EQUAL( success(), issue( N(alice), N(alice), asset::from_string("1000 CERO"), "issue" ) );
+
+   alice_balance = get_account(N(alice), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
+      ("balance", "1000 CERO")
+   );
+
+   auto bob_balance = get_account(N(bob), "0,CERO");
+   BOOST_REQUIRE_EQUAL(true, bob_balance.is_null() );
+
+   BOOST_REQUIRE_EQUAL( success(), open( N(bob), "0,CERO", N(alice) ) );
+
+   bob_balance = get_account(N(bob), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( bob_balance, mvo()
+      ("balance", "0 CERO")
+   );
+
+   BOOST_REQUIRE_EQUAL( success(), transfer( N(alice), N(bob), asset::from_string("200 CERO"), "hola" ) );
+
+   bob_balance = get_account(N(bob), "0,CERO");
+   REQUIRE_MATCHING_OBJECT( bob_balance, mvo()
+      ("balance", "200 CERO")
+   );
+
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( close_tests, eosio_token_tester ) try {
 
