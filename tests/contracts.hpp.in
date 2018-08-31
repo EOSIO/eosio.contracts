@@ -23,6 +23,8 @@ struct contracts {
    struct util {
       static std::vector<uint8_t> test_api_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/test_api.wasm"); }
       static std::vector<uint8_t> exchange_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/exchange.wasm"); }
+      static std::vector<uint8_t> msig_wasm_old() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/eosio.msig.old/eosio.msig.wasm"); }
+      static std::vector<char>    msig_abi_old() { return read_abi("${CMAKE_SOURCE_DIR}/test_contracts/eosio.msig.old/eosio.msig.abi"); }
    };
 };
 }} //ns eosio::testing
