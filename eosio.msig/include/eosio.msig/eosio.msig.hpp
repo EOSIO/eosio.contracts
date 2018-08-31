@@ -39,10 +39,13 @@ namespace eosio {
          };
 
          struct approvals_info {
-            uint8_t                    version;
-            name                       proposal_name;
-            vector<permission_level>   requested_approvals;
-            vector<approval>           provided_approvals;
+            uint8_t            version = 1;
+            name               proposal_name;
+            //requested approval doesn't need to cointain time, but we want requested approval
+            //to be of exact the same size ad provided approval, in this case approve/unapprove
+            //doesn't change serialized data size. So, we use the same type.
+            vector<approval>   requested_approvals;
+            vector<approval>   provided_approvals;
 
             auto primary_key()const { return proposal_name.value; }
          };

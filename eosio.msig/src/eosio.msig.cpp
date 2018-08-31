@@ -60,7 +60,10 @@ void multisig::propose() {
    approvals apptable(  _self, proposer );
    apptable.emplace( proposer, [&]( auto& a ) {
       a.proposal_name       = proposal_name;
-      a.requested_approvals = std::move(requested);
+      a.requested_approvals.reserve( requested.size() );
+      for ( auto& level : requested ) {
+         a.requested_approvals.push_back( approval{ level, time_point{ microseconds{0} } } );
+      }
    });
 }
 
@@ -70,7 +73,7 @@ void multisig::approve( account_name proposer, name proposal_name, permission_le
    approvals apptable(  _self, proposer );
    auto apps_it = apptable.find( proposal_name );
    if ( apps_it != apptable.end() ) {
-      auto itr = std::find( apps_it->requested_approvals.begin(), apps_it->requested_approvals.end(), level );
+      auto itr = std::find_if( apps_it->requested_approvals.begin(), apps_it->requested_approvals.end(), [&](const approval& a) { return a.level == level; } );
       eosio_assert( itr != apps_it->requested_approvals.end(), "approval is not on the list of requested approvals" );
 
       apptable.modify( apps_it, proposer, [&]( auto& a ) {
@@ -100,7 +103,7 @@ void multisig::unapprove( account_name proposer, name proposal_name, permission_
       auto itr = std::find_if( apps_it->provided_approvals.begin(), apps_it->provided_approvals.end(), [&](const approval& a) { return a.level == level; } );
       eosio_assert( itr != apps_it->provided_approvals.end(), "no approval previously granted" );
       apptable.modify( apps_it, proposer, [&]( auto& a ) {
-            a.requested_approvals.push_back( level );
+            a.requested_approvals.push_back( approval{ level, current_time_point() } );
             a.provided_approvals.erase( itr );
          });
    } else {

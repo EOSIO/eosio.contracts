@@ -668,6 +668,53 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_invalidate, eosio_msig_tester ) try {
    );
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( propose_invalidate_approve, eosio_msig_tester ) try {
+   auto trx = reqauth("alice", {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx)
+                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+   );
+
+   //fail to execute before approval
+   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+                                          ("proposer",      "alice")
+                                          ("proposal_name", "first")
+                                          ("executer",      "alice")
+                            ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is("transaction authorization failed")
+   );
+
+   //invalidate
+   push_action( N(alice), N(invalidate), mvo()
+                  ("account",      "alice")
+   );
+
+   //approve
+   push_action( N(alice), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+
+   //successfully execute
+   transaction_trace_ptr trace;
+   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+
+   push_action( N(bob), N(exec), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("executer",      "bob")
+   );
+
+   BOOST_REQUIRE( bool(trace) );
+   BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
+   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE( approve_execute_old, eosio_msig_tester ) try {
    set_code( N(eosio.msig), contracts::util::msig_wasm_old() );
    set_abi( N(eosio.msig), contracts::util::msig_abi_old().data() );
