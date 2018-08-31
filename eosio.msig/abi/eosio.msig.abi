@@ -119,7 +119,7 @@
       "base": "",
       "fields": [
         {"name": "account",                "type": "account_name"},
-        {"name": "last_invalidation_time", "type": "uint64"}
+        {"name": "last_invalidation_time", "type": "time_point"}
       ]
     }
   ],

@@ -4,6 +4,11 @@
 
 namespace eosio {
 
+static time_point current_time_point() {
+   const static time_point ct{ microseconds{ static_cast<int64_t>( current_time() ) } };
+   return ct;
+}
+
 /*
 propose function manually parses input data (instead of taking parsed arguments from dispatcher)
 because parsing data in the dispatcher uses too much CPU in case if proposed transaction is big
@@ -34,7 +39,7 @@ void multisig::propose() {
    ds >> trx_header;
 
    require_auth( proposer );
-   eosio_assert( trx_header.expiration >= eosio::time_point_sec(now()), "transaction expired" );
+   eosio_assert( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
    //eosio_assert( trx_header.actions.size() > 0, "transaction must have at least one action" );
 
    proposals proptable( _self, proposer );
@@ -69,7 +74,7 @@ void multisig::approve( account_name proposer, name proposal_name, permission_le
       eosio_assert( itr != apps_it->requested_approvals.end(), "approval is not on the list of requested approvals" );
 
       apptable.modify( apps_it, proposer, [&]( auto& a ) {
-            a.provided_approvals.push_back( approval{ level, now() } );
+            a.provided_approvals.push_back( approval{ level, current_time_point() } );
             a.requested_approvals.erase( itr );
          });
    } else {
@@ -117,7 +122,7 @@ void multisig::cancel( account_name proposer, name proposal_name, account_name c
    auto& prop = proptable.get( proposal_name, "proposal not found" );
 
    if( canceler != proposer ) {
-      eosio_assert( unpack<transaction_header>( prop.packed_transaction ).expiration < eosio::time_point_sec(now()), "cannot cancel until expiration" );
+      eosio_assert( unpack<transaction_header>( prop.packed_transaction ).expiration < eosio::time_point_sec(current_time_point()), "cannot cancel until expiration" );
    }
    proptable.erase(prop);
 
@@ -142,7 +147,7 @@ void multisig::exec( account_name proposer, name proposal_name, account_name exe
    transaction_header trx_header;
    datastream<const char*> ds( prop.packed_transaction.data(), prop.packed_transaction.size() );
    ds >> trx_header;
-   eosio_assert( trx_header.expiration >= eosio::time_point_sec(now()), "transaction expired" );
+   eosio_assert( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
 
    approvals apptable(  _self, proposer );
    auto apps_it = apptable.find( proposal_name );
@@ -187,11 +192,11 @@ void multisig::invalidate( account_name account ) {
    if ( it == inv_table.end() ) {
       inv_table.emplace( account, [&](auto& i) {
             i.account = account;
-            i.last_invalidation_time = now();
+            i.last_invalidation_time = current_time_point();
          });
    } else {
       inv_table.modify( it, account, [&](auto& i) {
-            i.last_invalidation_time = now();
+            i.last_invalidation_time = current_time_point();
          });
    }
 }

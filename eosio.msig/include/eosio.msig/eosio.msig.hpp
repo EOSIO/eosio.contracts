@@ -35,7 +35,7 @@ namespace eosio {
 
          struct approval {
             permission_level level;
-            uint64_t         time;
+            time_point       time;
          };
 
          struct approvals_info {
@@ -50,7 +50,7 @@ namespace eosio {
 
          struct invalidation {
             account_name account;
-            uint64_t     last_invalidation_time;
+            time_point   last_invalidation_time;
 
             auto primary_key() const { return account; }
          };
