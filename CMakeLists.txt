@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(eosio_contracts VERSION 1.2.1)
 
-set(EOSIO_DEPENDENCY "1.1")
+set(EOSIO_DEPENDENCY "1.2")
 set(EOSIO_WASMSDK_DEPENDENCY "1.1")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
