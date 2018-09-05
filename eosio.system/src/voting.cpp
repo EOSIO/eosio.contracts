@@ -140,28 +140,12 @@ namespace eosiosystem {
 
       delta_total_votepay_share += additional_shares_delta;
       if( delta_total_votepay_share < 0 && _gstate2.total_producer_votepay_share < -delta_total_votepay_share ) {
-         // Some amount of over subtracting is acceptable because of floating point errors.
-         // If it is too much though, the caller of this function is passing in delta values that are too negative.
-         {
-            double delta_total_votepay_share_magnitude = -delta_total_votepay_share; // must be positive
-            double relative_error = (delta_total_votepay_share_magnitude - _gstate2.total_producer_votepay_share)
-                                      / delta_total_votepay_share_magnitude; // must be positive and no greater than 1.0
-            eosio_assert( relative_error < relative_tolerance, "subtracting too much from total_producer_votepay_share" );
-         }
          _gstate2.total_producer_votepay_share = 0.0;
       } else {
          _gstate2.total_producer_votepay_share += delta_total_votepay_share;
       }
 
       if( shares_rate_delta < 0 && _gstate3.total_vpay_share_change_rate < -shares_rate_delta ) {
-         // Some amount of over subtracting is acceptable because of floating point errors.
-         // If it is too much though, the caller of this function is passing in delta values that are too negative.
-         {
-            double shares_rate_delta_magnitude = -shares_rate_delta; // must be positive
-            double relative_error = (shares_rate_delta_magnitude - _gstate3.total_vpay_share_change_rate)
-                                      / shares_rate_delta_magnitude; // must be positive and no greater than 1.0
-            eosio_assert( relative_error < relative_tolerance, "subtracting too much from total_vpay_share_change_rate" );
-         }
          _gstate3.total_vpay_share_change_rate = 0.0;
       } else {
          _gstate3.total_vpay_share_change_rate += shares_rate_delta;
