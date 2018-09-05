@@ -130,8 +130,6 @@ namespace eosiosystem {
                                                        double additional_shares_delta,
                                                        double shares_rate_delta )
    {
-      static const double relative_tolerance = 1e-10;
-
       double delta_total_votepay_share = 0.0;
       if( ct > _gstate3.last_vpay_state_update ) {
          delta_total_votepay_share = _gstate3.total_vpay_share_change_rate
