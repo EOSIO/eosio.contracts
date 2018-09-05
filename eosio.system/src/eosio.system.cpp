@@ -141,8 +141,10 @@ namespace eosiosystem {
 
    void system_contract::updtrevision( uint8_t revision ) {
       require_auth( _self );
+      eosio_assert( _gstate2.revision < 255, "can not increment revision" ); // prevent wrap around
       eosio_assert( revision == _gstate2.revision + 1, "can only increment revision by one" );
-      eosio_assert( _gstate2.revision < 255, "can not increment revision" );
+      eosio_assert( revision <= 1, // set upper bound to greatest revision supported in the code
+                    "specified revision is not yet supported by the code" );
       _gstate2.revision = revision;
    }
 

@@ -2267,6 +2267,70 @@ BOOST_FIXTURE_TEST_CASE(votepay_transition, eosio_system_tester, * boost::unit_t
 } FC_LOG_AND_RETHROW()
 
 
+BOOST_FIXTURE_TEST_CASE(votepay_transition2, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
+
+   set_code( config::system_account_name, contracts::util::system_wasm_old() );
+   set_abi(  config::system_account_name, contracts::util::system_abi_old().data() );
+
+   const asset net = core_from_string("80.0000");
+   const asset cpu = core_from_string("80.0000");
+   const std::vector<account_name> voters = { N(producvotera), N(producvoterb), N(producvoterc), N(producvoterd) };
+   for (const auto& v: voters) {
+      create_account_with_resources( v, config::system_account_name, core_from_string("1.0000"), false, net, cpu );
+      transfer( config::system_account_name, v, core_from_string("100000000.0000"), config::system_account_name );
+      BOOST_REQUIRE_EQUAL(success(), stake(v, core_from_string("30000000.0000"), core_from_string("30000000.0000")) );
+   }
+
+   // create accounts {defproducera, defproducerb, ..., defproducerz} and register as producers
+   std::vector<account_name> producer_names;
+   {
+      producer_names.reserve('z' - 'a' + 1);
+      {
+         const std::string root("defproducer");
+         for ( char c = 'a'; c <= 'd'; ++c ) {
+            producer_names.emplace_back(root + std::string(1, c));
+         }
+      }
+      setup_producer_accounts(producer_names);
+      for (const auto& p: producer_names) {
+         BOOST_REQUIRE_EQUAL( success(), regproducer(p) );
+         BOOST_TEST_REQUIRE(0 == get_producer_info(p)["total_votes"].as_double());
+      }
+   }
+
+   BOOST_REQUIRE_EQUAL( success(), vote(N(producvotera), vector<account_name>(producer_names.begin(), producer_names.end())) );
+   produce_block( fc::hours(20) );
+   BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterb), vector<account_name>(producer_names.begin(), producer_names.end())) );
+   produce_block( fc::hours(30) );
+   BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterc), vector<account_name>(producer_names.begin(), producer_names.end())) );
+   BOOST_REQUIRE_EQUAL( success(), push_action(producer_names[0], N(claimrewards), mvo()("owner", producer_names[0])) );
+   BOOST_REQUIRE_EQUAL( success(), push_action(producer_names[1], N(claimrewards), mvo()("owner", producer_names[1])) );
+   auto* tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>( boost::make_tuple( config::system_account_name,
+                                                                                                                        config::system_account_name,
+                                                                                                                        N(producers2) ) );
+   BOOST_REQUIRE( !tbl );
+
+   produce_block( fc::hours(2*24) );
+
+   set_code( config::system_account_name, contracts::system_wasm() );
+   set_abi(  config::system_account_name, contracts::system_abi().data() );
+
+   produce_blocks(2);
+   produce_block( fc::hours(24 + 1) );
+   
+   BOOST_REQUIRE_EQUAL( success(), push_action(producer_names[0], N(claimrewards), mvo()("owner", producer_names[0])) );
+   BOOST_TEST_REQUIRE( 0 == get_global_state2()["total_producer_votepay_share"].as_double() );
+   BOOST_TEST_REQUIRE( get_producer_info(producer_names[0])["total_votes"].as_double() == get_global_state3()["total_vpay_share_change_rate"].as_double() );
+
+   produce_block( fc::hours(5) );
+
+   BOOST_REQUIRE_EQUAL( success(), regproducer(producer_names[1]) );
+   BOOST_TEST_REQUIRE( get_producer_info(producer_names[0])["total_votes"].as_double() + get_producer_info(producer_names[1])["total_votes"].as_double() == 
+                       get_global_state3()["total_vpay_share_change_rate"].as_double() );
+
+} FC_LOG_AND_RETHROW()
+
+
 BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) try {
    //install multisig contract
    abi_serializer msig_abi_ser = initialize_multisig();
