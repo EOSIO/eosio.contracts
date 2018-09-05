@@ -49,18 +49,18 @@ namespace eosiosystem {
       auto base_symbol  = base.balance.symbol;
       auto quote_symbol = quote.balance.symbol;
 
-      //print( "From: ", from, " TO ", asset( 0,to), "\n" );
-      //print( "base: ", base_symbol, "\n" );
-      //print( "quote: ", quote_symbol, "\n" );
-      //print( "ex: ", supply.symbol, "\n" );
-
+      print( "From: ", from, " TO ", asset( 0,to), "\n" );
+      print( "base: ", base_symbol, "\n" );
+      print( "quote: ", quote_symbol, "\n" );
+      print( "ex: ", supply.symbol, "\n" );
       if( sell_symbol != ex_symbol ) {
          if( sell_symbol == base_symbol ) {
             from = convert_to_exchange( base, from );
          } else if( sell_symbol == quote_symbol ) {
             from = convert_to_exchange( quote, from );
          } else { 
-            eosio_assert( false, "invalid sell" );
+            return from;
+            //eosio_assert( false, "invalid sell" );
          }
       } else {
          if( to == base_symbol ) {

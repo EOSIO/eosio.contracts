@@ -161,13 +161,21 @@ public:
       return push_transaction( trx );
    }
 
-   transaction_trace_ptr setup_producer_accounts( const std::vector<account_name>& accounts ) {
+   transaction_trace_ptr setup_producer_accounts( const std::vector<account_name>& accounts, bool use_sys_symbol=false ) {
       account_name creator(config::system_account_name);
       signed_transaction trx;
       set_transaction_headers(trx);
-      asset cpu = core_from_string("80.0000");
-      asset net = core_from_string("80.0000");
-      asset ram = core_from_string("1.0000");
+      asset cpu, net, ram;
+      if (use_sys_symbol) {
+         cpu = eosio::chain::asset::from_string("80.0000 SYS");
+         net = eosio::chain::asset::from_string("80.0000 SYS");
+         ram = eosio::chain::asset::from_string("1.0000 SYS");
+      }
+      else {
+         cpu = core_from_string("80.0000");
+         net = core_from_string("80.0000");
+         ram = core_from_string("1.0000");
+      }
 
       for (const auto& a: accounts) {
          authority owner_auth( get_public_key( a, "owner" ) );

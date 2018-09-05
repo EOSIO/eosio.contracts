@@ -2269,16 +2269,57 @@ BOOST_FIXTURE_TEST_CASE(votepay_transition, eosio_system_tester, * boost::unit_t
 
 BOOST_FIXTURE_TEST_CASE(votepay_transition2, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
 
+   auto sys_core = []( const std::string& s ) { return eosio::chain::asset::from_string(s+" SYS"); };
+
+   set_code( N(eosio.token), contracts::util::token_wasm_sys() );
    set_code( config::system_account_name, contracts::util::system_wasm_old() );
    set_abi(  config::system_account_name, contracts::util::system_abi_old().data() );
 
-   const asset net = core_from_string("80.0000");
-   const asset cpu = core_from_string("80.0000");
+   const asset net = sys_core("80.0000");
+   const asset cpu = sys_core("80.0000");
    const std::vector<account_name> voters = { N(producvotera), N(producvoterb), N(producvoterc), N(producvoterd) };
    for (const auto& v: voters) {
-      create_account_with_resources( v, config::system_account_name, core_from_string("1.0000"), false, net, cpu );
-      transfer( config::system_account_name, v, core_from_string("100000000.0000"), config::system_account_name );
-      BOOST_REQUIRE_EQUAL(success(), stake(v, core_from_string("30000000.0000"), core_from_string("30000000.0000")) );
+      {
+         account_name creator = config::system_account_name;
+         asset ramfunds = eosio::chain::asset::from_string("1.0000 SYS");
+         signed_transaction trx;
+         set_transaction_headers(trx);
+
+         authority owner_auth;
+         owner_auth =  authority( get_public_key( v, "owner" ) );
+
+         trx.actions.emplace_back( vector<permission_level>{{creator,config::active_name}},
+                                   newaccount{
+                                      .creator  = creator,
+                                      .name     = v,
+                                      .owner    = owner_auth,
+                                      .active   = authority( get_public_key( v, "active" ) )
+                                   });
+
+         trx.actions.emplace_back( get_action( config::system_account_name, N(buyram), vector<permission_level>{{creator,config::active_name}},
+                                               mvo()
+                                               ("payer", creator)
+                                               ("receiver", v)
+                                               ("quant", ramfunds) )
+                                 );
+
+         trx.actions.emplace_back( get_action( config::system_account_name, N(delegatebw), vector<permission_level>{{creator,config::active_name}},
+                                               mvo()
+                                               ("from", creator)
+                                               ("receiver", v)
+                                               ("stake_net_quantity", net )
+                                               ("stake_cpu_quantity", cpu )
+                                               ("transfer", 0 )
+                                             )
+                                   );
+
+         set_transaction_headers(trx);
+         trx.sign( get_private_key( creator, "active" ), control->get_chain_id()  );
+         push_transaction( trx );
+         return;
+      }
+      transfer( config::system_account_name, v, sys_core("100000000.0000"), config::system_account_name );
+      BOOST_REQUIRE_EQUAL(success(), stake(v, sys_core("30000000.0000"), sys_core("30000000.0000")) );
    }
 
    // create accounts {defproducera, defproducerb, ..., defproducerz} and register as producers
@@ -2291,13 +2332,12 @@ BOOST_FIXTURE_TEST_CASE(votepay_transition2, eosio_system_tester, * boost::unit_
             producer_names.emplace_back(root + std::string(1, c));
          }
       }
-      setup_producer_accounts(producer_names);
+      setup_producer_accounts(producer_names, true);
       for (const auto& p: producer_names) {
          BOOST_REQUIRE_EQUAL( success(), regproducer(p) );
          BOOST_TEST_REQUIRE(0 == get_producer_info(p)["total_votes"].as_double());
       }
    }
-
    BOOST_REQUIRE_EQUAL( success(), vote(N(producvotera), vector<account_name>(producer_names.begin(), producer_names.end())) );
    produce_block( fc::hours(20) );
    BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterb), vector<account_name>(producer_names.begin(), producer_names.end())) );
@@ -2312,7 +2352,7 @@ BOOST_FIXTURE_TEST_CASE(votepay_transition2, eosio_system_tester, * boost::unit_
 
    produce_block( fc::hours(2*24) );
 
-   set_code( config::system_account_name, contracts::system_wasm() );
+   set_code( config::system_account_name, contracts::util::system_wasm_sys() );
    set_abi(  config::system_account_name, contracts::system_abi().data() );
 
    produce_blocks(2);
