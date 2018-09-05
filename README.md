@@ -14,8 +14,8 @@ The following unprivileged contract(s) are also part of the system.
    * [eosio.token](https://github.com/eosio/eosio.contracts/tree/master/eosio.token)
 
 Dependencies:
-* [eosio v1.1.2](https://github.com/eosio/eos/tree/v1.1.2)
-* [eosio.wasmsdk v1.1.0](https://github.com/eosio/eosio.wasmsdk/tree/v1.1.0)
+* [eosio v1.2.0](https://github.com/eosio/eos/tree/v1.2.0)
+* [eosio.cdt v1.2.0](https://github.com/eosio/eosio.wasmsdk/tree/v1.1.0)
 
 To build the contracts and the unit tests:
 * First, ensure that your __eosio__ is compiled to the core symbol for the EOSIO blockchain that intend to deploy to.
