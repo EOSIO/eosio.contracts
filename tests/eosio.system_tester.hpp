@@ -421,6 +421,11 @@ public:
       return abi_ser.binary_to_variant( "producer_info", data, abi_serializer_max_time );
    }
 
+   fc::variant get_producer_info2( const account_name& act ) {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(producers2), act );
+      return abi_ser.binary_to_variant( "producer_info2", data, abi_serializer_max_time );
+   }
+
    void create_currency( name contract, name manager, asset maxsupply ) {
       auto act =  mutable_variant_object()
          ("issuer",       manager )
@@ -465,6 +470,10 @@ public:
       return get_stats("4," CORE_SYMBOL_NAME)["supply"].as<asset>();
    }
 
+   uint64_t microseconds_since_epoch_of_iso_string( const fc::variant& v ) {
+      return static_cast<uint64_t>( time_point::from_iso_string( v.as_string() ).time_since_epoch().count() );
+   }
+
    fc::variant get_global_state() {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global), N(global) );
       if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
@@ -474,6 +483,11 @@ public:
    fc::variant get_global_state2() {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global2), N(global2) );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state2", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_global_state3() {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global3), N(global3) );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state3", data, abi_serializer_max_time );
    }
 
    fc::variant get_refund_request( name account ) {

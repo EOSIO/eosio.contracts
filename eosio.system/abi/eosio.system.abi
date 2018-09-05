@@ -25,6 +25,13 @@
         {"name":"permission", "type":"permission_name"}
       ]
     },{
+      "name": "abi_hash",
+      "base": "",
+      "fields": [
+         {"name":"owner", "type":"account_name"},
+         {"name":"hash",  "type":"checksum256"}
+      ]
+    },{
       "name": "key_weight",
       "base": "",
       "fields": [
@@ -294,11 +301,17 @@
     },{
       "name": "eosio_global_state2",
       "fields": [
-         {"name":"new_ram_per_block",   "type":"uint16"},
-         {"name":"last_ram_increase",   "type":"block_timestamp_type"},
-         {"name":"last_block_num",      "type":"block_timestamp_type"},
-         {"name":"reserved",            "type":"float64"},
-         {"name":"revision",            "type":"uint8"}
+         {"name":"new_ram_per_block",            "type":"uint16"},
+         {"name":"last_ram_increase",            "type":"block_timestamp_type"},
+         {"name":"last_block_num",               "type":"block_timestamp_type"},
+         {"name":"total_producer_votepay_share", "type":"float64"},
+         {"name":"revision",                     "type":"uint8"}
+      ]
+    },{
+      "name": "eosio_global_state3",
+      "fields": [
+         {"name":"last_vpay_state_update",       "type":"time_point"},
+         {"name":"total_vpay_share_change_rate", "type":"float64"}
       ]
     },{
       "name": "eosio_global_state",
@@ -308,12 +321,12 @@
          {"name":"total_ram_bytes_reserved",      "type":"uint64"},
          {"name":"total_ram_stake",               "type":"int64"},
          {"name":"last_producer_schedule_update", "type":"block_timestamp_type"},
-         {"name":"last_pervote_bucket_fill",      "type":"uint64"},
+         {"name":"last_pervote_bucket_fill",      "type":"time_point"},
          {"name":"pervote_bucket",                "type":"int64"},
          {"name":"perblock_bucket",               "type":"int64"},
          {"name":"total_unpaid_blocks",           "type":"uint32"},
          {"name":"total_activated_stake",         "type":"int64"},
-         {"name":"thresh_activated_stake_time",   "type":"uint64"},
+         {"name":"thresh_activated_stake_time",   "type":"time_point"},
          {"name":"last_producer_schedule_size",   "type":"uint16"},
          {"name":"total_producer_vote_weight",    "type":"float64"},
          {"name":"last_name_close",               "type":"block_timestamp_type"}
@@ -328,8 +341,16 @@
          {"name":"is_active",       "type":"bool"},
          {"name":"url",             "type":"string"},
          {"name":"unpaid_blocks",   "type":"uint32"},
-         {"name":"last_claim_time", "type":"uint64"},
+         {"name":"last_claim_time", "type":"time_point"},
          {"name":"location",        "type":"uint16"}
+      ]
+    },{
+      "name": "producer_info2",
+      "base": "",
+      "fields": [
+         {"name":"owner",                     "type":"account_name"},
+         {"name":"votepay_share",             "type":"float64"},
+         {"name":"last_votepay_share_update", "type":"time_point"}
       ]
     },{
       "name": "regproducer",
@@ -405,6 +426,12 @@
         {"name":"producer", "type":"account_name"}
       ]
     },{
+      "name": "updtrevision",
+      "base": "",
+      "fields": [
+        {"name":"revision", "type":"uint8"}
+      ]
+    },{
       "name": "set_account_limits",
       "base": "",
       "fields": [
@@ -466,7 +493,7 @@
           {"name":"newname", "type":"account_name"},
           {"name":"high_bidder", "type":"account_name"},
           {"name":"high_bid", "type":"int64"},
-          {"name":"last_bid_time", "type":"uint64"}
+          {"name":"last_bid_time", "type":"time_point"}
        ]
     }
    ],
@@ -583,6 +610,10 @@
       "type": "rmvproducer",
       "ricardian_contract": ""
    },{
+      "name": "updtrevision",
+      "type": "updtrevision",
+      "ricardian_contract": ""
+   },{
       "name": "setalimits",
       "type": "set_account_limits",
       "ricardian_contract": ""
@@ -610,6 +641,12 @@
       "key_names" : ["owner"],
       "key_types" : ["uint64"]
     },{
+      "name": "producers2",
+      "type": "producer_info2",
+      "index_type": "i64",
+      "key_names" : ["owner"],
+      "key_types" : ["uint64"]
+    },{
       "name": "global",
       "type": "eosio_global_state",
       "index_type": "i64",
@@ -618,6 +655,12 @@
     },{
       "name": "global2",
       "type": "eosio_global_state2",
+      "index_type": "i64",
+      "key_names" : [],
+      "key_types" : []
+    },{
+      "name": "global3",
+      "type": "eosio_global_state3",
       "index_type": "i64",
       "key_names" : [],
       "key_types" : []
