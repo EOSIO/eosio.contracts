@@ -156,7 +156,6 @@ namespace eosiosystem {
       set_resource_limits( res_itr->owner, res_itr->ram_bytes + ram_gift_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
    }
 
-
   /**
     *  The system contract now buys and sells RAM allocations at prevailing market prices.
     *  This may result in traders buying RAM today in anticipation of potential shortages
@@ -422,7 +421,7 @@ namespace eosiosystem {
       // allow people to get their tokens earlier than the 3 day delay if the unstake happened immediately after many
       // consecutive missed blocks.
 
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.stake),N(active)},
+      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{N(eosio.stake),N(active)},{req->owner,N(active)}},
                                                     { N(eosio.stake), req->owner, req->net_amount + req->cpu_amount, std::string("unstake") } );
 
       refunds_tbl.erase( req );

@@ -175,11 +175,11 @@ namespace eosiosystem {
       });
 
       if( producer_per_block_pay > 0 ) {
-         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.bpay),N(active)},
+         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{N(eosio.bpay),N(active)},{owner,N(active)}},
                                                        { N(eosio.bpay), owner, asset(producer_per_block_pay), std::string("producer block pay") } );
       }
       if( producer_per_vote_pay > 0 ) {
-         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.vpay),N(active)},
+         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{N(eosio.vpay),N(active)},{owner,N(active)}},
                                                        { N(eosio.vpay), owner, asset(producer_per_vote_pay), std::string("producer vote pay") } );
       }
    }

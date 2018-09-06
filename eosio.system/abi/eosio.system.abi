@@ -47,6 +47,13 @@
         {"name":"bid", "type":"asset"}
       ]
     },{
+      "name": "bidrefund",
+      "base": "",
+      "fields": [
+        {"name":"bidder",  "type":"account_name"},
+        {"name":"newname", "type":"account_name"}
+      ]
+    },{
       "name": "permission_level_weight",
       "base": "",
       "fields": [
@@ -437,7 +444,7 @@
         {"name":"quote", "type":"connector"}
       ]
     }, {
-       "name": "namebid_info",
+       "name": "name_bid",
        "base": "",
        "fields": [
           {"name":"newname", "type":"account_name"},
@@ -445,7 +452,14 @@
           {"name":"high_bid", "type":"int64"},
           {"name":"last_bid_time", "type":"time_point"}
        ]
-    }
+    }, {
+     "name": "bid_refund",
+     "base": "",
+     "fields": [
+       {"name":"bidder", "type":"account_name"},
+       {"name":"amount", "type":"asset"}
+     ]
+   }
    ],
    "actions": [{
      "name": "newaccount",
@@ -522,6 +536,10 @@
    },{
       "name": "bidname",
       "type": "bidname",
+      "ricardian_contract": ""
+   },{
+      "name": "bidrefund",
+      "type": "bidrefund",
       "ricardian_contract": ""
    },{
       "name": "unregprod",
@@ -634,17 +652,23 @@
       "key_types" : ["uint64"]
     },{
        "name": "namebids",
-       "type": "namebid_info",
+       "type": "name_bid",
        "index_type": "i64",
        "key_names" : ["newname"],
        "key_types" : ["account_name"]
     },{
+     "name": "bidrefunds",
+     "type": "bid_refund",
+     "index_type": "i64",
+     "key_names" : ["bidder"],
+     "key_types" : ["account_name"]
+   },{
       "name": "abihash",
       "type": "abi_hash",
       "index_type": "i64",
       "key_names": ["owner"],
       "key_types": ["account_name"]
-    }
+   }
    ],
    "ricardian_clauses": [],
    "abi_extensions": []

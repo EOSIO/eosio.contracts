@@ -32,10 +32,18 @@ namespace eosiosystem {
      uint64_t by_high_bid()const { return static_cast<uint64_t>(-high_bid); }
    };
 
+   struct bid_refund {
+      account_name bidder;
+      asset        amount;
+
+     auto primary_key() const { return bidder; }
+   };
+
    typedef eosio::multi_index< N(namebids), name_bid,
                                indexed_by<N(highbid), const_mem_fun<name_bid, uint64_t, &name_bid::by_high_bid>  >
                                >  name_bid_table;
 
+   typedef eosio::multi_index< N(bidrefunds), bid_refund> bid_refund_table;
 
    struct eosio_global_state : eosio::blockchain_parameters {
       uint64_t free_ram()const { return max_ram_size - total_ram_bytes_reserved; }
@@ -186,7 +194,7 @@ namespace eosiosystem {
          void onblock( block_timestamp timestamp, account_name producer );
                       // const block_header& header ); /// only parse first 3 fields of block header
 
-
+         void setalimits( account_name act, int64_t ram, int64_t net, int64_t cpu );
          // functions defined in delegate_bandwidth.cpp
 
          /**
@@ -263,6 +271,9 @@ namespace eosiosystem {
          void updtrevision( uint8_t revision );
 
          void bidname( account_name bidder, account_name newname, asset bid );
+
+         void bidrefund( account_name bidder, account_name newname );
+
       private:
          // Implementation details:
 
