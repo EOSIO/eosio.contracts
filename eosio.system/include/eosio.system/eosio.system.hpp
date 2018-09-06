@@ -19,12 +19,14 @@ namespace eosiosystem {
    using eosio::indexed_by;
    using eosio::const_mem_fun;
    using eosio::block_timestamp;
+   using eosio::time_point;
+   using eosio::microseconds;
 
    struct name_bid {
      account_name            newname;
      account_name            high_bidder;
      int64_t                 high_bid = 0; ///< negative high_bid == closed auction waiting to be claimed
-     uint64_t                last_bid_time = 0;
+     time_point              last_bid_time;
 
      auto     primary_key()const { return newname;                          }
      uint64_t by_high_bid()const { return static_cast<uint64_t>(-high_bid); }
@@ -51,12 +53,12 @@ namespace eosiosystem {
       int64_t              total_ram_stake = 0;
 
       block_timestamp      last_producer_schedule_update;
-      uint64_t             last_pervote_bucket_fill = 0;
+      time_point           last_pervote_bucket_fill;
       int64_t              pervote_bucket = 0;
       int64_t              perblock_bucket = 0;
       uint32_t             total_unpaid_blocks = 0; /// all blocks which have been produced but not paid
       int64_t              total_activated_stake = 0;
-      uint64_t             thresh_activated_stake_time = 0;
+      time_point           thresh_activated_stake_time;
       uint16_t             last_producer_schedule_size = 0;
       double               total_producer_vote_weight = 0; /// the sum of all producer votes
       block_timestamp      last_name_close;
@@ -78,11 +80,19 @@ namespace eosiosystem {
       uint16_t          new_ram_per_block = 0;
       block_timestamp   last_ram_increase;
       block_timestamp   last_block_num; /* deprecated */
-      double            reserved = 0;
+      double            total_producer_votepay_share = 0;
       uint8_t           revision = 0; ///< used to track version updates in the future.
 
+      EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)
+                        (total_producer_votepay_share)(revision) )
+   };
 
-      EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)(reserved)(revision) )
+   struct eosio_global_state3 {
+      eosio_global_state3() { }
+      time_point        last_vpay_state_update;
+      double            total_vpay_share_change_rate = 0;
+
+      EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
    };
 
    struct producer_info {
@@ -92,7 +102,7 @@ namespace eosiosystem {
       bool                  is_active = true;
       std::string           url;
       uint32_t              unpaid_blocks = 0;
-      uint64_t              last_claim_time = 0;
+      time_point            last_claim_time;
       uint16_t              location = 0;
 
       uint64_t primary_key()const { return owner;                                   }
@@ -103,6 +113,17 @@ namespace eosiosystem {
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
                         (unpaid_blocks)(last_claim_time)(location) )
+   };
+
+   struct producer_info2 {
+      account_name    owner;
+      double          votepay_share = 0;
+      time_point      last_votepay_share_update;
+
+      uint64_t primary_key()const { return owner; }
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
    };
 
    struct voter_info {
@@ -142,9 +163,11 @@ namespace eosiosystem {
    typedef eosio::multi_index< N(producers), producer_info,
                                indexed_by<N(prototalvote), const_mem_fun<producer_info, double, &producer_info::by_votes>  >
                                >  producers_table;
+   typedef eosio::multi_index< N(producers2), producer_info2 > producers_table2;
 
    typedef eosio::singleton<N(global), eosio_global_state> global_state_singleton;
    typedef eosio::singleton<N(global2), eosio_global_state2> global_state2_singleton;
+   typedef eosio::singleton<N(global3), eosio_global_state3> global_state3_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -154,12 +177,14 @@ namespace eosiosystem {
       private:
          voters_table            _voters;
          producers_table         _producers;
+         producers_table2        _producers2;
          global_state_singleton  _global;
          global_state2_singleton _global2;
-
-         eosio_global_state     _gstate;
-         eosio_global_state2    _gstate2;
-         rammarket              _rammarket;
+         global_state3_singleton _global3;
+         eosio_global_state      _gstate;
+         eosio_global_state2     _gstate2;
+         eosio_global_state3     _gstate3;
+         rammarket               _rammarket;
 
       public:
          system_contract( account_name s );
@@ -243,6 +268,8 @@ namespace eosiosystem {
 
          void rmvproducer( account_name producer );
 
+         void updtrevision( uint8_t revision );
+
          void bidname( account_name bidder, account_name newname, asset bid );
 
          void bidrefund( account_name bidder, account_name newname );
@@ -252,6 +279,7 @@ namespace eosiosystem {
 
          //defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
+         static time_point current_time_point();
          static block_timestamp current_block_time();
          void update_ram_supply();
 
@@ -265,6 +293,12 @@ namespace eosiosystem {
 
          // defined in voting.cpp
          void propagate_weight_change( const voter_info& voter );
+
+         double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
+                                               time_point ct,
+                                               double shares_rate, bool reset_to_zero = false );
+         double update_total_votepay_share( time_point ct,
+                                            double additional_shares_delta = 0.0, double shares_rate_delta = 0.0 );
    };
 
 } /// eosiosystem

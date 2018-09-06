@@ -40,33 +40,51 @@ namespace eosiosystem {
       require_auth( producer );
 
       auto prod = _producers.find( producer );
+      const auto ct = current_time_point();
 
       if ( prod != _producers.end() ) {
          _producers.modify( prod, producer, [&]( producer_info& info ){
-               info.producer_key = producer_key;
-               info.is_active    = true;
-               info.url          = url;
-               info.location     = location;
+            info.producer_key = producer_key;
+            info.is_active    = true;
+            info.url          = url;
+            info.location     = location;
+            if ( info.last_claim_time == time_point() )
+               info.last_claim_time = ct;
+         });
+
+         auto prod2 = _producers2.find( producer );
+         if ( prod2 == _producers2.end() ) {
+            _producers2.emplace( producer, [&]( producer_info2& info ){
+               info.owner                     = producer;
+               info.last_votepay_share_update = ct;
             });
+            update_total_votepay_share( ct, 0.0, prod->total_votes );
+            // When introducing the producer2 table row for the first time, the producer's votes must also be accounted for in the global total_producer_votepay_share at the same time.
+         }
       } else {
          _producers.emplace( producer, [&]( producer_info& info ){
-               info.owner         = producer;
-               info.total_votes   = 0;
-               info.producer_key  = producer_key;
-               info.is_active     = true;
-               info.url           = url;
-               info.location      = location;
+            info.owner           = producer;
+            info.total_votes     = 0;
+            info.producer_key    = producer_key;
+            info.is_active       = true;
+            info.url             = url;
+            info.location        = location;
+            info.last_claim_time = ct;
+         });
+         _producers2.emplace( producer, [&]( producer_info2& info ){
+            info.owner                     = producer;
+            info.last_votepay_share_update = ct;
          });
       }
+
    }
 
    void system_contract::unregprod( const account_name producer ) {
       require_auth( producer );
 
       const auto& prod = _producers.get( producer, "producer not found" );
-
       _producers.modify( prod, 0, [&]( producer_info& info ){
-            info.deactivate();
+         info.deactivate();
       });
    }
 
@@ -107,6 +125,58 @@ namespace eosiosystem {
       double weight = int64_t( (now() - (block_timestamp::block_timestamp_epoch / 1000)) / (seconds_per_day * 7) )  / double( 52 );
       return double(staked) * std::pow( 2, weight );
    }
+
+   double system_contract::update_total_votepay_share( time_point ct,
+                                                       double additional_shares_delta,
+                                                       double shares_rate_delta )
+   {
+      double delta_total_votepay_share = 0.0;
+      if( ct > _gstate3.last_vpay_state_update ) {
+         delta_total_votepay_share = _gstate3.total_vpay_share_change_rate
+                                       * double( (ct - _gstate3.last_vpay_state_update).count() / 1E6 );
+      }
+
+      delta_total_votepay_share += additional_shares_delta;
+      if( delta_total_votepay_share < 0 && _gstate2.total_producer_votepay_share < -delta_total_votepay_share ) {
+         _gstate2.total_producer_votepay_share = 0.0;
+      } else {
+         _gstate2.total_producer_votepay_share += delta_total_votepay_share;
+      }
+
+      if( shares_rate_delta < 0 && _gstate3.total_vpay_share_change_rate < -shares_rate_delta ) {
+         _gstate3.total_vpay_share_change_rate = 0.0;
+      } else {
+         _gstate3.total_vpay_share_change_rate += shares_rate_delta;
+      }
+
+      _gstate3.last_vpay_state_update = ct;
+
+      return _gstate2.total_producer_votepay_share;
+   }
+
+   double system_contract::update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
+                                                          time_point ct,
+                                                          double shares_rate,
+                                                          bool reset_to_zero )
+   {
+      double delta_votepay_share = 0.0;
+      if( shares_rate > 0.0 && ct > prod_itr->last_votepay_share_update ) {
+         delta_votepay_share = shares_rate * double( (ct - prod_itr->last_votepay_share_update).count() / 1E6 ); // cannot be negative
+      }
+
+      double new_votepay_share = prod_itr->votepay_share + delta_votepay_share;
+      _producers2.modify( prod_itr, 0, [&](auto& p) {
+         if( reset_to_zero )
+            p.votepay_share = 0.0;
+         else
+            p.votepay_share = new_votepay_share;
+
+         p.last_votepay_share_update = ct;
+      } );
+
+      return new_votepay_share;
+   }
+
    /**
     *  @pre producers must be sorted from lowest to highest and must be registered and active
     *  @pre if proxy is set then no producers can be voted for
@@ -152,8 +222,8 @@ namespace eosiosystem {
        */
       if( voter->last_vote_weight <= 0.0 ) {
          _gstate.total_activated_stake += voter->staked;
-         if( _gstate.total_activated_stake >= min_activated_stake && _gstate.thresh_activated_stake_time == 0 ) {
-            _gstate.thresh_activated_stake_time = current_time();
+         if( _gstate.total_activated_stake >= min_activated_stake && _gstate.thresh_activated_stake_time == time_point() ) {
+            _gstate.thresh_activated_stake_time = current_time_point();
          }
       }
 
@@ -200,10 +270,14 @@ namespace eosiosystem {
          }
       }
 
+      const auto ct = current_time_point();
+      double delta_change_rate         = 0.0;
+      double total_inactive_vpay_share = 0.0;
       for( const auto& pd : producer_deltas ) {
          auto pitr = _producers.find( pd.first );
          if( pitr != _producers.end() ) {
             eosio_assert( !voting || pitr->active() || !pd.second.second /* not from new set */, "producer is not currently registered" );
+            double init_total_votes = pitr->total_votes;
             _producers.modify( pitr, 0, [&]( auto& p ) {
                p.total_votes += pd.second.first;
                if ( p.total_votes < 0 ) { // floating point arithmetics can give small negative numbers
@@ -212,10 +286,32 @@ namespace eosiosystem {
                _gstate.total_producer_vote_weight += pd.second.first;
                //eosio_assert( p.total_votes >= 0, "something bad happened" );
             });
+            auto prod2 = _producers2.find( pd.first );
+            if( prod2 != _producers2.end() ) {
+               const auto last_claim_plus_3days = pitr->last_claim_time + microseconds(3 * useconds_per_day);
+               bool crossed_threshold       = (last_claim_plus_3days <= ct);
+               bool updated_after_threshold = (last_claim_plus_3days <= prod2->last_votepay_share_update);
+               // Note: updated_after_threshold implies cross_threshold
+
+               double new_votepay_share = update_producer_votepay_share( prod2,
+                                             ct,
+                                             updated_after_threshold ? 0.0 : init_total_votes,
+                                             crossed_threshold && !updated_after_threshold // only reset votepay_share once after threshold
+                                          );
+
+               if( !crossed_threshold ) {
+                  delta_change_rate += pd.second.first;
+               } else if( !updated_after_threshold ) {
+                  total_inactive_vpay_share += new_votepay_share;
+                  delta_change_rate -= init_total_votes;
+               }
+            }
          } else {
             eosio_assert( !pd.second.second /* not from new set */, "producer is not registered" ); //data corruption
          }
       }
+
+      update_total_votepay_share( ct, -total_inactive_vpay_share, delta_change_rate );
 
       _voters.modify( voter, 0, [&]( auto& av ) {
          av.last_vote_weight = new_vote_weight;
@@ -270,13 +366,39 @@ namespace eosiosystem {
             propagate_weight_change( proxy );
          } else {
             auto delta = new_weight - voter.last_vote_weight;
+            const auto ct = current_time_point();
+            double delta_change_rate         = 0;
+            double total_inactive_vpay_share = 0;
             for ( auto acnt : voter.producers ) {
-               auto& pitr = _producers.get( acnt, "producer not found" ); //data corruption
-               _producers.modify( pitr, 0, [&]( auto& p ) {
-                     p.total_votes += delta;
-                     _gstate.total_producer_vote_weight += delta;
+               auto& prod = _producers.get( acnt, "producer not found" ); //data corruption
+               const double init_total_votes = prod.total_votes;
+               _producers.modify( prod, 0, [&]( auto& p ) {
+                  p.total_votes += delta;
+                  _gstate.total_producer_vote_weight += delta;
                });
+               auto prod2 = _producers2.find( acnt );
+               if ( prod2 != _producers2.end() ) {
+                  const auto last_claim_plus_3days = prod.last_claim_time + microseconds(3 * useconds_per_day);
+                  bool crossed_threshold       = (last_claim_plus_3days <= ct);
+                  bool updated_after_threshold = (last_claim_plus_3days <= prod2->last_votepay_share_update);
+                  // Note: updated_after_threshold implies cross_threshold
+
+                  double new_votepay_share = update_producer_votepay_share( prod2,
+                                                ct,
+                                                updated_after_threshold ? 0.0 : init_total_votes,
+                                                crossed_threshold && !updated_after_threshold // only reset votepay_share once after threshold
+                                             );
+
+                  if( !crossed_threshold ) {
+                     delta_change_rate += delta;
+                  } else if( !updated_after_threshold ) {
+                     total_inactive_vpay_share += new_votepay_share;
+                     delta_change_rate -= init_total_votes;
+                  }
+               }
             }
+
+            update_total_votepay_share( ct, -total_inactive_vpay_share, delta_change_rate );
          }
       }
       _voters.modify( voter, 0, [&]( auto& v ) {

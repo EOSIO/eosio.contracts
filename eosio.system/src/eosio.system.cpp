@@ -1,5 +1,6 @@
 #include <eosio.system/eosio.system.hpp>
 #include <eosiolib/dispatcher.hpp>
+#include <eosiolib/crypto.h>
 
 #include "producer_pay.cpp"
 #include "delegate_bandwidth.cpp"
@@ -13,13 +14,16 @@ namespace eosiosystem {
    :native(s),
     _voters(_self,_self),
     _producers(_self,_self),
+    _producers2(_self,_self),
     _global(_self,_self),
     _global2(_self,_self),
+    _global3(_self,_self),
     _rammarket(_self,_self)
    {
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
+      _gstate3 = _global3.exists() ? _global3.get() : eosio_global_state3{};
 
       auto itr = _rammarket.find(S(4,RAMCORE));
 
@@ -46,14 +50,20 @@ namespace eosiosystem {
       return dp;
    }
 
+   time_point system_contract::current_time_point() {
+      const static time_point ct{ microseconds{ static_cast<int64_t>( current_time() ) } };
+      return ct;
+   }
+
    block_timestamp system_contract::current_block_time() {
-      const static block_timestamp cbt{ time_point{ microseconds{ static_cast<int64_t>( current_time() ) } } };
+      const static block_timestamp cbt{ current_time_point() };
       return cbt;
    }
 
    system_contract::~system_contract() {
       _global.set( _gstate, _self );
       _global2.set( _gstate2, _self );
+      _global3.set( _gstate3, _self );
    }
 
    void system_contract::setram( uint64_t max_ram_size ) {
@@ -119,7 +129,7 @@ namespace eosiosystem {
       require_auth( _self );
       set_privileged( account, ispriv );
    }
-   
+
    void system_contract::setalimits( account_name account, int64_t ram, int64_t net, int64_t cpu ) {
       require_auth( N(eosio) );
       user_resources_table userres( _self, account );
@@ -135,6 +145,15 @@ namespace eosiosystem {
       _producers.modify( prod, 0, [&](auto& p) {
             p.deactivate();
          });
+   }
+
+   void system_contract::updtrevision( uint8_t revision ) {
+      require_auth( _self );
+      eosio_assert( _gstate2.revision < 255, "can not increment revision" ); // prevent wrap around
+      eosio_assert( revision == _gstate2.revision + 1, "can only increment revision by one" );
+      eosio_assert( revision <= 1, // set upper bound to greatest revision supported in the code
+                    "specified revision is not yet supported by the code" );
+      _gstate2.revision = revision;
    }
 
    void system_contract::bidname( account_name bidder, account_name newname, asset bid ) {
@@ -159,7 +178,7 @@ namespace eosiosystem {
             b.newname = newname;
             b.high_bidder = bidder;
             b.high_bid = bid.amount;
-            b.last_bid_time = current_time();
+            b.last_bid_time = current_time_point();
          });
       } else {
          eosio_assert( current->high_bid > 0, "this auction has already closed" );
@@ -191,7 +210,7 @@ namespace eosiosystem {
          bids.modify( current, bidder, [&]( auto& b ) {
             b.high_bidder = bidder;
             b.high_bid = bid.amount;
-            b.last_bid_time = current_time();
+            b.last_bid_time = current_time_point();
          });
       }
    }
@@ -253,14 +272,29 @@ namespace eosiosystem {
       set_resource_limits( newact, 0, 0, 0 );
    }
 
+   void native::setabi( account_name acnt, const bytes& abi ) {
+      eosio::multi_index< N(abihash), abi_hash>  table(_self,_self);
+      auto itr = table.find( acnt );
+      if( itr == table.end() ) {
+         table.emplace( acnt, [&]( auto& row ) {
+            row.owner= acnt;
+            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+         });
+      } else {
+         table.modify( itr, 0, [&]( auto& row ) {
+            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+         });
+      }
+   }
+
 } /// eosio.system
 
 
 EOSIO_ABI( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
-     (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)
+     (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
-     (setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(bidname)(bidrefund)
+     (setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp
