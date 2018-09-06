@@ -306,6 +306,7 @@ namespace eosiosystem {
       rex_balance_table rbalance(_self,_self);
       auto bitr = rbalance.find( from );
       eosio_assert( bitr != rbalance.end(), "user must first lendrex" );
+      eosio_assert( bitr->rex_balance.symbol == rex.symbol, "asset symbol must be (4, REX)" );
       eosio_assert( bitr->rex_balance >= rex, "insufficient funds" );
 
       const auto S0 = itr->total_lendable.amount;
@@ -346,7 +347,7 @@ namespace eosiosystem {
       const double F0 = double(conin);
       const double I  = double(in);
 
-      auto out = int64_t((I*F0) / (T0+I));
+      auto out = int64_t((I*T0) / (I+F0));
 
       if( out < 0 ) out = 0;
 
@@ -430,8 +431,6 @@ namespace eosiosystem {
 
       auto unrent = [&]( int64_t rented_tokens )  {
          rextable.modify( rexi, 0, [&]( auto& rt ) {
-            int64_t unlent      = rt.total_lendable.amount - rt.total_lent.amount;
-            int64_t rent_earned = bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, rented_tokens ); 
             rt.total_lent.amount = rt.total_lendable.amount - rt.total_unlent.amount;
          });
       };
