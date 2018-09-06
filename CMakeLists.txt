@@ -22,7 +22,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH ${EOSIO_CDT_ROOT}/lib/cmake)
 include(EosioWasmToolchain)
 
-### Check the version of wasmsdk
+### Check the version of eosio.cdt
 string(FIND "${EOSIO_CDT_VERSION}" "${EOSIO_CDT_DEPENDENCY}" output)
 
 if (NOT "${output}" EQUAL 0)
