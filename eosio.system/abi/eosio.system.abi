@@ -638,6 +638,12 @@
        "index_type": "i64",
        "key_names" : ["newname"],
        "key_types" : ["account_name"]
+    },{
+      "name": "abihash",
+      "type": "abi_hash",
+      "index_type": "i64",
+      "key_names": ["owner"],
+      "key_types": ["account_name"]
     }
    ],
    "ricardian_clauses": [],
