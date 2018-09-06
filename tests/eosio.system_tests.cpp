@@ -3306,8 +3306,90 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+
+BOOST_FIXTURE_TEST_CASE( lend_unlend_rex, eosio_system_tester ) try {
+
+   const int64_t ratio = 10000;
+   cross_15_percent_threshold();
+   const asset net = core_from_string("80.0000");
+   const asset cpu = core_from_string("80.0000");
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount) };
+   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2]; 
+   for (const auto& a: accounts) {
+      create_account_with_resources( a, config::system_account_name, core_from_string("1.0000"), false, net, cpu );
+      transfer( config::system_account_name, a, core_from_string("1000.0000"), config::system_account_name );
+      BOOST_REQUIRE_EQUAL( asset::from_string("0.0000 REX"), get_rex_balance(a) );
+   }
+   
+   BOOST_REQUIRE_EQUAL( success(), lendrex( alice, core_from_string("30.0000") ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("970.0000"), get_balance(alice) );
+   BOOST_REQUIRE_EQUAL( ratio * asset::from_string("30.0000 REX").get_amount(), get_rex_balance(alice).get_amount() );
+   auto rex_pool = get_rex_pool();
+   BOOST_REQUIRE_EQUAL( core_from_string("30.0000"),  rex_pool["total_lendable"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( core_from_string("30.0000"),  rex_pool["total_unlent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"),   rex_pool["total_lent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( core_from_string("100.0000"), rex_pool["total_rent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( get_rex_balance(alice),       rex_pool["total_rex"].as<asset>() );
+
+   BOOST_REQUIRE_EQUAL( success(), lendrex( bob, core_from_string("75.0000") ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("925.0000"), get_balance(bob) );
+   BOOST_REQUIRE_EQUAL( ratio * asset::from_string("75.0000 REX").get_amount(), get_rex_balance(bob).get_amount() );
+   rex_pool = get_rex_pool();
+   BOOST_REQUIRE_EQUAL( core_from_string("105.0000"), rex_pool["total_lendable"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( core_from_string("105.0000"), rex_pool["total_unlent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"),   rex_pool["total_lent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( core_from_string("100.0000"), rex_pool["total_rent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( get_rex_balance(alice) + get_rex_balance(bob), rex_pool["total_rex"].as<asset>() );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("user must first lendrex"),       unlendrex( carol, asset::from_string("5.0000 REX") ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("asset symbol must be (4, REX)"), unlendrex( bob, core_from_string("55.0000") ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient funds"),            unlendrex( bob, asset::from_string("750000.0030 REX") ) );
+   
+   auto init_total_rex      = rex_pool["total_rex"].as<asset>().get_amount();
+   auto init_total_lendable = rex_pool["total_lendable"].as<asset>().get_amount();
+   BOOST_REQUIRE_EQUAL( success(), unlendrex( bob, asset::from_string("550000.6800 REX") ) );
+   BOOST_REQUIRE_EQUAL( asset::from_string("199999.3200 REX"), get_rex_balance(bob) );
+   rex_pool = get_rex_pool();
+   auto total_rex      = rex_pool["total_rex"].as<asset>().get_amount();
+   auto total_lendable = rex_pool["total_lendable"].as<asset>().get_amount();
+
+   BOOST_REQUIRE_EQUAL( init_total_rex / init_total_lendable, total_rex / total_lendable );
+   BOOST_REQUIRE_EQUAL( total_lendable, rex_pool["total_unlent"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"),   rex_pool["total_lent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( core_from_string("100.0000"), rex_pool["total_rent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( get_rex_balance(alice) + get_rex_balance(bob), rex_pool["total_rex"].as<asset>() );
+
+} FC_LOG_AND_RETHROW()
+
+
+BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
+
+   const int64_t ratio = 10000;
+   cross_15_percent_threshold();
+   const asset net = core_from_string("80.0000");
+   const asset cpu = core_from_string("80.0000");
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount) };
+   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2];
+   for (const auto& a: accounts) {
+      create_account_with_resources( a, config::system_account_name, core_from_string("1.0000"), false, net, cpu );
+      transfer( config::system_account_name, a, core_from_string("1000.0000"), config::system_account_name );
+      BOOST_REQUIRE_EQUAL( asset::from_string("0.0000 REX"), get_rex_balance(a) );
+   }
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex system not initialized yet"), rent( bob, carol, core_from_string("5.0000"), true ) );
+
+   BOOST_REQUIRE_EQUAL( success(), lendrex( alice, core_from_string("65.0000") ) );
+   auto rex_pool = get_rex_pool();
+   BOOST_REQUIRE_EQUAL( ratio * rex_pool["total_lendable"].as<asset>().get_amount(), rex_pool["total_rex"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( success(), rent( bob, carol, core_from_string("5.0000"), true ) );
+   rex_pool = get_rex_pool();
+   BOOST_REQUIRE_EQUAL( core_from_string("70.0000"), rex_pool["total_lendable"].as<asset>() ); // 65 + 5
+   //   BOOST_REQUIRE_EQUAL( core_from_string("100.0000"),  rex_pool["total_rent"].as<asset>() );
+
+} FC_LOG_AND_RETHROW()
+
+  /*
 BOOST_FIXTURE_TEST_CASE( lend_unlendrex, eosio_system_tester ) try {
-   /*
    transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
    BOOST_REQUIRE_EQUAL( core_from_string("1000.0000"), get_balance( "alice1111111" ) );
 
@@ -3325,7 +3407,6 @@ BOOST_FIXTURE_TEST_CASE( lend_unlendrex, eosio_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( success(), unlendrex( N(alice1111111), rex_balance/2 ) );
    BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
-   */
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( rent_bandwidth, eosio_system_tester ) try {
@@ -3343,6 +3424,7 @@ BOOST_FIXTURE_TEST_CASE( rent_bandwidth, eosio_system_tester ) try {
    auto loan = get_last_cpu_loan();
    //std::cout << loan << std::endl;
 } FC_LOG_AND_RETHROW()
+*/
 
 BOOST_FIXTURE_TEST_CASE( setabi_bios, TESTER ) try {
    abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>(), abi_serializer_max_time);

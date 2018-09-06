@@ -323,8 +323,8 @@ public:
    }
 
    asset get_rex_balance( const account_name& act ) const {
-      vector<char> data = get_row_by_account( N(eosio), N(eosio), N(rexbal), act );
-      return data.empty() ? asset(0, symbol(N(REX))) : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["rex_balance"].as<asset>();
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexbal), act );
+      return data.empty() ? asset(0, symbol(SY(4, REX))) : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["rex_balance"].as<asset>();
    }
 
    fc::variant get_rex_pool() const {
