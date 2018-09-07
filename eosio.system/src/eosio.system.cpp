@@ -343,8 +343,8 @@ namespace eosiosystem {
     * @param conout - the output connector balance
     */
    int64_t bancor_convert( int64_t& conin, int64_t& conout, int64_t in ) {
-      const double T0 = double(conout);
       const double F0 = double(conin);
+      const double T0 = double(conout);
       const double I  = double(in);
 
       auto out = int64_t((I*T0) / (I+F0));
@@ -393,8 +393,9 @@ namespace eosiosystem {
       rextable.modify( itr, 0, [&]( auto& rt ) {
          rt.total_lendable.amount += payment.amount;
          int64_t unlent = rt.total_lendable.amount - rt.total_lent.amount;
-         rented_tokens = bancor_convert( unlent, rt.total_rent.amount, payment.amount );
-         rt.total_lent.amount += rented_tokens;
+         rented_tokens  = bancor_convert( rt.total_rent.amount, unlent, payment.amount );
+         rt.total_lent.amount  += rented_tokens;
+         rt.total_unlent.amount = unlent;
          rt.loan_num++;
       });
 

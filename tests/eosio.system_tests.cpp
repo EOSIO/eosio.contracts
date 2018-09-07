@@ -3364,6 +3364,7 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_rex, eosio_system_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
 
+   auto bancor_convert = [](int64_t S, int64_t R, int64_t T) -> int64_t { return int64_t( double(R * T)  / double(S + T) ); };
    const int64_t ratio = 10000;
    cross_15_percent_threshold();
    const asset net = core_from_string("80.0000");
@@ -3377,14 +3378,21 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
    }
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex system not initialized yet"), rent( bob, carol, core_from_string("5.0000"), true ) );
-
    BOOST_REQUIRE_EQUAL( success(), lendrex( alice, core_from_string("65.0000") ) );
    auto rex_pool = get_rex_pool();
-   BOOST_REQUIRE_EQUAL( ratio * rex_pool["total_lendable"].as<asset>().get_amount(), rex_pool["total_rex"].as<asset>().get_amount() );
-   BOOST_REQUIRE_EQUAL( success(), rent( bob, carol, core_from_string("5.0000"), true ) );
+   asset init_tot_unlent   = rex_pool["total_unlent"].as<asset>();
+   asset init_tot_lendable = rex_pool["total_lendable"].as<asset>();
+   asset init_tot_rent     = rex_pool["total_rent"].as<asset>();
+   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), rex_pool["total_lent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( ratio * init_tot_lendable.get_amount(), rex_pool["total_rex"].as<asset>().get_amount() );
+   asset fee = core_from_string("7.0000");
+   BOOST_REQUIRE_EQUAL( success(), rent( bob, carol, fee, true ) );
    rex_pool = get_rex_pool();
-   BOOST_REQUIRE_EQUAL( core_from_string("70.0000"), rex_pool["total_lendable"].as<asset>() ); // 65 + 5
-   //   BOOST_REQUIRE_EQUAL( core_from_string("100.0000"),  rex_pool["total_rent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( init_tot_lendable + fee, rex_pool["total_lendable"].as<asset>() ); // 65 + 7
+   BOOST_REQUIRE_EQUAL( init_tot_rent + fee,     rex_pool["total_rent"].as<asset>() );     // 100 + 7
+   int64_t expected_total_lent = bancor_convert( init_tot_rent.get_amount(), init_tot_unlent.get_amount() + fee.get_amount(), fee.get_amount() );
+   BOOST_REQUIRE_EQUAL( expected_total_lent, rex_pool["total_lent"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( rex_pool["total_lent"].as<asset>() + rex_pool["total_unlent"].as<asset>(), rex_pool["total_lendable"].as<asset>() );
 
 } FC_LOG_AND_RETHROW()
 
