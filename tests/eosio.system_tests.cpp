@@ -3396,43 +3396,6 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-  /*
-BOOST_FIXTURE_TEST_CASE( lend_unlendrex, eosio_system_tester ) try {
-   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
-   BOOST_REQUIRE_EQUAL( core_from_string("1000.0000"), get_balance( "alice1111111" ) );
-
-   BOOST_REQUIRE_EQUAL( success(), lendrex( N(alice1111111), core_from_string("300.0000") ) );
-   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
-
-   //BOOST_REQUIRE_EQUAL( eosio::chain::asset::from_string("900.0000 REX"), get_rex_balance( "alice1111111" ) );
-   asset init_rex_balance = get_rex_balance( "alice1111111" );
-
-   BOOST_REQUIRE_EQUAL( success(), lendrex( N(alice1111111), core_from_string("300.0000") ) );
-   BOOST_REQUIRE_EQUAL( core_from_string("400.0000"), get_balance( "alice1111111" ) );
-   asset rex_balance = get_rex_balance( "alice1111111" );
-
-   BOOST_REQUIRE_EQUAL( init_rex_balance * 2, rex_balance );
-
-   BOOST_REQUIRE_EQUAL( success(), unlendrex( N(alice1111111), rex_balance/2 ) );
-   BOOST_REQUIRE_EQUAL( core_from_string("700.0000"), get_balance( "alice1111111" ) );
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE( rent_bandwidth, eosio_system_tester ) try {
-   transfer( "eosio", "alice1111111", core_from_string("1000.0000"), "eosio" );
-   BOOST_REQUIRE_EQUAL( core_from_string("1000.0000"), get_balance( "alice1111111" ) );
-
-   BOOST_REQUIRE_EQUAL( success(), lendrex( N(alice1111111), core_from_string("1000.0000") ) );
-   BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), get_balance( "alice1111111" ) );
-
-   asset init_rex_balance = get_rex_balance( "alice1111111" );
-
-   transfer( "eosio", "bob111111111", core_from_string("1000.0000"), "eosio" );
-   BOOST_REQUIRE_EQUAL( success(), rent( N(bob111111111), N(bob111111111), core_from_string("10.0000"), true ) );
-
-   auto loan = get_last_cpu_loan();
-   //std::cout << loan << std::endl;
-} FC_LOG_AND_RETHROW()
-*/
 
 BOOST_FIXTURE_TEST_CASE( setabi_bios, TESTER ) try {
    abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>(), abi_serializer_max_time);
