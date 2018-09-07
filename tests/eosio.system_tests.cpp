@@ -3367,18 +3367,20 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
    auto bancor_convert = [](int64_t S, int64_t R, int64_t T) -> int64_t { return int64_t( double(R * T)  / double(S + T) ); };
    const int64_t ratio = 10000;
    cross_15_percent_threshold();
-   const asset net = core_from_string("80.0000");
-   const asset cpu = core_from_string("80.0000");
+   const asset net          = core_from_string("80.0000");
+   const asset cpu          = core_from_string("80.0000");
+   const asset init_balance = core_from_string("1000.0000");
    const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount) };
    account_name alice = accounts[0], bob = accounts[1], carol = accounts[2];
    for (const auto& a: accounts) {
       create_account_with_resources( a, config::system_account_name, core_from_string("1.0000"), false, net, cpu );
-      transfer( config::system_account_name, a, core_from_string("1000.0000"), config::system_account_name );
+      transfer( config::system_account_name, a, init_balance, config::system_account_name );
       BOOST_REQUIRE_EQUAL( asset::from_string("0.0000 REX"), get_rex_balance(a) );
    }
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex system not initialized yet"), rent( bob, carol, core_from_string("5.0000"), true ) );
    BOOST_REQUIRE_EQUAL( success(), lendrex( alice, core_from_string("65.0000") ) );
+   BOOST_REQUIRE_EQUAL( init_balance - core_from_string("65.0000"), get_balance(alice) );
    auto rex_pool = get_rex_pool();
    asset init_tot_unlent   = rex_pool["total_unlent"].as<asset>();
    asset init_tot_lendable = rex_pool["total_lendable"].as<asset>();
@@ -3387,6 +3389,7 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( ratio * init_tot_lendable.get_amount(), rex_pool["total_rex"].as<asset>().get_amount() );
    asset fee = core_from_string("7.0000");
    BOOST_REQUIRE_EQUAL( success(), rent( bob, carol, fee, true ) );
+   BOOST_REQUIRE_EQUAL( init_balance - fee, get_balance(bob) );
    rex_pool = get_rex_pool();
    BOOST_REQUIRE_EQUAL( init_tot_lendable + fee, rex_pool["total_lendable"].as<asset>() ); // 65 + 7
    BOOST_REQUIRE_EQUAL( init_tot_rent + fee,     rex_pool["total_rent"].as<asset>() );     // 100 + 7
