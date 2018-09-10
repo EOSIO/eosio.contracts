@@ -431,6 +431,7 @@ namespace eosiosystem {
 
       auto unrent = [&]( int64_t rented_tokens )  {
          rextable.modify( rexi, 0, [&]( auto& rt ) {
+            bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, rented_tokens ); 
             rt.total_lent.amount = rt.total_lendable.amount - rt.total_unlent.amount;
          });
       };
