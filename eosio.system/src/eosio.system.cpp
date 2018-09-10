@@ -325,7 +325,7 @@ namespace eosiosystem {
       });
 
       rbalance.modify( bitr, 0, [&]( auto& rb ) {
-         rb.rex_balance.amount  -= rex.amount;
+         rb.rex_balance.amount -= rex.amount;
       });
 
 
@@ -391,11 +391,10 @@ namespace eosiosystem {
 
       int64_t rented_tokens = 0;
       rextable.modify( itr, 0, [&]( auto& rt ) {
+         rented_tokens  = bancor_convert( rt.total_rent.amount, rt.total_unlent.amount, payment.amount );
+         rt.total_lent.amount     += rented_tokens;
+         rt.total_unlent.amount   += payment.amount;
          rt.total_lendable.amount += payment.amount;
-         int64_t unlent = rt.total_lendable.amount - rt.total_lent.amount;
-         rented_tokens  = bancor_convert( rt.total_rent.amount, unlent, payment.amount );
-         rt.total_lent.amount  += rented_tokens;
-         rt.total_unlent.amount = unlent;
          rt.loan_num++;
       });
 
@@ -403,20 +402,20 @@ namespace eosiosystem {
          rex_cpu_loan_table cpu_loans(_self,_self);
 
          cpu_loans.emplace( from, [&]( auto& c ) {
-            c.receiver = receiver;
+            c.receiver     = receiver;
             c.total_staked = asset( rented_tokens, CORE_SYMBOL );
-            c.expiration = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
-            c.loan_num   = itr->loan_num;
+            c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
+            c.loan_num     = itr->loan_num;
          });
          update_resource_limits( receiver, rented_tokens, 0 );
       } else {
          rex_net_loan_table net_loans(_self,_self);
 
          net_loans.emplace( from, [&]( auto& c ) {
-            c.receiver = receiver;
+            c.receiver     = receiver;
             c.total_staked = asset( rented_tokens, CORE_SYMBOL );
-            c.expiration = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
-            c.loan_num   = itr->loan_num;
+            c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
+            c.loan_num     = itr->loan_num;
          });
          update_resource_limits( receiver, 0, rented_tokens );
       }
@@ -437,7 +436,7 @@ namespace eosiosystem {
       };
 
       rex_cpu_loan_table cpu_loans(_self,_self);
-      for( uint32_t i = 0; i < max; ++i ) {
+      for( uint16_t i = 0; i < max; ++i ) {
          auto itr = cpu_loans.begin();
          if( itr == cpu_loans.end() ) break;
          if( itr->expiration.elapsed.count() > current_time() ) break;
@@ -448,7 +447,7 @@ namespace eosiosystem {
       }
 
       rex_net_loan_table net_loans(_self,_self);
-      for( uint32_t i = 0; i < max; ++i ) {
+      for( uint16_t i = 0; i < max; ++i ) {
          auto itr = net_loans.begin();
          if( itr == net_loans.end() ) break;
          if( itr->expiration.elapsed.count() > current_time() ) break;
