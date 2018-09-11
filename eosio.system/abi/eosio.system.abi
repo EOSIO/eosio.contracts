@@ -213,6 +213,12 @@
          {"name":"rex",  "type":"asset"}
       ]
     },{
+      "name": "cnclrexorder",
+      "base": "",
+      "fields": [
+         {"name":"from", "type":"account_name"}
+      ]
+    },{
       "name": "rex_balance",
       "base": "",
       "fields": [
@@ -238,6 +244,14 @@
          {"name":"receiver",    "type":"account_name"},
          {"name":"total_stake", "type":"asset"},
          {"name":"loan_num",    "type":"uint64"}
+      ]
+    },{
+      "name": "rex_order",
+      "base": "",
+      "fields": [
+         {"name":"owner",         "type":"account_name"},
+         {"name":"rex_requested", "type":"asset"},
+         {"name":"order_time",    "type":"time_point"}
       ]
     },{
       "name": "rent",
@@ -566,6 +580,10 @@
       "type": "unlendrex",
       "ricardian_contract": ""
    },{
+      "name": "cnclrexorder",
+      "type": "cnclrexorder",
+      "ricardian_contract": ""
+   },{
       "name": "rent",
       "type": "rent",
       "ricardian_contract": ""
@@ -691,6 +709,12 @@
     },{
       "name": "rexbal",
       "type": "rex_balance",
+      "index_type": "i64",
+      "key_names" : ["owner"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "rexqueue",
+      "type": "rex_order",
       "index_type": "i64",
       "key_names" : ["owner"],
       "key_types" : ["uint64"]

@@ -200,17 +200,17 @@ namespace eosiosystem {
    typedef eosio::multi_index< N(cpuloan), rex_loan> rex_cpu_loan_table;
    typedef eosio::multi_index< N(cpunet), rex_loan>  rex_net_loan_table;
 
-   struct rex_request {
+   struct rex_order {
       account_name        owner;
       asset               rex_requested;
-      eosio::time_point   request_time;
+      eosio::time_point   order_time;
 
       auto primary_key()const { return owner; }
-      uint64_t by_request_time()const { return static_cast<uint64_t>( -request_time.elapsed.count() ); }
+      uint64_t by_time()const { return static_cast<uint64_t>( -order_time.elapsed.count() ); }
    };
 
-   typedef eosio::multi_index< N(rexqueue), rex_request,
-                               indexed_by<N(byreqtime), const_mem_fun<rex_request, uint64_t, &rex_request::by_request_time>>>  rex_request_table;
+   typedef eosio::multi_index< N(rexqueue), rex_order,
+                               indexed_by<N(bytime), const_mem_fun<rex_order, uint64_t, &rex_order::by_time>>> rex_order_table;
 
    class system_contract : public native {
       private:
@@ -256,6 +256,7 @@ namespace eosiosystem {
           * Converts REX stake back into SYS tokens at current exchange rate
           */
          void unlendrex( account_name from, asset rex );
+         void cnclrexorder( account_name from );
 
          /**
           * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
@@ -337,7 +338,7 @@ namespace eosiosystem {
          static block_timestamp current_block_time();
          void update_ram_supply();
          void runrex( uint16_t max );
-         bool close_unlendrex_request( const rex_balance_table::const_iterator& bal_itr, const asset& rex );
+         bool close_rex_order( const rex_balance_table::const_iterator& bal_itr, const asset& rex );
 
          //defined in delegate_bandwidth.cpp
          void changebw( account_name from, account_name receiver,
