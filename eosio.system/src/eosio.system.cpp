@@ -18,7 +18,9 @@ namespace eosiosystem {
     _global(_self,_self),
     _global2(_self,_self),
     _global3(_self,_self),
-    _rammarket(_self,_self)
+    _rammarket(_self,_self),
+    _rextable(_self,_self),
+    _rexbalance(_self,_self)
    {
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
@@ -243,48 +245,44 @@ namespace eosiosystem {
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
                                                     { from, N(eosio.rex), amount, "buy REX" } );
 
-      rex_pool_table rextable(_self,_self);
-
       asset rex_received( 0, S(4,REX) );
 
-      auto itr = rextable.begin();
-      if( itr == rextable.end() ) {
-         rextable.emplace( _self, [&]( auto& rp ){ 
-           rex_received.amount = amount.amount * 10000;
+      auto itr = _rextable.begin();
+      if( itr == _rextable.end() ) {
+         _rextable.emplace( _self, [&]( auto& rp ){ 
+            rex_received.amount = amount.amount * 10000;
 
-           rp.total_lendable        = amount;
-           rp.total_lent            = asset( 0, CORE_SYMBOL );
-           rp.total_rent            = asset( 1000000, CORE_SYMBOL ); /// base amount prevents renting profitably until at least a minimum number of CORE_SYMBOL are made available
-           rp.total_rex             = rex_received;
-           rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
+            rp.total_lendable        = amount;
+            rp.total_lent            = asset( 0, CORE_SYMBOL );
+            rp.total_rent            = asset( 1000000, CORE_SYMBOL ); /// base amount prevents renting profitably until at least a minimum number of CORE_SYMBOL are made available
+            rp.total_rex             = rex_received;
+            rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
          });
       } else {
          const auto S0 = itr->total_lendable.amount;
          const auto S1 = S0 + amount.amount;
          const auto R0 = itr->total_rex.amount;
-
          const auto R1 = (uint128_t(S1) * R0) / S0;
 
          rex_received.amount = R1 - R0;
 
-         rextable.modify( itr, 0, [&]( auto& rp ) {
-           rp.total_lendable.amount = S1;
-           rp.total_rex.amount      = R1;
-           rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
-           eosio_assert( rp.total_unlent.amount >= 0, "programmer error, this should never go negative" );
+         _rextable.modify( itr, 0, [&]( auto& rp ) {
+            rp.total_lendable.amount = S1;
+            rp.total_rex.amount      = R1;
+            rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
+            eosio_assert( rp.total_unlent.amount >= 0, "programmer error, this should never go negative" );
          });
       }
 
-      rex_balance_table rbalance(_self,_self);
-      auto bitr = rbalance.find( from );
-      if( bitr == rbalance.end() ) {
-         rbalance.emplace( from, [&]( auto& rb ) {
+      auto bitr = _rexbalance.find( from );
+      if( bitr == _rexbalance.end() ) {
+         _rexbalance.emplace( from, [&]( auto& rb ) {
             rb.owner = from;
             rb.rex_balance = rex_received;
          });
       }
       else {
-         rbalance.modify( bitr, 0, [&]( auto& rb ) {
+         _rexbalance.modify( bitr, 0, [&]( auto& rb ) {
             rb.rex_balance.amount  += rex_received.amount;
          });
       }
@@ -294,44 +292,28 @@ namespace eosiosystem {
    /**
     * Converts REX stake back into SYS tokens at current exchange rate
     */
-   void system_contract::unlendrex( account_name from, asset rex  ) {
+   void system_contract::unlendrex( account_name from, asset rex ) {
       runrex(2);
 
       require_auth( from );
 
-      rex_pool_table   rextable(_self,_self);
-      auto itr = rextable.begin();
-      eosio_assert( itr != rextable.end(), "rex system not initialized yet" );
+      auto itr = _rextable.begin();
+      eosio_assert( itr != _rextable.end(), "rex system not initialized yet" );
 
-      rex_balance_table rbalance(_self,_self);
-      auto bitr = rbalance.find( from );
-      eosio_assert( bitr != rbalance.end(), "user must first lendrex" );
+      //      rex_balance_table rbalance(_self,_self);
+      auto bitr = _rexbalance.find( from );
+      eosio_assert( bitr != _rexbalance.end(), "user must first lendrex" );
       eosio_assert( bitr->rex_balance.symbol == rex.symbol, "asset symbol must be (4, REX)" );
       eosio_assert( bitr->rex_balance >= rex, "insufficient funds" );
 
-      const auto S0 = itr->total_lendable.amount;
-      const auto R0 = itr->total_rex.amount;
-      const auto R1 = R0 - rex.amount;
-      const auto S1 = (uint128_t(R1) * S0) / R0;
-
-      asset proceeds(S0-S1, CORE_SYMBOL);
-
-      rextable.modify( itr, 0, [&]( auto& rt ) {
-          rt.total_rex.amount      = R1;
-          rt.total_lendable.amount = S1;
-          rt.total_unlent.amount = rt.total_lendable.amount - rt.total_lent.amount;
-          eosio_assert( rt.total_lendable.amount >= rt.total_lent.amount, "unable to unlendrex until loans expire" );// XXX > or >=
-          eosio_assert( rt.total_unlent.amount >= 0, "programmer error, this should never go negative" );
-      });
-
-      rbalance.modify( bitr, 0, [&]( auto& rb ) {
-         rb.rex_balance.amount -= rex.amount;
-      });
-
-
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.rex),N(active)},
-                                                    { N(eosio.rex), from, proceeds, "sell REX" } );
-
+      if( !close_unlendrex_request( bitr, rex ) ) {
+         rex_request_table rex_requests(_self, _self);
+         rex_requests.emplace( from, [&]( auto& req ) {
+            req.owner         = from;
+            req.rex_requested = rex;
+            req.request_time  = current_time_point();
+         });
+      }
    }
 
    /**
@@ -362,9 +344,9 @@ namespace eosiosystem {
       auto tot_itr = totals_tbl.find( receiver );
       eosio_assert( tot_itr !=  totals_tbl.end(), "expected to find resource table" );
       totals_tbl.modify( tot_itr, 0, [&]( auto& tot ) {
-            tot.cpu_weight.amount    += delta_cpu;
-            tot.net_weight.amount    += delta_net;
-         });
+         tot.cpu_weight.amount    += delta_cpu;
+         tot.net_weight.amount    += delta_net;
+      });
       eosio_assert( asset(0) <= tot_itr->net_weight, "insufficient staked total net bandwidth" );
       eosio_assert( asset(0) <= tot_itr->cpu_weight, "insufficient staked total cpu bandwidth" );
 
@@ -385,12 +367,11 @@ namespace eosiosystem {
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
                                                     { from, N(eosio.rex), payment, string("rent ") + (cpu ? "CPU" : "NET") } );
 
-      rex_pool_table   rextable(_self,_self);
-      auto itr = rextable.begin();
-      eosio_assert( itr != rextable.end(), "rex system not initialized yet" );
+      auto itr = _rextable.begin();
+      eosio_assert( itr != _rextable.end(), "rex system not initialized yet" );
 
       int64_t rented_tokens = 0;
-      rextable.modify( itr, 0, [&]( auto& rt ) {
+      _rextable.modify( itr, 0, [&]( auto& rt ) {
          rented_tokens  = bancor_convert( rt.total_rent.amount, rt.total_unlent.amount, payment.amount );
          rt.total_lent.amount     += rented_tokens;
          rt.total_unlent.amount   += payment.amount;
@@ -425,12 +406,11 @@ namespace eosiosystem {
     * Perform maitenance operations on expired rex
     */
    void system_contract::runrex( uint16_t max ) {
-      rex_pool_table   rextable(_self,_self);
-      auto rexi = rextable.begin();
-      eosio_assert( rexi != rextable.end(), "rex system not initialized yet" );
+      auto rexi = _rextable.begin();
+      eosio_assert( rexi != _rextable.end(), "rex system not initialized yet" );
 
       auto unrent = [&]( int64_t rented_tokens )  {
-         rextable.modify( rexi, 0, [&]( auto& rt ) {
+         _rextable.modify( rexi, 0, [&]( auto& rt ) {
             bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, rented_tokens ); 
             rt.total_lent.amount = rt.total_lendable.amount - rt.total_unlent.amount;
          });
@@ -457,6 +437,49 @@ namespace eosiosystem {
          unrent( itr->total_staked.amount );
          net_loans.erase( itr );
       }
+
+      rex_request_table rex_requests(_self, _self);
+      auto idx = rex_requests.get_index<N(byreqtime)>();
+      auto reqitr = idx.begin();
+      for( uint16_t i = 0; i < max; ++i ) {
+         if( reqitr == idx.end() ) break;
+         auto bitr = _rexbalance.find( reqitr->owner );
+         if( bitr == _rexbalance.end() ) {
+            idx.erase( reqitr++ );
+            continue;
+         }
+         if( close_unlendrex_request( bitr, reqitr->rex_requested ) ) {
+           idx.erase( reqitr++ );
+         } else {
+            ++reqitr;
+         }
+      }
+
+   }
+
+   bool system_contract::close_unlendrex_request( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
+      auto rexitr = _rextable.begin();
+      const auto S0  = rexitr->total_lendable.amount;
+      const auto R0  = rexitr->total_rex.amount;
+      const auto R1  = R0 - rex.amount;
+      const auto S1  = (uint128_t(R1) * S0) / R0;
+      asset proceeds(S0-S1, CORE_SYMBOL);
+      bool success = false;
+      if( proceeds <= rexitr->total_unlent ) {
+         _rextable.modify( rexitr, 0, [&]( auto& rt ) {
+            rt.total_rex.amount      = R1;
+            rt.total_lendable.amount = S1;
+            rt.total_unlent.amount = rt.total_lendable.amount - rt.total_lent.amount;
+         });
+         _rexbalance.modify( bitr, 0, [&]( auto& rb ) {
+            rb.rex_balance.amount -= rex.amount;
+         });
+         
+         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.rex),N(active)},
+                                                       { N(eosio.rex), bitr->owner, proceeds, "sell REX" } );
+         success = true;
+      }
+      return success;
    }
 
    void native::setabi( account_name acnt, const bytes& abi ) {
@@ -482,7 +505,7 @@ EOSIO_ABI( eosiosystem::system_contract,
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
      (setram)(setramrate)(setparams)(setpriv)(rmvproducer)(updtrevision)(bidname)
-     (lendrex)(unlendrex)(rent)(runrex)
+     (lendrex)(unlendrex)(rent)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

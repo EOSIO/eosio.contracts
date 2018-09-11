@@ -275,7 +275,7 @@ public:
    action_result unlendrex( const account_name& from, const asset& rex ) {
       return push_action( name(from), N(unlendrex), mvo()
                           ("from",  from)
-                          ("rex", rex)
+                          ("rex",   rex)
       );
    }
 
