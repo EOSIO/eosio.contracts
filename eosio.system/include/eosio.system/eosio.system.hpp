@@ -203,10 +203,13 @@ namespace eosiosystem {
    struct rex_order {
       account_name        owner;
       asset               rex_requested;
+      asset               proceeds;
       eosio::time_point   order_time;
-
+      bool                is_open = true;
+      
+      void close()            { is_open = false; }
       auto primary_key()const { return owner; }
-      uint64_t by_time()const { return static_cast<uint64_t>( -order_time.elapsed.count() ); }
+      uint64_t by_time()const { return is_open? -order_time.elapsed.count(): order_time.elapsed.count(); }
    };
 
    typedef eosio::multi_index< N(rexqueue), rex_order,
@@ -256,7 +259,8 @@ namespace eosiosystem {
           * Converts REX stake back into SYS tokens at current exchange rate
           */
          void unlendrex( account_name from, asset rex );
-         void cnclrexorder( account_name from );
+         void cnclrexorder( account_name owner );
+         void claimrex( account_name owner );
 
          /**
           * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
@@ -338,7 +342,7 @@ namespace eosiosystem {
          static block_timestamp current_block_time();
          void update_ram_supply();
          void runrex( uint16_t max );
-         bool close_rex_order( const rex_balance_table::const_iterator& bal_itr, const asset& rex );
+         std::pair<bool, asset> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
 
          //defined in delegate_bandwidth.cpp
          void changebw( account_name from, account_name receiver,

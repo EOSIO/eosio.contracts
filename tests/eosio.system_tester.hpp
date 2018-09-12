@@ -279,6 +279,10 @@ public:
       );
    }
 
+   action_result cancelrexorder( const account_name& owner ) {
+      return push_action( name(owner), N(cnclrexorder), mvo()("owner", owner) );
+   }
+
    action_result rent( const account_name& from, const account_name& receiver, const asset& payment, bool cpu ) {
       return push_action( name(from), N(rent), mvo()
                           ("from",  from)

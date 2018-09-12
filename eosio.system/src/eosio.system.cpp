@@ -300,27 +300,42 @@ namespace eosiosystem {
       auto itr = _rextable.begin();
       eosio_assert( itr != _rextable.end(), "rex system not initialized yet" );
 
-      //      rex_balance_table rbalance(_self,_self);
       auto bitr = _rexbalance.find( from );
       eosio_assert( bitr != _rexbalance.end(), "user must first lendrex" );
       eosio_assert( bitr->rex_balance.symbol == rex.symbol, "asset symbol must be (4, REX)" );
       eosio_assert( bitr->rex_balance >= rex, "insufficient funds" );
 
-      if( !close_rex_order( bitr, rex ) ) {
+      auto result = close_rex_order( bitr, rex );
+      if( result.first ) {
+         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { N(eosio.rex), N(active) },
+                                                       { N(eosio.rex), from, result.second, "sell REX" } );
+      } else {
          rex_order_table rexorders(_self, _self);
          rexorders.emplace( from, [&]( auto& ordr ) {
             ordr.owner         = from;
             ordr.rex_requested = rex;
-            ordr.order_time  = current_time_point();
+            ordr.order_time    = current_time_point();
          });
       }
    }
 
-   void system_contract::cnclrexorder( account_name from ) {
-      require_auth( from );
+   void system_contract::cnclrexorder( account_name owner ) {
+      require_auth( owner );
       rex_order_table rexorders(_self, _self);
-      auto itr = rexorders.find( from );
+      auto itr = rexorders.find( owner );
       eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
+      rexorders.erase( itr );
+   }
+
+   void system_contract::claimrex( account_name owner ) {
+      runrex(2);
+      require_auth( owner );
+      rex_order_table rexorders(_self, _self);
+      auto itr = rexorders.find( owner );
+      eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
+      eosio_assert( !itr->is_open, "rex order hasn't been closed" );
+      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.rex),N(active)},
+                                                    { N(eosio.rex), itr->owner, itr->proceeds, "sell REX" } );
       rexorders.erase( itr );
    }
 
@@ -448,24 +463,28 @@ namespace eosiosystem {
 
       rex_order_table rexorders(_self, _self);
       auto idx = rexorders.get_index<N(bytime)>();
-      auto reqitr = idx.begin();
+      auto oitr = idx.begin();
       for( uint16_t i = 0; i < max; ++i ) {
-         if( reqitr == idx.end() ) break;
-         auto bitr = _rexbalance.find( reqitr->owner );
+         if( oitr == idx.end() || !oitr->is_open ) break;
+         auto bitr = _rexbalance.find( oitr->owner );
          if( bitr == _rexbalance.end() ) {
-            idx.erase( reqitr++ );
+            idx.erase( oitr++ );
             continue;
          }
-         if( close_rex_order( bitr, reqitr->rex_requested ) ) {
-           idx.erase( reqitr++ );
-         } else {
-            ++reqitr;
+         auto result = close_rex_order( bitr, oitr->rex_requested );
+         auto next   = oitr;
+         if( result.first ) {
+            idx.modify( oitr, 0, [&]( auto& rt ) {
+               rt.proceeds.amount = result.second.amount;
+               rt.close();
+            });
          }
+         oitr = ++next;
       }
 
    }
 
-   bool system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
+   std::pair<bool, asset> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex) {
       auto rexitr = _rextable.begin();
       const auto S0  = rexitr->total_lendable.amount;
       const auto R0  = rexitr->total_rex.amount;
@@ -477,17 +496,14 @@ namespace eosiosystem {
          _rextable.modify( rexitr, 0, [&]( auto& rt ) {
             rt.total_rex.amount      = R1;
             rt.total_lendable.amount = S1;
-            rt.total_unlent.amount = rt.total_lendable.amount - rt.total_lent.amount;
+            rt.total_unlent.amount   = rt.total_lendable.amount - rt.total_lent.amount;
          });
          _rexbalance.modify( bitr, 0, [&]( auto& rb ) {
             rb.rex_balance.amount -= rex.amount;
          });
-         
-         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.rex),N(active)},
-                                                       { N(eosio.rex), bitr->owner, proceeds, "sell REX" } );
          success = true;
       }
-      return success;
+      return std::make_pair(success, proceeds);
    }
 
    void native::setabi( account_name acnt, const bytes& abi ) {
@@ -513,7 +529,7 @@ EOSIO_ABI( eosiosystem::system_contract,
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
      (setram)(setramrate)(setparams)(setpriv)(rmvproducer)(updtrevision)(bidname)
-     (lendrex)(unlendrex)(cnclrexorder)(rent)
+     (lendrex)(unlendrex)(cnclrexorder)(claimrex)(rent)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

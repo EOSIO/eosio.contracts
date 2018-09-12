@@ -216,7 +216,13 @@
       "name": "cnclrexorder",
       "base": "",
       "fields": [
-         {"name":"from", "type":"account_name"}
+         {"name":"owner", "type":"account_name"}
+      ]
+    },{
+      "name": "claimrex",
+      "base": "",
+      "fields": [
+         {"name":"owner", "type":"account_name"}
       ]
     },{
       "name": "rex_balance",

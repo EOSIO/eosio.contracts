@@ -3378,7 +3378,9 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
       BOOST_REQUIRE_EQUAL( asset::from_string("0.0000 REX"), get_rex_balance(a) );
    }
 
+   // bob tries to rent rex
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex system not initialized yet"), rent( bob, carol, core_from_string("5.0000"), true ) );
+   // alice lends rex
    BOOST_REQUIRE_EQUAL( success(), lendrex( alice, core_from_string("65.0000") ) );
    BOOST_REQUIRE_EQUAL( init_balance - core_from_string("65.0000"), get_balance(alice) );
    auto rex_pool = get_rex_pool();
@@ -3387,6 +3389,8 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
    asset init_tot_rent     = rex_pool["total_rent"].as<asset>();
    BOOST_REQUIRE_EQUAL( core_from_string("0.0000"), rex_pool["total_lent"].as<asset>() );
    BOOST_REQUIRE_EQUAL( ratio * init_tot_lendable.get_amount(), rex_pool["total_rex"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( rex_pool["total_rex"].as<asset>(), get_rex_balance(alice) );
+   // bob rents cpu for carol
    asset fee = core_from_string("7.0000");
    BOOST_REQUIRE_EQUAL( success(), rent( bob, carol, fee, true ) );
    BOOST_REQUIRE_EQUAL( init_balance - fee, get_balance(bob) );
@@ -3396,6 +3400,20 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
    int64_t expected_total_lent = bancor_convert( init_tot_rent.get_amount(), init_tot_unlent.get_amount(), fee.get_amount() );
    BOOST_REQUIRE_EQUAL( expected_total_lent, rex_pool["total_lent"].as<asset>().get_amount() );
    BOOST_REQUIRE_EQUAL( rex_pool["total_lent"].as<asset>() + rex_pool["total_unlent"].as<asset>(), rex_pool["total_lendable"].as<asset>() );
+   // alice tries to unlendrex, order gets scheduled then she scheduled cancels order
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("no unlendrex is scheduled"), cancelrexorder( alice ) );
+   BOOST_REQUIRE_EQUAL( success(), unlendrex( alice, get_rex_balance(alice) ) );
+   BOOST_REQUIRE_EQUAL( success(), cancelrexorder( alice ) );
+   BOOST_REQUIRE_EQUAL( rex_pool["total_rex"].as<asset>(), get_rex_balance(alice) );
+
+   produce_block( fc::days(20) );
+   BOOST_REQUIRE_EQUAL( success(), unlendrex( alice, get_rex_balance(alice) ) );
+   BOOST_REQUIRE_EQUAL( success(), cancelrexorder( alice ) );
+   produce_block( fc::days(10) );
+   // alice is finally able to unlendrex, she gains the fee paid by bob
+   BOOST_REQUIRE_EQUAL( success(), unlendrex( alice, get_rex_balance(alice) ) );
+   BOOST_REQUIRE_EQUAL( asset::from_string("0.0000 REX"), get_rex_balance(alice) );
+   BOOST_REQUIRE_EQUAL( init_balance + fee, get_balance(alice) );
 
 } FC_LOG_AND_RETHROW()
 
