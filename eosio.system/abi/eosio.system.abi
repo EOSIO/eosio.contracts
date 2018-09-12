@@ -257,7 +257,9 @@
       "fields": [
          {"name":"owner",         "type":"account_name"},
          {"name":"rex_requested", "type":"asset"},
-         {"name":"order_time",    "type":"time_point"}
+         {"name":"proceeds",      "type":"asset"},
+         {"name":"order_time",    "type":"time_point"},
+         {"name":"is_open",       "type":"bool"}
       ]
     },{
       "name": "rent",
@@ -588,6 +590,10 @@
    },{
       "name": "cnclrexorder",
       "type": "cnclrexorder",
+      "ricardian_contract": ""
+   },{
+      "name": "claimrex",
+      "type": "claimrex",
       "ricardian_contract": ""
    },{
       "name": "rent",

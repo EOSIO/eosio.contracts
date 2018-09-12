@@ -319,7 +319,7 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::cnclrexorder( account_name owner ) {
+   void system_contract::cnclrexorder( account_name owner ) {      
       require_auth( owner );
       rex_order_table rexorders(_self, _self);
       auto itr = rexorders.find( owner );
@@ -328,8 +328,8 @@ namespace eosiosystem {
    }
 
    void system_contract::claimrex( account_name owner ) {
-      runrex(2);
       require_auth( owner );
+      runrex(2);
       rex_order_table rexorders(_self, _self);
       auto itr = rexorders.find( owner );
       eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
@@ -395,10 +395,8 @@ namespace eosiosystem {
 
       int64_t rented_tokens = 0;
       _rextable.modify( itr, 0, [&]( auto& rt ) {
-         rented_tokens  = bancor_convert( rt.total_rent.amount, rt.total_unlent.amount, payment.amount );
-         rt.total_lent.amount     += rented_tokens;
-         rt.total_unlent.amount   += payment.amount;
-         rt.total_lendable.amount += payment.amount;
+         rented_tokens = bancor_convert( rt.total_rent.amount, rt.total_unlent.amount, payment.amount );
+         rt.total_lent.amount += rented_tokens;
          rt.loan_num++;
       });
 
