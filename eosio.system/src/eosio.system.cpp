@@ -311,6 +311,7 @@ namespace eosiosystem {
                                                        { N(eosio.rex), from, result.second, "sell REX" } );
       } else {
          rex_order_table rexorders(_self, _self);
+         eosio_assert( rexorders.find( from ) == rexorders.end(), "an unlendrex request has already been scheduled");
          rexorders.emplace( from, [&]( auto& ordr ) {
             ordr.owner         = from;
             ordr.rex_requested = rex;
@@ -324,6 +325,7 @@ namespace eosiosystem {
       rex_order_table rexorders(_self, _self);
       auto itr = rexorders.find( owner );
       eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
+      eosio_assert( itr->is_open, "rex order has been closed and cannot be canceled" );
       rexorders.erase( itr );
    }
 
@@ -333,7 +335,7 @@ namespace eosiosystem {
       rex_order_table rexorders(_self, _self);
       auto itr = rexorders.find( owner );
       eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
-      eosio_assert( !itr->is_open, "rex order hasn't been closed" );
+      eosio_assert( !itr->is_open, "rex order has not been closed" );
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.rex),N(active)},
                                                     { N(eosio.rex), itr->owner, itr->proceeds, "sell REX" } );
       rexorders.erase( itr );
@@ -432,8 +434,10 @@ namespace eosiosystem {
 
       auto unrent = [&]( int64_t rented_tokens )  {
          _rextable.modify( rexi, 0, [&]( auto& rt ) {
-            bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, rented_tokens ); 
-            rt.total_lent.amount = rt.total_lendable.amount - rt.total_unlent.amount;
+            auto fee = bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, rented_tokens );
+            rt.total_lent.amount    -= rented_tokens;
+            rt.total_unlent.amount  += fee;
+            rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
          });
       };
 
@@ -471,25 +475,26 @@ namespace eosiosystem {
          }
          auto result = close_rex_order( bitr, oitr->rex_requested );
          auto next   = oitr;
+         ++next;
          if( result.first ) {
             idx.modify( oitr, 0, [&]( auto& rt ) {
                rt.proceeds.amount = result.second.amount;
                rt.close();
             });
          }
-         oitr = ++next;
+         oitr = next;
       }
 
    }
 
    std::pair<bool, asset> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex) {
       auto rexitr = _rextable.begin();
-      const auto S0  = rexitr->total_lendable.amount;
-      const auto R0  = rexitr->total_rex.amount;
-      const auto R1  = R0 - rex.amount;
-      const auto S1  = (uint128_t(R1) * S0) / R0;
+      const auto S0 = rexitr->total_lendable.amount;
+      const auto R0 = rexitr->total_rex.amount;
+      const auto R1 = R0 - rex.amount;
+      const auto S1 = (uint128_t(R1) * S0) / R0;
       asset proceeds(S0-S1, CORE_SYMBOL);
-      bool success = false;
+      bool  success = false;
       if( proceeds <= rexitr->total_unlent ) {
          _rextable.modify( rexitr, 0, [&]( auto& rt ) {
             rt.total_rex.amount      = R1;

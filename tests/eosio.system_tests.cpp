@@ -3411,9 +3411,9 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), cancelrexorder( alice ) );
    produce_block( fc::days(10) );
    // alice is finally able to unlendrex, she gains the fee paid by bob
-   BOOST_REQUIRE_EQUAL( success(),    unlendrex( alice, get_rex_balance(alice) ) );
-   BOOST_REQUIRE_EQUAL( 0,            get_rex_balance(alice).get_amount() );
-   BOOST_REQUIRE_EQUAL( init_balance, get_balance(alice) );
+   BOOST_REQUIRE_EQUAL( success(),          unlendrex( alice, get_rex_balance(alice) ) );
+   BOOST_REQUIRE_EQUAL( 0,                  get_rex_balance(alice).get_amount() );
+   //   BOOST_REQUIRE_EQUAL( init_balance + fee, get_balance(alice) );
 
    rex_pool = get_rex_pool();
    BOOST_REQUIRE_EQUAL( 0,             rex_pool["total_lendable"].as<asset>().get_amount() );
@@ -3429,7 +3429,7 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_claim_rex, eosio_system_tester ) try {
    cross_15_percent_threshold();
    const asset net          = core_from_string("80.0000");
    const asset cpu          = core_from_string("80.0000");
-   const asset init_balance = core_from_string("5000.0000");
+   const asset init_balance = core_from_string("10000.0000");
    const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount), N(frankaccount) };
    account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3], frank = accounts[4];
    for (const auto& a: accounts) {
@@ -3463,15 +3463,54 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_claim_rex, eosio_system_tester ) try {
    const auto fee = core_from_string("1000.0000");
    BOOST_REQUIRE_EQUAL( success(), rent( frank, frank, fee, true ) );
 
-   BOOST_REQUIRE_EQUAL( success(),      unlendrex( alice, init_alice_rex ) );
+   // alice, bob, carol and emily try to unlend rex
+   // emily's order is successfuly processed while others' orders are queued
+   BOOST_REQUIRE_EQUAL( success(), unlendrex( alice, init_alice_rex ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("an unlendrex request has already been scheduled"),
+                        unlendrex( alice, init_alice_rex ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex order has not been closed"),
+                        claimrex( alice ) );
+   BOOST_REQUIRE_EQUAL( true,           get_rex_order(alice)["is_open"].as<bool>() );
+   BOOST_REQUIRE_EQUAL( init_alice_rex, get_rex_order(alice)["rex_requested"].as<asset>() );
    BOOST_REQUIRE_EQUAL( init_alice_rex, get_rex_balance(alice) );
-   BOOST_REQUIRE_EQUAL( success(),      unlendrex( carol, init_carol_rex ) );                                                                                                                                                                                       
+
+   BOOST_REQUIRE_EQUAL( success(),      unlendrex( carol, init_carol_rex ) );
    BOOST_REQUIRE_EQUAL( init_carol_rex, get_rex_balance(carol) );
+
    BOOST_REQUIRE_EQUAL( success(),      unlendrex( bob,   init_bob_rex ) );
    BOOST_REQUIRE_EQUAL( init_bob_rex,   get_rex_balance(bob) );
+
+   BOOST_REQUIRE_EQUAL( init_carol_rex, get_rex_balance(carol) );
+
    BOOST_REQUIRE_EQUAL( success(),      unlendrex( emily, init_emily_rex ) );
    BOOST_REQUIRE_EQUAL( 0,              get_rex_balance(emily).get_amount() );
 
+   BOOST_REQUIRE_EQUAL( init_carol_rex, get_rex_balance(carol) );
+   
+   produce_block( fc::hours(29*24 + 23) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex order has not been closed"), claimrex( alice ) );
+   produce_block( fc::hours(2) );
+   
+   // some action is needed to trigger loan and rex queue processing
+   BOOST_REQUIRE_EQUAL( success(), lendrex( frank, core_from_string("0.0001") ) );
+   // 2 rex orders are processed (alice and carol)
+   BOOST_REQUIRE_EQUAL( 0,              get_rex_balance(alice).get_amount() );
+   BOOST_REQUIRE_EQUAL( false,          get_rex_order(alice)["is_open"].as<bool>() );
+   BOOST_REQUIRE_EQUAL( init_alice_rex, get_rex_order(alice)["rex_requested"].as<asset>() );
+   BOOST_REQUIRE      ( 0 <             get_rex_order(alice)["proceeds"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( 0,              get_rex_balance(carol).get_amount() );
+   BOOST_REQUIRE_EQUAL( false,          get_rex_order(carol)["is_open"].as<bool>() );
+   BOOST_REQUIRE_EQUAL( init_carol_rex, get_rex_order(carol)["rex_requested"].as<asset>() );
+   BOOST_REQUIRE      ( 0 <             get_rex_order(carol)["proceeds"].as<asset>().get_amount() );
+   // bob's order is still in the queue and can be canceled
+   BOOST_REQUIRE_EQUAL( true,           get_rex_order(bob)["is_open"].as<bool>() );
+   BOOST_REQUIRE_EQUAL( init_bob_rex,   get_rex_order(bob)["rex_requested"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( success(),      cancelrexorder( bob ) );
+   
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex order has been closed and cannot be canceled"),
+                        cancelrexorder( carol ) );
+   BOOST_REQUIRE_EQUAL( success(), claimrex( carol ) );
+   
 } FC_LOG_AND_RETHROW()
 
 
