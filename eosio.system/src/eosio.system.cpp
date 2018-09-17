@@ -398,7 +398,9 @@ namespace eosiosystem {
       int64_t rented_tokens = 0;
       _rextable.modify( itr, 0, [&]( auto& rt ) {
          rented_tokens = bancor_convert( rt.total_rent.amount, rt.total_unlent.amount, payment.amount );
-         rt.total_lent.amount += rented_tokens;
+         rt.total_lent.amount    += rented_tokens;
+         rt.total_unlent.amount  += payment.amount;
+         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
          rt.loan_num++;
       });
 
@@ -436,7 +438,7 @@ namespace eosiosystem {
          _rextable.modify( rexi, 0, [&]( auto& rt ) {
             auto fee = bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, rented_tokens );
             rt.total_lent.amount    -= rented_tokens;
-            rt.total_unlent.amount  += fee;
+            //            rt.total_unlent.amount  += fee;
             rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
          });
       };
