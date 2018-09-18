@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(eosio_contracts VERSION 1.3.0)
+project(eosio_contracts VERSION 1.3.1)
 
 set(EOSIO_DEPENDENCY "1.2")
 set(EOSIO_CDT_DEPENDENCY "1.2")
