@@ -3447,6 +3447,7 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
    }
 
    {
+      // TODO:
       // the following fails with "divide by zero" error message!!
       // need to fix the corner case where rex system has been initialized but
       // balances are zero

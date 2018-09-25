@@ -277,13 +277,15 @@ namespace eosiosystem {
       auto bitr = _rexbalance.find( from );
       if( bitr == _rexbalance.end() ) {
          _rexbalance.emplace( from, [&]( auto& rb ) {
-            rb.owner = from;
+            rb.owner       = from;
+            rb.vote_stake  = amount;
             rb.rex_balance = rex_received;
+
          });
-      }
-      else {
+      } else {
          _rexbalance.modify( bitr, 0, [&]( auto& rb ) {
-            rb.rex_balance.amount  += rex_received.amount;
+            rb.vote_stake.amount  += amount.amount;
+            rb.rex_balance.amount += rex_received.amount;          
          });
       }
       runrex(2);
@@ -310,7 +312,7 @@ namespace eosiosystem {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { N(eosio.rex), N(active) },
                                                        { N(eosio.rex), from, result.second, "sell REX" } );
       } else {
-         rex_order_table rexorders(_self, _self);
+         rex_order_table rexorders( _self, _self );
          eosio_assert( rexorders.find( from ) == rexorders.end(), "an unlendrex request has already been scheduled");
          rexorders.emplace( from, [&]( auto& ordr ) {
             ordr.owner         = from;
@@ -322,7 +324,7 @@ namespace eosiosystem {
 
    void system_contract::cnclrexorder( account_name owner ) {      
       require_auth( owner );
-      rex_order_table rexorders(_self, _self);
+      rex_order_table rexorders( _self, _self );
       auto itr = rexorders.find( owner );
       eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
       eosio_assert( itr->is_open, "rex order has been closed and cannot be canceled" );
@@ -488,15 +490,15 @@ namespace eosiosystem {
 
    }
 
-   std::pair<bool, asset> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex) {
+   std::pair<bool, asset> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
       auto rexitr = _rextable.begin();
       const auto S0 = rexitr->total_lendable.amount;
       const auto R0 = rexitr->total_rex.amount;
       const auto R1 = R0 - rex.amount;
       const auto S1 = (uint128_t(R1) * S0) / R0;
-      asset proceeds(S0-S1, CORE_SYMBOL);
-      bool  success = false;
-      if( proceeds <= rexitr->total_unlent ) {
+      const asset proceeds( S0 - S1, CORE_SYMBOL );
+      bool success = false;
+      if( proceeds.amount <= rexitr->total_unlent.amount ) {
          _rextable.modify( rexitr, 0, [&]( auto& rt ) {
             rt.total_rex.amount      = R1;
             rt.total_lendable.amount = S1;
@@ -507,7 +509,7 @@ namespace eosiosystem {
          });
          success = true;
       }
-      return std::make_pair(success, proceeds);
+      return std::make_pair( success, proceeds );
    }
 
    void native::setabi( account_name acnt, const bytes& abi ) {

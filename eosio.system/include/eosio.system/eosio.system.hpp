@@ -172,7 +172,7 @@ namespace eosiosystem {
       asset      total_lendable; /// total EOS that have been lent (total_unlent + total_lent)
       asset      total_rex; /// total number of REX shares allocated to contributors to total_lendable
       uint64_t   loan_num = 0; /// increments with each new loan
-      auto primary_key()const { return 0; }
+      uint64_t primary_key()const { return 0; }
    };
 
    typedef eosio::multi_index< N(rexpool), rex_pool > rex_pool_table;
@@ -182,7 +182,7 @@ namespace eosiosystem {
       asset        vote_stake; /// the amount of CORE_SYMBOL currently included in owner's vote
       asset        rex_balance; /// the amount of REX owned by owner
 
-      auto primary_key()const { return owner; }
+      uint64_t primary_key()const { return owner; }
    };
 
    typedef eosio::multi_index< N(rexbal), rex_balance > rex_balance_table;
@@ -194,7 +194,7 @@ namespace eosiosystem {
       
       eosio::time_point   expiration;
 
-      auto primary_key()const { return loan_num; }
+      uint64_t primary_key()const { return loan_num; }
    };
 
    typedef eosio::multi_index< N(cpuloan), rex_loan> rex_cpu_loan_table;
@@ -348,6 +348,7 @@ namespace eosiosystem {
          void changebw( account_name from, account_name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
          void update_resource_limits( account_name receiver, int64_t delta_cpu, int64_t delta_net );
+         void update_voting_power( const account_name& voter, const asset& total_update );
 
          //defined in voting.hpp
          void update_elected_producers( block_timestamp timestamp );
