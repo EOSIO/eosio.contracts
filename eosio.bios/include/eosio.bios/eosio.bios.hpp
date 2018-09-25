@@ -13,7 +13,7 @@ namespace eosio {
       EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
    };
 
-   typedef eosio::multi_index< N(abihash), abi_hash> abi_hash_table; 
+   typedef eosio::multi_index< N(abihash), abi_hash> abi_hash_table;
 
    class bios : public contract {
       public:
@@ -45,6 +45,11 @@ namespace eosio {
             set_proposed_producers(buffer, size);
          }
 
+         void setparams( const eosio::blockchain_parameters& params ) {
+            require_auth( _self );
+            set_blockchain_parameters( params );
+         }
+
          void reqauth( action_name from ) {
             require_auth( from );
          }
@@ -55,11 +60,11 @@ namespace eosio {
             if( itr == table.end() ) {
                table.emplace( acnt, [&]( auto& row ) {
                   row.owner = acnt;
-                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash ); 
+                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
                });
             } else {
                table.modify( itr, 0, [&]( auto& row ) {
-                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash ); 
+                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
                });
             }
          }
