@@ -280,7 +280,6 @@ namespace eosiosystem {
             rb.owner       = from;
             rb.vote_stake  = amount;
             rb.rex_balance = rex_received;
-
          });
       } else {
          _rexbalance.modify( bitr, 0, [&]( auto& rb ) {
@@ -288,6 +287,9 @@ namespace eosiosystem {
             rb.rex_balance.amount += rex_received.amount;          
          });
       }
+
+      update_voting_power( from, amount );
+
       runrex(2);
    }
 
@@ -504,7 +506,11 @@ namespace eosiosystem {
             rt.total_lendable.amount = S1;
             rt.total_unlent.amount   = rt.total_lendable.amount - rt.total_lent.amount;
          });
+         asset unstake_quant( 0, CORE_SYMBOL );
+         unstake_quant.amount = -( rex.amount * bitr->vote_stake.amount ) / bitr->rex_balance.amount;
+         update_voting_power( bitr->owner, unstake_quant );
          _rexbalance.modify( bitr, 0, [&]( auto& rb ) {
+            rb.vote_stake.amount  += unstake_quant.amount;   
             rb.rex_balance.amount -= rex.amount;
          });
          success = true;
