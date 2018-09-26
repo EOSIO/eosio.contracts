@@ -15,7 +15,7 @@ if(EOSIO_ROOT STREQUAL "" OR NOT EOSIO_ROOT)
    set(EOSIO_ROOT "/usr/local/eosio")
 endif()
 
-if(EOSIO_CDT_ROOT STREQUAL "" OR NOT EOSIO__ROOT)
+if(EOSIO_CDT_ROOT STREQUAL "" OR NOT EOSIO_CDT_ROOT)
    set(EOSIO_CDT_ROOT "/usr/local/eosio.cdt")
 endif()
 
