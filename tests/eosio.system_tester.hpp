@@ -335,6 +335,11 @@ public:
       return data.empty() ? asset(0, symbol(SY(4, REX))) : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["rex_balance"].as<asset>();
    }
 
+   asset get_rex_vote_stake( const account_name& act ) const {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexbal), act );
+      return data.empty() ? core_from_string("0.0000") : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["vote_stake"].as<asset>();
+   }   
+
    fc::variant get_rex_order( const account_name& act ) {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexqueue), act );
       return abi_ser.binary_to_variant( "rex_order", data, abi_serializer_max_time );

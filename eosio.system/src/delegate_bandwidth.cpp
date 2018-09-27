@@ -362,7 +362,6 @@ namespace eosiosystem {
          }
       }
 
-      // update voting power
       update_voting_power( from, stake_net_delta + stake_cpu_delta );
 
    }

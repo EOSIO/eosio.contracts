@@ -258,6 +258,7 @@
          {"name":"owner",         "type":"account_name"},
          {"name":"rex_requested", "type":"asset"},
          {"name":"proceeds",      "type":"asset"},
+         {"name":"unstake_quant", "type":"asset"},
          {"name":"order_time",    "type":"time_point"},
          {"name":"is_open",       "type":"bool"}
       ]

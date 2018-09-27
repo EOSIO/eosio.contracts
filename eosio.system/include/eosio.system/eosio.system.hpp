@@ -204,6 +204,7 @@ namespace eosiosystem {
       account_name        owner;
       asset               rex_requested;
       asset               proceeds;
+      asset               unstake_quant;
       eosio::time_point   order_time;
       bool                is_open = true;
       
@@ -342,7 +343,7 @@ namespace eosiosystem {
          static block_timestamp current_block_time();
          void update_ram_supply();
          void runrex( uint16_t max );
-         std::pair<bool, asset> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
+         std::tuple<bool, asset, asset> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
 
          //defined in delegate_bandwidth.cpp
          void changebw( account_name from, account_name receiver,

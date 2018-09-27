@@ -3480,7 +3480,7 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_claim_rex, eosio_system_tester ) try {
       transfer( config::system_account_name, a, init_balance, config::system_account_name );
       BOOST_REQUIRE_EQUAL( asset::from_string("0.0000 REX"), get_rex_balance(a) );
    }
-   
+
    auto purchase1 = core_from_string("880.0000");
    auto purchase2 = core_from_string("471.0000");
    auto purchase3 = core_from_string("469.0000");
@@ -3489,6 +3489,7 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_claim_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), lendrex( carol, purchase3) );
    
    BOOST_REQUIRE_EQUAL( init_balance - purchase1, get_balance(alice) );
+   BOOST_REQUIRE_EQUAL( purchase1.get_amount(),   get_voter_info(alice)["staked"].as<int64_t>() );
    BOOST_REQUIRE_EQUAL( init_balance - purchase2, get_balance(bob) );
    BOOST_REQUIRE_EQUAL( init_balance - purchase3, get_balance(carol) );
    
@@ -3498,7 +3499,13 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_claim_rex, eosio_system_tester ) try {
    
    BOOST_REQUIRE_EQUAL( success(), rent( frank, frank, core_from_string("1100.0000"), true ) );
    BOOST_REQUIRE_EQUAL( success(), unlendrex( alice, asset( (3*get_rex_balance(alice).get_amount())/4, symbol(SY(4,REX)) ) ) );
+
+   BOOST_REQUIRE_EQUAL( init_alice_rex.get_amount() / 4, get_rex_balance(alice).get_amount() );
+   BOOST_REQUIRE_EQUAL( purchase1.get_amount() / 4,      get_rex_vote_stake( alice ).get_amount() );
+   BOOST_REQUIRE_EQUAL( purchase1.get_amount() / 4,      get_voter_info(alice)["staked"].as<int64_t>() );
+
    init_alice_rex = get_rex_balance(alice);
+
    BOOST_REQUIRE_EQUAL( success(), unlendrex( bob,   get_rex_balance(bob) ) );
    BOOST_REQUIRE_EQUAL( success(), unlendrex( carol, get_rex_balance(carol) ) );
    BOOST_REQUIRE_EQUAL( success(), unlendrex( alice, get_rex_balance(alice) ) );
@@ -3543,14 +3550,18 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_claim_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( false,           get_rex_order(bob)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( init_bob_rex,    get_rex_order(bob)["rex_requested"].as<asset>() );
    BOOST_REQUIRE      ( 0 <              get_rex_order(bob)["proceeds"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( purchase2,       get_rex_order(bob)["unstake_quant"].as<asset>() );
    
    BOOST_REQUIRE_EQUAL( false,           get_rex_order(carol)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( init_carol_rex,  get_rex_order(carol)["rex_requested"].as<asset>() );
    BOOST_REQUIRE      ( 0 <              get_rex_order(carol)["proceeds"].as<asset>().get_amount() );
    
-   BOOST_REQUIRE_EQUAL( success(),       claimrex( bob ) );
+   BOOST_REQUIRE_EQUAL( success(),       claimrex( bob ) );   
    BOOST_REQUIRE_EQUAL( success(),       claimrex( carol ) );
-   
+   BOOST_REQUIRE_EQUAL( 0,               get_rex_vote_stake( bob ).get_amount() );
+   BOOST_REQUIRE_EQUAL( 0,               get_voter_info( bob )["staked"].as<int64_t>() );
+   BOOST_REQUIRE_EQUAL( 0,               get_voter_info( carol )["staked"].as<int64_t>() );
+
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex order has not been closed"),
                         claimrex( alice ) );
    

@@ -310,15 +310,17 @@ namespace eosiosystem {
       eosio_assert( bitr->rex_balance >= rex, "insufficient funds" );
 
       auto result = close_rex_order( bitr, rex );
-      if( result.first ) {
+      if( std::get<0>( result ) ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { N(eosio.rex), N(active) },
-                                                       { N(eosio.rex), from, result.second, "sell REX" } );
+                                                       { N(eosio.rex), from, std::get<1>(result), "sell REX" } );
+         update_voting_power( from, asset( -( std::get<2>( result ).amount ), CORE_SYMBOL ) );
       } else {
          rex_order_table rexorders( _self, _self );
          eosio_assert( rexorders.find( from ) == rexorders.end(), "an unlendrex request has already been scheduled");
          rexorders.emplace( from, [&]( auto& ordr ) {
             ordr.owner         = from;
             ordr.rex_requested = rex;
+            ordr.unstake_quant = std::get<2>( result );
             ordr.order_time    = current_time_point();
          });
       }
@@ -341,7 +343,8 @@ namespace eosiosystem {
       eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
       eosio_assert( !itr->is_open, "rex order has not been closed" );
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.rex),N(active)},
-                                                    { N(eosio.rex), itr->owner, itr->proceeds, "sell REX" } );
+                                                    { N(eosio.rex), itr->owner, itr->proceeds, "claim REX proceeds" } );
+      update_voting_power( owner, asset( -( itr->unstake_quant.amount ), CORE_SYMBOL ) );
       rexorders.erase( itr );
    }
 
@@ -446,7 +449,7 @@ namespace eosiosystem {
          });
       };
 
-      rex_cpu_loan_table cpu_loans(_self,_self);
+      rex_cpu_loan_table cpu_loans( _self, _self );
       for( uint16_t i = 0; i < max; ++i ) {
          auto itr = cpu_loans.begin();
          if( itr == cpu_loans.end() ) break;
@@ -457,7 +460,7 @@ namespace eosiosystem {
          cpu_loans.erase( itr );
       }
 
-      rex_net_loan_table net_loans(_self,_self);
+      rex_net_loan_table net_loans( _self, _self );
       for( uint16_t i = 0; i < max; ++i ) {
          auto itr = net_loans.begin();
          if( itr == net_loans.end() ) break;
@@ -468,7 +471,7 @@ namespace eosiosystem {
          net_loans.erase( itr );
       }
 
-      rex_order_table rexorders(_self, _self);
+      rex_order_table rexorders( _self, _self );
       auto idx = rexorders.get_index<N(bytime)>();
       auto oitr = idx.begin();
       for( uint16_t i = 0; i < max; ++i ) {
@@ -481,9 +484,9 @@ namespace eosiosystem {
          auto result = close_rex_order( bitr, oitr->rex_requested );
          auto next   = oitr;
          ++next;
-         if( result.first ) {
+         if( std::get<0>( result ) ) {
             idx.modify( oitr, 0, [&]( auto& rt ) {
-               rt.proceeds.amount = result.second.amount;
+               rt.proceeds.amount = std::get<1>( result ).amount;
                rt.close();
             });
          }
@@ -492,13 +495,15 @@ namespace eosiosystem {
 
    }
 
-   std::pair<bool, asset> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
+   std::tuple<bool, asset, asset> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
       auto rexitr = _rextable.begin();
       const auto S0 = rexitr->total_lendable.amount;
       const auto R0 = rexitr->total_rex.amount;
       const auto R1 = R0 - rex.amount;
       const auto S1 = (uint128_t(R1) * S0) / R0;
       const asset proceeds( S0 - S1, CORE_SYMBOL );
+      asset unstake_quant( 0, CORE_SYMBOL );
+      unstake_quant.amount = ( uint128_t(rex.amount) * bitr->vote_stake.amount ) / bitr->rex_balance.amount;
       bool success = false;
       if( proceeds.amount <= rexitr->total_unlent.amount ) {
          _rextable.modify( rexitr, 0, [&]( auto& rt ) {
@@ -506,16 +511,13 @@ namespace eosiosystem {
             rt.total_lendable.amount = S1;
             rt.total_unlent.amount   = rt.total_lendable.amount - rt.total_lent.amount;
          });
-         asset unstake_quant( 0, CORE_SYMBOL );
-         unstake_quant.amount = -( rex.amount * bitr->vote_stake.amount ) / bitr->rex_balance.amount;
-         update_voting_power( bitr->owner, unstake_quant );
          _rexbalance.modify( bitr, 0, [&]( auto& rb ) {
-            rb.vote_stake.amount  += unstake_quant.amount;   
+            rb.vote_stake.amount  -= unstake_quant.amount;
             rb.rex_balance.amount -= rex.amount;
          });
          success = true;
       }
-      return std::make_pair( success, proceeds );
+      return std::make_tuple( success, proceeds, unstake_quant );
    }
 
    void native::setabi( account_name acnt, const bytes& abi ) {
