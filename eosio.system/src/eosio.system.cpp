@@ -132,6 +132,14 @@ namespace eosiosystem {
       set_privileged( account, ispriv );
    }
 
+   void system_contract::setalimits( account_name account, int64_t ram, int64_t net, int64_t cpu ) {
+      require_auth( N(eosio) );
+      user_resources_table userres( _self, account );
+      auto ritr = userres.find( account );
+      eosio_assert( ritr == userres.end(), "only supports unlimited accounts" );
+      set_resource_limits(account, ram, net, cpu);
+   }
+
    void system_contract::rmvproducer( account_name producer ) {
       require_auth( _self );
       auto prod = _producers.find( producer );
@@ -143,8 +151,10 @@ namespace eosiosystem {
 
    void system_contract::updtrevision( uint8_t revision ) {
       require_auth( _self );
+      eosio_assert( _gstate2.revision < 255, "can not increment revision" ); // prevent wrap around
       eosio_assert( revision == _gstate2.revision + 1, "can only increment revision by one" );
-      eosio_assert( _gstate2.revision < 255, "can not increment revision" );
+      eosio_assert( revision <= 1, // set upper bound to greatest revision supported in the code
+                    "specified revision is not yet supported by the code" );
       _gstate2.revision = revision;
    }
 
@@ -177,9 +187,27 @@ namespace eosiosystem {
          eosio_assert( bid.amount - current->high_bid > (current->high_bid / 10), "must increase bid by 10%" );
          eosio_assert( current->high_bidder != bidder, "account is already highest bidder" );
 
-         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.names),N(active)},
-                                                       { N(eosio.names), current->high_bidder, asset(current->high_bid),
-                                                       std::string("refund bid on name ")+(name{newname}).to_string()  } );
+         bid_refund_table refunds_table(_self, newname);
+
+         auto it = refunds_table.find( current->high_bidder );
+         if ( it != refunds_table.end() ) {
+            refunds_table.modify( it, 0, [&](auto& r) {
+                  r.amount += asset( current->high_bid, system_token_symbol );
+               });
+         } else {
+            refunds_table.emplace( bidder, [&](auto& r) {
+                  r.bidder = current->high_bidder;
+                  r.amount = asset( current->high_bid, system_token_symbol );
+               });
+         }
+
+         action a( {N(eosio),N(active)}, N(eosio), N(bidrefund), std::make_tuple( current->high_bidder, newname ) );
+         transaction t;
+         t.actions.push_back( std::move(a) );
+         t.delay_sec = 0;
+         uint128_t deferred_id = (uint128_t(newname) << 64) | current->high_bidder;
+         cancel_deferred( deferred_id );
+         t.send( deferred_id, bidder );
 
          bids.modify( current, bidder, [&]( auto& b ) {
             b.high_bidder = bidder;
@@ -187,6 +215,16 @@ namespace eosiosystem {
             b.last_bid_time = current_time_point();
          });
       }
+   }
+
+   void system_contract::bidrefund( account_name bidder, account_name newname ) {
+      bid_refund_table refunds_table(_self, newname);
+      auto it = refunds_table.find( bidder );
+      eosio_assert( it != refunds_table.end(), "refund not found" );
+      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{N(eosio.names),N(active)},{bidder,N(active)}},
+                                                    { N(eosio.names), bidder, asset(it->amount),
+                                                       std::string("refund bid on name ")+(name{newname}).to_string()  } );
+      refunds_table.erase( it );
    }
 
    /**
@@ -542,7 +580,7 @@ EOSIO_ABI( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
-     (setram)(setramrate)(setparams)(setpriv)(rmvproducer)(updtrevision)(bidname)
+     (setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
      (lendrex)(unlendrex)(cnclrexorder)(claimrex)(rent)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)

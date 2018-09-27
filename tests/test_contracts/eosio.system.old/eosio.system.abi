@@ -25,13 +25,6 @@
         {"name":"permission", "type":"permission_name"}
       ]
     },{
-      "name": "abi_hash",
-      "base": "",
-      "fields": [
-         {"name":"owner", "type":"account_name"},
-         {"name":"hash",  "type":"checksum256"}
-      ]
-    },{
       "name": "key_weight",
       "base": "",
       "fields": [
@@ -206,79 +199,6 @@
          {"name":"cpu_weight", "type":"asset"}
       ]
     },{
-      "name": "lendrex",
-      "base": "",
-      "fields": [
-         {"name":"from",   "type":"account_name"},
-         {"name":"amount", "type":"asset"}
-      ]
-    },{
-      "name": "unlendrex",
-      "base": "",
-      "fields": [
-         {"name":"from", "type":"account_name"},
-         {"name":"rex",  "type":"asset"}
-      ]
-    },{
-      "name": "cnclrexorder",
-      "base": "",
-      "fields": [
-         {"name":"owner", "type":"account_name"}
-      ]
-    },{
-      "name": "claimrex",
-      "base": "",
-      "fields": [
-         {"name":"owner", "type":"account_name"}
-      ]
-    },{
-      "name": "rex_balance",
-      "base": "",
-      "fields": [
-         {"name":"owner",       "type":"account_name"},
-         {"name":"vote_stake",  "type":"asset"},
-         {"name":"rex_balance", "type":"asset"}
-      ]
-    },{
-      "name": "rex_pool",
-      "base": "",
-      "fields": [
-         {"name":"total_lent",     "type":"asset"},
-         {"name":"total_unlent",   "type":"asset"},
-         {"name":"total_rent",     "type":"asset"},
-         {"name":"total_lendable", "type":"asset"},
-         {"name":"total_rex",      "type":"asset"},
-         {"name":"loan_num",       "type":"uint64"}
-      ]
-    },{
-      "name": "rex_loan",
-      "base": "",
-      "fields": [
-         {"name":"receiver",    "type":"account_name"},
-         {"name":"total_stake", "type":"asset"},
-         {"name":"loan_num",    "type":"uint64"}
-      ]
-    },{
-      "name": "rex_order",
-      "base": "",
-      "fields": [
-         {"name":"owner",         "type":"account_name"},
-         {"name":"rex_requested", "type":"asset"},
-         {"name":"proceeds",      "type":"int64"},
-         {"name":"unstake_quant", "type":"int64"},
-         {"name":"order_time",    "type":"time_point"},
-         {"name":"is_open",       "type":"bool"}
-      ]
-    },{
-      "name": "rent",
-      "base": "",
-      "fields": [
-         {"name":"from",     "type":"account_name"},
-         {"name":"receiver", "type":"account_name"},
-         {"name":"payment",  "type":"asset"},
-         {"name":"cpu",      "type":"bool"}
-      ]
-    },{
       "name": "user_resources",
       "base": "",
       "fields": [
@@ -331,17 +251,11 @@
     },{
       "name": "eosio_global_state2",
       "fields": [
-         {"name":"new_ram_per_block",            "type":"uint16"},
-         {"name":"last_ram_increase",            "type":"block_timestamp_type"},
-         {"name":"last_block_num",               "type":"block_timestamp_type"},
-         {"name":"total_producer_votepay_share", "type":"float64"},
-         {"name":"revision",                     "type":"uint8"}
-      ]
-    },{
-      "name": "eosio_global_state3",
-      "fields": [
-         {"name":"last_vpay_state_update",       "type":"time_point"},
-         {"name":"total_vpay_share_change_rate", "type":"float64"}
+         {"name":"new_ram_per_block",   "type":"uint16"},
+         {"name":"last_ram_increase",   "type":"block_timestamp_type"},
+         {"name":"last_block_num",      "type":"block_timestamp_type"},
+         {"name":"reserved",            "type":"float64"},
+         {"name":"revision",            "type":"uint8"}
       ]
     },{
       "name": "eosio_global_state",
@@ -351,12 +265,12 @@
          {"name":"total_ram_bytes_reserved",      "type":"uint64"},
          {"name":"total_ram_stake",               "type":"int64"},
          {"name":"last_producer_schedule_update", "type":"block_timestamp_type"},
-         {"name":"last_pervote_bucket_fill",      "type":"time_point"},
+         {"name":"last_pervote_bucket_fill",      "type":"uint64"},
          {"name":"pervote_bucket",                "type":"int64"},
          {"name":"perblock_bucket",               "type":"int64"},
          {"name":"total_unpaid_blocks",           "type":"uint32"},
          {"name":"total_activated_stake",         "type":"int64"},
-         {"name":"thresh_activated_stake_time",   "type":"time_point"},
+         {"name":"thresh_activated_stake_time",   "type":"uint64"},
          {"name":"last_producer_schedule_size",   "type":"uint16"},
          {"name":"total_producer_vote_weight",    "type":"float64"},
          {"name":"last_name_close",               "type":"block_timestamp_type"}
@@ -371,16 +285,8 @@
          {"name":"is_active",       "type":"bool"},
          {"name":"url",             "type":"string"},
          {"name":"unpaid_blocks",   "type":"uint32"},
-         {"name":"last_claim_time", "type":"time_point"},
+         {"name":"last_claim_time", "type":"uint64"},
          {"name":"location",        "type":"uint16"}
-      ]
-    },{
-      "name": "producer_info2",
-      "base": "",
-      "fields": [
-         {"name":"owner",                     "type":"account_name"},
-         {"name":"votepay_share",             "type":"float64"},
-         {"name":"last_votepay_share_update", "type":"time_point"}
       ]
     },{
       "name": "regproducer",
@@ -456,12 +362,6 @@
         {"name":"producer", "type":"account_name"}
       ]
     },{
-      "name": "updtrevision",
-      "base": "",
-      "fields": [
-        {"name":"revision", "type":"uint8"}
-      ]
-    },{
       "name": "set_account_limits",
       "base": "",
       "fields": [
@@ -523,7 +423,7 @@
           {"name":"newname", "type":"account_name"},
           {"name":"high_bidder", "type":"account_name"},
           {"name":"high_bid", "type":"int64"},
-          {"name":"last_bid_time", "type":"time_point"}
+          {"name":"last_bid_time", "type":"uint64"}
        ]
     }, {
      "name": "bid_refund",
@@ -595,26 +495,6 @@
       "type": "refund",
       "ricardian_contract": ""
    },{
-      "name": "lendrex",
-      "type": "lendrex",
-      "ricardian_contract": ""
-   },{
-      "name": "unlendrex",
-      "type": "unlendrex",
-      "ricardian_contract": ""
-   },{
-      "name": "cnclrexorder",
-      "type": "cnclrexorder",
-      "ricardian_contract": ""
-   },{
-      "name": "claimrex",
-      "type": "claimrex",
-      "ricardian_contract": ""
-   },{
-      "name": "rent",
-      "type": "rent",
-      "ricardian_contract": ""
-   },{
       "name": "regproducer",
       "type": "regproducer",
       "ricardian_contract": ""
@@ -659,10 +539,6 @@
       "type": "rmvproducer",
       "ricardian_contract": ""
    },{
-      "name": "updtrevision",
-      "type": "updtrevision",
-      "ricardian_contract": ""
-   },{
       "name": "setalimits",
       "type": "set_account_limits",
       "ricardian_contract": ""
@@ -690,12 +566,6 @@
       "key_names" : ["owner"],
       "key_types" : ["uint64"]
     },{
-      "name": "producers2",
-      "type": "producer_info2",
-      "index_type": "i64",
-      "key_names" : ["owner"],
-      "key_types" : ["uint64"]
-    },{
       "name": "global",
       "type": "eosio_global_state",
       "index_type": "i64",
@@ -704,12 +574,6 @@
     },{
       "name": "global2",
       "type": "eosio_global_state2",
-      "index_type": "i64",
-      "key_names" : [],
-      "key_types" : []
-    },{
-      "name": "global3",
-      "type": "eosio_global_state3",
       "index_type": "i64",
       "key_names" : [],
       "key_types" : []
@@ -730,36 +594,6 @@
       "type": "delegated_bandwidth",
       "index_type": "i64",
       "key_names" : ["to"],
-      "key_types" : ["uint64"]
-    },{
-      "name": "rexpool",
-      "type": "rex_pool",
-      "index_type": "i64",
-      "key_names" : ["zero"],
-      "key_types" : ["uint64"]
-    },{
-      "name": "rexbal",
-      "type": "rex_balance",
-      "index_type": "i64",
-      "key_names" : ["owner"],
-      "key_types" : ["uint64"]
-    },{
-      "name": "rexqueue",
-      "type": "rex_order",
-      "index_type": "i64",
-      "key_names" : ["owner"],
-      "key_types" : ["uint64"]
-    },{
-      "name": "cpuloan",
-      "type": "rex_loan",
-      "index_type": "i64",
-      "key_names" : ["loan_num"],
-      "key_types" : ["uint64"]
-    },{
-      "name": "netloan",
-      "type": "rex_loan",
-      "index_type": "i64",
-      "key_names" : ["loan_num"],
       "key_types" : ["uint64"]
     },{
       "name": "rammarket",
@@ -785,12 +619,6 @@
      "index_type": "i64",
      "key_names" : ["bidder"],
      "key_types" : ["account_name"]
-   },{
-      "name": "abihash",
-      "type": "abi_hash",
-      "index_type": "i64",
-      "key_names": ["owner"],
-      "key_types": ["account_name"]
    }
    ],
    "ricardian_clauses": [],
