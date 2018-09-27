@@ -211,8 +211,8 @@ namespace eosiosystem {
    struct rex_order {
       account_name        owner;
       asset               rex_requested;
-      int64_t             proceeds;
-      int64_t             unstake_quant;
+      int64_t             proceeds = 0;
+      int64_t             unstake_quant = 0;
       eosio::time_point   order_time;
       bool                is_open = true;
       
@@ -348,27 +348,25 @@ namespace eosiosystem {
       private:
          // Implementation details:
 
-         //defined in eosio.system.cpp
+         // defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
          static time_point current_time_point();
          static block_timestamp current_block_time();
          void update_ram_supply();
+         // defined in rex.cpp
          void runrex( uint16_t max );
          std::tuple<bool, int64_t, int64_t> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
 
-         //defined in delegate_bandwidth.cpp
+         // defined in delegate_bandwidth.cpp
          void changebw( account_name from, account_name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
          void update_resource_limits( account_name receiver, int64_t delta_cpu, int64_t delta_net );
          void update_voting_power( const account_name& voter, const asset& total_update );
 
-         //defined in voting.hpp
+         // defined in voting.hpp
          void update_elected_producers( block_timestamp timestamp );
          void update_votes( const account_name voter, const account_name proxy, const std::vector<account_name>& producers, bool voting );
-
-         // defined in voting.cpp
          void propagate_weight_change( const voter_info& voter );
-
          double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
                                                time_point ct,
                                                double shares_rate, bool reset_to_zero = false );
