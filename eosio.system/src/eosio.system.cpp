@@ -310,17 +310,17 @@ namespace eosiosystem {
       eosio_assert( bitr->rex_balance >= rex, "insufficient funds" );
 
       auto result = close_rex_order( bitr, rex );
-      if( std::get<0>( result ) ) {
+      if( std::get<0>(result) ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { N(eosio.rex), N(active) },
-                                                       { N(eosio.rex), from, std::get<1>(result), "sell REX" } );
-         update_voting_power( from, asset( -( std::get<2>( result ).amount ), CORE_SYMBOL ) );
+                                                       { N(eosio.rex), from, asset( std::get<1>(result), CORE_SYMBOL ), "sell REX" } );
+         update_voting_power( from, asset( -(std::get<2>(result)), CORE_SYMBOL ) );
       } else {
          rex_order_table rexorders( _self, _self );
          eosio_assert( rexorders.find( from ) == rexorders.end(), "an unlendrex request has already been scheduled");
          rexorders.emplace( from, [&]( auto& ordr ) {
             ordr.owner         = from;
             ordr.rex_requested = rex;
-            ordr.unstake_quant = std::get<2>( result );
+            ordr.unstake_quant = std::get<2>(result);
             ordr.order_time    = current_time_point();
          });
       }
@@ -343,8 +343,8 @@ namespace eosiosystem {
       eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
       eosio_assert( !itr->is_open, "rex order has not been closed" );
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.rex),N(active)},
-                                                    { N(eosio.rex), itr->owner, itr->proceeds, "claim REX proceeds" } );
-      update_voting_power( owner, asset( -( itr->unstake_quant.amount ), CORE_SYMBOL ) );
+                                                    { N(eosio.rex), itr->owner, asset(itr->proceeds, CORE_SYMBOL), "claim REX proceeds" } );
+      update_voting_power( owner, asset( -( itr->unstake_quant ), CORE_SYMBOL ) );
       rexorders.erase( itr );
    }
 
@@ -477,6 +477,7 @@ namespace eosiosystem {
       for( uint16_t i = 0; i < max; ++i ) {
          if( oitr == idx.end() || !oitr->is_open ) break;
          auto bitr = _rexbalance.find( oitr->owner );
+         // TODO: change the logic below
          if( bitr == _rexbalance.end() ) {
             idx.erase( oitr++ );
             continue;
@@ -486,7 +487,7 @@ namespace eosiosystem {
          ++next;
          if( std::get<0>( result ) ) {
             idx.modify( oitr, 0, [&]( auto& rt ) {
-               rt.proceeds.amount = std::get<1>( result ).amount;
+               rt.proceeds = std::get<1>( result );
                rt.close();
             });
          }
@@ -495,24 +496,23 @@ namespace eosiosystem {
 
    }
 
-   std::tuple<bool, asset, asset> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
+   std::tuple<bool, int64_t, int64_t> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
       auto rexitr = _rextable.begin();
       const auto S0 = rexitr->total_lendable.amount;
       const auto R0 = rexitr->total_rex.amount;
       const auto R1 = R0 - rex.amount;
       const auto S1 = (uint128_t(R1) * S0) / R0;
-      const asset proceeds( S0 - S1, CORE_SYMBOL );
-      asset unstake_quant( 0, CORE_SYMBOL );
-      unstake_quant.amount = ( uint128_t(rex.amount) * bitr->vote_stake.amount ) / bitr->rex_balance.amount;
+      const int64_t proceeds      = S0 - S1;  // asset( S0 - S1, CORE_SYMBOL );
+      const int64_t unstake_quant = ( uint128_t(rex.amount) * bitr->vote_stake.amount ) / bitr->rex_balance.amount;
       bool success = false;
-      if( proceeds.amount <= rexitr->total_unlent.amount ) {
+      if( proceeds <= rexitr->total_unlent.amount ) {
          _rextable.modify( rexitr, 0, [&]( auto& rt ) {
             rt.total_rex.amount      = R1;
             rt.total_lendable.amount = S1;
             rt.total_unlent.amount   = rt.total_lendable.amount - rt.total_lent.amount;
          });
          _rexbalance.modify( bitr, 0, [&]( auto& rb ) {
-            rb.vote_stake.amount  -= unstake_quant.amount;
+            rb.vote_stake.amount  -= unstake_quant;
             rb.rex_balance.amount -= rex.amount;
          });
          success = true;

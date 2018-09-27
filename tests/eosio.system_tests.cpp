@@ -3517,13 +3517,13 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_claim_rex, eosio_system_tester ) try {
    // now bob's, carol's and alice's unlendrex requests have been queued
    BOOST_REQUIRE_EQUAL( true,           get_rex_order(alice)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( init_alice_rex, get_rex_order(alice)["rex_requested"].as<asset>() );
-   BOOST_REQUIRE_EQUAL( 0,              get_rex_order(alice)["proceeds"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( 0,              get_rex_order(alice)["proceeds"].as<int64_t>() );
    BOOST_REQUIRE_EQUAL( true,           get_rex_order(bob)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( init_bob_rex,   get_rex_order(bob)["rex_requested"].as<asset>() );
-   BOOST_REQUIRE_EQUAL( 0,              get_rex_order(bob)["proceeds"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( 0,              get_rex_order(bob)["proceeds"].as<int64_t>() );
    BOOST_REQUIRE_EQUAL( true,           get_rex_order(carol)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( init_carol_rex, get_rex_order(carol)["rex_requested"].as<asset>() );
-   BOOST_REQUIRE_EQUAL( 0,              get_rex_order(carol)["proceeds"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( 0,              get_rex_order(carol)["proceeds"].as<int64_t>() );
    
    // wait for 30 days minus 1 hour
    produce_block( fc::hours(29*24 + 23) );
@@ -3543,18 +3543,18 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_claim_rex, eosio_system_tester ) try {
                         unlendrex( alice, init_alice_rex ) );
    BOOST_REQUIRE_EQUAL( true,            get_rex_order(alice)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( init_alice_rex,  get_rex_order(alice)["rex_requested"].as<asset>() );
-   BOOST_REQUIRE_EQUAL( 0,               get_rex_order(alice)["proceeds"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( 0,               get_rex_order(alice)["proceeds"].as<int64_t>() );
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex order has not been closed"),
                         claimrex( alice ) );
    
-   BOOST_REQUIRE_EQUAL( false,           get_rex_order(bob)["is_open"].as<bool>() );
-   BOOST_REQUIRE_EQUAL( init_bob_rex,    get_rex_order(bob)["rex_requested"].as<asset>() );
-   BOOST_REQUIRE      ( 0 <              get_rex_order(bob)["proceeds"].as<asset>().get_amount() );
-   BOOST_REQUIRE_EQUAL( purchase2,       get_rex_order(bob)["unstake_quant"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( false,                  get_rex_order(bob)["is_open"].as<bool>() );
+   BOOST_REQUIRE_EQUAL( init_bob_rex,           get_rex_order(bob)["rex_requested"].as<asset>() );
+   BOOST_REQUIRE      ( 0 <                     get_rex_order(bob)["proceeds"].as<int64_t>() );
+   BOOST_REQUIRE_EQUAL( purchase2.get_amount(), get_rex_order(bob)["unstake_quant"].as<int64_t>() );
    
    BOOST_REQUIRE_EQUAL( false,           get_rex_order(carol)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( init_carol_rex,  get_rex_order(carol)["rex_requested"].as<asset>() );
-   BOOST_REQUIRE      ( 0 <              get_rex_order(carol)["proceeds"].as<asset>().get_amount() );
+   BOOST_REQUIRE      ( 0 <              get_rex_order(carol)["proceeds"].as<int64_t>() );
    
    BOOST_REQUIRE_EQUAL( success(),       claimrex( bob ) );   
    BOOST_REQUIRE_EQUAL( success(),       claimrex( carol ) );

@@ -203,14 +203,14 @@ namespace eosiosystem {
    struct rex_order {
       account_name        owner;
       asset               rex_requested;
-      asset               proceeds;
-      asset               unstake_quant;
+      int64_t             proceeds;
+      int64_t             unstake_quant;
       eosio::time_point   order_time;
       bool                is_open = true;
       
       void close()            { is_open = false; }
-      auto primary_key()const { return owner; }
-      uint64_t by_time()const { return is_open? order_time.elapsed.count(): -order_time.elapsed.count(); }
+      auto primary_key()const { return owner;    }
+      uint64_t by_time()const { return is_open ? order_time.elapsed.count() : -order_time.elapsed.count(); }
    };
 
    typedef eosio::multi_index< N(rexqueue), rex_order,
@@ -343,7 +343,7 @@ namespace eosiosystem {
          static block_timestamp current_block_time();
          void update_ram_supply();
          void runrex( uint16_t max );
-         std::tuple<bool, asset, asset> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
+         std::tuple<bool, int64_t, int64_t> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
 
          //defined in delegate_bandwidth.cpp
          void changebw( account_name from, account_name receiver,
