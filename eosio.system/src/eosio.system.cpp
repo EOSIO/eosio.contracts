@@ -24,24 +24,6 @@ namespace eosiosystem {
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
       _gstate3 = _global3.exists() ? _global3.get() : eosio_global_state3{};
-
-      auto itr = _rammarket.find(S(4,RAMCORE));
-
-      if( itr == _rammarket.end() ) {
-         auto system_token_supply   = eosio::token(N(eosio.token)).get_supply(eosio::symbol_type(system_token_symbol).name()).amount;
-         if( system_token_supply > 0 ) {
-            itr = _rammarket.emplace( _self, [&]( auto& m ) {
-               m.supply.amount = 100000000000000ll;
-               m.supply.symbol = S(4,RAMCORE);
-               m.base.balance.amount = int64_t(_gstate.free_ram());
-               m.base.balance.symbol = S(0,RAM);
-               m.quote.balance.amount = system_token_supply / 1000;
-               m.quote.balance.symbol = CORE_SYMBOL;
-            });
-         }
-      } else {
-         //print( "ram market already created" );
-      }
    }
 
    eosio_global_state system_contract::get_default_parameters() {
@@ -190,12 +172,12 @@ namespace eosiosystem {
          auto it = refunds_table.find( current->high_bidder );
          if ( it != refunds_table.end() ) {
             refunds_table.modify( it, 0, [&](auto& r) {
-                  r.amount += asset( current->high_bid, system_token_symbol );
+                  r.amount += asset( current->high_bid, get_core_symbol() );
                });
          } else {
             refunds_table.emplace( bidder, [&](auto& r) {
                   r.bidder = current->high_bidder;
-                  r.amount = asset( current->high_bid, system_token_symbol );
+                  r.amount = asset( current->high_bid, get_core_symbol() );
                });
          }
 
@@ -286,7 +268,23 @@ namespace eosiosystem {
          });
       }
    }
-
+   
+   void system_contract::init( symbol_type core ) {
+      auto itr = _rammarket.find(S(4,RAMCORE));
+      if ( itr == _rammarket.end() ) {
+         auto system_token_supply   = eosio::token(N(eosio.token)).get_supply(eosio::symbol_type(core).name()).amount;
+         if( system_token_supply > 0 ) {
+            _rammarket.emplace( S(4,RAMCORE), [&]( auto& m ) {
+               m.supply.amount = 100000000000000ll;
+               m.supply.symbol = S(4,RAMCORE);
+               m.base.balance.amount = int64_t(_gstate.free_ram());
+               m.base.balance.symbol = S(0,RAM);
+               m.quote.balance.amount = system_token_supply / 1000;
+               m.quote.balance.symbol = core;
+            });
+         }
+      }
+   }
 } /// eosio.system
 
 
@@ -294,7 +292,7 @@ EOSIO_ABI( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
-     (setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
+     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

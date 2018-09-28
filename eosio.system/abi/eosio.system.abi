@@ -25,6 +25,12 @@
         {"name":"permission", "type":"permission_name"}
       ]
     },{
+      "name": "init",
+      "base": "",
+      "fields": [
+         {"name":"core", "type":"symbol"}
+      ]
+    },{
       "name": "abi_hash",
       "base": "",
       "fields": [
@@ -464,6 +470,10 @@
    "actions": [{
      "name": "newaccount",
      "type": "newaccount",
+     "ricardian_contract": ""
+   },{
+     "name": "init",
+     "type": "init",
      "ricardian_contract": ""
    },{
      "name": "setcode",
