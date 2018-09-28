@@ -268,7 +268,7 @@ namespace eosiosystem {
          });
       }
    }
-   
+
    void system_contract::init( symbol_type core ) {
       auto itr = _rammarket.find(S(4,RAMCORE));
       if ( itr == _rammarket.end() ) {

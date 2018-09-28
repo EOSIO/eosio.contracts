@@ -171,7 +171,7 @@ namespace eosiosystem {
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
-   
+
    class system_contract : public native {
       private:
          voters_table            _voters;
@@ -188,16 +188,16 @@ namespace eosiosystem {
       public:
          system_contract( account_name s );
          ~system_contract();
-         
-         inline uint64_t get_core_symbol() {
-            auto get_sym = [&]() {
+
+         inline symbol_type get_core_symbol() {
+            auto get_sym = [&]() -> symbol_type {
                auto itr = _rammarket.find(S(4,RAMCORE));
                eosio_assert(itr != _rammarket.end(), "rammarket must exist");
                uint64_t sym = 0;
                _rammarket.modify(itr, 0, [&]( auto& m ) { sym = m.quote.balance.symbol; } );
-               return sym;
+               return {sym};
             };
-            static uint64_t sym = get_sym();
+            static auto sym = get_sym();
             return sym;
          }
 

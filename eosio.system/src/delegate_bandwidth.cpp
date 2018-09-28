@@ -200,7 +200,7 @@ namespace eosiosystem {
       // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
       if( fee > 0 ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {account,N(active)},
-            { account, N(eosio.ramfee), asset(fee), std::string("sell ram fee") } );
+            { account, N(eosio.ramfee), asset(fee, get_core_symbol()), std::string("sell ram fee") } );
       }
    }
 
@@ -216,7 +216,7 @@ namespace eosiosystem {
                                    const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
    {
       require_auth( from );
-      eosio_assert( stake_net_delta != asset(0) || stake_cpu_delta != asset(0), "should stake non-zero amount" );
+      eosio_assert( stake_net_delta.amount != 0 || stake_cpu_delta.amount != 0, "should stake non-zero amount" );
       eosio_assert( std::abs( (stake_net_delta + stake_cpu_delta).amount )
                      >= std::max( std::abs( stake_net_delta.amount ), std::abs( stake_cpu_delta.amount ) ),
                     "net and cpu deltas cannot be opposite signs" );
@@ -244,9 +244,9 @@ namespace eosiosystem {
                   dbo.cpu_weight    += stake_cpu_delta;
                });
          }
-         eosio_assert( asset(0) <= itr->net_weight, "insufficient staked net bandwidth" );
-         eosio_assert( asset(0) <= itr->cpu_weight, "insufficient staked cpu bandwidth" );
-         if ( itr->net_weight == asset(0) && itr->cpu_weight == asset(0) ) {
+         eosio_assert( 0 <= itr->net_weight.amount, "insufficient staked net bandwidth" );
+         eosio_assert( 0 <= itr->cpu_weight.amount, "insufficient staked cpu bandwidth" );
+         if ( itr->net_weight.amount == 0 && itr->cpu_weight.amount == 0 ) {
             del_tbl.erase( itr );
          }
       } // itr can be invalid, should go out of scope
@@ -267,15 +267,15 @@ namespace eosiosystem {
                   tot.cpu_weight    += stake_cpu_delta;
                });
          }
-         eosio_assert( asset(0) <= tot_itr->net_weight, "insufficient staked total net bandwidth" );
-         eosio_assert( asset(0) <= tot_itr->cpu_weight, "insufficient staked total cpu bandwidth" );
+         eosio_assert( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
+         eosio_assert( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
 
          int64_t ram_bytes, net, cpu;
          get_resource_limits( receiver, &ram_bytes, &net, &cpu );
 
          set_resource_limits( receiver, std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ), tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
 
-         if ( tot_itr->net_weight == asset(0) && tot_itr->cpu_weight == asset(0)  && tot_itr->ram_bytes == 0 ) {
+         if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0  && tot_itr->ram_bytes == 0 ) {
             totals_tbl.erase( tot_itr );
          }
       } // tot_itr can be invalid, should go out of scope
@@ -299,44 +299,44 @@ namespace eosiosystem {
          if( is_delegating_to_self || is_undelegating ) {
             if ( req != refunds_tbl.end() ) { //need to update refund
                refunds_tbl.modify( req, 0, [&]( refund_request& r ) {
-                  if ( net_balance < asset(0) || cpu_balance < asset(0) ) {
+                  if ( net_balance.amount < 0 || cpu_balance.amount < 0 ) {
                      r.request_time = now();
                   }
                   r.net_amount -= net_balance;
-                  if ( r.net_amount < asset(0) ) {
+                  if ( r.net_amount.amount < 0 ) {
                      net_balance = -r.net_amount;
-                     r.net_amount = asset(0);
+                     r.net_amount.amount = 0;
                   } else {
-                     net_balance = asset(0);
+                     net_balance.amount = 0;
                   }
                   r.cpu_amount -= cpu_balance;
-                  if ( r.cpu_amount < asset(0) ){
+                  if ( r.cpu_amount.amount < 0 ){
                      cpu_balance = -r.cpu_amount;
-                     r.cpu_amount = asset(0);
+                     r.cpu_amount.amount = 0;
                   } else {
-                     cpu_balance = asset(0);
+                     cpu_balance.amount = 0;
                   }
                });
 
-               eosio_assert( asset(0) <= req->net_amount, "negative net refund amount" ); //should never happen
-               eosio_assert( asset(0) <= req->cpu_amount, "negative cpu refund amount" ); //should never happen
+               eosio_assert( 0 <= req->net_amount.amount, "negative net refund amount" ); //should never happen
+               eosio_assert( 0 <= req->cpu_amount.amount, "negative cpu refund amount" ); //should never happen
 
-               if ( req->net_amount == asset(0) && req->cpu_amount == asset(0) ) {
+               if ( req->net_amount.amount == 0 && req->cpu_amount.amount == 0 ) {
                   refunds_tbl.erase( req );
                   need_deferred_trx = false;
                } else {
                   need_deferred_trx = true;
                }
-            } else if ( net_balance < asset(0) || cpu_balance < asset(0) ) { //need to create refund
+            } else if ( net_balance.amount < 0 || cpu_balance.amount < 0 ) { //need to create refund
                refunds_tbl.emplace( from, [&]( refund_request& r ) {
                   r.owner = from;
-                  if ( net_balance < asset(0) ) {
+                  if ( net_balance.amount < 0 ) {
                      r.net_amount = -net_balance;
-                     net_balance = asset(0);
+                     net_balance.amount = 0;
                   } // else r.net_amount = 0 by default constructor
-                  if ( cpu_balance < asset(0) ) {
+                  if ( cpu_balance.amount < 0 ) {
                      r.cpu_amount = -cpu_balance;
-                     cpu_balance = asset(0);
+                     cpu_balance.amount = 0;
                   } // else r.cpu_amount = 0 by default constructor
                   r.request_time = now();
                });
@@ -355,7 +355,7 @@ namespace eosiosystem {
          }
 
          auto transfer_amount = net_balance + cpu_balance;
-         if ( asset(0) < transfer_amount ) {
+         if ( 0 < transfer_amount.amount ) {
             INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {source_stake_from, N(active)},
                { source_stake_from, N(eosio.stake), asset(transfer_amount), std::string("stake bandwidth") } );
          }
@@ -390,19 +390,22 @@ namespace eosiosystem {
                                      asset stake_net_quantity,
                                      asset stake_cpu_quantity, bool transfer )
    {
-      eosio_assert( stake_cpu_quantity >= asset(0), "must stake a positive amount" );
-      eosio_assert( stake_net_quantity >= asset(0), "must stake a positive amount" );
-      eosio_assert( stake_net_quantity + stake_cpu_quantity > asset(0), "must stake a positive amount" );
+      asset zero_asset( 0, get_core_symbol() );
+      eosio_assert( stake_cpu_quantity >= zero_asset, "must stake a positive amount" );
+      eosio_assert( stake_net_quantity >= zero_asset, "must stake a positive amount" );
+      eosio_assert( stake_net_quantity.amount + stake_cpu_quantity.amount > 0, "must stake a positive amount" );
       eosio_assert( !transfer || from != receiver, "cannot use transfer flag if delegating to self" );
+
       changebw( from, receiver, stake_net_quantity, stake_cpu_quantity, transfer);
    } // delegatebw
 
    void system_contract::undelegatebw( account_name from, account_name receiver,
                                        asset unstake_net_quantity, asset unstake_cpu_quantity )
    {
-      eosio_assert( asset() <= unstake_cpu_quantity, "must unstake a positive amount" );
-      eosio_assert( asset() <= unstake_net_quantity, "must unstake a positive amount" );
-      eosio_assert( asset() < unstake_cpu_quantity + unstake_net_quantity, "must unstake a positive amount" );
+      asset zero_asset( 0, get_core_symbol() );
+      eosio_assert( unstake_cpu_quantity >= zero_asset, "must unstake a positive amount" );
+      eosio_assert( unstake_net_quantity >= zero_asset, "must unstake a positive amount" );
+      eosio_assert( unstake_cpu_quantity.amount + unstake_net_quantity.amount > 0, "must unstake a positive amount" );
       eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
                     "cannot undelegate bandwidth until the chain is activated (at least 15% of all tokens participate in voting)" );
 
