@@ -284,6 +284,8 @@ namespace eosiosystem {
           * after 30 days the rented SYS delegation of CPU or NET will expire.
           */
          void rent( account_name from, account_name receiver, asset payment, bool cpu, bool auto_renew );
+         
+         void fundrexloan( account_name from, uint64_t loan_num, asset payment, bool cpu );
 
          /**
           *  Decreases the total tokens delegated by from to receiver and/or

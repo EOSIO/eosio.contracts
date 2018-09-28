@@ -285,6 +285,15 @@
          {"name":"auto_renew", "type":"bool"}
       ]
     },{
+      "name": "fundrexloan",
+      "base": "",
+      "fields": [
+         {"name":"from",       "type":"account_name"},
+         {"name":"loan_num",   "type":"uint64"},
+         {"name":"payment",    "type":"asset"},
+         {"name":"cpu",        "type":"bool"}
+      ]
+    },{
       "name": "user_resources",
       "base": "",
       "fields": [
@@ -619,6 +628,10 @@
    },{
       "name": "rent",
       "type": "rent",
+      "ricardian_contract": ""
+   },{
+      "name": "fundrexloan",
+      "type": "fundrexloan",
       "ricardian_contract": ""
    },{
       "name": "regproducer",

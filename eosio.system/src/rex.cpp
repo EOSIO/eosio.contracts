@@ -214,6 +214,36 @@ namespace eosiosystem {
       }
    }
 
+   void system_contract::fundrexloan( account_name from, uint64_t loan_num, asset payment, bool cpu ) {
+
+      require_auth( from );
+
+      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
+                                                    { from, N(eosio.rex), payment, string("fund ") + (cpu ? "CPU loan" : "NET loan") } );
+      // TODO: refactor and remove code duplication
+      if( cpu ) {
+         rex_cpu_loan_table cpu_loans( _self, _self );
+         auto itr = cpu_loans.find( loan_num );
+         eosio_assert( itr != cpu_loans.end(), "loan not found" );
+         eosio_assert( itr->from, "actor has to be loan creator" );
+         eosio_assert( itr->auto_renew, "loan must be set as auto-renew" );
+         eosio_assert( itr->expiration < current_time_point(), "loan has already expired" );
+         cpu_loans.modify( itr, 0, [&]( auto& loan ) {
+            loan.balance.amount += payment.amount;
+         });
+      } else {
+         rex_net_loan_table net_loans( _self, _self );
+         auto itr = net_loans.find( loan_num );
+         eosio_assert( itr != net_loans.end(), "loan not found" );
+         eosio_assert( itr->from, "actor has to be loan creator" );
+         eosio_assert( itr->auto_renew, "loan must be set as auto-renew" );
+         eosio_assert( itr->expiration < current_time_point(), "loan has already expired" );
+         net_loans.modify( itr, 0, [&]( auto& loan ) {
+            loan.balance.amount += payment.amount;
+         });
+      }
+   }
+
    /**
     * Perform maitenance operations on expired rex
     */
