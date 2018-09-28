@@ -196,17 +196,25 @@ namespace eosiosystem {
    typedef eosio::multi_index< N(rexbal), rex_balance > rex_balance_table;
 
    struct rex_loan {
+      account_name        from;
       account_name        receiver;
+      asset               loan_payment;
       asset               total_staked;
       uint64_t            loan_num;
-      
       eosio::time_point   expiration;
+      
+      bool                auto_renew = false;
+      asset               balance;
 
-      uint64_t primary_key()const { return loan_num; }
+      uint64_t primary_key()const { return loan_num;                   }
+      uint64_t by_expr()const     { return expiration.elapsed.count(); }
    };
 
-   typedef eosio::multi_index< N(cpuloan), rex_loan> rex_cpu_loan_table;
-   typedef eosio::multi_index< N(cpunet), rex_loan>  rex_net_loan_table;
+   typedef eosio::multi_index< N(cpuloan), rex_loan,
+                               indexed_by<N(byexpr), const_mem_fun<rex_loan, uint64_t, &rex_loan::by_expr>>> rex_cpu_loan_table;
+
+   typedef eosio::multi_index< N(netloan), rex_loan,
+                               indexed_by<N(byexpr), const_mem_fun<rex_loan, uint64_t, &rex_loan::by_expr>>> rex_net_loan_table;
 
    struct rex_order {
       account_name        owner;
@@ -275,7 +283,7 @@ namespace eosiosystem {
           * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
           * after 30 days the rented SYS delegation of CPU or NET will expire.
           */
-         void rent( account_name from, account_name receiver, asset payment, bool cpu  );
+         void rent( account_name from, account_name receiver, asset payment, bool cpu, bool auto_renew );
 
          /**
           *  Decreases the total tokens delegated by from to receiver and/or

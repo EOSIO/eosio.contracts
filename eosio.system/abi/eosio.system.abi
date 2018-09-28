@@ -254,9 +254,14 @@
       "name": "rex_loan",
       "base": "",
       "fields": [
-         {"name":"receiver",    "type":"account_name"},
-         {"name":"total_stake", "type":"asset"},
-         {"name":"loan_num",    "type":"uint64"}
+         {"name":"from",         "type":"account_name"},
+         {"name":"receiver",     "type":"account_name"},
+         {"name":"loan_payment", "type":"asset"},
+         {"name":"total_stake",  "type":"asset"},
+         {"name":"loan_num",     "type":"uint64"},
+         {"name":"expiration",   "type":"time_point"},
+         {"name":"auto_renew",   "type":"bool"},
+         {"name":"balance",      "type":"asset"}
       ]
     },{
       "name": "rex_order",
@@ -273,10 +278,11 @@
       "name": "rent",
       "base": "",
       "fields": [
-         {"name":"from",     "type":"account_name"},
-         {"name":"receiver", "type":"account_name"},
-         {"name":"payment",  "type":"asset"},
-         {"name":"cpu",      "type":"bool"}
+         {"name":"from",       "type":"account_name"},
+         {"name":"receiver",   "type":"account_name"},
+         {"name":"payment",    "type":"asset"},
+         {"name":"cpu",        "type":"bool"},
+         {"name":"auto_renew", "type":"bool"}
       ]
     },{
       "name": "user_resources",

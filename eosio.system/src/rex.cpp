@@ -161,7 +161,7 @@ namespace eosiosystem {
     * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
     * after 30 days the rented SYS delegation of CPU or NET will expire.
     */
-   void system_contract::rent( account_name from, account_name receiver, asset payment, bool cpu  ) {
+   void system_contract::rent( account_name from, account_name receiver, asset payment, bool cpu, bool auto_renew ) {
       require_auth( from );
 
       runrex(2);
@@ -185,20 +185,30 @@ namespace eosiosystem {
          rex_cpu_loan_table cpu_loans(_self,_self);
 
          cpu_loans.emplace( from, [&]( auto& c ) {
+            c.from         = from;
             c.receiver     = receiver;
+            c.loan_payment = payment;
             c.total_staked = asset( rented_tokens, CORE_SYMBOL );
             c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
             c.loan_num     = itr->loan_num;
+            
+            c.auto_renew   = auto_renew;
+            c.balance      = asset( 0, CORE_SYMBOL );
          });
          update_resource_limits( receiver, rented_tokens, 0 );
       } else {
          rex_net_loan_table net_loans(_self,_self);
          
          net_loans.emplace( from, [&]( auto& c ) {
+            c.from         = from;
             c.receiver     = receiver;
+            c.loan_payment = payment;
             c.total_staked = asset( rented_tokens, CORE_SYMBOL );
             c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
             c.loan_num     = itr->loan_num;
+            
+            c.auto_renew   = auto_renew;
+            c.balance      = asset( 0, CORE_SYMBOL );
          });
          update_resource_limits( receiver, 0, rented_tokens );
       }
@@ -219,26 +229,107 @@ namespace eosiosystem {
          });
       };
 
-      rex_cpu_loan_table cpu_loans( _self, _self );
-      for( uint16_t i = 0; i < max; ++i ) {
-         auto itr = cpu_loans.begin();
-         if( itr == cpu_loans.end() ) break;
-         if( itr->expiration.elapsed.count() > current_time() ) break;
-
-         update_resource_limits( itr->receiver, -itr->total_staked.amount, 0 );
-         unrent( itr->total_staked.amount );
-         cpu_loans.erase( itr );
+      // TODO: refactor and remove code duplication
+      {
+         rex_cpu_loan_table cpu_loans( _self, _self );
+         auto cpu_idx = cpu_loans.get_index<N(byexpr)>();
+         bool delete_loan = false;
+         for( uint16_t i = 0; i < max; ++i ) {
+            auto itr = cpu_idx.begin();                                                                                                                                                                                                                                        
+            if( itr == cpu_idx.end() ) break;
+            if( itr->expiration.elapsed.count() > current_time() ) break;
+            
+            // update rex totals to account for closing the loan
+            unrent( itr->total_staked.amount );
+            
+            int64_t delta_stake = 0;
+            if( itr->auto_renew && itr->loan_payment <= itr->balance ) {
+               
+               int64_t rented_tokens = 0;
+               _rextable.modify( rexi, 0, [&]( auto& rt ) {
+                  rented_tokens = bancor_convert( rt.total_rent.amount,
+                                                  rt.total_unlent.amount,
+                                                  itr->loan_payment.amount );
+                  rt.total_lent.amount    += rented_tokens;
+                  rt.total_unlent.amount  += itr->loan_payment.amount;
+                  rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+               });
+               
+               {
+                  auto prim_itr = cpu_loans.find( itr->loan_num );
+                  cpu_loans.modify ( prim_itr, 0, [&]( auto loan ) {
+                     delta_stake              = rented_tokens - loan.total_staked.amount;
+                     loan.total_staked.amount = rented_tokens;
+                     loan.expiration         += eosio::days(30);
+                     loan.balance            -= itr->loan_payment;
+                  });
+               }
+               
+            } else {
+               delete_loan = true;
+               delta_stake = -( itr->total_staked.amount );
+               if( itr->auto_renew ) {
+                  // refund "from" account
+               }
+            }
+            
+            if( delta_stake != 0 )
+               update_resource_limits( itr->receiver, delta_stake, 0 );
+            if( delete_loan )
+               cpu_idx.erase( itr );
+         }
       }
 
-      rex_net_loan_table net_loans( _self, _self );
-      for( uint16_t i = 0; i < max; ++i ) {
-         auto itr = net_loans.begin();
-         if( itr == net_loans.end() ) break;
-         if( itr->expiration.elapsed.count() > current_time() ) break;
+      // TODO: refactor and remove code duplication
+      {
+         rex_net_loan_table net_loans( _self, _self );
+         auto net_idx = net_loans.get_index<N(byexpr)>();
+         bool delete_loan = false;
+         for( uint16_t i = 0; i < max; ++i ) {
+            auto itr = net_idx.begin();
+            if( itr == net_idx.end() ) break;
+            if( itr->expiration.elapsed.count() > current_time() ) break;
 
-         update_resource_limits( itr->receiver, 0, -itr->total_staked.amount );
-         unrent( itr->total_staked.amount );
-         net_loans.erase( itr );
+            // update rex totals to account for closing the loan
+            unrent( itr->total_staked.amount );
+
+            int64_t delta_stake = 0;
+            if( itr->auto_renew && itr->loan_payment <= itr->balance ) {
+
+               int64_t rented_tokens = 0;
+               _rextable.modify( rexi, 0, [&]( auto& rt ) {
+                  rented_tokens = bancor_convert( rt.total_rent.amount,
+                                                  rt.total_unlent.amount,
+                                                  itr->loan_payment.amount );
+                  rt.total_lent.amount    += rented_tokens;
+                  rt.total_unlent.amount  += itr->loan_payment.amount;
+                  rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+               });
+
+               {
+                  auto prim_itr = net_loans.find( itr->loan_num );
+                  net_loans.modify ( prim_itr, 0, [&]( auto loan ) {
+                     delta_stake              = rented_tokens - loan.total_staked.amount;
+                     loan.total_staked.amount = rented_tokens;
+                     loan.expiration         += eosio::days(30);
+                     loan.balance            -= itr->loan_payment;
+                  });
+               }
+
+            } else {
+               delete_loan = true;
+               delta_stake = -( itr->total_staked.amount );
+               if( itr->auto_renew && itr->balance.amount > 0 ) {
+                  // refund "from" account
+               }
+            }
+
+            if( delta_stake != 0 )
+               update_resource_limits( itr->receiver, 0, delta_stake );
+
+            if( delete_loan )
+               net_idx.erase( itr );
+         }
       }
 
       rex_order_table rexorders( _self, _self );
