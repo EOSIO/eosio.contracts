@@ -15,12 +15,7 @@ if(EOSIO_ROOT STREQUAL "" OR NOT EOSIO_ROOT)
    set(EOSIO_ROOT "/usr/local/eosio")
 endif()
 
-if(EOSIO_CDT_ROOT STREQUAL "" OR NOT EOSIO__ROOT)
-   set(EOSIO_CDT_ROOT "/usr/local/eosio.cdt")
-endif()
-
-list(APPEND CMAKE_MODULE_PATH ${EOSIO_CDT_ROOT}/lib/cmake)
-include(EosioWasmToolchain)
+find_package(eosio.cdt)
 
 ### Check the version of eosio.cdt
 string(FIND "${EOSIO_CDT_VERSION}" "${EOSIO_CDT_DEPENDENCY}" output)
