@@ -275,13 +275,21 @@
          {"name":"is_open",       "type":"bool"}
       ]
     },{
-      "name": "rent",
+      "name": "rentcpu",
       "base": "",
       "fields": [
          {"name":"from",       "type":"account_name"},
          {"name":"receiver",   "type":"account_name"},
          {"name":"payment",    "type":"asset"},
-         {"name":"cpu",        "type":"bool"},
+         {"name":"auto_renew", "type":"bool"}
+      ]
+    },{
+      "name": "rentnet",
+      "base": "",
+      "fields": [
+         {"name":"from",       "type":"account_name"},
+         {"name":"receiver",   "type":"account_name"},
+         {"name":"payment",    "type":"asset"},
          {"name":"auto_renew", "type":"bool"}
       ]
     },{
@@ -626,8 +634,12 @@
       "type": "claimrex",
       "ricardian_contract": ""
    },{
-      "name": "rent",
-      "type": "rent",
+      "name": "rentcpu",
+      "type": "rentcpu",
+      "ricardian_contract": ""
+   },{
+      "name": "rentnet",
+      "type": "rentnet",
       "ricardian_contract": ""
    },{
       "name": "fundrexloan",

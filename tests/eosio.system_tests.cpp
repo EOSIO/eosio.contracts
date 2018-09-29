@@ -3454,7 +3454,7 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
    }
 
    // bob tries to rent rex
-   BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex system not initialized yet"), rent( bob, carol, core_from_string("5.0000"), true ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex system not initialized yet"), rentcpu( bob, carol, core_from_string("5.0000") ) );
    // alice lends rex
    BOOST_REQUIRE_EQUAL( success(), lendrex( alice, core_from_string("65.0000") ) );
    BOOST_REQUIRE_EQUAL( init_balance - core_from_string("65.0000"), get_balance(alice) );
@@ -3469,7 +3469,7 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
    {
       // bob rents cpu for carol
       const asset fee = core_from_string("17.0000");
-      BOOST_REQUIRE_EQUAL( success(),          rent( bob, carol, fee, true ) );
+      BOOST_REQUIRE_EQUAL( success(),          rentcpu( bob, carol, fee ) );
       BOOST_REQUIRE_EQUAL( init_balance - fee, get_balance(bob) );
       rex_pool = get_rex_pool();
       BOOST_REQUIRE_EQUAL( init_tot_lendable + fee, rex_pool["total_lendable"].as<asset>() ); // 65 + 17
@@ -3522,7 +3522,7 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
       int64_t expected_net = bancor_convert( rex_pool["total_rent"].as<asset>().get_amount(),
                                              rex_pool["total_unlent"].as<asset>().get_amount(),
                                              fee.get_amount() );
-      BOOST_REQUIRE_EQUAL( success(),    rent( emily, emily, fee, false ) );
+      BOOST_REQUIRE_EQUAL( success(),    rentnet( emily, emily, fee ) );
       BOOST_REQUIRE_EQUAL( expected_net, get_net_limit( emily ) - init_net.get_amount() );
    }
 
@@ -3561,7 +3561,7 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_claim_rex, eosio_system_tester ) try {
    auto init_bob_rex   = get_rex_balance(bob);
    auto init_carol_rex = get_rex_balance(carol);
    
-   BOOST_REQUIRE_EQUAL( success(), rent( frank, frank, core_from_string("1100.0000"), true ) );
+   BOOST_REQUIRE_EQUAL( success(), rentcpu( frank, frank, core_from_string("1100.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), unlendrex( alice, asset( (3*get_rex_balance(alice).get_amount())/4, symbol(SY(4,REX)) ) ) );
 
    BOOST_REQUIRE_EQUAL( init_alice_rex.get_amount() / 4, get_rex_balance(alice).get_amount() );
@@ -3601,7 +3601,7 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_claim_rex, eosio_system_tester ) try {
    // alices's order is still open
    // an action is needed to trigger queue processing
    produce_block( fc::hours(2) );
-   BOOST_REQUIRE_EQUAL( success(),       rent( frank, frank, core_from_string("0.0001"), true ) );
+   BOOST_REQUIRE_EQUAL( success(),       rentcpu( frank, frank, core_from_string("0.0001") ) );
    
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("an unlendrex request has already been scheduled"),
                         unlendrex( alice, init_alice_rex ) );

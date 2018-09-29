@@ -287,12 +287,20 @@ public:
       return push_action( name(owner), N(claimrex), mvo()("owner", owner) );
    }
 
-   action_result rent( const account_name& from, const account_name& receiver, const asset& payment, bool cpu, bool auto_renew = false ) {
-      return push_action( name(from), N(rent), mvo()
-                          ("from",  from)
-                          ("receiver", receiver)
-                          ("payment", payment)
-                          ("cpu", cpu)
+   action_result rentcpu( const account_name& from, const account_name& receiver, const asset& payment, bool auto_renew = false ) {
+      return push_action( name(from), N(rentcpu), mvo()
+                          ("from",       from)
+                          ("receiver",   receiver)
+                          ("payment",    payment)
+                          ("auto_renew", auto_renew)
+      );
+   }
+
+   action_result rentnet( const account_name& from, const account_name& receiver, const asset& payment, bool auto_renew = false ) {
+      return push_action( name(from), N(rentnet), mvo()
+                          ("from",       from)
+                          ("receiver",   receiver)
+                          ("payment",    payment)
                           ("auto_renew", auto_renew)
       );
    }

@@ -161,13 +161,14 @@ namespace eosiosystem {
     * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
     * after 30 days the rented SYS delegation of CPU or NET will expire.
     */
-   void system_contract::rent( account_name from, account_name receiver, asset payment, bool cpu, bool auto_renew ) {
+   void system_contract::rentcpu( account_name from, account_name receiver, asset payment, bool auto_renew ) {
+
       require_auth( from );
 
       runrex(2);
 
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
-                                                    { from, N(eosio.rex), payment, string("rent ") + (cpu ? "CPU" : "NET") } );
+                                                    { from, N(eosio.rex), payment, string("rent CPU") } );
 
       auto itr = _rextable.begin();
       eosio_assert( itr != _rextable.end(), "rex system not initialized yet" );
@@ -181,38 +182,61 @@ namespace eosiosystem {
          rt.loan_num++;
       });
 
-      if( cpu ) {
-         rex_cpu_loan_table cpu_loans(_self,_self);
-
-         cpu_loans.emplace( from, [&]( auto& c ) {
-            c.from         = from;
-            c.receiver     = receiver;
-            c.loan_payment = payment;
-            c.total_staked = asset( rented_tokens, CORE_SYMBOL );
-            c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
-            c.loan_num     = itr->loan_num;
-            
-            c.auto_renew   = auto_renew;
-            c.balance      = asset( 0, CORE_SYMBOL );
-         });
-         update_resource_limits( receiver, rented_tokens, 0 );
-      } else {
-         rex_net_loan_table net_loans(_self,_self);
+      rex_cpu_loan_table cpu_loans(_self,_self);
+      
+      cpu_loans.emplace( from, [&]( auto& c ) {
+         c.from         = from;
+         c.receiver     = receiver;
+         c.loan_payment = payment;
+         c.total_staked = asset( rented_tokens, CORE_SYMBOL );
+         c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
+         c.loan_num     = itr->loan_num;
          
-         net_loans.emplace( from, [&]( auto& c ) {
-            c.from         = from;
-            c.receiver     = receiver;
-            c.loan_payment = payment;
-            c.total_staked = asset( rented_tokens, CORE_SYMBOL );
-            c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
-            c.loan_num     = itr->loan_num;
-            
-            c.auto_renew   = auto_renew;
-            c.balance      = asset( 0, CORE_SYMBOL );
-         });
-         update_resource_limits( receiver, 0, rented_tokens );
-      }
+         c.auto_renew   = auto_renew;
+         c.balance      = asset( 0, CORE_SYMBOL );
+      });
+
+      update_resource_limits( receiver, rented_tokens, 0 );
    }
+   
+   void system_contract::rentnet( account_name from, account_name receiver, asset payment, bool auto_renew ) {
+
+      require_auth( from );
+
+      runrex(2);
+
+      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
+                                                    { from, N(eosio.rex), payment, string("rent NET") } );
+
+      auto itr = _rextable.begin();
+      eosio_assert( itr != _rextable.end(), "rex system not initialized yet" );
+
+      int64_t rented_tokens = 0;
+      _rextable.modify( itr, 0, [&]( auto& rt ) {
+         rented_tokens = bancor_convert( rt.total_rent.amount, rt.total_unlent.amount, payment.amount );
+         rt.total_lent.amount    += rented_tokens;
+         rt.total_unlent.amount  += payment.amount;
+         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+         rt.loan_num++;
+      });
+
+      rex_net_loan_table net_loans(_self,_self);
+
+      net_loans.emplace( from, [&]( auto& c ) {
+         c.from         = from;
+         c.receiver     = receiver;
+         c.loan_payment = payment;
+         c.total_staked = asset( rented_tokens, CORE_SYMBOL );
+         c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
+         c.loan_num     = itr->loan_num;
+         
+         c.auto_renew   = auto_renew;
+         c.balance      = asset( 0, CORE_SYMBOL );
+      });
+
+      update_resource_limits( receiver, 0, rented_tokens );
+   }
+
 
    void system_contract::fundrexloan( account_name from, uint64_t loan_num, asset payment, bool cpu ) {
 
