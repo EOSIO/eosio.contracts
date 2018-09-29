@@ -216,6 +216,15 @@ namespace eosiosystem {
    typedef eosio::multi_index< N(netloan), rex_loan,
                                indexed_by<N(byexpr), const_mem_fun<rex_loan, uint64_t, &rex_loan::by_expr>>> rex_net_loan_table;
 
+   struct loan_refund {
+      account_name  owner;
+      asset         balance;
+         
+      uint64_t primary_key()const { return owner; }
+   };
+
+   typedef eosio::multi_index< N(loanrefunds), loan_refund > loan_refund_table;
+
    struct rex_order {
       account_name        owner;
       asset               rex_requested;
@@ -284,9 +293,12 @@ namespace eosiosystem {
           * after 30 days the rented SYS delegation of CPU or NET will expire.
           */
          void rentcpu( account_name from, account_name receiver, asset payment, bool auto_renew );
+
          void rentnet( account_name from, account_name receiver, asset payment, bool auto_renew );
          
          void fundrexloan( account_name from, uint64_t loan_num, asset payment, bool cpu );
+
+         void claimrefund( account_name owner );
 
          /**
           *  Decreases the total tokens delegated by from to receiver and/or

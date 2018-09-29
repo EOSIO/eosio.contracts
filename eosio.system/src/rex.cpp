@@ -268,6 +268,19 @@ namespace eosiosystem {
       }
    }
 
+   void system_contract::claimrefund( account_name owner ) {
+      
+      require_auth( owner );
+      
+      loan_refund_table loan_refunds( _self, _self );      
+      auto itr = loan_refunds.find( owner );
+      eosio_assert( itr != loan_refunds.end(), "no refund to be claimed" );
+      if( itr->balance.amount > 0 )
+         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { N(eosio.rex), N(active) },
+                                                       { N(eosio.rex), owner, itr->balance, "claim REX loan refund" } );
+      loan_refunds.erase( itr );
+   }
+
    /**
     * Perform maitenance operations on expired rex
     */
@@ -322,8 +335,20 @@ namespace eosiosystem {
             } else {
                delete_loan = true;
                delta_stake = -( itr->total_staked.amount );
-               if( itr->auto_renew ) {
-                  // refund "from" account
+               // refund "from" account if the closed loan balance is positive
+               if( itr->auto_renew && itr->balance.amount > 0 ) {
+                  loan_refund_table loan_refunds( _self, _self );
+                  auto ref_itr = loan_refunds.find( itr->from );
+                  if( ref_itr == loan_refunds.end() ) {
+                     loan_refunds.emplace( itr->from, [&]( auto& ref ) {
+                        ref.owner   = itr->from;
+                        ref.balance = itr->balance;
+                     });
+                  } else {
+                     loan_refunds.modify( ref_itr, itr->from, [&]( auto& ref ) {
+                        ref.balance.amount += itr->balance.amount;
+                     });
+                  }
                }
             }
             
@@ -373,8 +398,20 @@ namespace eosiosystem {
             } else {
                delete_loan = true;
                delta_stake = -( itr->total_staked.amount );
+               // refund "from" account if the closed loan balance is positive
                if( itr->auto_renew && itr->balance.amount > 0 ) {
-                  // refund "from" account
+                  loan_refund_table loan_refunds( _self, _self );
+                  auto ref_itr = loan_refunds.find( itr->from );
+                  if( ref_itr == loan_refunds.end() ) {
+                     loan_refunds.emplace( itr->from, [&]( auto& ref ) { 
+                        ref.owner   = itr->from;
+                        ref.balance = itr->balance;
+                     });
+                  } else {
+                     loan_refunds.modify( ref_itr, itr->from, [&]( auto& ref ) {
+                        ref.balance.amount += itr->balance.amount;
+                     });
+                  }
                }
             }
 

@@ -264,6 +264,13 @@
          {"name":"balance",      "type":"asset"}
       ]
     },{
+      "name": "loan_refund",
+      "base": "",
+      "fields": [
+         {"name":"owner",   "type":"account_name"},
+         {"name":"balance", "type":"asset"}
+      ]
+    },{
       "name": "rex_order",
       "base": "",
       "fields": [
@@ -300,6 +307,12 @@
          {"name":"loan_num",   "type":"uint64"},
          {"name":"payment",    "type":"asset"},
          {"name":"cpu",        "type":"bool"}
+      ]
+    },{
+      "name": "claimrefund",
+      "base": "",
+      "fields": [
+         {"name":"owner", "type":"account_name"}
       ]
     },{
       "name": "user_resources",
@@ -644,6 +657,10 @@
    },{
       "name": "fundrexloan",
       "type": "fundrexloan",
+      "ricardian_contract": ""
+   },{
+      "name": "claimrefund",
+      "type": "claimrefund",
       "ricardian_contract": ""
    },{
       "name": "regproducer",
