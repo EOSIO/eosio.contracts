@@ -298,7 +298,7 @@ EOSIO_ABI( eosiosystem::system_contract,
      // eosio.system.cpp
      (setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
      // rex.cpp
-     (lendrex)(unlendrex)(cnclrexorder)(claimrex)(rentcpu)(rentnet)
+     (lendrex)(unlendrex)(cnclrexorder)(claimrex)(rentcpu)(rentnet)(fundrexloan)(claimrefund)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp
