@@ -33,13 +33,13 @@ namespace eosio {
                         asset        quantity,
                         string       memo );
 
-         void open( account_name owner, symbol_type symbol, account_name payer );
+         void open( account_name owner, symbol symbol, account_name payer );
 
-         void close( account_name owner, symbol_type symbol );
+         void close( account_name owner, symbol symbol );
 
-         inline asset get_supply( symbol_name sym )const;
+         inline asset get_supply( symbol sym )const;
 
-         inline asset get_balance( account_name owner, symbol_name sym )const;
+         inline asset get_balance( account_name owner, symbol sym )const;
 
       private:
          struct account {
@@ -71,14 +71,14 @@ namespace eosio {
          };
    };
 
-   asset token::get_supply( symbol_name sym )const
+   asset token::get_supply( symbol sym )const
    {
       stats statstable( _self, sym );
       const auto& st = statstable.get( sym );
       return st.supply;
    }
 
-   asset token::get_balance( account_name owner, symbol_name sym )const
+   asset token::get_balance( account_name owner, symbol sym )const
    {
       accounts accountstable( _self, owner );
       const auto& ac = accountstable.get( sym );

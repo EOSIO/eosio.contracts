@@ -136,7 +136,7 @@ void token::add_balance( account_name owner, asset value, account_name ram_payer
    }
 }
 
-void token::open( account_name owner, symbol_type symbol, account_name ram_payer )
+void token::open( account_name owner, symbol symbol, account_name ram_payer )
 {
    require_auth( ram_payer );
    accounts acnts( _self, owner );
@@ -148,7 +148,7 @@ void token::open( account_name owner, symbol_type symbol, account_name ram_payer
    }
 }
 
-void token::close( account_name owner, symbol_type symbol )
+void token::close( account_name owner, symbol symbol )
 {
    require_auth( owner );
    accounts acnts( _self, owner );

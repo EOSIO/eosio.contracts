@@ -4,7 +4,7 @@
 
 namespace eosiosystem {
    using eosio::asset;
-   using eosio::symbol_type;
+   using eosio::symbol;
 
    typedef double real_type;
 
@@ -30,7 +30,7 @@ namespace eosiosystem {
 
       asset convert_to_exchange( connector& c, asset in ); 
       asset convert_from_exchange( connector& c, asset in );
-      asset convert( asset from, symbol_type to );
+      asset convert( asset from, symbol to );
 
       EOSLIB_SERIALIZE( exchange_state, (supply)(base)(quote) )
    };

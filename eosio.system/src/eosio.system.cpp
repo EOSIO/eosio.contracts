@@ -25,18 +25,18 @@ namespace eosiosystem {
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
       _gstate3 = _global3.exists() ? _global3.get() : eosio_global_state3{};
 
-      auto itr = _rammarket.find(S(4,RAMCORE));
+      auto itr = _rammarket.find(symbol(4, "RAMCORE"));
 
       if( itr == _rammarket.end() ) {
-         auto system_token_supply   = eosio::token(N(eosio.token)).get_supply(eosio::symbol_type(system_token_symbol).name()).amount;
+         auto system_token_supply   = eosio::token(N(eosio.token)).get_supply(eosio::symbol(system_token_symbol)).amount;
          if( system_token_supply > 0 ) {
             itr = _rammarket.emplace( _self, [&]( auto& m ) {
                m.supply.amount = 100000000000000ll;
-               m.supply.symbol = S(4,RAMCORE);
+               m.supply.symbol = symbol(4, "RAMCORE");
                m.base.balance.amount = int64_t(_gstate.free_ram());
-               m.base.balance.symbol = S(0,RAM);
+               m.base.balance.symbol = symbol(0, "RAM");
                m.quote.balance.amount = system_token_supply / 1000;
-               m.quote.balance.symbol = CORE_SYMBOL;
+               m.quote.balance.symbol = symbol(4, "SYS");
             });
          }
       } else {
@@ -74,7 +74,7 @@ namespace eosiosystem {
       eosio_assert( max_ram_size > _gstate.total_ram_bytes_reserved, "attempt to set max below reserved" );
 
       auto delta = int64_t(max_ram_size) - int64_t(_gstate.max_ram_size);
-      auto itr = _rammarket.find(S(4,RAMCORE));
+      auto itr = _rammarket.find(symbol(4, "RAMCORE"));
 
       /**
        *  Increase the amount of ram for sale based upon the change in max ram size.
@@ -91,7 +91,7 @@ namespace eosiosystem {
 
       if( cbt <= _gstate2.last_ram_increase ) return;
 
-      auto itr = _rammarket.find(S(4,RAMCORE));
+      auto itr = _rammarket.find(symbol(4, "RAMCORE"));
       auto new_ram = (cbt.slot - _gstate2.last_ram_increase.slot)*_gstate2.new_ram_per_block;
       _gstate.max_ram_size += new_ram;
 
