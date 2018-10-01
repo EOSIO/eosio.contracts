@@ -305,6 +305,19 @@ public:
       );
    }
 
+   action_result fundrexloan( const account_name& from, const uint64_t loan_num, const asset& payment, bool cpu ) {
+      return push_action( name(from), N(fundrexloan), mvo()
+                          ("from",       from)
+                          ("loan_num",   loan_num)
+                          ("payment",    payment)
+                          ("cpu",        cpu)
+      );
+   }
+
+   action_result claimrefund( const account_name& owner ) {
+      return push_action( name(owner), N(claimrefund), mvo()("owner", owner) );
+   }
+
    fc::variant get_last_loan(bool cpu) {
       vector<char> data;
       const auto& db = control->db();

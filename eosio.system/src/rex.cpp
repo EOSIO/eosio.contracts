@@ -251,7 +251,7 @@ namespace eosiosystem {
          eosio_assert( itr != cpu_loans.end(), "loan not found" );
          eosio_assert( itr->from, "actor has to be loan creator" );
          eosio_assert( itr->auto_renew, "loan must be set as auto-renew" );
-         eosio_assert( itr->expiration < current_time_point(), "loan has already expired" );
+         eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
          cpu_loans.modify( itr, 0, [&]( auto& loan ) {
             loan.balance.amount += payment.amount;
          });
@@ -261,7 +261,7 @@ namespace eosiosystem {
          eosio_assert( itr != net_loans.end(), "loan not found" );
          eosio_assert( itr->from, "actor has to be loan creator" );
          eosio_assert( itr->auto_renew, "loan must be set as auto-renew" );
-         eosio_assert( itr->expiration < current_time_point(), "loan has already expired" );
+         eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
          net_loans.modify( itr, 0, [&]( auto& loan ) {
             loan.balance.amount += payment.amount;
          });
@@ -322,16 +322,13 @@ namespace eosiosystem {
                   rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
                });
                
-               {
-                  auto prim_itr = cpu_loans.find( itr->loan_num );
-                  cpu_loans.modify ( prim_itr, 0, [&]( auto loan ) {
-                     delta_stake              = rented_tokens - loan.total_staked.amount;
-                     loan.total_staked.amount = rented_tokens;
-                     loan.expiration         += eosio::days(30);
-                     loan.balance            -= itr->loan_payment;
-                  });
-               }
-               
+               cpu_idx.modify ( itr, 0, [&]( auto& loan ) {
+                  delta_stake              = rented_tokens - loan.total_staked.amount;
+                  loan.total_staked.amount = rented_tokens;
+                  loan.expiration         += eosio::days(30);
+                  loan.balance.amount     -= loan.loan_payment.amount;
+               });
+      
             } else {
                delete_loan = true;
                delta_stake = -( itr->total_staked.amount );
@@ -354,6 +351,7 @@ namespace eosiosystem {
             
             if( delta_stake != 0 )
                update_resource_limits( itr->receiver, delta_stake, 0 );
+
             if( delete_loan )
                cpu_idx.erase( itr );
          }
@@ -385,15 +383,12 @@ namespace eosiosystem {
                   rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
                });
 
-               {
-                  auto prim_itr = net_loans.find( itr->loan_num );
-                  net_loans.modify ( prim_itr, 0, [&]( auto loan ) {
-                     delta_stake              = rented_tokens - loan.total_staked.amount;
-                     loan.total_staked.amount = rented_tokens;
-                     loan.expiration         += eosio::days(30);
-                     loan.balance            -= itr->loan_payment;
-                  });
-               }
+               net_idx.modify ( itr, 0, [&]( auto& loan ) {
+                  delta_stake              = rented_tokens - loan.total_staked.amount;
+                  loan.total_staked.amount = rented_tokens;
+                  loan.expiration         += eosio::days(30);
+                  loan.balance            -= itr->loan_payment;
+               });
 
             } else {
                delete_loan = true;

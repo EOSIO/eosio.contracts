@@ -810,6 +810,12 @@
       "key_names" : ["loan_num"],
       "key_types" : ["uint64"]
     },{
+      "name": "loanrefunds",
+      "type": "loan_refund",
+      "index_type": "i64",
+      "key_names" : ["owner"],
+      "key_types" : ["uint64"]
+    },{
       "name": "rammarket",
       "type": "exchange_state",
       "index_type": "i64",
