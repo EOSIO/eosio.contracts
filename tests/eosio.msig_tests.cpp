@@ -413,9 +413,9 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
 
    set_code( config::system_account_name, contracts::system_wasm() );
    set_abi( config::system_account_name, contracts::system_abi().data() );
-   base_tester::push_action(config::system_account_name, N(init),
-                                            config::system_account_name,  mutable_variant_object()
-                                            ("core", CORE_SYM_STR));
+   base_tester::push_action( config::system_account_name, N(init),
+                             config::system_account_name,  mutable_variant_object()
+                              ("core", CORE_SYM_STR) );
    produce_blocks();
    create_account_with_resources( N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false );
    create_account_with_resources( N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false );
@@ -525,7 +525,9 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
 
    set_code( config::system_account_name, contracts::system_wasm() );
    set_abi( config::system_account_name, contracts::system_abi().data() );
-
+   base_tester::push_action( config::system_account_name, N(init),
+                             config::system_account_name,  mutable_variant_object()
+                                 ("core", CORE_SYM_STR) );
    produce_blocks();
 
    create_account_with_resources( N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false );
