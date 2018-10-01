@@ -90,7 +90,7 @@ namespace eosiosystem {
 
       auto itr = _rammarket.find(S(4,RAMCORE));
       auto tmp = *itr;
-      auto eosout = tmp.convert( asset(bytes,S(0,RAM)), get_core_symbol() );
+      auto eosout = tmp.convert( asset(bytes,S(0,RAM)), core_symbol() );
 
       buyram( payer, receiver, eosout );
    }
@@ -109,6 +109,7 @@ namespace eosiosystem {
       require_auth( payer );
       update_ram_supply();
 
+      eosio_assert( quant.symbol == core_symbol(), "must buy ram with core token" );
       eosio_assert( quant.amount > 0, "must purchase a positive amount" );
 
       auto fee = quant;
@@ -146,6 +147,8 @@ namespace eosiosystem {
       if( res_itr ==  userres.end() ) {
          res_itr = userres.emplace( receiver, [&]( auto& res ) {
                res.owner = receiver;
+               res.net_weight = asset( 0, core_symbol() );
+               res.cpu_weight = asset( 0, core_symbol() );
                res.ram_bytes = bytes_out;
             });
       } else {
@@ -177,7 +180,7 @@ namespace eosiosystem {
       auto itr = _rammarket.find(S(4,RAMCORE));
       _rammarket.modify( itr, 0, [&]( auto& es ) {
           /// the cast to int64_t of bytes is safe because we certify bytes is <= quota which is limited by prior purchases
-          tokens_out = es.convert( asset(bytes,S(0,RAM)), get_core_symbol());
+          tokens_out = es.convert( asset(bytes,S(0,RAM)), core_symbol());
       });
 
       eosio_assert( tokens_out.amount > 1, "token amount received from selling ram is too low" );
@@ -200,7 +203,7 @@ namespace eosiosystem {
       // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
       if( fee > 0 ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {account,N(active)},
-            { account, N(eosio.ramfee), asset(fee, get_core_symbol()), std::string("sell ram fee") } );
+            { account, N(eosio.ramfee), asset(fee, core_symbol()), std::string("sell ram fee") } );
       }
    }
 
@@ -390,7 +393,7 @@ namespace eosiosystem {
                                      asset stake_net_quantity,
                                      asset stake_cpu_quantity, bool transfer )
    {
-      asset zero_asset( 0, get_core_symbol() );
+      asset zero_asset( 0, core_symbol() );
       eosio_assert( stake_cpu_quantity >= zero_asset, "must stake a positive amount" );
       eosio_assert( stake_net_quantity >= zero_asset, "must stake a positive amount" );
       eosio_assert( stake_net_quantity.amount + stake_cpu_quantity.amount > 0, "must stake a positive amount" );
@@ -402,7 +405,7 @@ namespace eosiosystem {
    void system_contract::undelegatebw( account_name from, account_name receiver,
                                        asset unstake_net_quantity, asset unstake_cpu_quantity )
    {
-      asset zero_asset( 0, get_core_symbol() );
+      asset zero_asset( 0, core_symbol() );
       eosio_assert( unstake_cpu_quantity >= zero_asset, "must unstake a positive amount" );
       eosio_assert( unstake_net_quantity >= zero_asset, "must unstake a positive amount" );
       eosio_assert( unstake_cpu_quantity.amount + unstake_net_quantity.amount > 0, "must unstake a positive amount" );

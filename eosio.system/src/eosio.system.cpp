@@ -42,6 +42,24 @@ namespace eosiosystem {
       return cbt;
    }
 
+   symbol_type system_contract::get_core_symbol( const rammarket& rm ) {
+      auto itr = rm.find(S(4,RAMCORE));
+      eosio_assert(itr != rm.end(), "system contract must first be initialized");
+      return itr->quote.balance.symbol;
+   }
+
+   symbol_type system_contract::get_core_symbol() {
+      rammarket rm(N(eosio),N(eosio));
+      const static auto sym = get_core_symbol( rm );
+      return sym;
+   }
+
+
+   symbol_type system_contract::core_symbol()const {
+      const static auto sym = get_core_symbol( _rammarket );
+      return sym;
+   }
+
    system_contract::~system_contract() {
       _global.set( _gstate, _self );
       _global2.set( _gstate2, _self );
@@ -172,12 +190,12 @@ namespace eosiosystem {
          auto it = refunds_table.find( current->high_bidder );
          if ( it != refunds_table.end() ) {
             refunds_table.modify( it, 0, [&](auto& r) {
-                  r.amount += asset( current->high_bid, get_core_symbol() );
+                  r.amount += asset( current->high_bid, core_symbol() );
                });
          } else {
             refunds_table.emplace( bidder, [&](auto& r) {
                   r.bidder = current->high_bidder;
-                  r.amount = asset( current->high_bid, get_core_symbol() );
+                  r.amount = asset( current->high_bid, core_symbol() );
                });
          }
 
@@ -249,6 +267,8 @@ namespace eosiosystem {
 
       userres.emplace( newact, [&]( auto& res ) {
         res.owner = newact;
+        res.net_weight = asset( 0, system_contract::get_core_symbol() );
+        res.cpu_weight = asset( 0, system_contract::get_core_symbol() );
       });
 
       set_resource_limits( newact, 0, 0, 0 );
@@ -271,18 +291,18 @@ namespace eosiosystem {
 
    void system_contract::init( symbol_type core ) {
       auto itr = _rammarket.find(S(4,RAMCORE));
-      if ( itr == _rammarket.end() ) {
-         auto system_token_supply   = eosio::token(N(eosio.token)).get_supply(eosio::symbol_type(core).name()).amount;
-         if( system_token_supply > 0 ) {
-            _rammarket.emplace( S(4,RAMCORE), [&]( auto& m ) {
-               m.supply.amount = 100000000000000ll;
-               m.supply.symbol = S(4,RAMCORE);
-               m.base.balance.amount = int64_t(_gstate.free_ram());
-               m.base.balance.symbol = S(0,RAM);
-               m.quote.balance.amount = system_token_supply / 1000;
-               m.quote.balance.symbol = core;
-            });
-         }
+      eosio_assert( itr == _rammarket.end(), "system contract has already been initialized" );
+
+      auto system_token_supply   = eosio::token(N(eosio.token)).get_supply(eosio::symbol_type(core).name()).amount;
+      if( system_token_supply > 0 ) {
+         _rammarket.emplace( _self, [&]( auto& m ) {
+            m.supply.amount = 100000000000000ll;
+            m.supply.symbol = S(4,RAMCORE);
+            m.base.balance.amount = int64_t(_gstate.free_ram());
+            m.base.balance.symbol = S(0,RAM);
+            m.quote.balance.amount = system_token_supply / 1000;
+            m.quote.balance.symbol = core;
+         });
       }
    }
 } /// eosio.system

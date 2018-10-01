@@ -189,17 +189,9 @@ namespace eosiosystem {
          system_contract( account_name s );
          ~system_contract();
 
-         inline symbol_type get_core_symbol() {
-            auto get_sym = [&]() -> symbol_type {
-               auto itr = _rammarket.find(S(4,RAMCORE));
-               eosio_assert(itr != _rammarket.end(), "rammarket must exist");
-               uint64_t sym = 0;
-               _rammarket.modify(itr, 0, [&]( auto& m ) { sym = m.quote.balance.symbol; } );
-               return {sym};
-            };
-            static auto sym = get_sym();
-            return sym;
-         }
+         static symbol_type get_core_symbol( const rammarket& rm );
+         static symbol_type get_core_symbol();
+         symbol_type core_symbol()const;
 
          // Actions:
          void init( symbol_type core );
@@ -293,6 +285,7 @@ namespace eosiosystem {
          static eosio_global_state get_default_parameters();
          static time_point current_time_point();
          static block_timestamp current_block_time();
+
          void update_ram_supply();
 
          //defined in delegate_bandwidth.cpp
