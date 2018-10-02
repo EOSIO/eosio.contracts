@@ -33,19 +33,19 @@ namespace eosio {
                         asset        quantity,
                         string       memo );
 
-         void open( account_name owner, symbol symbol, account_name payer );
+         void open( account_name owner, const symbol& symbol, account_name payer );
 
-         void close( account_name owner, symbol symbol );
+         void close( account_name owner, const symbol& symbol );
 
-         inline asset get_supply( symbol sym )const;
+         inline asset get_supply( const symbol& sym )const;
 
-         inline asset get_balance( account_name owner, symbol sym )const;
+         inline asset get_balance( account_name owner, const symbol& sym )const;
 
       private:
          struct account {
             asset    balance;
 
-            uint64_t primary_key()const { return balance.symbol.name(); }
+            uint64_t primary_key()const { return balance.symbol.raw(); }
          };
 
          struct currency_stats {
@@ -53,7 +53,7 @@ namespace eosio {
             asset          max_supply;
             account_name   issuer;
 
-            uint64_t primary_key()const { return supply.symbol.name(); }
+            uint64_t primary_key()const { return supply.symbol.raw(); }
          };
 
          typedef eosio::multi_index<N(accounts), account> accounts;
@@ -71,17 +71,17 @@ namespace eosio {
          };
    };
 
-   asset token::get_supply( symbol sym )const
+   asset token::get_supply( const symbol& sym )const
    {
-      stats statstable( _self, sym );
-      const auto& st = statstable.get( sym );
+      stats statstable( _self, sym.raw() );
+      const auto& st = statstable.get( sym.raw() );
       return st.supply;
    }
 
-   asset token::get_balance( account_name owner, symbol sym )const
+   asset token::get_balance( account_name owner, const symbol& sym )const
    {
       accounts accountstable( _self, owner );
-      const auto& ac = accountstable.get( sym );
+      const auto& ac = accountstable.get( sym.raw() );
       return ac.balance;
    }
 

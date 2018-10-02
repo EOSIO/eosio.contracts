@@ -43,7 +43,7 @@ namespace eosiosystem {
       return asset( out, c.balance.symbol );
    }
 
-   asset exchange_state::convert( asset from, symbol to ) {
+   asset exchange_state::convert( asset from, const symbol& to ) {
       auto sell_symbol  = from.symbol;
       auto ex_symbol    = supply.symbol;
       auto base_symbol  = base.balance.symbol;

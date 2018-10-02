@@ -26,11 +26,11 @@ namespace eosiosystem {
       connector base;
       connector quote;
 
-      uint64_t primary_key()const { return supply.symbol; }
+      uint64_t primary_key()const { return supply.symbol.code().raw(); }
 
       asset convert_to_exchange( connector& c, asset in ); 
       asset convert_from_exchange( connector& c, asset in );
-      asset convert( asset from, symbol to );
+      asset convert( asset from, const symbol& to );
 
       EOSLIB_SERIALIZE( exchange_state, (supply)(base)(quote) )
    };

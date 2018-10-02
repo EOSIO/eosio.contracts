@@ -171,7 +171,7 @@ namespace eosiosystem {
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
-   static constexpr symbol       system_token_symbol = symbol(4, "SYS");
+   static constexpr symbol       system_token_symbol = symbol(4, "SYS"_s);
 
    class system_contract : public native {
       private:
@@ -189,6 +189,9 @@ namespace eosiosystem {
       public:
          system_contract( account_name s );
          ~system_contract();
+
+         static constexpr symbol ramcore_symbol = symbol(4, "RAMCORE"_s);
+         static constexpr symbol ram_symbol     = symbol(0, "RAM"_s);
 
          // Actions:
          void onblock( block_timestamp timestamp, account_name producer );
