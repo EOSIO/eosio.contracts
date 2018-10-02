@@ -42,20 +42,20 @@ namespace eosiosystem {
       return cbt;
    }
 
-   symbol_type system_contract::get_core_symbol( const rammarket& rm ) {
-      auto itr = rm.find(S(4,RAMCORE));
+   symbol system_contract::get_core_symbol( const rammarket& rm ) {
+      auto itr = rm.find(ram_symbol.raw());
       eosio_assert(itr != rm.end(), "system contract must first be initialized");
       return itr->quote.balance.symbol;
    }
 
-   symbol_type system_contract::get_core_symbol() {
+   symbol system_contract::get_core_symbol() {
       rammarket rm("eosio"_n, "eosio"_n);
       const static auto sym = get_core_symbol( rm );
       return sym;
    }
 
 
-   symbol_type system_contract::core_symbol()const {
+   symbol system_contract::core_symbol()const {
       const static auto sym = get_core_symbol( _rammarket );
       return sym;
    }
@@ -74,7 +74,7 @@ namespace eosiosystem {
       eosio_assert( max_ram_size > _gstate.total_ram_bytes_reserved, "attempt to set max below reserved" );
 
       auto delta = int64_t(max_ram_size) - int64_t(_gstate.max_ram_size);
-      auto itr = _rammarket.find(S(4,RAMCORE));
+      auto itr = _rammarket.find(ramcore_symbol.raw());
 
       /**
        *  Increase the amount of ram for sale based upon the change in max ram size.
@@ -91,7 +91,7 @@ namespace eosiosystem {
 
       if( cbt <= _gstate2.last_ram_increase ) return;
 
-      auto itr = _rammarket.find(S(4,RAMCORE));
+      auto itr = _rammarket.find(ramcore_symbol.raw());
       auto new_ram = (cbt.slot - _gstate2.last_ram_increase.slot)*_gstate2.new_ram_per_block;
       _gstate.max_ram_size += new_ram;
 
@@ -294,20 +294,20 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::init( unsigned_int version, symbol_type core ) {
+   void system_contract::init( unsigned_int version, symbol core ) {
       require_auth( _self );
       eosio_assert( version.value == 0, "unsupported version for init action" );
 
-      auto itr = _rammarket.find(S(4,RAMCORE));
+      auto itr = _rammarket.find(ramcore_symbol.raw());
       eosio_assert( itr == _rammarket.end(), "system contract has already been initialized" );
 
-      auto system_token_supply   = eosio::token(token_account).get_supply(eosio::symbol_type(core).name()).amount;
+      auto system_token_supply   = eosio::token(token_account).get_supply(core).amount;
       if( system_token_supply > 0 ) {
          _rammarket.emplace( _self, [&]( auto& m ) {
             m.supply.amount = 100000000000000ll;
-            m.supply.symbol = S(4,RAMCORE);
+            m.supply.symbol = ramcore_symbol;
             m.base.balance.amount = int64_t(_gstate.free_ram());
-            m.base.balance.symbol = S(0,RAM);
+            m.base.balance.symbol = ram_symbol;
             m.quote.balance.amount = system_token_supply / 1000;
             m.quote.balance.symbol = core;
          });

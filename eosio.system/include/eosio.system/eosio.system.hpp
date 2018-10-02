@@ -195,16 +195,18 @@ namespace eosiosystem {
          static constexpr eosio::name vpay_account{"eosio.vpay"_n};
          static constexpr eosio::name names_account{"eosio.names"_n};
          static constexpr eosio::name saving_account{"eosio.saving"_n};
+         static constexpr symbol ramcore_symbol = symbol(4, "RAMCORE"_s);
+         static constexpr symbol ram_symbol     = symbol(0, "RAM"_s);
 
          system_contract( account_name s );
          ~system_contract();
 
-         static symbol_type get_core_symbol( const rammarket& rm );
-         static symbol_type get_core_symbol();
-         symbol_type core_symbol()const;
+         static symbol get_core_symbol( const rammarket& rm );
+         static symbol get_core_symbol();
+         symbol core_symbol()const;
 
          // Actions:
-         void init( unsigned_int version, symbol_type core );
+         void init( unsigned_int version, symbol core );
          void onblock( block_timestamp timestamp, account_name producer );
                       // const block_header& header ); /// only parse first 3 fields of block header
 

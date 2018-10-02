@@ -88,9 +88,9 @@ namespace eosiosystem {
     */
    void system_contract::buyrambytes( account_name payer, account_name receiver, uint32_t bytes ) {
 
-      auto itr = _rammarket.find(S(4,RAMCORE));
+      auto itr = _rammarket.find(ramcore_symbol.raw());
       auto tmp = *itr;
-      auto eosout = tmp.convert( asset(bytes,S(0,RAM)), core_symbol() );
+      auto eosout = tmp.convert( asset(bytes, ram_symbol), core_symbol() );
 
       buyram( payer, receiver, eosout );
    }
@@ -136,9 +136,9 @@ namespace eosiosystem {
 
       int64_t bytes_out;
 
-      const auto& market = _rammarket.get(S(4,RAMCORE), "ram market does not exist");
+      const auto& market = _rammarket.get(ramcore_symbol.raw(), "ram market does not exist");
       _rammarket.modify( market, 0, [&]( auto& es ) {
-          bytes_out = es.convert( quant_after_fee,  S(0,RAM) ).amount;
+          bytes_out = es.convert( quant_after_fee,  ram_symbol ).amount;
       });
 
       eosio_assert( bytes_out > 0, "must reserve a positive amount" );
@@ -181,10 +181,10 @@ namespace eosiosystem {
       eosio_assert( res_itr->ram_bytes >= bytes, "insufficient quota" );
 
       asset tokens_out;
-      auto itr = _rammarket.find(S(4,RAMCORE));
+      auto itr = _rammarket.find(ramcore_symbol.raw());
       _rammarket.modify( itr, 0, [&]( auto& es ) {
           /// the cast to int64_t of bytes is safe because we certify bytes is <= quota which is limited by prior purchases
-          tokens_out = es.convert( asset(bytes,S(0,RAM)), core_symbol());
+          tokens_out = es.convert( asset(bytes, ram_symbol), core_symbol());
       });
 
       eosio_assert( tokens_out.amount > 1, "token amount received from selling ram is too low" );
