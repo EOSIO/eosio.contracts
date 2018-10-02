@@ -204,7 +204,7 @@ namespace eosiosystem {
          symbol_type core_symbol()const;
 
          // Actions:
-         void init( symbol_type core );
+         void init( unsigned_int version, symbol_type core );
          void onblock( block_timestamp timestamp, account_name producer );
                       // const block_header& header ); /// only parse first 3 fields of block header
 

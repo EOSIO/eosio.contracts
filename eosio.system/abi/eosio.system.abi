@@ -28,6 +28,7 @@
       "name": "init",
       "base": "",
       "fields": [
+         {"name":"version", "type": "varuint32"},
          {"name":"core", "type":"symbol"}
       ]
     },{

@@ -63,7 +63,9 @@ public:
       if( call_init ) {
          base_tester::push_action(config::system_account_name, N(init),
                                                config::system_account_name,  mutable_variant_object()
-                                               ("core", CORE_SYM_STR));
+                                               ("version", 0)
+                                               ("core", CORE_SYM_STR)
+         );
       }
 
       {

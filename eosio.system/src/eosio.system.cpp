@@ -294,7 +294,10 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::init( symbol_type core ) {
+   void system_contract::init( unsigned_int version, symbol_type core ) {
+      require_auth( _self );
+      eosio_assert( version.value == 0, "unsupported version for init action" );
+
       auto itr = _rammarket.find(S(4,RAMCORE));
       eosio_assert( itr == _rammarket.end(), "system contract has already been initialized" );
 
