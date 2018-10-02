@@ -28,13 +28,13 @@ namespace eosiosystem {
 
       uint64_t primary_key()const { return supply.symbol; }
 
-      asset convert_to_exchange( connector& c, asset in ); 
+      asset convert_to_exchange( connector& c, asset in );
       asset convert_from_exchange( connector& c, asset in );
       asset convert( asset from, symbol_type to );
 
       EOSLIB_SERIALIZE( exchange_state, (supply)(base)(quote) )
    };
 
-   typedef eosio::multi_index<N(rammarket), exchange_state> rammarket;
+   typedef eosio::multi_index< "rammarket"_n, exchange_state > rammarket;
 
 } /// namespace eosiosystem

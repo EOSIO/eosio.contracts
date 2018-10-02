@@ -22,7 +22,7 @@ namespace eosio {
 
             auto primary_key()const { return proposal_name.value; }
          };
-         typedef eosio::multi_index<N(proposal),proposal> proposals;
+         typedef eosio::multi_index< "proposal"_n, proposal > proposals;
 
          struct old_approvals_info {
             name                       proposal_name;
@@ -31,7 +31,7 @@ namespace eosio {
 
             auto primary_key()const { return proposal_name.value; }
          };
-         typedef eosio::multi_index<N(approvals), old_approvals_info> old_approvals;
+         typedef eosio::multi_index< "approvals"_n, old_approvals_info > old_approvals;
 
          struct approval {
             permission_level level;
@@ -49,7 +49,7 @@ namespace eosio {
 
             auto primary_key()const { return proposal_name.value; }
          };
-         typedef eosio::multi_index<N(approvals2), approvals_info> approvals;
+         typedef eosio::multi_index< "approvals2"_n, approvals_info > approvals;
 
          struct invalidation {
             account_name account;
@@ -58,7 +58,7 @@ namespace eosio {
             auto primary_key() const { return account; }
          };
 
-         typedef eosio::multi_index<N(invals), invalidation> invalidations;
+         typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
 };
 
 } /// namespace eosio

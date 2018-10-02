@@ -39,11 +39,11 @@ namespace eosiosystem {
      auto primary_key() const { return bidder; }
    };
 
-   typedef eosio::multi_index< N(namebids), name_bid,
-                               indexed_by<N(highbid), const_mem_fun<name_bid, uint64_t, &name_bid::by_high_bid>  >
-                               >  name_bid_table;
+   typedef eosio::multi_index< "namebids"_n, name_bid,
+                               indexed_by<"highbid"_n, const_mem_fun<name_bid, uint64_t, &name_bid::by_high_bid>  >
+                             > name_bid_table;
 
-   typedef eosio::multi_index< N(bidrefunds), bid_refund> bid_refund_table;
+   typedef eosio::multi_index< "bidrefunds"_n, bid_refund > bid_refund_table;
 
    struct eosio_global_state : eosio::blockchain_parameters {
       uint64_t free_ram()const { return max_ram_size - total_ram_bytes_reserved; }
@@ -157,17 +157,17 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(proxied_vote_weight)(is_proxy)(reserved1)(reserved2)(reserved3) )
    };
 
-   typedef eosio::multi_index< N(voters), voter_info>  voters_table;
+   typedef eosio::multi_index< "voters"_n, voter_info >  voters_table;
 
 
-   typedef eosio::multi_index< N(producers), producer_info,
-                               indexed_by<N(prototalvote), const_mem_fun<producer_info, double, &producer_info::by_votes>  >
-                               >  producers_table;
-   typedef eosio::multi_index< N(producers2), producer_info2 > producers_table2;
+   typedef eosio::multi_index< "producers"_n, producer_info,
+                               indexed_by<"prototalvote"_n, const_mem_fun<producer_info, double, &producer_info::by_votes>  >
+                             > producers_table;
+   typedef eosio::multi_index< "producers2"_n, producer_info2 > producers_table2;
 
-   typedef eosio::singleton<N(global), eosio_global_state> global_state_singleton;
-   typedef eosio::singleton<N(global2), eosio_global_state2> global_state2_singleton;
-   typedef eosio::singleton<N(global3), eosio_global_state3> global_state3_singleton;
+   typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
+   typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
+   typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -186,6 +186,16 @@ namespace eosiosystem {
          rammarket               _rammarket;
 
       public:
+         static constexpr eosio::name active_permission{"active"_n};
+         static constexpr eosio::name token_account{"eosio.token"_n};
+         static constexpr eosio::name ram_account{"eosio.ram"_n};
+         static constexpr eosio::name ramfee_account{"eosio.ramfee"_n};
+         static constexpr eosio::name stake_account{"eosio.stake"_n};
+         static constexpr eosio::name bpay_account{"eosio.bpay"_n};
+         static constexpr eosio::name vpay_account{"eosio.vpay"_n};
+         static constexpr eosio::name names_account{"eosio.names"_n};
+         static constexpr eosio::name saving_account{"eosio.saving"_n};
+
          system_contract( account_name s );
          ~system_contract();
 

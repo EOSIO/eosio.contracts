@@ -49,7 +49,7 @@ namespace eosiosystem {
    }
 
    symbol_type system_contract::get_core_symbol() {
-      rammarket rm(N(eosio),N(eosio));
+      rammarket rm("eosio"_n, "eosio"_n);
       const static auto sym = get_core_symbol( rm );
       return sym;
    }
@@ -119,7 +119,7 @@ namespace eosiosystem {
    }
 
    void system_contract::setparams( const eosio::blockchain_parameters& params ) {
-      require_auth( N(eosio) );
+      require_auth( _self );
       (eosio::blockchain_parameters&)(_gstate) = params;
       eosio_assert( 3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3" );
       set_blockchain_parameters( params );
@@ -131,7 +131,7 @@ namespace eosiosystem {
    }
 
    void system_contract::setalimits( account_name account, int64_t ram, int64_t net, int64_t cpu ) {
-      require_auth( N(eosio) );
+      require_auth( _self );
       user_resources_table userres( _self, account );
       auto ritr = userres.find( account );
       eosio_assert( ritr == userres.end(), "only supports unlimited accounts" );
@@ -167,8 +167,10 @@ namespace eosiosystem {
       eosio_assert( bid.symbol == core_symbol(), "asset must be system token" );
       eosio_assert( bid.amount > 0, "insufficient bid" );
 
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {bidder,N(active)},
-                                                    { bidder, N(eosio.names), bid, std::string("bid name ")+(name{newname}).to_string()  } );
+      INLINE_ACTION_SENDER(eosio::token, transfer)(
+         token_account, { {bidder, active_permission} },
+         { bidder, names_account, bid, std::string("bid name ")+(name{newname}).to_string() }
+      );
 
       name_bid_table bids(_self,_self);
       print( name{bidder}, " bid ", bid, " on ", name{newname}, "\n" );
@@ -199,9 +201,11 @@ namespace eosiosystem {
                });
          }
 
-         action a( {N(eosio),N(active)}, N(eosio), N(bidrefund), std::make_tuple( current->high_bidder, newname ) );
          transaction t;
-         t.actions.push_back( std::move(a) );
+         t.actions.emplace_back( permission_level{_self, active_permission},
+                                 _self, "bidrefund"_n,
+                                 std::make_tuple( current->high_bidder, newname )
+         );
          t.delay_sec = 0;
          uint128_t deferred_id = (uint128_t(newname) << 64) | current->high_bidder;
          cancel_deferred( deferred_id );
@@ -219,9 +223,10 @@ namespace eosiosystem {
       bid_refund_table refunds_table(_self, newname);
       auto it = refunds_table.find( bidder );
       eosio_assert( it != refunds_table.end(), "refund not found" );
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{N(eosio.names),N(active)},{bidder,N(active)}},
-                                                    { N(eosio.names), bidder, asset(it->amount),
-                                                       std::string("refund bid on name ")+(name{newname}).to_string()  } );
+      INLINE_ACTION_SENDER(eosio::token, transfer)(
+         token_account, { {names_account, active_permission}, {bidder, active_permission} },
+         { names_account, bidder, asset(it->amount), std::string("refund bid on name ")+(name{newname}).to_string() }
+      );
       refunds_table.erase( it );
    }
 
@@ -275,7 +280,7 @@ namespace eosiosystem {
    }
 
    void native::setabi( account_name acnt, const bytes& abi ) {
-      eosio::multi_index< N(abihash), abi_hash>  table(_self,_self);
+      eosio::multi_index< "abihash"_n, abi_hash >  table(_self,_self);
       auto itr = table.find( acnt );
       if( itr == table.end() ) {
          table.emplace( acnt, [&]( auto& row ) {
@@ -293,7 +298,7 @@ namespace eosiosystem {
       auto itr = _rammarket.find(S(4,RAMCORE));
       eosio_assert( itr == _rammarket.end(), "system contract has already been initialized" );
 
-      auto system_token_supply   = eosio::token(N(eosio.token)).get_supply(eosio::symbol_type(core).name()).amount;
+      auto system_token_supply   = eosio::token(token_account).get_supply(eosio::symbol_type(core).name()).amount;
       if( system_token_supply > 0 ) {
          _rammarket.emplace( _self, [&]( auto& m ) {
             m.supply.amount = 100000000000000ll;

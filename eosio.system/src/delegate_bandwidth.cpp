@@ -77,9 +77,9 @@ namespace eosiosystem {
     *  These tables are designed to be constructed in the scope of the relevant user, this
     *  facilitates simpler API for per-user queries
     */
-   typedef eosio::multi_index< N(userres), user_resources>      user_resources_table;
-   typedef eosio::multi_index< N(delband), delegated_bandwidth> del_bandwidth_table;
-   typedef eosio::multi_index< N(refunds), refund_request>      refunds_table;
+   typedef eosio::multi_index< "userres"_n, user_resources >      user_resources_table;
+   typedef eosio::multi_index< "delband"_n, delegated_bandwidth > del_bandwidth_table;
+   typedef eosio::multi_index< "refunds"_n, refund_request >      refunds_table;
 
 
 
@@ -122,12 +122,16 @@ namespace eosiosystem {
       // quant_after_fee.amount should be > 0 if quant.amount > 1.
       // If quant.amount == 1, then quant_after_fee.amount == 0 and the next inline transfer will fail causing the buyram action to fail.
 
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{payer,N(active)},{N(eosio.ram),N(active)}},
-         { payer, N(eosio.ram), quant_after_fee, std::string("buy ram") } );
+      INLINE_ACTION_SENDER(eosio::token, transfer)(
+         token_account, { {payer, active_permission}, {ram_account, active_permission} },
+         { payer, ram_account, quant_after_fee, std::string("buy ram") }
+      );
 
       if( fee.amount > 0 ) {
-         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {payer,N(active)},
-                                                       { payer, N(eosio.ramfee), fee, std::string("ram fee") } );
+         INLINE_ACTION_SENDER(eosio::token, transfer)(
+            token_account, { {payer, active_permission} },
+            { payer, ramfee_account, fee, std::string("ram fee") }
+         );
       }
 
       int64_t bytes_out;
@@ -196,14 +200,18 @@ namespace eosiosystem {
       });
       set_resource_limits( res_itr->owner, res_itr->ram_bytes + ram_gift_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
 
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{N(eosio.ram),N(active)},{account,N(active)}},
-                                                       { N(eosio.ram), account, asset(tokens_out), std::string("sell ram") } );
+      INLINE_ACTION_SENDER(eosio::token, transfer)(
+         token_account, { {ram_account, active_permission}, {account, active_permission} },
+         { ram_account, account, asset(tokens_out), std::string("sell ram") }
+      );
 
       auto fee = ( tokens_out.amount + 199 ) / 200; /// .5% fee (round up)
       // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
       if( fee > 0 ) {
-         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {account,N(active)},
-            { account, N(eosio.ramfee), asset(fee, core_symbol()), std::string("sell ram fee") } );
+         INLINE_ACTION_SENDER(eosio::token, transfer)(
+            token_account, { {account, active_permission} },
+            { account, ramfee_account, asset(fee, core_symbol()), std::string("sell ram fee") }
+         );
       }
    }
 
@@ -284,7 +292,7 @@ namespace eosiosystem {
       } // tot_itr can be invalid, should go out of scope
 
       // create refund or update from existing refund
-      if ( N(eosio.stake) != source_stake_from ) { //for eosio both transfer and refund make no sense
+      if ( stake_account != source_stake_from ) { //for eosio both transfer and refund make no sense
          refunds_table refunds_tbl( _self, from );
          auto req = refunds_tbl.find( from );
 
@@ -353,7 +361,10 @@ namespace eosiosystem {
 
          if ( need_deferred_trx ) {
             eosio::transaction out;
-            out.actions.emplace_back( permission_level{ from, N(active) }, _self, N(refund), from );
+            out.actions.emplace_back( permission_level{from, active_permission},
+                                      _self, "refund"_n,
+                                      from
+            );
             out.delay_sec = refund_delay;
             cancel_deferred( from ); // TODO: Remove this line when replacing deferred trxs is fixed
             out.send( from, from, true );
@@ -363,8 +374,10 @@ namespace eosiosystem {
 
          auto transfer_amount = net_balance + cpu_balance;
          if ( 0 < transfer_amount.amount ) {
-            INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {source_stake_from, N(active)},
-               { source_stake_from, N(eosio.stake), asset(transfer_amount), std::string("stake bandwidth") } );
+            INLINE_ACTION_SENDER(eosio::token, transfer)(
+               token_account, { {source_stake_from, active_permission} },
+               { source_stake_from, stake_account, asset(transfer_amount), std::string("stake bandwidth") }
+            );
          }
       }
 
@@ -383,7 +396,7 @@ namespace eosiosystem {
                });
          }
          eosio_assert( 0 <= from_voter->staked, "stake for voting cannot be negative");
-         if( from == N(b1) ) {
+         if( from == "b1"_n ) {
             validate_b1_vesting( from_voter->staked );
          }
 
@@ -431,8 +444,10 @@ namespace eosiosystem {
       // allow people to get their tokens earlier than the 3 day delay if the unstake happened immediately after many
       // consecutive missed blocks.
 
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{N(eosio.stake),N(active)},{req->owner,N(active)}},
-                                                    { N(eosio.stake), req->owner, req->net_amount + req->cpu_amount, std::string("unstake") } );
+      INLINE_ACTION_SENDER(eosio::token, transfer)(
+         token_account, { {stake_account, active_permission}, {req->owner, active_permission} },
+         { stake_account, req->owner, req->net_amount + req->cpu_amount, std::string("unstake") }
+      );
 
       refunds_tbl.erase( req );
    }

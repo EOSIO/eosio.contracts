@@ -56,8 +56,8 @@ namespace eosio {
             uint64_t primary_key()const { return supply.symbol.name(); }
          };
 
-         typedef eosio::multi_index<N(accounts), account> accounts;
-         typedef eosio::multi_index<N(stat), currency_stats> stats;
+         typedef eosio::multi_index< "accounts"_n, account > accounts;
+         typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
          void sub_balance( account_name owner, asset value );
          void add_balance( account_name owner, asset value, account_name ram_payer );

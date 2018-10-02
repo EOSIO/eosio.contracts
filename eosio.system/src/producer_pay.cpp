@@ -19,7 +19,7 @@ namespace eosiosystem {
    void system_contract::onblock( block_timestamp timestamp, account_name producer ) {
       using namespace eosio;
 
-      require_auth(N(eosio));
+      require_auth(_self);
 
       // _gstate2.last_block_num is not used anywhere in the system contract code anymore.
       // Although this field is deprecated, we will continue updating it for now until the last_block_num field
@@ -52,7 +52,7 @@ namespace eosiosystem {
 
          if( (timestamp.slot - _gstate.last_name_close.slot) > blocks_per_day ) {
             name_bid_table bids(_self,_self);
-            auto idx = bids.get_index<N(highbid)>();
+            auto idx = bids.get_index<"highbid"_n>();
             auto highest = idx.lower_bound( std::numeric_limits<uint64_t>::max()/2 );
             if( highest != idx.end() &&
                 highest->high_bid > 0 &&
@@ -83,7 +83,7 @@ namespace eosiosystem {
 
       eosio_assert( ct - prod.last_claim_time > microseconds(useconds_per_day), "already claimed rewards within past day" );
 
-      const asset token_supply   = token( N(eosio.token)).get_supply( core_symbol().name() );
+      const asset token_supply   = token(token_account).get_supply( core_symbol().name() );
       const auto usecs_since_last_fill = (ct - _gstate.last_pervote_bucket_fill).count();
 
       if( usecs_since_last_fill > 0 && _gstate.last_pervote_bucket_fill > time_point() ) {
@@ -94,17 +94,25 @@ namespace eosiosystem {
          auto to_per_block_pay = to_producers / 4;
          auto to_per_vote_pay  = to_producers - to_per_block_pay;
 
-         INLINE_ACTION_SENDER(eosio::token, issue)( N(eosio.token), {{N(eosio),N(active)}},
-                                                    { N(eosio), asset(new_tokens, core_symbol()), std::string("issue tokens for producer pay and savings") } );
+         INLINE_ACTION_SENDER(eosio::token, issue)(
+            token_account, { {_self, active_permission} },
+            { _self, asset(new_tokens, core_symbol()), std::string("issue tokens for producer pay and savings") }
+         );
 
-         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio),N(active)},
-                                                       { N(eosio), N(eosio.saving), asset(to_savings, core_symbol()), "unallocated inflation" } );
+         INLINE_ACTION_SENDER(eosio::token, transfer)(
+            token_account, { {_self, active_permission} },
+            { _self, saving_account, asset(to_savings, core_symbol()), "unallocated inflation" }
+         );
 
-         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio),N(active)},
-                                                       { N(eosio), N(eosio.bpay), asset(to_per_block_pay, core_symbol()), "fund per-block bucket" } );
+         INLINE_ACTION_SENDER(eosio::token, transfer)(
+            token_account, { {_self, active_permission} },
+            { _self, bpay_account, asset(to_per_block_pay, core_symbol()), "fund per-block bucket" }
+         );
 
-         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio),N(active)},
-                                                       { N(eosio), N(eosio.vpay), asset(to_per_vote_pay, core_symbol()), "fund per-vote bucket" } );
+         INLINE_ACTION_SENDER(eosio::token, transfer)(
+            token_account, { {_self, active_permission} },
+            { _self, vpay_account, asset(to_per_vote_pay, core_symbol()), "fund per-vote bucket" }
+         );
 
          _gstate.pervote_bucket          += to_per_vote_pay;
          _gstate.perblock_bucket         += to_per_block_pay;
@@ -174,12 +182,16 @@ namespace eosiosystem {
       });
 
       if( producer_per_block_pay > 0 ) {
-         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{N(eosio.bpay),N(active)},{owner,N(active)}},
-                                                       { N(eosio.bpay), owner, asset(producer_per_block_pay, core_symbol()), std::string("producer block pay") } );
+         INLINE_ACTION_SENDER(eosio::token, transfer)(
+            token_account, { {bpay_account, active_permission}, {owner, active_permission} },
+            { bpay_account, owner, asset(producer_per_block_pay, core_symbol()), std::string("producer block pay") }
+         );
       }
       if( producer_per_vote_pay > 0 ) {
-         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {{N(eosio.vpay),N(active)},{owner,N(active)}},
-                                                       { N(eosio.vpay), owner, asset(producer_per_vote_pay, core_symbol()), std::string("producer vote pay") } );
+         INLINE_ACTION_SENDER(eosio::token, transfer)(
+            token_account, { {vpay_account, active_permission}, {owner, active_permission} },
+            { vpay_account, owner, asset(producer_per_vote_pay, core_symbol()), std::string("producer vote pay") }
+         );
       }
    }
 

@@ -13,7 +13,7 @@ namespace eosio {
       EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
    };
 
-   typedef eosio::multi_index< N(abihash), abi_hash> abi_hash_table;
+   typedef eosio::multi_index< "abihash"_n, abi_hash > abi_hash_table;
 
    class bios : public contract {
       public:
