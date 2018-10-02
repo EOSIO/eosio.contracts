@@ -257,7 +257,7 @@
          {"name":"from",         "type":"account_name"},
          {"name":"receiver",     "type":"account_name"},
          {"name":"loan_payment", "type":"asset"},
-         {"name":"total_stake",  "type":"asset"},
+         {"name":"total_staked", "type":"asset"},
          {"name":"loan_num",     "type":"uint64"},
          {"name":"expiration",   "type":"time_point"},
          {"name":"auto_renew",   "type":"bool"},

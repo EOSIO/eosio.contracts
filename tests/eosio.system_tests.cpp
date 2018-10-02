@@ -3638,8 +3638,18 @@ BOOST_FIXTURE_TEST_CASE( lend_unlend_claim_rex, eosio_system_tester ) try {
 BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
 
    auto bancor_convert = [](int64_t S, int64_t R, int64_t T) -> int64_t { return int64_t( double(R * T)  / double(S + T) ); };
+   auto get_net_limit  = [&](account_name a) -> int64_t {
+      int64_t ram_bytes = 0, net = 0, cpu = 0;
+      control->get_resource_limits_manager().get_account_limits( a, ram_bytes, net, cpu );
+      return net;
+   };
+   auto get_cpu_limit  = [&](account_name a) -> int64_t {
+      int64_t ram_bytes = 0, net = 0, cpu = 0;
+      control->get_resource_limits_manager().get_account_limits( a, ram_bytes, net, cpu );
+      return cpu;
+   };
+
    const int64_t ratio = 10000;
-   cross_15_percent_threshold();
    const asset net          = core_from_string("80.0000");
    const asset cpu          = core_from_string("80.0000");
    const asset init_balance = core_from_string("10000.0000");
@@ -3651,43 +3661,87 @@ BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
       BOOST_REQUIRE_EQUAL( asset::from_string("0.0000 REX"), get_rex_balance(a) );
    }
 
-   const asset payment = core_from_string("30.0000");
-   asset cur_frank_balance = get_balance( frank );
-   BOOST_REQUIRE_EQUAL( success(),         lendrex( alice, core_from_string("500.0000") ) );
-   BOOST_REQUIRE_EQUAL( success(),         rentcpu( frank, frank, payment, true ) );
-   auto loan_info = get_last_cpu_loan();
-   auto old_frank_balance = cur_frank_balance;
-   cur_frank_balance = get_balance( frank );
-   BOOST_REQUIRE_EQUAL( old_frank_balance, payment + cur_frank_balance );
-   BOOST_REQUIRE_EQUAL( 1,                 loan_info["loan_num"].as_uint64() );
-   BOOST_REQUIRE_EQUAL( payment,           loan_info["loan_payment"].as<asset>() );
-   BOOST_REQUIRE_EQUAL( 0,                 loan_info["balance"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( success(), lendrex( alice, core_from_string("500.0000") ) );
+   
+   auto rex_pool            = get_rex_pool();
+   const asset payment      = core_from_string("30.0000");
+   asset cur_frank_balance  = get_balance( frank );
+   int64_t expected_stake   = bancor_convert( rex_pool["total_rent"].as<asset>().get_amount(),
+                                              rex_pool["total_unlent"].as<asset>().get_amount(),
+                                              payment.get_amount() );
+   const int64_t init_stake = get_cpu_limit( frank ); 
 
+   // frank rents cpu for bob
+   BOOST_REQUIRE_EQUAL( success(), rentcpu( frank, bob,   payment, true ) );  // loan_num = 1
+   BOOST_REQUIRE_EQUAL( success(), rentcpu( alice, emily, payment, false ) ); // loan_num = 2
+   BOOST_REQUIRE_EQUAL( 2,         get_last_cpu_loan()["loan_num"].as_uint64() );
+
+   BOOST_REQUIRE_EQUAL( success(), rentnet( alice, emily, payment, false ) ); // loan_num = 3
+   BOOST_REQUIRE_EQUAL( success(), rentnet( alice, alice, payment, false ) ); // loan_num = 4
+   BOOST_REQUIRE_EQUAL( success(), rentnet( alice, frank, payment, false ) ); // loan_num = 5
+   BOOST_REQUIRE_EQUAL( 5,         get_last_net_loan()["loan_num"].as_uint64() );
+
+   auto loan_info         = get_cpu_loan(1);
+   auto old_frank_balance = cur_frank_balance;
+   cur_frank_balance      = get_balance( frank );
+   BOOST_REQUIRE_EQUAL( old_frank_balance,           payment + cur_frank_balance );
+   BOOST_REQUIRE_EQUAL( 1,                           loan_info["loan_num"].as_uint64() );
+   BOOST_REQUIRE_EQUAL( payment,                     loan_info["loan_payment"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( 0,                           loan_info["balance"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( expected_stake,              loan_info["total_staked"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( expected_stake + init_stake, get_cpu_limit( bob ) );
+
+   // frank funds his loan enough to be renewed once
    const asset fund = core_from_string("35.0000");
    BOOST_REQUIRE_EQUAL( success(),         fundrexloan( frank, 1, fund, true ) );
    old_frank_balance = cur_frank_balance;
    cur_frank_balance = get_balance( frank );
-   loan_info         = get_last_cpu_loan();
+   loan_info         = get_cpu_loan(1);
    BOOST_REQUIRE_EQUAL( old_frank_balance, fund + cur_frank_balance );
    BOOST_REQUIRE_EQUAL( fund,              loan_info["balance"].as<asset>() );
    BOOST_REQUIRE_EQUAL( payment,           loan_info["loan_payment"].as<asset>() );
 
+   // wait for 30 days, frank's loan will be renewed at the current price
    produce_block( fc::hours(30*24 + 1) );
-   BOOST_REQUIRE_EQUAL( success(),            lendrex( alice, core_from_string("10.0000") ) );
+   rex_pool = get_rex_pool();
+   {
+      int64_t unlent_tokens = bancor_convert( rex_pool["total_unlent"].as<asset>().get_amount(),
+                                              rex_pool["total_rent"].as<asset>().get_amount(),
+                                              expected_stake );
+      
+      expected_stake = bancor_convert( rex_pool["total_rent"].as<asset>().get_amount() - unlent_tokens, 
+                                       rex_pool["total_unlent"].as<asset>().get_amount() + expected_stake,
+                                       payment.get_amount() );
+   }
+   
+   BOOST_REQUIRE_EQUAL( success(),            unlendrex( alice, asset::from_string("1.0000 REX") ) );
    BOOST_REQUIRE_EQUAL( claimrefund( frank ), wasm_assert_msg("no refund to be claimed") );
+   
+   loan_info = get_cpu_loan(1);
+   BOOST_REQUIRE_EQUAL( payment,                     loan_info["loan_payment"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( fund - payment,              loan_info["balance"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( expected_stake,              loan_info["total_staked"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( expected_stake + init_stake, get_cpu_limit( bob ) );
 
-   loan_info = get_last_cpu_loan();
-   BOOST_REQUIRE_EQUAL( 1,              loan_info["loan_num"].as_uint64() );
-   BOOST_REQUIRE_EQUAL( payment,        loan_info["loan_payment"].as<asset>() );
-   BOOST_REQUIRE_EQUAL( fund - payment, loan_info["balance"].as<asset>() );
+   // check that loans have been processed in order
+   BOOST_REQUIRE_EQUAL( false, get_cpu_loan(1).is_null() );
+   BOOST_REQUIRE_EQUAL( true,  get_cpu_loan(2).is_null() );
+   BOOST_REQUIRE_EQUAL( true,  get_net_loan(3).is_null() );
+   BOOST_REQUIRE_EQUAL( true,  get_net_loan(4).is_null() );
+   BOOST_REQUIRE_EQUAL( false, get_net_loan(5).is_null() );
+   BOOST_REQUIRE_EQUAL( 1,     get_last_cpu_loan()["loan_num"].as_uint64() );
+   BOOST_REQUIRE_EQUAL( 5,     get_last_net_loan()["loan_num"].as_uint64() );
 
+   // wait for another month, frank's loan doesn't have enough funds and will be closed
    produce_block( fc::hours(30*24) );
-   BOOST_REQUIRE_EQUAL( success(), lendrex( alice, core_from_string("10.0000") ) );   
-   BOOST_REQUIRE_EQUAL( success(), claimrefund( frank ) );
+   BOOST_REQUIRE_EQUAL( success(),  lendrex( alice, core_from_string("10.0000") ) );
+   BOOST_REQUIRE_EQUAL( true,       get_cpu_loan(1).is_null() );
+   BOOST_REQUIRE_EQUAL( init_stake, get_cpu_limit( bob ) );
+   BOOST_REQUIRE_EQUAL( success(),  claimrefund( frank ) );
    old_frank_balance = cur_frank_balance;
    cur_frank_balance = get_balance( frank );
-   BOOST_REQUIRE_EQUAL( fund - payment, cur_frank_balance - old_frank_balance );
-   BOOST_REQUIRE      (old_frank_balance < cur_frank_balance );
+   BOOST_REQUIRE_EQUAL( fund - payment,     cur_frank_balance - old_frank_balance );
+   BOOST_REQUIRE      ( old_frank_balance < cur_frank_balance );
 
    BOOST_REQUIRE_EQUAL( claimrefund( frank ), wasm_assert_msg("no refund to be claimed") );
 

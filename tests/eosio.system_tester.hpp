@@ -352,6 +352,20 @@ public:
       return get_last_loan( false );
    }
 
+   fc::variant get_loan_info( const uint64_t& loan_num, bool cpu ) const {
+      name table_name = cpu ? N(cpuloan) : N(netloan);
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, table_name, loan_num );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "rex_loan", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_cpu_loan( const uint64_t loan_num ) const {
+      return get_loan_info( loan_num, true );
+   }
+
+   fc::variant get_net_loan( const uint64_t loan_num ) const {
+      return get_loan_info( loan_num, false );
+   }
+
    asset get_rex_balance( const account_name& act ) const {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexbal), act );
       return data.empty() ? asset(0, symbol(SY(4, REX))) : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["rex_balance"].as<asset>();
