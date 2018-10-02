@@ -31,13 +31,8 @@ namespace eosio_system {
 
 class eosio_system_tester : public TESTER {
 public:
-   eosio_system_tester()
-   : eosio_system_tester([](TESTER& ) {}){}
 
-   template<typename Lambda>
-   eosio_system_tester(Lambda setup) {
-      setup(*this);
-
+   void basic_setup() {
       produce_blocks( 2 );
 
       create_accounts({ N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake),
@@ -53,29 +48,74 @@ public:
          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
          token_abi_ser.set_abi(abi, abi_serializer_max_time);
       }
+   }
 
-      create_currency( N(eosio.token), config::system_account_name, core_sym::from_string("10000000000.0000") );
-      issue(config::system_account_name,      core_sym::from_string("1000000000.0000"));
-      BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance( "eosio" ) );
+   void create_core_token( symbol core_symbol = symbol{CORE_SYM} ) {
+      FC_ASSERT( core_symbol.precision() != 4, "create_core_token assumes precision of core token is 4" );
+      create_currency( N(eosio.token), config::system_account_name, asset(100000000000000, core_symbol) );
+      issue(config::system_account_name, asset(10000000000000, core_symbol) );
+      BOOST_REQUIRE_EQUAL( asset(10000000000000, core_symbol), get_balance( "eosio", core_symbol ) );
+   }
+
+   void deploy_contract( bool call_init = true ) {
       set_code( config::system_account_name, contracts::system_wasm() );
       set_abi( config::system_account_name, contracts::system_abi().data() );
-      base_tester::push_action(config::system_account_name, N(init),
-                                            config::system_account_name,  mutable_variant_object()
-                                            ("core", CORE_SYM_STR));
+      if( call_init ) {
+         base_tester::push_action(config::system_account_name, N(init),
+                                               config::system_account_name,  mutable_variant_object()
+                                               ("core", CORE_SYM_STR));
+      }
+
       {
          const auto& accnt = control->db().get<account_object,by_name>( config::system_account_name );
          abi_def abi;
          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
          abi_ser.set_abi(abi, abi_serializer_max_time);
       }
+   }
 
+   void remaining_setup() {
       produce_blocks();
 
+      // Assumes previous setup steps were done with core token symbol set to CORE_SYM
       create_account_with_resources( N(alice1111111), config::system_account_name, core_sym::from_string("1.0000"), false );
       create_account_with_resources( N(bob111111111), config::system_account_name, core_sym::from_string("0.4500"), false );
       create_account_with_resources( N(carol1111111), config::system_account_name, core_sym::from_string("1.0000"), false );
 
       BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance("eosio")  + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
+   }
+
+   enum class setup_level {
+      none,
+      minimal,
+      core_token,
+      deploy_contract,
+      full
+   };
+
+   eosio_system_tester( setup_level l = setup_level::full ) {
+      if( l == setup_level::none ) return;
+
+      basic_setup();
+      if( l == setup_level::minimal ) return;
+
+      create_core_token();
+      if( l == setup_level::core_token ) return;
+
+      deploy_contract();
+      if( l == setup_level::deploy_contract ) return;
+
+      remaining_setup();
+   }
+
+   template<typename Lambda>
+   eosio_system_tester(Lambda setup) {
+      setup(*this);
+
+      basic_setup();
+      create_core_token();
+      deploy_contract();
+      remaining_setup();
    }
 
 
@@ -164,13 +204,15 @@ public:
       return push_transaction( trx );
    }
 
-   transaction_trace_ptr setup_producer_accounts( const std::vector<account_name>& accounts ) {
+   transaction_trace_ptr setup_producer_accounts( const std::vector<account_name>& accounts,
+                                                  asset ram = core_sym::from_string("1.0000"),
+                                                  asset cpu = core_sym::from_string("80.0000"),
+                                                  asset net = core_sym::from_string("80.0000")
+                                                )
+   {
       account_name creator(config::system_account_name);
       signed_transaction trx;
       set_transaction_headers(trx);
-      asset cpu = core_sym::from_string("80.0000");
-      asset net = core_sym::from_string("80.0000");
-      asset ram = core_sym::from_string("1.0000");
 
       for (const auto& a: accounts) {
          authority owner_auth( get_public_key( a, "owner" ) );
@@ -321,9 +363,9 @@ public:
       return time_point_sec( control->head_block_time() ).sec_since_epoch();
    }
 
-   asset get_balance( const account_name& act ) {
-      vector<char> data = get_row_by_account( N(eosio.token), act, N(accounts), symbol(CORE_SYM).to_symbol_code().value );
-      return data.empty() ? asset(0, symbol(CORE_SYM)) : token_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["balance"].as<asset>();
+   asset get_balance( const account_name& act, symbol balance_symbol = symbol{CORE_SYM} ) {
+      vector<char> data = get_row_by_account( N(eosio.token), act, N(accounts), balance_symbol.to_symbol_code().value );
+      return data.empty() ? asset(0, balance_symbol) : token_abi_ser.binary_to_variant("account", data, abi_serializer_max_time)["balance"].as<asset>();
    }
 
    fc::variant get_total_stake( const account_name& act ) {

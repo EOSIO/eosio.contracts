@@ -336,11 +336,15 @@ namespace eosiosystem {
                   if ( net_balance.amount < 0 ) {
                      r.net_amount = -net_balance;
                      net_balance.amount = 0;
-                  } // else r.net_amount = 0 by default constructor
+                  } else {
+                     r.net_amount = asset( 0, core_symbol() );
+                  }
                   if ( cpu_balance.amount < 0 ) {
                      r.cpu_amount = -cpu_balance;
                      cpu_balance.amount = 0;
-                  } // else r.cpu_amount = 0 by default constructor
+                  } else {
+                     r.cpu_amount = asset( 0, core_symbol() );
+                  }
                   r.request_time = now();
                });
                need_deferred_trx = true;

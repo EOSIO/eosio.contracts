@@ -164,7 +164,7 @@ namespace eosiosystem {
       eosio_assert( (newname & 0xFull) == 0, "13 character names are not valid account names to bid on" );
       eosio_assert( (newname & 0x1F0ull) == 0, "accounts with 12 character names and no dots can be created without bidding required" );
       eosio_assert( !is_account( newname ), "account already exists" );
-      eosio_assert( bid.symbol == asset().symbol, "asset must be system token" );
+      eosio_assert( bid.symbol == core_symbol(), "asset must be system token" );
       eosio_assert( bid.amount > 0, "insufficient bid" );
 
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {bidder,N(active)},
