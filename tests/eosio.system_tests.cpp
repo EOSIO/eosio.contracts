@@ -3748,6 +3748,38 @@ BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 
+BOOST_FIXTURE_TEST_CASE( ramfee_to_rex, eosio_system_tester ) try {
+
+   const int64_t ratio = 10000;
+   const asset net          = core_from_string("80.0000");
+   const asset cpu          = core_from_string("80.0000");
+   const asset init_balance = core_from_string("10000.0000");
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount), N(frankaccount) };
+   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3], frank = accounts[4];
+   for (const auto& a: accounts) {
+      create_account_with_resources( a, config::system_account_name, core_from_string("1.0000"), false, net, cpu );
+      transfer( config::system_account_name, a, init_balance, config::system_account_name );
+      BOOST_REQUIRE_EQUAL( asset::from_string("0.0000 REX"), get_rex_balance(a) );
+   }
+
+   asset cur_ramfee_balance = get_balance( N(eosio.ramfee) );
+   BOOST_REQUIRE_EQUAL( success(),                      buyram( alice, alice, core_from_string("20.0000") ) );
+   BOOST_REQUIRE_EQUAL( get_balance( N(eosio.ramfee) ), core_from_string("0.1000") + cur_ramfee_balance );
+   BOOST_REQUIRE_EQUAL( success(),                      lendrex( alice, core_from_string("350.0000") ) );
+   cur_ramfee_balance = get_balance( N(eosio.ramfee) );
+   asset cur_rex_balance = get_balance( N(eosio.rex) );
+   BOOST_REQUIRE_EQUAL( core_from_string("350.0000"),   cur_rex_balance );
+   BOOST_REQUIRE_EQUAL( success(),                      buyram( bob, carol, core_from_string("70.0000") ) );
+   BOOST_REQUIRE_EQUAL( cur_ramfee_balance,             get_balance( N(eosio.ramfee) ) );
+   BOOST_REQUIRE_EQUAL( get_balance( N(eosio.rex) ),    cur_rex_balance + core_from_string("0.3500") );
+   cur_rex_balance = get_balance( N(eosio.rex) );
+   BOOST_REQUIRE_EQUAL( cur_rex_balance,                get_rex_pool()["total_unlent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( 0,                              get_rex_pool()["total_lent"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( cur_rex_balance,                get_rex_pool()["total_lendable"].as<asset>() );
+
+} FC_LOG_AND_RETHROW()
+
+
 BOOST_FIXTURE_TEST_CASE( setabi_bios, TESTER ) try {
    abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>(), abi_serializer_max_time);
    set_code( config::system_account_name, contracts::bios_wasm() );

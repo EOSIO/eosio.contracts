@@ -438,11 +438,11 @@ namespace eosiosystem {
       if( itr != _rextable.end() ) {
          _rextable.modify( itr, 0, [&]( auto& rp ) {
             rp.total_unlent.amount   += amount.amount;
-            rp.total_lendable.amount += rp.total_unlent.amount + rp.total_lent.amount;
+            rp.total_lendable.amount += amount.amount;
          });
          
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { from, N(active) },
-                                                       { from, N(eosio.rex), amount, std::string("ram fee") } );
+            { from, N(eosio.rex), amount, std::string("transfer from ") + name{from}.to_string() + " REX"} );
       }
    }
 
