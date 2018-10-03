@@ -179,6 +179,7 @@ namespace eosiosystem {
       asset      total_rent; /// fees received in exchange for lent  (connector)
       asset      total_lendable; /// total EOS that have been lent (total_unlent + total_lent)
       asset      total_rex; /// total number of REX shares allocated to contributors to total_lendable
+      asset      namebid_proceeds;
       uint64_t   loan_num = 0; /// increments with each new loan
       uint64_t primary_key()const { return 0; }
    };

@@ -342,6 +342,14 @@ namespace eosiosystem {
          return std::make_pair( delete_loan, delta_stake );
       };
 
+      // transfer from eosio.names to eosio.rex
+      if( rexi->namebid_proceeds.amount > 0 ) {
+         deposit_rex( N(eosio.names), rexi->namebid_proceeds );
+         _rextable.modify( rexi, 0, [&]( auto& rt ) {
+            rt.namebid_proceeds.amount = 0;
+         });
+      }
+
       {
          rex_cpu_loan_table cpu_loans( _self, _self );
          auto cpu_idx = cpu_loans.get_index<N(byexpr)>();

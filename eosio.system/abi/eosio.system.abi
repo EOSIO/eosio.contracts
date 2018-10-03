@@ -243,12 +243,13 @@
       "name": "rex_pool",
       "base": "",
       "fields": [
-         {"name":"total_lent",     "type":"asset"},
-         {"name":"total_unlent",   "type":"asset"},
-         {"name":"total_rent",     "type":"asset"},
-         {"name":"total_lendable", "type":"asset"},
-         {"name":"total_rex",      "type":"asset"},
-         {"name":"loan_num",       "type":"uint64"}
+         {"name":"total_lent",       "type":"asset"},
+         {"name":"total_unlent",     "type":"asset"},
+         {"name":"total_rent",       "type":"asset"},
+         {"name":"total_lendable",   "type":"asset"},
+         {"name":"total_rex",        "type":"asset"},
+         {"name":"namebid_proceeds", "type":"asset"},
+         {"name":"loan_num",         "type":"uint64"}
       ]
     },{
       "name": "rex_loan",
