@@ -1,17 +1,19 @@
 /**
- *  @copyright defined in eos/LICENSE.txt 
+ *  @copyright defined in eos/LICENSE.txt
  */
 
 #include <eosio.system/eosio.system.hpp>
 
 namespace eosiosystem {
-
+   
    /**
     * Transfers SYS tokens from user balance and credits converts them to REX stake.
     */
    void system_contract::lendrex( account_name from, asset amount ) {
+      
       require_auth( from );
 
+      eosio_assert( amount.symbol == system_token_symbol, "asset must be system token" );
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
                                                     { from, N(eosio.rex), amount, "buy REX" } );
 
@@ -22,11 +24,11 @@ namespace eosiosystem {
          _rextable.emplace( _self, [&]( auto& rp ){
             rex_received.amount = amount.amount * 10000;
 
-            rp.total_lendable        = amount;
-            rp.total_lent            = asset( 0, system_token_symbol );
-            rp.total_rent            = asset( 1000000, system_token_symbol ); /// base amount prevents renting profitably until at least a minimum number of system_token_symbol are made available
-            rp.total_rex             = rex_received;
-            rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
+            rp.total_lendable = amount;
+            rp.total_lent     = asset( 0, system_token_symbol );
+            rp.total_rent     = asset( 1000000, system_token_symbol ); /// base amount prevents renting profitably until at least a minimum number of system_token_symbol are made available
+            rp.total_rex      = rex_received;
+            rp.total_unlent   = rp.total_lendable - rp.total_lent; 
          });
       } else {
          const auto S0 = itr->total_lendable.amount;
@@ -149,8 +151,8 @@ namespace eosiosystem {
          tot.cpu_weight.amount    += delta_cpu;
          tot.net_weight.amount    += delta_net;
       });
-      eosio_assert( asset(0) <= tot_itr->net_weight, "insufficient staked total net bandwidth" );
-      eosio_assert( asset(0) <= tot_itr->cpu_weight, "insufficient staked total cpu bandwidth" );
+      eosio_assert( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
+      eosio_assert( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
 
       int64_t ram_bytes, net, cpu;
       get_resource_limits( receiver, &ram_bytes, &net, &cpu );
@@ -167,6 +169,7 @@ namespace eosiosystem {
 
       runrex(2);
 
+      eosio_assert( payment.symbol == system_token_symbol, "asset must be system token" );
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
                                                     { from, N(eosio.rex), payment, string("rent CPU") } );
 
@@ -189,7 +192,7 @@ namespace eosiosystem {
          c.receiver     = receiver;
          c.loan_payment = payment;
          c.total_staked = asset( rented_tokens, system_token_symbol );
-         c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
+         c.expiration   = current_time_point() + eosio::days(30);
          c.loan_num     = itr->loan_num;
          
          c.auto_renew   = auto_renew;
@@ -205,6 +208,7 @@ namespace eosiosystem {
 
       runrex(2);
 
+      eosio_assert( payment.symbol == system_token_symbol, "asset must be system token" );
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
                                                     { from, N(eosio.rex), payment, string("rent NET") } );
 
@@ -227,7 +231,7 @@ namespace eosiosystem {
          c.receiver     = receiver;
          c.loan_payment = payment;
          c.total_staked = asset( rented_tokens, system_token_symbol );
-         c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
+         c.expiration   = current_time_point() + eosio::days(30);
          c.loan_num     = itr->loan_num;
          
          c.auto_renew   = auto_renew;
@@ -241,6 +245,7 @@ namespace eosiosystem {
 
       require_auth( from );
 
+      eosio_assert( payment.symbol == system_token_symbol, "asset must be system token" );
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
                                                     { from, N(eosio.rex), payment, string("fund ") + (cpu ? "CPU loan" : "NET loan") } );
       // TODO: refactor and remove code duplication
@@ -248,7 +253,7 @@ namespace eosiosystem {
          rex_cpu_loan_table cpu_loans( _self, _self );
          auto itr = cpu_loans.find( loan_num );
          eosio_assert( itr != cpu_loans.end(), "loan not found" );
-         eosio_assert( itr->from, "actor has to be loan creator" );
+         eosio_assert( itr->from == from, "actor has to be loan creator" );
          eosio_assert( itr->auto_renew, "loan must be set as auto-renew" );
          eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
          cpu_loans.modify( itr, 0, [&]( auto& loan ) {
@@ -258,7 +263,7 @@ namespace eosiosystem {
          rex_net_loan_table net_loans( _self, _self );
          auto itr = net_loans.find( loan_num );
          eosio_assert( itr != net_loans.end(), "loan not found" );
-         eosio_assert( itr->from, "actor has to be loan creator" );
+         eosio_assert( itr->from == from, "actor has to be loan creator" );
          eosio_assert( itr->auto_renew, "loan must be set as auto-renew" );
          eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
          net_loans.modify( itr, 0, [&]( auto& loan ) {
@@ -288,7 +293,6 @@ namespace eosiosystem {
       eosio_assert( rexi != _rextable.end(), "rex system not initialized yet" );
 
       auto process_expired_loan = [&]( auto& idx, const auto& itr ) -> std::pair<bool, int64_t> {
-
          _rextable.modify( rexi, 0, [&]( auto& rt ) {
             bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, itr->total_staked.amount );
             rt.total_lent.amount    -= itr->total_staked.amount;
@@ -343,8 +347,7 @@ namespace eosiosystem {
          auto cpu_idx = cpu_loans.get_index<N(byexpr)>();
          for( uint16_t i = 0; i < max; ++i ) {
             auto itr = cpu_idx.begin();                                                                                                                                                                                                                                        
-            if( itr == cpu_idx.end() ) break;
-            if( itr->expiration.elapsed.count() > current_time() ) break;
+            if( itr == cpu_idx.end() || itr->expiration > current_time_point() ) break;
       
             auto result = process_expired_loan( cpu_idx, itr );
             if( result.second != 0 )
@@ -360,8 +363,7 @@ namespace eosiosystem {
          auto net_idx = net_loans.get_index<N(byexpr)>();
          for( uint16_t i = 0; i < max; ++i ) {
             auto itr = net_idx.begin();
-            if( itr == net_idx.end() ) break;
-            if( itr->expiration.elapsed.count() > current_time() ) break;
+            if( itr == net_idx.end() || itr->expiration > current_time_point() ) break;
 
             auto result = process_expired_loan( net_idx, itr );
             if( result.second != 0 )
@@ -421,6 +423,19 @@ namespace eosiosystem {
          success = true;
       }
       return std::make_tuple( success, proceeds, unstake_quant );
+   }
+
+   void system_contract::deposit_rex( const account_name& from, const asset& amount ) {
+      auto itr = _rextable.begin();
+      if( itr != _rextable.end() ) {
+         _rextable.modify( itr, 0, [&]( auto& rp ) {
+            rp.total_unlent.amount   += amount.amount;
+            rp.total_lendable.amount += rp.total_unlent.amount + rp.total_lent.amount;
+         });
+         
+         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { from, N(active) },
+                                                       { from, N(eosio.rex), amount, std::string("ram fee") } );
+      }
    }
 
 }; /// namespace eosiosystem

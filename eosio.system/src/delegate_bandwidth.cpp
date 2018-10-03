@@ -127,8 +127,9 @@ namespace eosiosystem {
       if( fee.amount > 0 ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {payer,N(active)},
                                                        { payer, N(eosio.ramfee), fee, std::string("ram fee") } );
+         deposit_rex( N(eosio.ramfee), fee );
       }
-
+      
       int64_t bytes_out;
 
       const auto& market = _rammarket.get(S(4,RAMCORE), "ram market does not exist");
@@ -200,7 +201,8 @@ namespace eosiosystem {
       // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
       if( fee > 0 ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {account,N(active)},
-            { account, N(eosio.ramfee), asset(fee), std::string("sell ram fee") } );
+            { account, N(eosio.ramfee), asset(fee, system_token_symbol), std::string("sell ram fee") } );
+         deposit_rex( N(eosio.ramfee), asset(fee, system_token_symbol) );
       }
    }
 
