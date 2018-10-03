@@ -288,76 +288,75 @@ namespace eosiosystem {
       auto rexi = _rextable.begin();
       eosio_assert( rexi != _rextable.end(), "rex system not initialized yet" );
 
-      auto unrent = [&]( int64_t rented_tokens )  {
+      auto process_expired_loan = [&]( auto& idx, const auto& itr ) -> std::pair<bool, int64_t> {
+
          _rextable.modify( rexi, 0, [&]( auto& rt ) {
-            auto fee = bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, rented_tokens );
-            rt.total_lent.amount    -= rented_tokens;
+            bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, itr->total_staked.amount );
+            rt.total_lent.amount    -= itr->total_staked.amount;
             rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
          });
+
+         bool    delete_loan = false;
+         int64_t delta_stake = 0;
+         if( itr->auto_renew && itr->loan_payment <= itr->balance ) {
+
+            int64_t rented_tokens = 0;
+            _rextable.modify( rexi, 0, [&]( auto& rt ) {
+               rented_tokens = bancor_convert( rt.total_rent.amount,
+                                               rt.total_unlent.amount,
+                                               itr->loan_payment.amount );
+               rt.total_lent.amount    += rented_tokens;
+               rt.total_unlent.amount  += itr->loan_payment.amount;
+               rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+            });
+
+            idx.modify ( itr, 0, [&]( auto& loan ) {
+               delta_stake              = rented_tokens - loan.total_staked.amount;
+               loan.total_staked.amount = rented_tokens;
+               loan.expiration         += eosio::days(30);
+               loan.balance.amount     -= loan.loan_payment.amount;
+            });
+
+         } else {
+            delete_loan = true;
+            delta_stake = -( itr->total_staked.amount );
+            // refund "from" account if the closed loan balance is positive
+            if( itr->auto_renew && itr->balance.amount > 0 ) {
+               loan_refund_table loan_refunds( _self, _self );
+               auto ref_itr = loan_refunds.find( itr->from );
+               if( ref_itr == loan_refunds.end() ) {
+                  loan_refunds.emplace( itr->from, [&]( auto& ref ) {
+                     ref.owner   = itr->from;
+                     ref.balance = itr->balance;
+                  });
+               } else {
+                  loan_refunds.modify( ref_itr, itr->from, [&]( auto& ref ) {
+                     ref.balance.amount += itr->balance.amount;
+                  });
+               }
+            }
+         }
+         
+         return std::make_pair( delete_loan, delta_stake );
       };
 
-      // TODO: refactor and remove code duplication
       {
          rex_cpu_loan_table cpu_loans( _self, _self );
          auto cpu_idx = cpu_loans.get_index<N(byexpr)>();
-         bool delete_loan = false;
          for( uint16_t i = 0; i < max; ++i ) {
             auto itr = cpu_idx.begin();                                                                                                                                                                                                                                        
             if( itr == cpu_idx.end() ) break;
             if( itr->expiration.elapsed.count() > current_time() ) break;
-            
-            // update rex totals to account for closing the loan
-            unrent( itr->total_staked.amount );
-            
-            int64_t delta_stake = 0;
-            if( itr->auto_renew && itr->loan_payment <= itr->balance ) {
-               
-               int64_t rented_tokens = 0;
-               _rextable.modify( rexi, 0, [&]( auto& rt ) {
-                  rented_tokens = bancor_convert( rt.total_rent.amount,
-                                                  rt.total_unlent.amount,
-                                                  itr->loan_payment.amount );
-                  rt.total_lent.amount    += rented_tokens;
-                  rt.total_unlent.amount  += itr->loan_payment.amount;
-                  rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
-               });
-               
-               cpu_idx.modify ( itr, 0, [&]( auto& loan ) {
-                  delta_stake              = rented_tokens - loan.total_staked.amount;
-                  loan.total_staked.amount = rented_tokens;
-                  loan.expiration         += eosio::days(30);
-                  loan.balance.amount     -= loan.loan_payment.amount;
-               });
       
-            } else {
-               delete_loan = true;
-               delta_stake = -( itr->total_staked.amount );
-               // refund "from" account if the closed loan balance is positive
-               if( itr->auto_renew && itr->balance.amount > 0 ) {
-                  loan_refund_table loan_refunds( _self, _self );
-                  auto ref_itr = loan_refunds.find( itr->from );
-                  if( ref_itr == loan_refunds.end() ) {
-                     loan_refunds.emplace( itr->from, [&]( auto& ref ) {
-                        ref.owner   = itr->from;
-                        ref.balance = itr->balance;
-                     });
-                  } else {
-                     loan_refunds.modify( ref_itr, itr->from, [&]( auto& ref ) {
-                        ref.balance.amount += itr->balance.amount;
-                     });
-                  }
-               }
-            }
-            
-            if( delta_stake != 0 )
-               update_resource_limits( itr->receiver, delta_stake, 0 );
+            auto result = process_expired_loan( cpu_idx, itr );
+            if( result.second != 0 )
+               update_resource_limits( itr->receiver, result.second, 0 );
 
-            if( delete_loan )
+            if( result.first )
                cpu_idx.erase( itr );
          }
       }
 
-      // TODO: refactor and remove code duplication
       {
          rex_net_loan_table net_loans( _self, _self );
          auto net_idx = net_loans.get_index<N(byexpr)>();
@@ -367,53 +366,11 @@ namespace eosiosystem {
             if( itr == net_idx.end() ) break;
             if( itr->expiration.elapsed.count() > current_time() ) break;
 
-            // update rex totals to account for closing the loan
-            unrent( itr->total_staked.amount );
+            auto result = process_expired_loan( net_idx, itr );
+            if( result.second != 0 )
+               update_resource_limits( itr->receiver, 0, result.second );
 
-            int64_t delta_stake = 0;
-            if( itr->auto_renew && itr->loan_payment <= itr->balance ) {
-
-               int64_t rented_tokens = 0;
-               _rextable.modify( rexi, 0, [&]( auto& rt ) {
-                  rented_tokens = bancor_convert( rt.total_rent.amount,
-                                                  rt.total_unlent.amount,
-                                                  itr->loan_payment.amount );
-                  rt.total_lent.amount    += rented_tokens;
-                  rt.total_unlent.amount  += itr->loan_payment.amount;
-                  rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
-               });
-
-               net_idx.modify ( itr, 0, [&]( auto& loan ) {
-                  delta_stake              = rented_tokens - loan.total_staked.amount;
-                  loan.total_staked.amount = rented_tokens;
-                  loan.expiration         += eosio::days(30);
-                  loan.balance            -= itr->loan_payment;
-               });
-
-            } else {
-               delete_loan = true;
-               delta_stake = -( itr->total_staked.amount );
-               // refund "from" account if the closed loan balance is positive
-               if( itr->auto_renew && itr->balance.amount > 0 ) {
-                  loan_refund_table loan_refunds( _self, _self );
-                  auto ref_itr = loan_refunds.find( itr->from );
-                  if( ref_itr == loan_refunds.end() ) {
-                     loan_refunds.emplace( itr->from, [&]( auto& ref ) { 
-                        ref.owner   = itr->from;
-                        ref.balance = itr->balance;
-                     });
-                  } else {
-                     loan_refunds.modify( ref_itr, itr->from, [&]( auto& ref ) {
-                        ref.balance.amount += itr->balance.amount;
-                     });
-                  }
-               }
-            }
-
-            if( delta_stake != 0 )
-               update_resource_limits( itr->receiver, 0, delta_stake );
-
-            if( delete_loan )
+            if( result.first )
                net_idx.erase( itr );
          }
       }
