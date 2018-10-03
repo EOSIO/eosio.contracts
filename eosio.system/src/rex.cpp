@@ -23,8 +23,8 @@ namespace eosiosystem {
             rex_received.amount = amount.amount * 10000;
 
             rp.total_lendable        = amount;
-            rp.total_lent            = asset( 0, CORE_SYMBOL );
-            rp.total_rent            = asset( 1000000, CORE_SYMBOL ); /// base amount prevents renting profitably until at least a minimum number of CORE_SYMBOL are made available
+            rp.total_lent            = asset( 0, system_token_symbol );
+            rp.total_rent            = asset( 1000000, system_token_symbol ); /// base amount prevents renting profitably until at least a minimum number of system_token_symbol are made available
             rp.total_rex             = rex_received;
             rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
          });
@@ -82,8 +82,8 @@ namespace eosiosystem {
       auto result = close_rex_order( bitr, rex );
       if( std::get<0>(result) ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { N(eosio.rex), N(active) },
-                                                       { N(eosio.rex), from, asset( std::get<1>(result), CORE_SYMBOL ), "sell REX" } );
-         update_voting_power( from, asset( -(std::get<2>(result)), CORE_SYMBOL ) );
+                                                       { N(eosio.rex), from, asset( std::get<1>(result), system_token_symbol ), "sell REX" } );
+         update_voting_power( from, asset( -(std::get<2>(result)), system_token_symbol ) );
       } else {
          rex_order_table rexorders( _self, _self );
          eosio_assert( rexorders.find( from ) == rexorders.end(), "an unlendrex request has already been scheduled");
@@ -113,8 +113,8 @@ namespace eosiosystem {
       eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
       eosio_assert( !itr->is_open, "rex order has not been closed" );
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.rex),N(active)},
-                                                    { N(eosio.rex), itr->owner, asset(itr->proceeds, CORE_SYMBOL), "claim REX proceeds" } );
-      update_voting_power( owner, asset( -( itr->unstake_quant ), CORE_SYMBOL ) );
+                                                    { N(eosio.rex), itr->owner, asset(itr->proceeds, system_token_symbol), "claim REX proceeds" } );
+      update_voting_power( owner, asset( -( itr->unstake_quant ), system_token_symbol ) );
       rexorders.erase( itr );
    }
 
@@ -188,12 +188,12 @@ namespace eosiosystem {
          c.from         = from;
          c.receiver     = receiver;
          c.loan_payment = payment;
-         c.total_staked = asset( rented_tokens, CORE_SYMBOL );
+         c.total_staked = asset( rented_tokens, system_token_symbol );
          c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
          c.loan_num     = itr->loan_num;
          
          c.auto_renew   = auto_renew;
-         c.balance      = asset( 0, CORE_SYMBOL );
+         c.balance      = asset( 0, system_token_symbol );
       });
 
       update_resource_limits( receiver, rented_tokens, 0 );
@@ -226,17 +226,16 @@ namespace eosiosystem {
          c.from         = from;
          c.receiver     = receiver;
          c.loan_payment = payment;
-         c.total_staked = asset( rented_tokens, CORE_SYMBOL );
+         c.total_staked = asset( rented_tokens, system_token_symbol );
          c.expiration   = eosio::time_point( eosio::microseconds(current_time() + eosio::days(30).count()) );
          c.loan_num     = itr->loan_num;
          
          c.auto_renew   = auto_renew;
-         c.balance      = asset( 0, CORE_SYMBOL );
+         c.balance      = asset( 0, system_token_symbol );
       });
 
       update_resource_limits( receiver, 0, rented_tokens );
    }
-
 
    void system_contract::fundrexloan( account_name from, uint64_t loan_num, asset payment, bool cpu ) {
 
@@ -299,7 +298,6 @@ namespace eosiosystem {
          bool    delete_loan = false;
          int64_t delta_stake = 0;
          if( itr->auto_renew && itr->loan_payment <= itr->balance ) {
-
             int64_t rented_tokens = 0;
             _rextable.modify( rexi, 0, [&]( auto& rt ) {
                rented_tokens = bancor_convert( rt.total_rent.amount,
@@ -360,7 +358,6 @@ namespace eosiosystem {
       {
          rex_net_loan_table net_loans( _self, _self );
          auto net_idx = net_loans.get_index<N(byexpr)>();
-         bool delete_loan = false;
          for( uint16_t i = 0; i < max; ++i ) {
             auto itr = net_idx.begin();
             if( itr == net_idx.end() ) break;
@@ -375,27 +372,29 @@ namespace eosiosystem {
          }
       }
 
-      rex_order_table rexorders( _self, _self );
-      auto idx = rexorders.get_index<N(bytime)>();
-      auto oitr = idx.begin();
-      for( uint16_t i = 0; i < max; ++i ) {
-         if( oitr == idx.end() || !oitr->is_open ) break;
-         auto bitr = _rexbalance.find( oitr->owner );
-         // TODO: change the logic below
-         if( bitr == _rexbalance.end() ) {
-            idx.erase( oitr++ );
-            continue;
+      {
+         rex_order_table rex_orders( _self, _self );
+         auto idx = rex_orders.get_index<N(bytime)>();
+         auto oitr = idx.begin();
+         for( uint16_t i = 0; i < max; ++i ) {
+            if( oitr == idx.end() || !oitr->is_open ) break;
+            auto bitr = _rexbalance.find( oitr->owner );
+            // TODO: change the logic below
+            if( bitr == _rexbalance.end() ) {
+               idx.erase( oitr++ );
+               continue;
+            }
+            auto result = close_rex_order( bitr, oitr->rex_requested );
+            auto next   = oitr;
+            ++next;
+            if( std::get<0>( result ) ) {
+               idx.modify( oitr, 0, [&]( auto& rt ) {
+                  rt.proceeds = std::get<1>( result );
+                  rt.close();
+               });
+            }
+            oitr = next;
          }
-         auto result = close_rex_order( bitr, oitr->rex_requested );
-         auto next   = oitr;
-         ++next;
-         if( std::get<0>( result ) ) {
-            idx.modify( oitr, 0, [&]( auto& rt ) {
-               rt.proceeds = std::get<1>( result );
-               rt.close();
-            });
-         }
-         oitr = next;
       }
 
    }
@@ -406,7 +405,7 @@ namespace eosiosystem {
       const auto R0 = rexitr->total_rex.amount;
       const auto R1 = R0 - rex.amount;
       const auto S1 = (uint128_t(R1) * S0) / R0;
-      const int64_t proceeds      = S0 - S1;  // asset( S0 - S1, CORE_SYMBOL );
+      const int64_t proceeds      = S0 - S1;  // asset( S0 - S1, system_token_symbol );
       const int64_t unstake_quant = ( uint128_t(rex.amount) * bitr->vote_stake.amount ) / bitr->rex_balance.amount;
       bool success = false;
       if( proceeds <= rexitr->total_unlent.amount ) {

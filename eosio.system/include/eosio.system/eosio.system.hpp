@@ -208,13 +208,18 @@ namespace eosiosystem {
 
       uint64_t primary_key()const { return loan_num;                   }
       uint64_t by_expr()const     { return expiration.elapsed.count(); }
+      uint64_t by_owner()const    { return from;                       }
    };
 
    typedef eosio::multi_index< N(cpuloan), rex_loan,
-                               indexed_by<N(byexpr), const_mem_fun<rex_loan, uint64_t, &rex_loan::by_expr>>> rex_cpu_loan_table;
+                               indexed_by<N(byexpr),  const_mem_fun<rex_loan, uint64_t, &rex_loan::by_expr>>,
+                               indexed_by<N(byowner), const_mem_fun<rex_loan, uint64_t, &rex_loan::by_owner>>
+                             > rex_cpu_loan_table;
 
    typedef eosio::multi_index< N(netloan), rex_loan,
-                               indexed_by<N(byexpr), const_mem_fun<rex_loan, uint64_t, &rex_loan::by_expr>>> rex_net_loan_table;
+                               indexed_by<N(byexpr),  const_mem_fun<rex_loan, uint64_t, &rex_loan::by_expr>>,
+                               indexed_by<N(byowner), const_mem_fun<rex_loan, uint64_t, &rex_loan::by_owner>>
+                             > rex_net_loan_table;
 
    struct loan_refund {
       account_name  owner;
