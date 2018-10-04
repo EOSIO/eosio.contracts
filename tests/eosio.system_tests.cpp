@@ -3748,7 +3748,7 @@ BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 
-BOOST_FIXTURE_TEST_CASE( ramfee_to_rex, eosio_system_tester ) try {
+BOOST_FIXTURE_TEST_CASE( ramfee_namebid_to_rex, eosio_system_tester ) try {
 
    const int64_t ratio = 10000;
    const asset net          = core_from_string("80.0000");
@@ -3772,10 +3772,36 @@ BOOST_FIXTURE_TEST_CASE( ramfee_to_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(),                      buyram( bob, carol, core_from_string("70.0000") ) );
    BOOST_REQUIRE_EQUAL( cur_ramfee_balance,             get_balance( N(eosio.ramfee) ) );
    BOOST_REQUIRE_EQUAL( get_balance( N(eosio.rex) ),    cur_rex_balance + core_from_string("0.3500") );
+  
    cur_rex_balance = get_balance( N(eosio.rex) );
-   BOOST_REQUIRE_EQUAL( cur_rex_balance,                get_rex_pool()["total_unlent"].as<asset>() );
-   BOOST_REQUIRE_EQUAL( 0,                              get_rex_pool()["total_lent"].as<asset>().get_amount() );
-   BOOST_REQUIRE_EQUAL( cur_rex_balance,                get_rex_pool()["total_lendable"].as<asset>() );
+   auto cur_rex_pool = get_rex_pool();
+   
+   BOOST_REQUIRE_EQUAL( cur_rex_balance, cur_rex_pool["total_unlent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( 0,               cur_rex_pool["total_lent"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( cur_rex_balance, cur_rex_pool["total_lendable"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( 0,               cur_rex_pool["namebid_proceeds"].as<asset>().get_amount() );
+
+   // required for closing namebids 
+   cross_15_percent_threshold();
+   produce_block( fc::days(14) );
+
+   cur_rex_balance = get_balance( N(eosio.rex) );
+   BOOST_REQUIRE_EQUAL( success(),                    bidname( carol, N(rndmbid), core_from_string("23.7000") ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("23.7000"),  get_balance( N(eosio.names) ) );
+   BOOST_REQUIRE_EQUAL( success(),                    bidname( alice, N(rndmbid), core_from_string("29.3500") ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("29.3500"),  get_balance( N(eosio.names) ));
+
+   produce_block( fc::hours(24) );
+   produce_blocks( 10 );
+
+   BOOST_REQUIRE_EQUAL( core_from_string("29.3500"),   get_rex_pool()["namebid_proceeds"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( success(),                     lendrex( frank, core_from_string("5.0000") ) );
+   BOOST_REQUIRE_EQUAL( get_balance( N(eosio.rex) ),   cur_rex_balance + core_from_string("34.3500") );
+   BOOST_REQUIRE_EQUAL( 0,                             get_balance( N(eosio.names) ).get_amount() );
+
+   cur_rex_balance = get_balance( N(eosio.rex) );
+   BOOST_REQUIRE_EQUAL( cur_rex_balance,               get_rex_pool()["total_lendable"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( cur_rex_balance,               get_rex_pool()["total_unlent"].as<asset>() );
 
 } FC_LOG_AND_RETHROW()
 
