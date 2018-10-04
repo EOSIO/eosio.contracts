@@ -305,6 +305,8 @@ namespace eosiosystem {
          void fundrexloan( account_name from, uint64_t loan_num, asset payment, bool cpu );
 
          void claimrefund( account_name owner );
+         
+         void updaterex( account_name owner );
 
          /**
           *  Decreases the total tokens delegated by from to receiver and/or

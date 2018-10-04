@@ -233,6 +233,29 @@ namespace eosiosystem {
       loan_refunds.erase( itr );
    }
 
+   void system_contract::updaterex( account_name owner ) {
+      
+      require_auth( owner );
+      
+      auto itr = _rexbalance.find( owner );
+      eosio_assert( itr != _rexbalance.end() && itr->rex_balance.amount > 0, "account has no REX balance");
+      const asset init_stake = itr->vote_stake;
+
+      runrex(2);
+
+      auto rexp_itr = _rextable.begin();
+      const asset& total_rex      = rexp_itr->total_rex;
+      const asset& total_lendable = rexp_itr->total_lendable;
+
+      asset current_stake( 0, system_token_symbol );
+      current_stake.amount = ( uint128_t(itr->rex_balance.amount) * total_lendable.amount ) / total_rex.amount;
+      _rexbalance.modify( itr, 0, [&]( auto& rb ) {
+         rb.vote_stake = current_stake;
+      });
+
+      update_voting_power( owner, current_stake - init_stake );
+   }
+
    /**
     * Perform maitenance operations on expired rex
     */
@@ -296,6 +319,7 @@ namespace eosiosystem {
          });
       }
 
+      // process cpu loans
       {
          rex_cpu_loan_table cpu_loans( _self, _self );
          auto cpu_idx = cpu_loans.get_index<N(byexpr)>();
@@ -312,6 +336,7 @@ namespace eosiosystem {
          }
       }
 
+      // process net loans
       {
          rex_net_loan_table net_loans( _self, _self );
          auto net_idx = net_loans.get_index<N(byexpr)>();
@@ -328,18 +353,14 @@ namespace eosiosystem {
          }
       }
 
+      // process unlendrex orders
       {
          rex_order_table rex_orders( _self, _self );
          auto idx = rex_orders.get_index<N(bytime)>();
          auto oitr = idx.begin();
          for( uint16_t i = 0; i < max; ++i ) {
             if( oitr == idx.end() || !oitr->is_open ) break;
-            auto bitr = _rexbalance.find( oitr->owner );
-            // TODO: change the logic below
-            if( bitr == _rexbalance.end() ) {
-               idx.erase( oitr++ );
-               continue;
-            }
+            auto bitr   = _rexbalance.find( oitr->owner ); // bitr != _rexbalance.end()
             auto result = close_rex_order( bitr, oitr->rex_requested );
             auto next   = oitr;
             ++next;

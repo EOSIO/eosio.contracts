@@ -3492,15 +3492,13 @@ BOOST_FIXTURE_TEST_CASE( lend_rent_rex, eosio_system_tester ) try {
       BOOST_REQUIRE_EQUAL( 0,                  get_rex_balance(alice).get_amount() );
       BOOST_REQUIRE_EQUAL( init_balance + fee, get_balance(alice) );
       // test that carol's resource limits have been updated properly when loan expires
-      BOOST_REQUIRE_EQUAL( 0,                  get_cpu_limit( carol ) - init_cpu_limit );
-      BOOST_REQUIRE_EQUAL( 0,                  get_net_limit( carol ) - init_net_limit );
+      BOOST_REQUIRE_EQUAL( init_cpu_limit,     get_cpu_limit( carol ) );
+      BOOST_REQUIRE_EQUAL( init_net_limit,     get_net_limit( carol ) );
       
       rex_pool = get_rex_pool();
       BOOST_REQUIRE_EQUAL( 0, rex_pool["total_lendable"].as<asset>().get_amount() );
       BOOST_REQUIRE_EQUAL( 0, rex_pool["total_unlent"].as<asset>().get_amount() );
       BOOST_REQUIRE_EQUAL( 0, rex_pool["total_rex"].as<asset>().get_amount() );
-      // The following test is not always true, need to be replaced
-      //   BOOST_REQUIRE_EQUAL( init_tot_rent, rex_pool["total_rent"].as<asset>() );
    }
 
    {
