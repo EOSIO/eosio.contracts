@@ -76,6 +76,7 @@ namespace eosiosystem {
     * Converts REX stake back into SYS tokens at current exchange rate
     */
    void system_contract::unlendrex( account_name from, asset rex ) {
+
       runrex(2);
 
       require_auth( from );
@@ -174,38 +175,8 @@ namespace eosiosystem {
 
       require_auth( from );
 
-      runrex(2);
-
-      eosio_assert( payment.symbol == system_token_symbol, "asset must be system token" );
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
-                                                    { from, N(eosio.rex), payment, string("rent CPU") } );
-
-      auto itr = _rextable.begin();
-      eosio_assert( itr != _rextable.end(), "rex system not initialized yet" );
-
-      int64_t rented_tokens = 0;
-      _rextable.modify( itr, 0, [&]( auto& rt ) {
-         rented_tokens = bancor_convert( rt.total_rent.amount, rt.total_unlent.amount, payment.amount );
-         rt.total_lent.amount    += rented_tokens;
-         rt.total_unlent.amount  += payment.amount;
-         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
-         rt.loan_num++;
-      });
-
-      rex_cpu_loan_table cpu_loans(_self,_self);
-      
-      cpu_loans.emplace( from, [&]( auto& c ) {
-         c.from         = from;
-         c.receiver     = receiver;
-         c.loan_payment = payment;
-         c.total_staked = asset( rented_tokens, system_token_symbol );
-         c.expiration   = current_time_point() + eosio::days(30);
-         c.loan_num     = itr->loan_num;
-         
-         c.auto_renew   = auto_renew;
-         c.balance      = asset( 0, system_token_symbol );
-      });
-
+      rex_cpu_loan_table cpu_loans( _self, _self );
+      int64_t rented_tokens = rentrex( cpu_loans, from, receiver, payment, auto_renew, "rent CPU" );
       update_resource_limits( receiver, rented_tokens, 0 );
    }
    
@@ -213,38 +184,8 @@ namespace eosiosystem {
 
       require_auth( from );
 
-      runrex(2);
-
-      eosio_assert( payment.symbol == system_token_symbol, "asset must be system token" );
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
-                                                    { from, N(eosio.rex), payment, string("rent NET") } );
-
-      auto itr = _rextable.begin();
-      eosio_assert( itr != _rextable.end(), "rex system not initialized yet" );
-
-      int64_t rented_tokens = 0;
-      _rextable.modify( itr, 0, [&]( auto& rt ) {
-         rented_tokens = bancor_convert( rt.total_rent.amount, rt.total_unlent.amount, payment.amount );
-         rt.total_lent.amount    += rented_tokens;
-         rt.total_unlent.amount  += payment.amount;
-         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
-         rt.loan_num++;
-      });
-
-      rex_net_loan_table net_loans(_self,_self);
-
-      net_loans.emplace( from, [&]( auto& c ) {
-         c.from         = from;
-         c.receiver     = receiver;
-         c.loan_payment = payment;
-         c.total_staked = asset( rented_tokens, system_token_symbol );
-         c.expiration   = current_time_point() + eosio::days(30);
-         c.loan_num     = itr->loan_num;
-         
-         c.auto_renew   = auto_renew;
-         c.balance      = asset( 0, system_token_symbol );
-      });
-
+      rex_net_loan_table net_loans( _self, _self );
+      int64_t rented_tokens = rentrex( net_loans, from, receiver, payment, auto_renew, "rent NET" );
       update_resource_limits( receiver, 0, rented_tokens );
    }
 
@@ -412,6 +353,42 @@ namespace eosiosystem {
          }
       }
 
+   }
+
+   template <typename T>
+   int64_t system_contract::rentrex( T& table, account_name from, account_name receiver,
+                                     asset payment, bool auto_renew, const std::string& memo ) {
+      runrex(2);
+
+      eosio_assert( payment.symbol == system_token_symbol, "asset must be system token" );
+      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
+                                                    { from, N(eosio.rex), payment, memo } );
+
+      auto itr = _rextable.begin();
+      eosio_assert( itr != _rextable.end(), "rex system not initialized yet" );
+
+      int64_t rented_tokens = 0;
+      _rextable.modify( itr, 0, [&]( auto& rt ) {
+         rented_tokens = bancor_convert( rt.total_rent.amount, rt.total_unlent.amount, payment.amount );
+         rt.total_lent.amount    += rented_tokens;
+         rt.total_unlent.amount  += payment.amount;
+         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+         rt.loan_num++;
+      });
+
+      table.emplace( from, [&]( auto& c ) {
+         c.from         = from;
+         c.receiver     = receiver;
+         c.loan_payment = payment;
+         c.total_staked = asset( rented_tokens, system_token_symbol );
+         c.expiration   = current_time_point() + eosio::days(30);
+         c.loan_num     = itr->loan_num;
+         
+         c.auto_renew   = auto_renew;
+         c.balance      = asset( 0, system_token_symbol );
+      });
+
+      return rented_tokens;
    }
 
    std::tuple<bool, int64_t, int64_t> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {

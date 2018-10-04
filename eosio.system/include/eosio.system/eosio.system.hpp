@@ -386,6 +386,9 @@ namespace eosiosystem {
          void runrex( uint16_t max );
          std::tuple<bool, int64_t, int64_t> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
          void deposit_rex( const account_name& from, const asset& amount );
+         template <typename T>
+         int64_t rentrex( T& table, account_name from, account_name receiver, asset payment, bool auto_renew,
+                          const std::string& memo );
 
          // defined in delegate_bandwidth.cpp
          void changebw( account_name from, account_name receiver,
