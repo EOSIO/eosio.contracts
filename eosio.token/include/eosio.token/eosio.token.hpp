@@ -19,7 +19,7 @@ namespace eosio {
 
    class token : public contract {
       public:
-         token( account_name self ):contract(self){}
+         token( name self ):contract(self){}
 
          void create( account_name issuer,
                       asset        maximum_supply);

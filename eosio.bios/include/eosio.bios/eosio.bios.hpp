@@ -17,7 +17,7 @@ namespace eosio {
 
    class bios : public contract {
       public:
-         bios( action_name self ):contract(self){}
+         bios( name self ):contract(self){}
 
          void setpriv( account_name account, uint8_t ispriv ) {
             require_auth( _self );

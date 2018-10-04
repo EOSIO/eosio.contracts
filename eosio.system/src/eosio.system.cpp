@@ -10,7 +10,7 @@
 
 namespace eosiosystem {
 
-   system_contract::system_contract( account_name s )
+   system_contract::system_contract( name s )
    :native(s),
     _voters(_self,_self),
     _producers(_self,_self),
@@ -158,7 +158,7 @@ namespace eosiosystem {
 
    void system_contract::bidname( account_name bidder, account_name newname, asset bid ) {
       require_auth( bidder );
-      eosio_assert( eosio::name_suffix(newname) == newname, "you can only bid on top-level suffix" );
+      eosio_assert( name(newname).suffix() == name(newname), "you can only bid on top-level suffix" );
 
       eosio_assert( newname != 0, "the empty name is not a valid account name to bid on" );
       eosio_assert( (newname & 0xFull) == 0, "13 character names are not valid account names to bid on" );
@@ -254,7 +254,7 @@ namespace eosiosystem {
            tmp >>= 5;
          }
          if( has_dot ) { // or is less than 12 characters
-            auto suffix = eosio::name_suffix(newact);
+            auto suffix = name(newact).suffix().raw();
             if( suffix == newact ) {
                name_bid_table bids(_self,_self);
                auto current = bids.find( newact );

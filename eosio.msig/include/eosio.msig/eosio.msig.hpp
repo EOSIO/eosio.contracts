@@ -6,7 +6,7 @@ namespace eosio {
 
    class multisig : public contract {
       public:
-         multisig( account_name self ):contract(self){}
+         multisig( name self ):contract(self){}
 
          void propose();
          void approve( account_name proposer, name proposal_name, permission_level level );
@@ -20,7 +20,7 @@ namespace eosio {
             name                       proposal_name;
             vector<char>               packed_transaction;
 
-            auto primary_key()const { return proposal_name.value; }
+            auto primary_key()const { return proposal_name.raw(); }
          };
          typedef eosio::multi_index< "proposal"_n, proposal > proposals;
 
@@ -29,7 +29,7 @@ namespace eosio {
             vector<permission_level>   requested_approvals;
             vector<permission_level>   provided_approvals;
 
-            auto primary_key()const { return proposal_name.value; }
+            auto primary_key()const { return proposal_name.raw(); }
          };
          typedef eosio::multi_index< "approvals"_n, old_approvals_info > old_approvals;
 
@@ -47,7 +47,7 @@ namespace eosio {
             vector<approval>   requested_approvals;
             vector<approval>   provided_approvals;
 
-            auto primary_key()const { return proposal_name.value; }
+            auto primary_key()const { return proposal_name.raw(); }
          };
          typedef eosio::multi_index< "approvals2"_n, approvals_info > approvals;
 
