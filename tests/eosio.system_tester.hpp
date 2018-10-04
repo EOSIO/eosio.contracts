@@ -406,8 +406,6 @@ public:
                             const asset& init_balance,
                             const asset& net = core_from_string("80.0000"),
                             const asset& cpu = core_from_string("80.0000") ) {
-      //      const asset net    = core_from_string("80.0000");
-      //      const asset cpu    = core_from_string("80.0000");
       const asset nstake = core_from_string("10.0000");
       const asset cstake = core_from_string("10.0000");
       create_account_with_resources( N(proxyaccount), config::system_account_name, core_from_string("1.0000"), false, net, cpu );
