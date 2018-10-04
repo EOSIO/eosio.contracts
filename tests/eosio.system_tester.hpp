@@ -402,6 +402,26 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "rex_pool", data, abi_serializer_max_time );
    }
 
+   void setup_rex_accounts( const std::vector<account_name>& accounts,
+                            const asset& init_balance,
+                            const asset& net = core_from_string("80.0000"),
+                            const asset& cpu = core_from_string("80.0000") ) {
+      //      const asset net    = core_from_string("80.0000");
+      //      const asset cpu    = core_from_string("80.0000");
+      const asset nstake = core_from_string("10.0000");
+      const asset cstake = core_from_string("10.0000");
+      create_account_with_resources( N(proxyaccount), config::system_account_name, core_from_string("1.0000"), false, net, cpu );
+      BOOST_REQUIRE_EQUAL( success(), push_action( N(proxyaccount), N(regproxy), mvo()("proxy", "proxyaccount")("isproxy", true) ) );
+      for (const auto& a: accounts) {
+         create_account_with_resources( a, config::system_account_name, core_from_string("1.0000"), false, net, cpu );
+         transfer( config::system_account_name, a, init_balance + nstake + cstake, config::system_account_name );
+         BOOST_REQUIRE_EQUAL( success(),                        stake( a, a, nstake, cstake) );
+         BOOST_REQUIRE_EQUAL( success(),                        vote( a, { }, N(proxyaccount) ) );
+         BOOST_REQUIRE_EQUAL( init_balance,                     get_balance(a) );
+         BOOST_REQUIRE_EQUAL( asset::from_string("0.0000 REX"), get_rex_balance(a) );
+      }
+   }
+
    action_result bidname( const account_name& bidder, const account_name& newname, const asset& bid ) {
       return push_action( name(bidder), N(bidname), mvo()
                           ("bidder",  bidder)

@@ -14,6 +14,13 @@ namespace eosiosystem {
       require_auth( from );
 
       eosio_assert( amount.symbol == system_token_symbol, "asset must be system token" );
+
+      {
+         auto vitr = _voters.find( from );
+         eosio_assert( vitr != _voters.end() && ( vitr->proxy || vitr->producers.size() >= 21 ), 
+                       "must vote for proxy or at least 21 producers before buying REX" );
+      }
+
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
                                                     { from, N(eosio.rex), amount, "buy REX" } );
 
@@ -148,8 +155,8 @@ namespace eosiosystem {
       auto tot_itr = totals_tbl.find( receiver );
       eosio_assert( tot_itr !=  totals_tbl.end(), "expected to find resource table" );
       totals_tbl.modify( tot_itr, 0, [&]( auto& tot ) {
-         tot.cpu_weight.amount    += delta_cpu;
-         tot.net_weight.amount    += delta_net;
+         tot.cpu_weight.amount += delta_cpu;
+         tot.net_weight.amount += delta_net;
       });
       eosio_assert( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
       eosio_assert( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
@@ -311,14 +318,12 @@ namespace eosiosystem {
                rt.total_unlent.amount  += itr->loan_payment.amount;
                rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
             });
-
             idx.modify ( itr, 0, [&]( auto& loan ) {
                delta_stake              = rented_tokens - loan.total_staked.amount;
                loan.total_staked.amount = rented_tokens;
                loan.expiration         += eosio::days(30);
                loan.balance.amount     -= loan.loan_payment.amount;
             });
-
          } else {
             delete_loan = true;
             delta_stake = -( itr->total_staked.amount );
