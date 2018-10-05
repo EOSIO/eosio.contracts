@@ -26,21 +26,29 @@ namespace eosiosystem {
    };
 
    struct key_weight {
-      public_key   key;
-      uint16_t     weight;
+      eosio::public_key  key;
+      uint16_t           weight;
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( key_weight, (key)(weight) )
    };
 
-   struct authority {
-      uint32_t                              threshold;
-      uint32_t                              delay_sec;
-      std::vector<key_weight>               keys;
-      std::vector<permission_level_weight>  accounts;
+   struct wait_weight {
+      uint32_t           wait_sec;
+      uint16_t           weight;
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( authority, (threshold)(delay_sec)(keys)(accounts) )
+      EOSLIB_SERIALIZE( wait_weight, (wait_sec)(weight) )
+   };
+
+   struct authority {
+      uint32_t                              threshold = 0;
+      std::vector<key_weight>               keys;
+      std::vector<permission_level_weight>  accounts;
+      std::vector<wait_weight>              waits;
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts)(waits) )
    };
 
    struct block_header {

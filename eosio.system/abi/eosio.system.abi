@@ -16,7 +16,6 @@
       "new_type_name": "weight_type",
       "type": "uint16"
    }],
-   "____comment": "eosio.bios structs: set_account_limits, setpriv, set_global_limits, producer_key, set_producers, require_auth are provided so abi available for deserialization in future.",
    "structs": [{
       "name": "permission_level",
       "base": "",
@@ -243,7 +242,6 @@
       "name": "blockchain_parameters",
       "base": "",
       "fields": [
-
          {"name":"max_block_net_usage",                 "type":"uint64"},
          {"name":"target_block_net_usage_pct",          "type":"uint32"},
          {"name":"max_transaction_net_usage",           "type":"uint32"},
@@ -264,6 +262,7 @@
       ]
     },{
       "name": "eosio_global_state2",
+      "base": "",
       "fields": [
          {"name":"new_ram_per_block",            "type":"uint16"},
          {"name":"last_ram_increase",            "type":"block_timestamp_type"},
@@ -273,6 +272,7 @@
       ]
     },{
       "name": "eosio_global_state3",
+      "base": "",
       "fields": [
          {"name":"last_vpay_state_update",       "type":"time_point"},
          {"name":"total_vpay_share_change_rate", "type":"float64"}
@@ -403,31 +403,6 @@
         {"name":"ram_bytes",  "type":"int64"},
         {"name":"net_weight", "type":"int64"},
         {"name":"cpu_weight", "type":"int64"}
-      ]
-    },{
-      "name": "set_global_limits",
-      "base": "",
-      "fields": [
-        {"name":"cpu_usec_per_period",    "type":"int64"}
-      ]
-    },{
-      "name": "producer_key",
-      "base": "",
-      "fields": [
-        {"name":"producer_name",      "type":"account_name"},
-        {"name":"block_signing_key",  "type":"public_key"}
-      ]
-    },{
-      "name": "set_producers",
-      "base": "",
-      "fields": [
-        {"name":"schedule",   "type":"producer_key[]"}
-      ]
-    },{
-      "name": "require_auth",
-      "base": "",
-      "fields": [
-        {"name":"from", "type":"account_name"}
       ]
     },{
       "name": "setparams",
@@ -583,18 +558,6 @@
    },{
       "name": "setalimits",
       "type": "set_account_limits",
-      "ricardian_contract": ""
-    },{
-      "name": "setglimits",
-      "type": "set_global_limits",
-      "ricardian_contract": ""
-    },{
-      "name": "setprods",
-      "type": "set_producers",
-      "ricardian_contract": ""
-    },{
-      "name": "reqauth",
-      "type": "require_auth",
       "ricardian_contract": ""
     },{
       "name": "setparams",
