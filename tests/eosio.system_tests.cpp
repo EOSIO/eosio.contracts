@@ -3502,10 +3502,7 @@ BOOST_FIXTURE_TEST_CASE( buy_rent_rex, eosio_system_tester ) try {
    }
 
    {
-      // TODO:
-      // the following fails with "divide by zero" error message!!
-      // need to fix the corner case where rex system has been initialized but
-      // balances are zero
+      const int64_t init_net_limit = get_net_limit( emily );
       BOOST_REQUIRE_EQUAL( 0,         get_rex_balance(alice).get_amount() );
       BOOST_REQUIRE_EQUAL( success(), buyrex( alice, core_from_string("110.0000") ) );
       rex_pool = get_rex_pool();
@@ -3514,7 +3511,7 @@ BOOST_FIXTURE_TEST_CASE( buy_rent_rex, eosio_system_tester ) try {
                                              rex_pool["total_unlent"].as<asset>().get_amount(),
                                              fee.get_amount() );
       BOOST_REQUIRE_EQUAL( success(),    rentnet( emily, emily, fee ) );
-      BOOST_REQUIRE_EQUAL( expected_net, get_net_limit( emily ) - init_net.get_amount() );
+      BOOST_REQUIRE_EQUAL( expected_net, get_net_limit( emily ) - init_net_limit );
    }
 
 } FC_LOG_AND_RETHROW()
