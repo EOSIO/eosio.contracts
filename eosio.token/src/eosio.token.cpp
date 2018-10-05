@@ -17,8 +17,8 @@ void token::create( name   issuer,
     eosio_assert( maximum_supply.is_valid(), "invalid supply");
     eosio_assert( maximum_supply.amount > 0, "max-supply must be positive");
 
-    stats statstable( _self, sym.raw() );
-    auto existing = statstable.find( sym.raw() );
+    stats statstable( _self, sym.code().raw() );
+    auto existing = statstable.find( sym.code().raw() );
     eosio_assert( existing == statstable.end(), "token with symbol already exists" );
 
     statstable.emplace( _self, [&]( auto& s ) {
@@ -35,8 +35,8 @@ void token::issue( name to, asset quantity, string memo )
     eosio_assert( sym.is_valid(), "invalid symbol name" );
     eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
 
-    stats statstable( _self, sym.raw() );
-    auto existing = statstable.find( sym.raw() );
+    stats statstable( _self, sym.code().raw() );
+    auto existing = statstable.find( sym.code().raw() );
     eosio_assert( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
     const auto& st = *existing;
 
@@ -66,8 +66,8 @@ void token::retire( asset quantity, string memo )
     eosio_assert( sym.is_valid(), "invalid symbol name" );
     eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
 
-    stats statstable( _self, sym.raw() );
-    auto existing = statstable.find( sym.raw() );
+    stats statstable( _self, sym.code().raw() );
+    auto existing = statstable.find( sym.code().raw() );
     eosio_assert( existing != statstable.end(), "token with symbol does not exist" );
     const auto& st = *existing;
 
@@ -113,7 +113,7 @@ void token::transfer( name    from,
 void token::sub_balance( name owner, asset value ) {
    accounts from_acnts( _self, owner.value );
 
-   const auto& from = from_acnts.get( value.symbol.raw(), "no balance object found" );
+   const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
    eosio_assert( from.balance.amount >= value.amount, "overdrawn balance" );
 
    from_acnts.modify( from, owner, [&]( auto& a ) {

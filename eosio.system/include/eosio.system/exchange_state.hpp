@@ -26,7 +26,7 @@ namespace eosiosystem {
       connector base;
       connector quote;
 
-      uint64_t primary_key()const { return supply.symbol.code().raw(); }
+      uint64_t primary_key()const { return supply.symbol.raw(); }
 
       asset convert_to_exchange( connector& c, asset in );
       asset convert_from_exchange( connector& c, asset in );

@@ -43,7 +43,7 @@ namespace eosiosystem {
    }
 
    symbol system_contract::get_core_symbol( const rammarket& rm ) {
-      auto itr = rm.find(ram_symbol.raw());
+      auto itr = rm.find(ramcore_symbol.raw());
       eosio_assert(itr != rm.end(), "system contract must first be initialized");
       return itr->quote.balance.symbol;
    }
@@ -301,14 +301,16 @@ namespace eosiosystem {
       auto itr = _rammarket.find(ramcore_symbol.raw());
       eosio_assert( itr == _rammarket.end(), "system contract has already been initialized" );
 
-      auto system_token_supply   = eosio::token(token_account).get_supply(core).amount;
-      if( system_token_supply > 0 ) {
+      auto system_token_supply   = eosio::token(token_account).get_supply( core.code() );
+      eosio_assert( system_token_supply.symbol == core, "specified core symbol does not exist (precision mismatch)" );
+
+      if( system_token_supply.amount > 0 ) {
          _rammarket.emplace( _self, [&]( auto& m ) {
             m.supply.amount = 100000000000000ll;
             m.supply.symbol = ramcore_symbol;
             m.base.balance.amount = int64_t(_gstate.free_ram());
             m.base.balance.symbol = ram_symbol;
-            m.quote.balance.amount = system_token_supply / 1000;
+            m.quote.balance.amount = system_token_supply.amount / 1000;
             m.quote.balance.symbol = core;
          });
       }
