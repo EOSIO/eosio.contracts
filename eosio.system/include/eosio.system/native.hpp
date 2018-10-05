@@ -55,9 +55,9 @@ namespace eosiosystem {
       uint32_t                                  timestamp;
       name                                      producer;
       uint16_t                                  confirmed = 0;
-      checksum256                               previous;
-      checksum256                               transaction_mroot;
-      checksum256                               action_mroot;
+      capi_checksum256                          previous;
+      capi_checksum256                          transaction_mroot;
+      capi_checksum256                          action_mroot;
       uint32_t                                  schedule_version = 0;
       eosio::optional<eosio::producer_schedule> new_producers;
 
@@ -68,8 +68,8 @@ namespace eosiosystem {
 
 
    struct abi_hash {
-      name         owner;
-      checksum256  hash;
+      name              owner;
+      capi_checksum256  hash;
       uint64_t primary_key()const { return owner.value; }
 
       EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )

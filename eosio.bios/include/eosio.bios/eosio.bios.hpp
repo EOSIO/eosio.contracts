@@ -6,8 +6,8 @@
 namespace eosio {
 
    struct abi_hash {
-      name         owner;
-      checksum256  hash;
+      name              owner;
+      capi_checksum256  hash;
       uint64_t primary_key()const { return owner.value; }
 
       EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
