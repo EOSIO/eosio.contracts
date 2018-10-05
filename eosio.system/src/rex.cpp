@@ -9,7 +9,7 @@ namespace eosiosystem {
    /**
     * Transfers SYS tokens from user balance and credits converts them to REX stake.
     */
-   void system_contract::lendrex( account_name from, asset amount ) {
+   void system_contract::buyrex( account_name from, asset amount ) {
       
       require_auth( from );
 
@@ -75,7 +75,7 @@ namespace eosiosystem {
    /**
     * Converts REX stake back into SYS tokens at current exchange rate
     */
-   void system_contract::unlendrex( account_name from, asset rex ) {
+   void system_contract::sellrex( account_name from, asset rex ) {
 
       runrex(2);
 
@@ -85,13 +85,13 @@ namespace eosiosystem {
       eosio_assert( itr != _rextable.end(), "rex system not initialized yet" );
 
       auto bitr = _rexbalance.find( from );
-      eosio_assert( bitr != _rexbalance.end(), "user must first lendrex" );
+      eosio_assert( bitr != _rexbalance.end(), "user must first buyrex" );
       eosio_assert( bitr->rex_balance.symbol == rex.symbol, "asset symbol must be (4, REX)" );
       eosio_assert( bitr->rex_balance >= rex, "insufficient funds" );
 
       auto result = close_rex_order( bitr, rex );
       if( std::get<0>(result) ) {
-         /// unlendrex has been processed successfuly, transfer tokens and update voting power
+         /// sellrex has been processed successfuly, transfer tokens and update voting power
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { N(eosio.rex), N(active) },
                                                        { N(eosio.rex), from, asset( std::get<1>(result), system_token_symbol ), "sell REX" } );
          update_voting_power( from, asset( -(std::get<2>(result)), system_token_symbol ) );
@@ -126,8 +126,8 @@ namespace eosiosystem {
 
       rex_order_table rexorders( _self, _self );
       auto itr = rexorders.find( owner );
-      eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
-      eosio_assert( itr->is_open, "rex order has been closed and cannot be canceled" );
+      eosio_assert( itr != rexorders.end(), "no sellrex order is scheduled" );
+      eosio_assert( itr->is_open, "sellrex order has been closed and cannot be canceled" );
       rexorders.erase( itr );
    }
 
@@ -139,8 +139,8 @@ namespace eosiosystem {
 
       rex_order_table rexorders( _self, _self );
       auto itr = rexorders.find( owner );
-      eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
-      eosio_assert( !itr->is_open, "rex order has not been closed" );
+      eosio_assert( itr != rexorders.end(), "no sellrex order is scheduled" );
+      eosio_assert( !itr->is_open, "sellrex order has not been closed" );
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.rex),N(active)},
                                                     { N(eosio.rex), itr->owner, itr->proceeds, "claim REX proceeds" } );
       update_voting_power( owner, -( itr->unstake_quant ) );
@@ -295,7 +295,7 @@ namespace eosiosystem {
          } else {
             delete_loan = true;
             delta_stake = -( itr->total_staked.amount );
-            // refund "from" account if the closed loan balance is positive
+            /// refund "from" account if the closed loan balance is positive
             if( itr->auto_renew && itr->balance.amount > 0 ) {
                loan_refund_table loan_refunds( _self, _self );
                auto ref_itr = loan_refunds.find( itr->from );
@@ -357,7 +357,7 @@ namespace eosiosystem {
          }
       }
 
-      /// process unlendrex orders
+      /// process sellrex orders
       {
          rex_order_table rex_orders( _self, _self );
          auto idx = rex_orders.get_index<N(bytime)>();

@@ -206,14 +206,14 @@
          {"name":"cpu_weight", "type":"asset"}
       ]
     },{
-      "name": "lendrex",
+      "name": "buyrex",
       "base": "",
       "fields": [
          {"name":"from",   "type":"account_name"},
          {"name":"amount", "type":"asset"}
       ]
     },{
-      "name": "unlendrex",
+      "name": "sellrex",
       "base": "",
       "fields": [
          {"name":"from", "type":"account_name"},
@@ -645,12 +645,12 @@
       "type": "refund",
       "ricardian_contract": ""
    },{
-      "name": "lendrex",
-      "type": "lendrex",
+      "name": "buyrex",
+      "type": "buyrex",
       "ricardian_contract": ""
    },{
-      "name": "unlendrex",
-      "type": "unlendrex",
+      "name": "sellrex",
+      "type": "sellrex",
       "ricardian_contract": ""
    },{
       "name": "cnclrexorder",

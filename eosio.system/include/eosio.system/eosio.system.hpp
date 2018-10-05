@@ -284,12 +284,12 @@ namespace eosiosystem {
          /**
           * Transfers SYS tokens from user balance and credits converts them to REX stake.
           */
-         void lendrex( account_name from, asset amount );
+         void buyrex( account_name from, asset amount );
 
          /**
           * Converts REX stake back into SYS tokens at current exchange rate
           */
-         void unlendrex( account_name from, asset rex );
+         void sellrex( account_name from, asset rex );
          void cnclrexorder( account_name owner );
          void claimrex( account_name owner );
 

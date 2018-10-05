@@ -265,17 +265,17 @@ public:
       return unstake( acnt, acnt, net, cpu );
    }
 
-   action_result lendrex( const account_name& from, const asset& amount ) {
-      return push_action( name(from), N(lendrex), mvo()
-                          ("from",  from)
+   action_result buyrex( const account_name& from, const asset& amount ) {
+      return push_action( name(from), N(buyrex), mvo()
+                          ("from",   from)
                           ("amount", amount)
       );
    }
 
-   action_result unlendrex( const account_name& from, const asset& rex ) {
-      return push_action( name(from), N(unlendrex), mvo()
-                          ("from",  from)
-                          ("rex",   rex)
+   action_result sellrex( const account_name& from, const asset& rex ) {
+      return push_action( name(from), N(sellrex), mvo()
+                          ("from", from)
+                          ("rex",  rex)
       );
    }
 
