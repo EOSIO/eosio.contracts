@@ -91,23 +91,39 @@ namespace eosiosystem {
 
       auto result = close_rex_order( bitr, rex );
       if( std::get<0>(result) ) {
+         /// unlendrex has been processed successfuly, transfer tokens and update voting power
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { N(eosio.rex), N(active) },
                                                        { N(eosio.rex), from, asset( std::get<1>(result), system_token_symbol ), "sell REX" } );
          update_voting_power( from, asset( -(std::get<2>(result)), system_token_symbol ) );
       } else {
-         rex_order_table rexorders( _self, _self );
-         eosio_assert( rexorders.find( from ) == rexorders.end(), "an unlendrex request has already been scheduled");
-         rexorders.emplace( from, [&]( auto& ordr ) {
-            ordr.owner         = from;
-            ordr.rex_requested = rex;
-            ordr.unstake_quant = std::get<2>(result);
-            ordr.order_time    = current_time_point();
-         });
+         /**
+          * REX order couldn't be filled and is added to queue.
+          * If account already has an open order, requested rex is added to existing order.
+          * If account has a closed order, action fails and account must claimrex first in order
+          * to delete closed order from queue.
+          */
+         rex_order_table rex_orders( _self, _self );
+         auto oitr = rex_orders.find( from );
+         if( oitr == rex_orders.end() ) {
+            rex_orders.emplace( from, [&]( auto& ordr ) {
+               ordr.owner         = from;
+               ordr.rex_requested = rex;
+               ordr.order_time    = current_time_point();
+            });
+         } else {
+            eosio_assert( oitr->is_open, "user has a closed rex order in queue, must claimrex first");
+            rex_orders.modify( oitr, 0, [&]( auto& ordr ) {
+               ordr.rex_requested.amount += rex.amount;
+               eosio_assert( bitr->rex_balance >= ordr.rex_requested, "insufficient funds for current and scheduled orders");
+            });
+         }
       }
    }
 
    void system_contract::cnclrexorder( account_name owner ) {
+
       require_auth( owner );
+
       rex_order_table rexorders( _self, _self );
       auto itr = rexorders.find( owner );
       eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
@@ -116,15 +132,18 @@ namespace eosiosystem {
    }
 
    void system_contract::claimrex( account_name owner ) {
+
       require_auth( owner );
+
       runrex(2);
-      rex_order_table rexorders(_self, _self);
+
+      rex_order_table rexorders( _self, _self );
       auto itr = rexorders.find( owner );
       eosio_assert( itr != rexorders.end(), "no unlendrex is scheduled" );
       eosio_assert( !itr->is_open, "rex order has not been closed" );
       INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(eosio.rex),N(active)},
-                                                    { N(eosio.rex), itr->owner, asset(itr->proceeds, system_token_symbol), "claim REX proceeds" } );
-      update_voting_power( owner, asset( -( itr->unstake_quant ), system_token_symbol ) );
+                                                    { N(eosio.rex), itr->owner, itr->proceeds, "claim REX proceeds" } );
+      update_voting_power( owner, -( itr->unstake_quant ) );
       rexorders.erase( itr );
    }
 
@@ -296,7 +315,7 @@ namespace eosiosystem {
          return std::make_pair( delete_loan, delta_stake );
       };
 
-      // transfer from eosio.names to eosio.rex
+      /// transfer from eosio.names to eosio.rex
       if( rexi->namebid_proceeds.amount > 0 ) {
          deposit_rex( N(eosio.names), rexi->namebid_proceeds );
          _rextable.modify( rexi, 0, [&]( auto& rt ) {
@@ -304,7 +323,7 @@ namespace eosiosystem {
          });
       }
 
-      // process cpu loans
+      /// process cpu loans
       {
          rex_cpu_loan_table cpu_loans( _self, _self );
          auto cpu_idx = cpu_loans.get_index<N(byexpr)>();
@@ -321,7 +340,7 @@ namespace eosiosystem {
          }
       }
 
-      // process net loans
+      /// process net loans
       {
          rex_net_loan_table net_loans( _self, _self );
          auto net_idx = net_loans.get_index<N(byexpr)>();
@@ -338,7 +357,7 @@ namespace eosiosystem {
          }
       }
 
-      // process unlendrex orders
+      /// process unlendrex orders
       {
          rex_order_table rex_orders( _self, _self );
          auto idx = rex_orders.get_index<N(bytime)>();
@@ -351,7 +370,8 @@ namespace eosiosystem {
             ++next;
             if( std::get<0>( result ) ) {
                idx.modify( oitr, 0, [&]( auto& rt ) {
-                  rt.proceeds = std::get<1>( result );
+                  rt.proceeds.amount      = std::get<1>( result );
+                  rt.unstake_quant.amount = std::get<2>( result ); 
                   rt.close();
                });
             }

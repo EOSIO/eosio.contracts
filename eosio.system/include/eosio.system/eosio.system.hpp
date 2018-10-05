@@ -169,7 +169,6 @@ namespace eosiosystem {
    typedef eosio::singleton<N(global2), eosio_global_state2> global_state2_singleton;
    typedef eosio::singleton<N(global3), eosio_global_state3> global_state3_singleton;
 
-   //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
    static constexpr uint64_t     system_token_symbol = CORE_SYMBOL;
 
@@ -179,7 +178,7 @@ namespace eosiosystem {
       asset      total_rent; /// fees received in exchange for lent  (connector)
       asset      total_lendable; /// total EOS that have been lent (total_unlent + total_lent)
       asset      total_rex; /// total number of REX shares allocated to contributors to total_lendable
-      asset      namebid_proceeds;
+      asset      namebid_proceeds; /// EOS to be transferred from namebids to REX pool
       uint64_t   loan_num = 0; /// increments with each new loan
       uint64_t primary_key()const { return 0; }
    };
@@ -234,8 +233,8 @@ namespace eosiosystem {
    struct rex_order {
       account_name        owner;
       asset               rex_requested;
-      int64_t             proceeds = 0;
-      int64_t             unstake_quant = 0;
+      asset               proceeds;
+      asset               unstake_quant;
       eosio::time_point   order_time;
       bool                is_open = true;
       
