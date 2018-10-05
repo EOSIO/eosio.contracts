@@ -318,6 +318,10 @@ public:
       return push_action( name(owner), N(claimrefund), mvo()("owner", owner) );
    }
 
+   action_result updaterex( const account_name& owner ) {
+      return push_action( name(owner), N(updaterex), mvo()("owner", owner) );
+   }
+
    fc::variant get_last_loan(bool cpu) {
       vector<char> data;
       const auto& db = control->db();

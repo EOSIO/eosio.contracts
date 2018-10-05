@@ -378,7 +378,7 @@ namespace eosiosystem {
 
    template <typename T>
    int64_t system_contract::rentrex( T& table, account_name from, account_name receiver,
-                                     asset payment, bool auto_renew, const std::string& memo ) {
+                                     const asset& payment, bool auto_renew, const std::string& memo ) {
       runrex(2);
 
       eosio_assert( payment.symbol == system_token_symbol, "asset must be system token" );

@@ -3765,7 +3765,7 @@ BOOST_FIXTURE_TEST_CASE( ramfee_namebid_to_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( core_from_string("29.3500"), get_balance( N(eosio.names) ));
 
    produce_block( fc::hours(24) );
-   produce_blocks( 10 );
+   produce_blocks( 2 );
 
    BOOST_REQUIRE_EQUAL( core_from_string("29.3500"), get_rex_pool()["namebid_proceeds"].as<asset>() );
    BOOST_REQUIRE_EQUAL( success(),                   lendrex( frank, core_from_string("5.0000") ) );
@@ -3775,6 +3775,30 @@ BOOST_FIXTURE_TEST_CASE( ramfee_namebid_to_rex, eosio_system_tester ) try {
    cur_rex_balance = get_balance( N(eosio.rex) );
    BOOST_REQUIRE_EQUAL( cur_rex_balance,             get_rex_pool()["total_lendable"].as<asset>() );
    BOOST_REQUIRE_EQUAL( cur_rex_balance,             get_rex_pool()["total_unlent"].as<asset>() );
+
+} FC_LOG_AND_RETHROW()
+
+
+BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester ) try {
+
+   auto bancor_convert = [](int64_t S, int64_t R, int64_t T) -> int64_t { return int64_t( double(R * T)  / double(S + T) ); };
+
+   const int64_t ratio        = 10000;
+   const asset   init_balance = core_from_string("10000.0000");
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount), N(frankaccount) };
+   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3], frank = accounts[4];
+   setup_rex_accounts( accounts, init_balance );
+
+   const int64_t init_stake = get_voter_info( alice )["staked"].as<int64_t>();
+
+   BOOST_REQUIRE_EQUAL( success(),                              lendrex( alice, core_from_string("250.0000") ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("250.0000"),           get_rex_vote_stake(alice) );
+   BOOST_REQUIRE_EQUAL( get_rex_vote_stake(alice).get_amount(), get_voter_info(alice)["staked"].as<int64_t>() - init_stake );
+
+   BOOST_REQUIRE_EQUAL( success(),                              rentcpu( frank, bob, core_from_string("50.0000"), false ) );
+   BOOST_REQUIRE_EQUAL( success(),                              updaterex( alice ) );
+   BOOST_REQUIRE_EQUAL( core_from_string("300.0000"),           get_rex_vote_stake(alice) );
+   BOOST_REQUIRE_EQUAL( get_rex_vote_stake(alice).get_amount(), get_voter_info( alice )["staked"].as<int64_t>() - init_stake );
 
 } FC_LOG_AND_RETHROW()
 
