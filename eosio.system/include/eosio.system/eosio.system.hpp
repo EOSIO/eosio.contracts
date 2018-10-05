@@ -287,26 +287,46 @@ namespace eosiosystem {
          void buyrex( account_name from, asset amount );
 
          /**
-          * Converts REX stake back into SYS tokens at current exchange rate
+          * Converts REX stake back into SYS tokens at current exchange rate. If order cannot be 
+          * processed, it gets queued untill it can be there is enough REX to fill order.
           */
          void sellrex( account_name from, asset rex );
+         
+         /**
+          * Cancels queued sellrex order.
+          */
          void cnclrexorder( account_name owner );
+
+         /**
+          * Transfers processed sellrex order that had been queued proceeds to owner account. Fails if 
+          * order hasn't been filled.
+          */
          void claimrex( account_name owner );
 
          /**
-          * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
-          * after 30 days the rented SYS delegation of CPU or NET will expire.
+          * Use payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
+          * after 30 days the rented SYS delegation of CPU or NET will expire unless auto_renew == true.
+          * If auto_renew == true, loan creator can fund that specific loan. Upon expiration, if loan has enough funds, it 
+          * gets renewed at current market price, otherwise, the loan is closed and remaining balance if refunded to loan 
+          * creator. User claims the refund in a separate action.
           */
          void rentcpu( account_name from, account_name receiver, asset payment, bool auto_renew );
-
          void rentnet( account_name from, account_name receiver, asset payment, bool auto_renew );
-         
-         void fundcpuloan( account_name from, uint64_t loan_num, asset payment );
 
+         /**
+          * Loan initiator funds a given CPU or NET loan. Loan must've been set as autorenew.
+          */
+         void fundcpuloan( account_name from, uint64_t loan_num, asset payment );
          void fundnetloan( account_name from, uint64_t loan_num, asset payment );
 
+         /**
+          * Transfers remaining balance of closed auto-renew loans to owner account.
+          */
          void claimrefund( account_name owner );
          
+         /**
+          * Updates REX vote stake of owner to its current value.
+          */
          void updaterex( account_name owner );
 
          /**
