@@ -307,13 +307,20 @@
          {"name":"auto_renew", "type":"bool"}
       ]
     },{
-      "name": "fundrexloan",
+      "name": "fundcpuloan",
       "base": "",
       "fields": [
-         {"name":"from",       "type":"account_name"},
-         {"name":"loan_num",   "type":"uint64"},
-         {"name":"payment",    "type":"asset"},
-         {"name":"cpu",        "type":"bool"}
+         {"name":"from",     "type":"account_name"},
+         {"name":"loan_num", "type":"uint64"},
+         {"name":"payment",  "type":"asset"}
+      ]
+    },{
+      "name": "fundnetloan",
+      "base": "",
+      "fields": [
+         {"name":"from",     "type":"account_name"},
+         {"name":"loan_num", "type":"uint64"},
+         {"name":"payment",  "type":"asset"}
       ]
     },{
       "name": "claimrefund",
@@ -666,8 +673,12 @@
       "type": "rentnet",
       "ricardian_contract": ""
    },{
-      "name": "fundrexloan",
-      "type": "fundrexloan",
+      "name": "fundcpuloan",
+      "type": "fundcpuloan",
+      "ricardian_contract": ""
+   },{
+      "name": "fundnetloan",
+      "type": "fundnetloan",
       "ricardian_contract": ""
    },{
       "name": "claimrefund",

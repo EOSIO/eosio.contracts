@@ -305,12 +305,19 @@ public:
       );
    }
 
-   action_result fundrexloan( const account_name& from, const uint64_t loan_num, const asset& payment, bool cpu ) {
-      return push_action( name(from), N(fundrexloan), mvo()
+   action_result fundcpuloan( const account_name& from, const uint64_t loan_num, const asset& payment ) {
+      return push_action( name(from), N(fundcpuloan), mvo()
                           ("from",       from)
                           ("loan_num",   loan_num)
                           ("payment",    payment)
-                          ("cpu",        cpu)
+      );
+   }
+
+   action_result fundnetloan( const account_name& from, const uint64_t loan_num, const asset& payment ) {
+      return push_action( name(from), N(fundnetloan), mvo()
+                          ("from",       from)
+                          ("loan_num",   loan_num)
+                          ("payment",    payment)
       );
    }
 

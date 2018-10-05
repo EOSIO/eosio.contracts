@@ -3672,7 +3672,9 @@ BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
 
    // frank funds his loan enough to be renewed once
    const asset fund = core_from_string("35.0000");
-   BOOST_REQUIRE_EQUAL( success(),         fundrexloan( frank, 1, fund, true ) );
+   BOOST_REQUIRE_EQUAL( fundnetloan( frank, 1, fund ), wasm_assert_msg("loan not found") );
+   BOOST_REQUIRE_EQUAL( fundcpuloan( alice, 1, fund ), wasm_assert_msg("actor has to be loan creator") );
+   BOOST_REQUIRE_EQUAL( success(),                     fundcpuloan( frank, 1, fund ) );
    old_frank_balance = cur_frank_balance;
    cur_frank_balance = get_balance( frank );
    loan_info         = get_cpu_loan(1);

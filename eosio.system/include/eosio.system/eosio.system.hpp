@@ -302,7 +302,9 @@ namespace eosiosystem {
 
          void rentnet( account_name from, account_name receiver, asset payment, bool auto_renew );
          
-         void fundrexloan( account_name from, uint64_t loan_num, asset payment, bool cpu );
+         void fundcpuloan( account_name from, uint64_t loan_num, asset payment );
+
+         void fundnetloan( account_name from, uint64_t loan_num, asset payment );
 
          void claimrefund( account_name owner );
          
@@ -391,6 +393,8 @@ namespace eosiosystem {
          template <typename T>
          int64_t rentrex( T& table, account_name from, account_name receiver, const asset& payment, bool auto_renew,
                           const std::string& memo );
+         template <typename T>
+         void fundrexloan( T& table, account_name from, uint64_t loan_num, const asset& payment, const std::string& memo );
 
          // defined in delegate_bandwidth.cpp
          void changebw( account_name from, account_name receiver,

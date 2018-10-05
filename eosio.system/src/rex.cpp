@@ -189,35 +189,20 @@ namespace eosiosystem {
       update_resource_limits( receiver, 0, rented_tokens );
    }
 
-   void system_contract::fundrexloan( account_name from, uint64_t loan_num, asset payment, bool cpu ) {
+   void system_contract::fundcpuloan( account_name from, uint64_t loan_num, asset payment ) {
 
       require_auth( from );
 
-      eosio_assert( payment.symbol == system_token_symbol, "asset must be system token" );
-      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {from,N(active)},
-                                                    { from, N(eosio.rex), payment, string("fund ") + (cpu ? "CPU loan" : "NET loan") } );
-      // TODO: refactor and remove code duplication
-      if( cpu ) {
-         rex_cpu_loan_table cpu_loans( _self, _self );
-         auto itr = cpu_loans.find( loan_num );
-         eosio_assert( itr != cpu_loans.end(), "loan not found" );
-         eosio_assert( itr->from == from, "actor has to be loan creator" );
-         eosio_assert( itr->auto_renew, "loan must be set as auto-renew" );
-         eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
-         cpu_loans.modify( itr, 0, [&]( auto& loan ) {
-            loan.balance.amount += payment.amount;
-         });
-      } else {
-         rex_net_loan_table net_loans( _self, _self );
-         auto itr = net_loans.find( loan_num );
-         eosio_assert( itr != net_loans.end(), "loan not found" );
-         eosio_assert( itr->from == from, "actor has to be loan creator" );
-         eosio_assert( itr->auto_renew, "loan must be set as auto-renew" );
-         eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
-         net_loans.modify( itr, 0, [&]( auto& loan ) {
-            loan.balance.amount += payment.amount;
-         });
-      }
+      rex_cpu_loan_table cpu_loans( _self, _self );
+      fundrexloan( cpu_loans, from, loan_num, payment, "fund CPU loan" );
+   }
+
+   void system_contract::fundnetloan( account_name from, uint64_t loan_num, asset payment ) {
+
+      require_auth( from );
+
+      rex_net_loan_table net_loans( _self, _self );
+      fundrexloan( net_loans, from, loan_num, payment, "fund NET loan" );
    }
 
    void system_contract::claimrefund( account_name owner ) {
@@ -447,6 +432,21 @@ namespace eosiosystem {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { from, N(active) },
             { from, N(eosio.rex), amount, std::string("transfer from ") + name{from}.to_string() + " REX"} );
       }
+   }
+
+   template <typename T>
+   void system_contract::fundrexloan( T& table, account_name from, uint64_t loan_num, const asset& payment, const std::string& memo ) {
+      eosio_assert( payment.symbol == system_token_symbol, "asset must be system token" );
+      INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), { from, N(active) },
+                                                    { from, N(eosio.rex), payment, memo } );
+      auto itr = table.find( loan_num );
+      eosio_assert( itr != table.end(), "loan not found" );
+      eosio_assert( itr->from == from, "actor has to be loan creator" );
+      eosio_assert( itr->auto_renew, "loan must be set as auto-renew" );
+      eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
+      table.modify( itr, 0, [&]( auto& loan ) {
+         loan.balance.amount += payment.amount;
+      });
    }
 
 }; /// namespace eosiosystem
