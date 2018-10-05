@@ -9,7 +9,7 @@ because parsing data in the dispatcher uses too much CPU if the included transac
 
 If we use dispatcher the function signature should be:
 
-void sudo::exec( account_name executer,
+void sudo::exec( name executer,
                  transaction  trx )
 */
 
@@ -21,7 +21,7 @@ void sudo::exec() {
    char* buffer = (char*)( max_stack_buffer_size < size ? malloc(size) : alloca(size) );
    read_action_data( buffer, size );
 
-   account_name executer;
+   name executer;
 
    datastream<const char*> ds( buffer, size );
    ds >> executer;
@@ -29,7 +29,7 @@ void sudo::exec() {
    require_auth( executer );
 
    size_t trx_pos = ds.tellp();
-   send_deferred( (uint128_t(executer) << 64) | current_time(), executer, buffer+trx_pos, size-trx_pos );
+   send_deferred( (uint128_t(executer.value) << 64) | current_time(), executer.value, buffer+trx_pos, size-trx_pos );
 }
 
 } /// namespace eosio

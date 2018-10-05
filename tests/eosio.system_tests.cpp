@@ -2238,22 +2238,26 @@ BOOST_FIXTURE_TEST_CASE(votepay_transition, eosio_system_tester, * boost::unit_t
    }
 
    BOOST_REQUIRE_EQUAL( success(), vote(N(producvotera), vector<account_name>(producer_names.begin(), producer_names.end())) );
-   auto* tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>( boost::make_tuple( config::system_account_name,
-                                                                                                                        config::system_account_name,
-                                                                                                                        N(producers2) ) );
+   auto* tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>(
+                  boost::make_tuple( config::system_account_name,
+                                     config::system_account_name,
+                                     N(producers2) ) );
    BOOST_REQUIRE( tbl );
    BOOST_REQUIRE( 0 < microseconds_since_epoch_of_iso_string( get_producer_info2("defproducera")["last_votepay_share_update"] ) );
 
-   control->db().remove( *tbl );
-   tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>( boost::make_tuple( config::system_account_name,
-                                                                                                                  config::system_account_name,
-                                                                                                                  N(producers2) ) );
+   // const_cast hack for now
+   const_cast<chainbase::database&>(control->db()).remove( *tbl );
+   tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>(
+                  boost::make_tuple( config::system_account_name,
+                                     config::system_account_name,
+                                     N(producers2) ) );
    BOOST_REQUIRE( !tbl );
 
    BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterb), vector<account_name>(producer_names.begin(), producer_names.end())) );
-   tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>( boost::make_tuple( config::system_account_name,
-                                                                                                                  config::system_account_name,
-                                                                                                                  N(producers2) ) );
+   tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>(
+            boost::make_tuple( config::system_account_name,
+                               config::system_account_name,
+                               N(producers2) ) );
    BOOST_REQUIRE( !tbl );
    BOOST_REQUIRE_EQUAL( success(), regproducer(N(defproducera)) );
    BOOST_REQUIRE( microseconds_since_epoch_of_iso_string( get_producer_info(N(defproducera))["last_claim_time"] ) < microseconds_since_epoch_of_iso_string( get_producer_info2(N(defproducera))["last_votepay_share_update"] ) );

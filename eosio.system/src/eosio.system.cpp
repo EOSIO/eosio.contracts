@@ -12,13 +12,13 @@ namespace eosiosystem {
 
    system_contract::system_contract( name s )
    :native(s),
-    _voters(_self,_self),
-    _producers(_self,_self),
-    _producers2(_self,_self),
-    _global(_self,_self),
-    _global2(_self,_self),
-    _global3(_self,_self),
-    _rammarket(_self,_self)
+    _voters(_self, _self.value),
+    _producers(_self, _self.value),
+    _producers2(_self, _self.value),
+    _global(_self, _self.value),
+    _global2(_self, _self.value),
+    _global3(_self, _self.value),
+    _rammarket(_self, _self.value)
    {
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
@@ -49,7 +49,7 @@ namespace eosiosystem {
    }
 
    symbol system_contract::get_core_symbol() {
-      rammarket rm("eosio"_n, "eosio"_n);
+      rammarket rm("eosio"_n, "eosio"_n.value);
       const static auto sym = get_core_symbol( rm );
       return sym;
    }
@@ -79,7 +79,7 @@ namespace eosiosystem {
       /**
        *  Increase the amount of ram for sale based upon the change in max ram size.
        */
-      _rammarket.modify( itr, 0, [&]( auto& m ) {
+      _rammarket.modify( itr, same_payer, [&]( auto& m ) {
          m.base.balance.amount += delta;
       });
 
@@ -98,7 +98,7 @@ namespace eosiosystem {
       /**
        *  Increase the amount of ram for sale based upon the change in max ram size.
        */
-      _rammarket.modify( itr, 0, [&]( auto& m ) {
+      _rammarket.modify( itr, same_payer, [&]( auto& m ) {
          m.base.balance.amount += new_ram;
       });
       _gstate2.last_ram_increase = cbt;
@@ -125,24 +125,24 @@ namespace eosiosystem {
       set_blockchain_parameters( params );
    }
 
-   void system_contract::setpriv( account_name account, uint8_t ispriv ) {
+   void system_contract::setpriv( name account, uint8_t ispriv ) {
       require_auth( _self );
-      set_privileged( account, ispriv );
+      set_privileged( account.value, ispriv );
    }
 
-   void system_contract::setalimits( account_name account, int64_t ram, int64_t net, int64_t cpu ) {
+   void system_contract::setalimits( name account, int64_t ram, int64_t net, int64_t cpu ) {
       require_auth( _self );
-      user_resources_table userres( _self, account );
-      auto ritr = userres.find( account );
+      user_resources_table userres( _self, account.value );
+      auto ritr = userres.find( account.value );
       eosio_assert( ritr == userres.end(), "only supports unlimited accounts" );
-      set_resource_limits(account, ram, net, cpu);
+      set_resource_limits( account.value, ram, net, cpu );
    }
 
-   void system_contract::rmvproducer( account_name producer ) {
+   void system_contract::rmvproducer( name producer ) {
       require_auth( _self );
-      auto prod = _producers.find( producer );
+      auto prod = _producers.find( producer.value );
       eosio_assert( prod != _producers.end(), "producer not found" );
-      _producers.modify( prod, 0, [&](auto& p) {
+      _producers.modify( prod, same_payer, [&](auto& p) {
             p.deactivate();
          });
    }
@@ -156,25 +156,25 @@ namespace eosiosystem {
       _gstate2.revision = revision;
    }
 
-   void system_contract::bidname( account_name bidder, account_name newname, asset bid ) {
+   void system_contract::bidname( name bidder, name newname, asset bid ) {
       require_auth( bidder );
-      eosio_assert( name(newname).suffix() == name(newname), "you can only bid on top-level suffix" );
+      eosio_assert( newname.suffix() == newname, "you can only bid on top-level suffix" );
 
-      eosio_assert( newname != 0, "the empty name is not a valid account name to bid on" );
-      eosio_assert( (newname & 0xFull) == 0, "13 character names are not valid account names to bid on" );
-      eosio_assert( (newname & 0x1F0ull) == 0, "accounts with 12 character names and no dots can be created without bidding required" );
+      eosio_assert( (bool)newname, "the empty name is not a valid account name to bid on" );
+      eosio_assert( (newname.value & 0xFull) == 0, "13 character names are not valid account names to bid on" );
+      eosio_assert( (newname.value & 0x1F0ull) == 0, "accounts with 12 character names and no dots can be created without bidding required" );
       eosio_assert( !is_account( newname ), "account already exists" );
       eosio_assert( bid.symbol == core_symbol(), "asset must be system token" );
       eosio_assert( bid.amount > 0, "insufficient bid" );
 
       INLINE_ACTION_SENDER(eosio::token, transfer)(
          token_account, { {bidder, active_permission} },
-         { bidder, names_account, bid, std::string("bid name ")+(name{newname}).to_string() }
+         { bidder, names_account, bid, std::string("bid name ")+ newname.to_string() }
       );
 
-      name_bid_table bids(_self,_self);
+      name_bid_table bids(_self, _self.value);
       print( name{bidder}, " bid ", bid, " on ", name{newname}, "\n" );
-      auto current = bids.find( newname );
+      auto current = bids.find( newname.value );
       if( current == bids.end() ) {
          bids.emplace( bidder, [&]( auto& b ) {
             b.newname = newname;
@@ -187,11 +187,11 @@ namespace eosiosystem {
          eosio_assert( bid.amount - current->high_bid > (current->high_bid / 10), "must increase bid by 10%" );
          eosio_assert( current->high_bidder != bidder, "account is already highest bidder" );
 
-         bid_refund_table refunds_table(_self, newname);
+         bid_refund_table refunds_table(_self, newname.value);
 
-         auto it = refunds_table.find( current->high_bidder );
+         auto it = refunds_table.find( current->high_bidder.value );
          if ( it != refunds_table.end() ) {
-            refunds_table.modify( it, 0, [&](auto& r) {
+            refunds_table.modify( it, same_payer, [&](auto& r) {
                   r.amount += asset( current->high_bid, core_symbol() );
                });
          } else {
@@ -207,7 +207,7 @@ namespace eosiosystem {
                                  std::make_tuple( current->high_bidder, newname )
          );
          t.delay_sec = 0;
-         uint128_t deferred_id = (uint128_t(newname) << 64) | current->high_bidder;
+         uint128_t deferred_id = (uint128_t(newname.value) << 64) | current->high_bidder.value;
          cancel_deferred( deferred_id );
          t.send( deferred_id, bidder );
 
@@ -219,9 +219,9 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::bidrefund( account_name bidder, account_name newname ) {
-      bid_refund_table refunds_table(_self, newname);
-      auto it = refunds_table.find( bidder );
+   void system_contract::bidrefund( name bidder, name newname ) {
+      bid_refund_table refunds_table(_self, newname.value);
+      auto it = refunds_table.find( bidder.value );
       eosio_assert( it != refunds_table.end(), "refund not found" );
       INLINE_ACTION_SENDER(eosio::token, transfer)(
          token_account, { {names_account, active_permission}, {bidder, active_permission} },
@@ -239,14 +239,14 @@ namespace eosiosystem {
     *  who can create accounts with the creator's name as a suffix.
     *
     */
-   void native::newaccount( account_name     creator,
-                            account_name     newact
+   void native::newaccount( name             creator,
+                            name             newact
                             /*  no need to parse authorites
                             const authority& owner,
                             const authority& active*/ ) {
 
       if( creator != _self ) {
-         auto tmp = newact >> 4;
+         uint64_t tmp = newact.value >> 4;
          bool has_dot = false;
 
          for( uint32_t i = 0; i < 12; ++i ) {
@@ -254,10 +254,10 @@ namespace eosiosystem {
            tmp >>= 5;
          }
          if( has_dot ) { // or is less than 12 characters
-            auto suffix = name(newact).suffix().raw();
+            auto suffix = newact.suffix();
             if( suffix == newact ) {
-               name_bid_table bids(_self,_self);
-               auto current = bids.find( newact );
+               name_bid_table bids(_self, _self.value);
+               auto current = bids.find( newact.value );
                eosio_assert( current != bids.end(), "no active bid for name" );
                eosio_assert( current->high_bidder == creator, "only highest bidder can claim" );
                eosio_assert( current->high_bid < 0, "auction for name is not closed yet" );
@@ -268,7 +268,7 @@ namespace eosiosystem {
          }
       }
 
-      user_resources_table  userres( _self, newact);
+      user_resources_table  userres( _self, newact.value);
 
       userres.emplace( newact, [&]( auto& res ) {
         res.owner = newact;
@@ -276,19 +276,19 @@ namespace eosiosystem {
         res.cpu_weight = asset( 0, system_contract::get_core_symbol() );
       });
 
-      set_resource_limits( newact, 0, 0, 0 );
+      set_resource_limits( newact.value, 0, 0, 0 );
    }
 
-   void native::setabi( account_name acnt, const bytes& abi ) {
-      eosio::multi_index< "abihash"_n, abi_hash >  table(_self,_self);
-      auto itr = table.find( acnt );
+   void native::setabi( name acnt, const bytes& abi ) {
+      eosio::multi_index< "abihash"_n, abi_hash >  table(_self, _self.value);
+      auto itr = table.find( acnt.value );
       if( itr == table.end() ) {
          table.emplace( acnt, [&]( auto& row ) {
             row.owner= acnt;
             sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
          });
       } else {
-         table.modify( itr, 0, [&]( auto& row ) {
+         table.modify( itr, same_payer, [&]( auto& row ) {
             sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
          });
       }

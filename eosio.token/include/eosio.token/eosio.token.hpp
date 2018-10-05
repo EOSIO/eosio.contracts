@@ -21,25 +21,25 @@ namespace eosio {
       public:
          token( name self ):contract(self){}
 
-         void create( account_name issuer,
-                      asset        maximum_supply);
+         void create( name   issuer,
+                      asset  maximum_supply);
 
-         void issue( account_name to, asset quantity, string memo );
+         void issue( name to, asset quantity, string memo );
 
          void retire( asset quantity, string memo );
 
-         void transfer( account_name from,
-                        account_name to,
-                        asset        quantity,
-                        string       memo );
+         void transfer( name    from,
+                        name    to,
+                        asset   quantity,
+                        string  memo );
 
-         void open( account_name owner, const symbol& symbol, account_name payer );
+         void open( name owner, const symbol& symbol, name payer );
 
-         void close( account_name owner, const symbol& symbol );
+         void close( name owner, const symbol& symbol );
 
          inline asset get_supply( const symbol& sym )const;
 
-         inline asset get_balance( account_name owner, symbol sym )const;
+         inline asset get_balance( name owner, symbol sym )const;
 
       private:
          struct account {
@@ -49,9 +49,9 @@ namespace eosio {
          };
 
          struct currency_stats {
-            asset          supply;
-            asset          max_supply;
-            account_name   issuer;
+            asset    supply;
+            asset    max_supply;
+            name     issuer;
 
             uint64_t primary_key()const { return supply.symbol.raw(); }
          };
@@ -59,15 +59,15 @@ namespace eosio {
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
-         void sub_balance( account_name owner, asset value );
-         void add_balance( account_name owner, asset value, account_name ram_payer );
+         void sub_balance( name owner, asset value );
+         void add_balance( name owner, asset value, name ram_payer );
 
       public:
          struct transfer_args {
-            account_name  from;
-            account_name  to;
-            asset         quantity;
-            string        memo;
+            name     from;
+            name     to;
+            asset    quantity;
+            string   memo;
          };
    };
 
@@ -78,9 +78,9 @@ namespace eosio {
       return st.supply;
    }
 
-   asset token::get_balance( account_name owner, symbol sym )const
+   asset token::get_balance( name owner, symbol sym )const
    {
-      accounts accountstable( _self, owner );
+      accounts accountstable( _self, owner.value );
       const auto& ac = accountstable.get( sym.raw() );
       eosio::print(sym);
       eosio::print(sym.raw());

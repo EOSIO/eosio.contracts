@@ -16,7 +16,7 @@ namespace eosiosystem {
    const int64_t  useconds_per_day      = 24 * 3600 * int64_t(1000000);
    const int64_t  useconds_per_year     = seconds_per_year*1000000ll;
 
-   void system_contract::onblock( block_timestamp timestamp, account_name producer ) {
+   void system_contract::onblock( block_timestamp timestamp, name producer ) {
       using namespace eosio;
 
       require_auth(_self);
@@ -38,10 +38,10 @@ namespace eosiosystem {
        * At startup the initial producer may not be one that is registered / elected
        * and therefore there may be no producer object for them.
        */
-      auto prod = _producers.find(producer);
+      auto prod = _producers.find( producer.value );
       if ( prod != _producers.end() ) {
          _gstate.total_unpaid_blocks++;
-         _producers.modify( prod, 0, [&](auto& p ) {
+         _producers.modify( prod, same_payer, [&](auto& p ) {
                p.unpaid_blocks++;
          });
       }
@@ -51,7 +51,7 @@ namespace eosiosystem {
          update_elected_producers( timestamp );
 
          if( (timestamp.slot - _gstate.last_name_close.slot) > blocks_per_day ) {
-            name_bid_table bids(_self,_self);
+            name_bid_table bids(_self, _self.value);
             auto idx = bids.get_index<"highbid"_n>();
             auto highest = idx.lower_bound( std::numeric_limits<uint64_t>::max()/2 );
             if( highest != idx.end() &&
@@ -61,7 +61,7 @@ namespace eosiosystem {
                 (current_time_point() - _gstate.thresh_activated_stake_time) > microseconds(14 * useconds_per_day)
             ) {
                _gstate.last_name_close = timestamp;
-               idx.modify( highest, 0, [&]( auto& b ){
+               idx.modify( highest, same_payer, [&]( auto& b ){
                   b.high_bid = -b.high_bid;
                });
             }
@@ -70,10 +70,10 @@ namespace eosiosystem {
    }
 
    using namespace eosio;
-   void system_contract::claimrewards( const account_name& owner ) {
+   void system_contract::claimrewards( const name owner ) {
       require_auth( owner );
 
-      const auto& prod = _producers.get( owner );
+      const auto& prod = _producers.get( owner.value );
       eosio_assert( prod.active(), "producer does not have an active key" );
 
       eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
@@ -119,7 +119,7 @@ namespace eosiosystem {
          _gstate.last_pervote_bucket_fill = ct;
       }
 
-      auto prod2 = _producers2.find( owner );
+      auto prod2 = _producers2.find( owner.value );
 
       /// New metric to be used in pervote pay calculation. Instead of vote weight ratio, we combine vote weight and
       /// time duration the vote weight has been held into one metric.
@@ -176,7 +176,7 @@ namespace eosiosystem {
 
       update_total_votepay_share( ct, -new_votepay_share, (updated_after_threshold ? prod.total_votes : 0.0) );
 
-      _producers.modify( prod, 0, [&](auto& p) {
+      _producers.modify( prod, same_payer, [&](auto& p) {
          p.last_claim_time = ct;
          p.unpaid_blocks   = 0;
       });

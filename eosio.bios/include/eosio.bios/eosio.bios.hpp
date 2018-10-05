@@ -6,9 +6,9 @@
 namespace eosio {
 
    struct abi_hash {
-      account_name owner;
+      name         owner;
       checksum256  hash;
-      auto primary_key()const { return owner; }
+      uint64_t primary_key()const { return owner.value; }
 
       EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
    };
@@ -19,14 +19,14 @@ namespace eosio {
       public:
          bios( name self ):contract(self){}
 
-         void setpriv( account_name account, uint8_t ispriv ) {
+         void setpriv( name account, uint8_t ispriv ) {
             require_auth( _self );
-            set_privileged( account, ispriv );
+            set_privileged( account.value, ispriv );
          }
 
-         void setalimits( account_name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight ) {
+         void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight ) {
             require_auth( _self );
-            set_resource_limits( account, ram_bytes, net_weight, cpu_weight );
+            set_resource_limits( account.value, ram_bytes, net_weight, cpu_weight );
          }
 
          void setglimits( uint64_t ram, uint64_t net, uint64_t cpu ) {
@@ -50,20 +50,20 @@ namespace eosio {
             set_blockchain_parameters( params );
          }
 
-         void reqauth( action_name from ) {
+         void reqauth( name from ) {
             require_auth( from );
          }
 
-         void setabi( account_name acnt, const bytes& abi ) {
-            abi_hash_table table(_self, _self);
-            auto itr = table.find( acnt );
+         void setabi( name acnt, const bytes& abi ) {
+            abi_hash_table table(_self, _self.value);
+            auto itr = table.find( acnt.value );
             if( itr == table.end() ) {
                table.emplace( acnt, [&]( auto& row ) {
                   row.owner = acnt;
                   sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
                });
             } else {
-               table.modify( itr, 0, [&]( auto& row ) {
+               table.modify( itr, same_payer, [&]( auto& row ) {
                   sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
                });
             }

@@ -9,18 +9,18 @@ namespace eosio {
          multisig( name self ):contract(self){}
 
          void propose();
-         void approve( account_name proposer, name proposal_name, permission_level level );
-         void unapprove( account_name proposer, name proposal_name, permission_level level );
-         void cancel( account_name proposer, name proposal_name, account_name canceler );
-         void exec( account_name proposer, name proposal_name, account_name executer );
-         void invalidate( account_name account );
+         void approve( name proposer, name proposal_name, permission_level level );
+         void unapprove( name proposer, name proposal_name, permission_level level );
+         void cancel( name proposer, name proposal_name, name canceler );
+         void exec( name proposer, name proposal_name, name executer );
+         void invalidate( name account );
 
       private:
          struct proposal {
             name                       proposal_name;
             vector<char>               packed_transaction;
 
-            auto primary_key()const { return proposal_name.raw(); }
+            uint64_t primary_key()const { return proposal_name.value; }
          };
          typedef eosio::multi_index< "proposal"_n, proposal > proposals;
 
@@ -29,7 +29,7 @@ namespace eosio {
             vector<permission_level>   requested_approvals;
             vector<permission_level>   provided_approvals;
 
-            auto primary_key()const { return proposal_name.raw(); }
+            uint64_t primary_key()const { return proposal_name.value; }
          };
          typedef eosio::multi_index< "approvals"_n, old_approvals_info > old_approvals;
 
@@ -47,15 +47,15 @@ namespace eosio {
             vector<approval>   requested_approvals;
             vector<approval>   provided_approvals;
 
-            auto primary_key()const { return proposal_name.raw(); }
+            uint64_t primary_key()const { return proposal_name.value; }
          };
          typedef eosio::multi_index< "approvals2"_n, approvals_info > approvals;
 
          struct invalidation {
-            account_name account;
+            name         account;
             time_point   last_invalidation_time;
 
-            auto primary_key() const { return account; }
+            uint64_t primary_key() const { return account.value; }
          };
 
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
