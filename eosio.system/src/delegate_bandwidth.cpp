@@ -22,7 +22,6 @@ namespace eosiosystem {
    using eosio::asset;
    using eosio::indexed_by;
    using eosio::const_mem_fun;
-   using eosio::bytes;
    using eosio::print;
    using eosio::permission_level;
    using eosio::time_point_sec;

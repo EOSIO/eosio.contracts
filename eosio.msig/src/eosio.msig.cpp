@@ -17,7 +17,7 @@ If we use dispatcher the function signature should be:
 
 void multisig::propose( name proposer,
                         name proposal_name,
-                        vector<permission_level> requested,
+                        std::vector<permission_level> requested,
                         transaction  trx)
 */
 
@@ -29,7 +29,7 @@ void multisig::propose() {
 
    name proposer;
    name proposal_name;
-   vector<permission_level> requested;
+   std::vector<permission_level> requested;
    transaction_header trx_header;
 
    datastream<const char*> ds( buffer, size );
@@ -45,7 +45,7 @@ void multisig::propose() {
    proposals proptable( _self, proposer.value );
    eosio_assert( proptable.find( proposal_name.value ) == proptable.end(), "proposal with the same name exists" );
 
-   bytes packed_requested = pack(requested);
+   auto packed_requested = pack(requested);
    auto res = ::check_transaction_authorization( buffer+trx_pos, size-trx_pos,
                                                  (const char*)0, 0,
                                                  packed_requested.data(), packed_requested.size()
@@ -54,7 +54,7 @@ void multisig::propose() {
 
    proptable.emplace( proposer, [&]( auto& prop ) {
       prop.proposal_name       = proposal_name;
-      prop.packed_transaction  = bytes( buffer+trx_pos, buffer+size );
+      prop.packed_transaction  = std::vector<char>( buffer+trx_pos, buffer+size );
    });
 
    approvals apptable(  _self, proposer.value );
@@ -154,7 +154,7 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
 
    approvals apptable(  _self, proposer.value );
    auto apps_it = apptable.find( proposal_name.value );
-   vector<permission_level> approvals;
+   std::vector<permission_level> approvals;
    invalidations inv_table( _self, _self.value );
    if ( apps_it != apptable.end() ) {
       approvals.reserve( apps_it->provided_approvals.size() );
@@ -176,7 +176,7 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
       }
       old_apptable.erase(apps);
    }
-   bytes packed_provided_approvals = pack(approvals);
+   auto packed_provided_approvals = pack(approvals);
    auto res = ::check_transaction_authorization( prop.packed_transaction.data(), prop.packed_transaction.size(),
                                                  (const char*)0, 0,
                                                  packed_provided_approvals.data(), packed_provided_approvals.size()

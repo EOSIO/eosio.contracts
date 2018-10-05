@@ -54,7 +54,7 @@ namespace eosio {
             require_auth( from );
          }
 
-         void setabi( name acnt, const bytes& abi ) {
+         void setabi( name acnt, const std::vector<char>& abi ) {
             abi_hash_table table(_self, _self.value);
             auto itr = table.find( acnt.value );
             if( itr == table.end() ) {

@@ -6,7 +6,6 @@
 
 #include <eosiolib/action.hpp>
 #include <eosiolib/public_key.hpp>
-#include <eosiolib/types.hpp>
 #include <eosiolib/print.hpp>
 #include <eosiolib/privileged.h>
 #include <eosiolib/optional.hpp>
@@ -17,8 +16,6 @@ namespace eosiosystem {
    using eosio::name;
    using eosio::permission_level;
    using eosio::public_key;
-
-   typedef std::vector<char> bytes;
 
    struct permission_level_weight {
       permission_level  permission;
@@ -116,8 +113,8 @@ namespace eosiosystem {
 
          void canceldelay( /* permission_level canceling_auth, checksum256 trx_id */ ) {}
 
-         void onerror( /* const bytes& */ ) {}
+         void onerror( /* const std::vector<char>& */ ) {}
 
-         void setabi( name acnt, const bytes& abi );
+         void setabi( name acnt, const std::vector<char>& abi );
    };
 }

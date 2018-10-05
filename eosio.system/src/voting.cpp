@@ -21,7 +21,6 @@
 namespace eosiosystem {
    using eosio::indexed_by;
    using eosio::const_mem_fun;
-   using eosio::bytes;
    using eosio::print;
    using eosio::singleton;
    using eosio::transaction;
@@ -113,7 +112,7 @@ namespace eosiosystem {
       for( const auto& item : top_producers )
          producers.push_back(item.first);
 
-      bytes packed_schedule = pack(producers);
+      auto packed_schedule = pack(producers);
 
       if( set_proposed_producers( packed_schedule.data(),  packed_schedule.size() ) >= 0 ) {
          _gstate.last_producer_schedule_size = static_cast<decltype(_gstate.last_producer_schedule_size)>( top_producers.size() );
