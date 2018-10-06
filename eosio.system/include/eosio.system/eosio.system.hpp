@@ -288,7 +288,7 @@ namespace eosiosystem {
 
          /**
           * Converts REX stake back into SYS tokens at current exchange rate. If order cannot be 
-          * processed, it gets queued untill it can be there is enough REX to fill order.
+          * processed, it gets queued until it can be there is enough REX to fill order.
           */
          void sellrex( account_name from, asset rex );
          
