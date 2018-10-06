@@ -14,7 +14,7 @@ The following unprivileged contract(s) are also part of the system.
    * [eosio.token](https://github.com/eosio/eosio.contracts/tree/master/eosio.token)
 
 Dependencies:
-* [eosio v1.2.x](https://github.com/EOSIO/eos/releases/tag/v1.2.6)
+* [eosio v1.3.x](https://github.com/EOSIO/eos/releases/tag/v1.3.1)
 * [eosio.cdt v1.2.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.2.1)
 
 To build the contracts and the unit tests:

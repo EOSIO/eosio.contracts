@@ -195,6 +195,10 @@ namespace eosiosystem {
     */
    void system_contract::voteproducer( const account_name voter_name, const account_name proxy, const std::vector<account_name>& producers ) {
       require_auth( voter_name );
+      auto rex_itr = _rexbalance.find( voter_name );
+      if( rex_itr != _rexbalance.end() && rex_itr->rex_balance.amount > 0 ) {
+         eosio_assert( proxy || producers.size() >= 21, "voter holding REX must vote for a proxy or at least 21 producers");
+      }
       update_votes( voter_name, proxy, producers, true );
    }
 

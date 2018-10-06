@@ -6,7 +6,7 @@
 #include "delegate_bandwidth.cpp"
 #include "voting.cpp"
 #include "exchange_state.cpp"
-
+#include "rex.cpp"
 
 namespace eosiosystem {
 
@@ -18,7 +18,9 @@ namespace eosiosystem {
     _global(_self,_self),
     _global2(_self,_self),
     _global3(_self,_self),
-    _rammarket(_self,_self)
+    _rammarket(_self,_self),
+    _rextable(_self,_self),
+    _rexbalance(_self,_self)
    {
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
@@ -295,6 +297,9 @@ EOSIO_ABI( eosiosystem::system_contract,
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
      (setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
+     // rex.cpp
+     (buyrex)(sellrex)(cnclrexorder)(claimrex)(rentcpu)(rentnet)(fundcpuloan)(fundnetloan)
+     (claimrefund)(updaterex)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

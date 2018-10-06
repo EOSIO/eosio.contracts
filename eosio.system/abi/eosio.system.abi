@@ -205,6 +205,129 @@
          {"name":"cpu_weight", "type":"asset"}
       ]
     },{
+      "name": "buyrex",
+      "base": "",
+      "fields": [
+         {"name":"from",   "type":"account_name"},
+         {"name":"amount", "type":"asset"}
+      ]
+    },{
+      "name": "sellrex",
+      "base": "",
+      "fields": [
+         {"name":"from", "type":"account_name"},
+         {"name":"rex",  "type":"asset"}
+      ]
+    },{
+      "name": "cnclrexorder",
+      "base": "",
+      "fields": [
+         {"name":"owner", "type":"account_name"}
+      ]
+    },{
+      "name": "claimrex",
+      "base": "",
+      "fields": [
+         {"name":"owner", "type":"account_name"}
+      ]
+    },{
+      "name": "updaterex",
+      "base": "",
+      "fields": [
+         {"name":"owner", "type":"account_name"}
+      ]
+    },{
+      "name": "rex_balance",
+      "base": "",
+      "fields": [
+         {"name":"owner",       "type":"account_name"},
+         {"name":"vote_stake",  "type":"asset"},
+         {"name":"rex_balance", "type":"asset"}
+      ]
+    },{
+      "name": "rex_pool",
+      "base": "",
+      "fields": [
+         {"name":"total_lent",       "type":"asset"},
+         {"name":"total_unlent",     "type":"asset"},
+         {"name":"total_rent",       "type":"asset"},
+         {"name":"total_lendable",   "type":"asset"},
+         {"name":"total_rex",        "type":"asset"},
+         {"name":"namebid_proceeds", "type":"asset"},
+         {"name":"loan_num",         "type":"uint64"}
+      ]
+    },{
+      "name": "rex_loan",
+      "base": "",
+      "fields": [
+         {"name":"from",         "type":"account_name"},
+         {"name":"receiver",     "type":"account_name"},
+         {"name":"loan_payment", "type":"asset"},
+         {"name":"total_staked", "type":"asset"},
+         {"name":"loan_num",     "type":"uint64"},
+         {"name":"expiration",   "type":"time_point"},
+         {"name":"auto_renew",   "type":"bool"},
+         {"name":"balance",      "type":"asset"}
+      ]
+    },{
+      "name": "loan_refund",
+      "base": "",
+      "fields": [
+         {"name":"owner",   "type":"account_name"},
+         {"name":"balance", "type":"asset"}
+      ]
+    },{
+      "name": "rex_order",
+      "base": "",
+      "fields": [
+         {"name":"owner",         "type":"account_name"},
+         {"name":"rex_requested", "type":"asset"},
+         {"name":"proceeds",      "type":"asset"},
+         {"name":"unstake_quant", "type":"asset"},
+         {"name":"order_time",    "type":"time_point"},
+         {"name":"is_open",       "type":"bool"}
+      ]
+    },{
+      "name": "rentcpu",
+      "base": "",
+      "fields": [
+         {"name":"from",       "type":"account_name"},
+         {"name":"receiver",   "type":"account_name"},
+         {"name":"payment",    "type":"asset"},
+         {"name":"auto_renew", "type":"bool"}
+      ]
+    },{
+      "name": "rentnet",
+      "base": "",
+      "fields": [
+         {"name":"from",       "type":"account_name"},
+         {"name":"receiver",   "type":"account_name"},
+         {"name":"payment",    "type":"asset"},
+         {"name":"auto_renew", "type":"bool"}
+      ]
+    },{
+      "name": "fundcpuloan",
+      "base": "",
+      "fields": [
+         {"name":"from",     "type":"account_name"},
+         {"name":"loan_num", "type":"uint64"},
+         {"name":"payment",  "type":"asset"}
+      ]
+    },{
+      "name": "fundnetloan",
+      "base": "",
+      "fields": [
+         {"name":"from",     "type":"account_name"},
+         {"name":"loan_num", "type":"uint64"},
+         {"name":"payment",  "type":"asset"}
+      ]
+    },{
+      "name": "claimrefund",
+      "base": "",
+      "fields": [
+         {"name":"owner", "type":"account_name"}
+      ]
+    },{
       "name": "user_resources",
       "base": "",
       "fields": [
@@ -497,6 +620,46 @@
       "type": "refund",
       "ricardian_contract": ""
    },{
+      "name": "buyrex",
+      "type": "buyrex",
+      "ricardian_contract": ""
+   },{
+      "name": "sellrex",
+      "type": "sellrex",
+      "ricardian_contract": ""
+   },{
+      "name": "cnclrexorder",
+      "type": "cnclrexorder",
+      "ricardian_contract": ""
+   },{
+      "name": "claimrex",
+      "type": "claimrex",
+      "ricardian_contract": ""
+   },{
+      "name": "updaterex",
+      "type": "updaterex",
+      "ricardian_contract": ""
+   },{
+      "name": "rentcpu",
+      "type": "rentcpu",
+      "ricardian_contract": ""
+   },{
+      "name": "rentnet",
+      "type": "rentnet",
+      "ricardian_contract": ""
+   },{
+      "name": "fundcpuloan",
+      "type": "fundcpuloan",
+      "ricardian_contract": ""
+   },{
+      "name": "fundnetloan",
+      "type": "fundnetloan",
+      "ricardian_contract": ""
+   },{
+      "name": "claimrefund",
+      "type": "claimrefund",
+      "ricardian_contract": ""
+   },{
       "name": "regproducer",
       "type": "regproducer",
       "ricardian_contract": ""
@@ -600,6 +763,42 @@
       "type": "delegated_bandwidth",
       "index_type": "i64",
       "key_names" : ["to"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "rexpool",
+      "type": "rex_pool",
+      "index_type": "i64",
+      "key_names" : ["zero"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "rexbal",
+      "type": "rex_balance",
+      "index_type": "i64",
+      "key_names" : ["owner"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "rexqueue",
+      "type": "rex_order",
+      "index_type": "i64",
+      "key_names" : ["owner"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "cpuloan",
+      "type": "rex_loan",
+      "index_type": "i64",
+      "key_names" : ["loan_num"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "netloan",
+      "type": "rex_loan",
+      "index_type": "i64",
+      "key_names" : ["loan_num"],
+      "key_types" : ["uint64"]
+    },{
+      "name": "loanrefunds",
+      "type": "loan_refund",
+      "index_type": "i64",
+      "key_names" : ["owner"],
       "key_types" : ["uint64"]
     },{
       "name": "rammarket",

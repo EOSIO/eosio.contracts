@@ -169,9 +169,82 @@ namespace eosiosystem {
    typedef eosio::singleton<N(global2), eosio_global_state2> global_state2_singleton;
    typedef eosio::singleton<N(global3), eosio_global_state3> global_state3_singleton;
 
-   //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
    static constexpr uint64_t     system_token_symbol = CORE_SYMBOL;
+
+   struct rex_pool {
+      asset      total_lent; /// total EOS in open rex_loans
+      asset      total_unlent; /// total EOS available to be lent (connector)
+      asset      total_rent; /// fees received in exchange for lent  (connector)
+      asset      total_lendable; /// total EOS that have been lent (total_unlent + total_lent)
+      asset      total_rex; /// total number of REX shares allocated to contributors to total_lendable
+      asset      namebid_proceeds; /// EOS to be transferred from namebids to REX pool
+      uint64_t   loan_num = 0; /// increments with each new loan
+      uint64_t primary_key()const { return 0; }
+   };
+
+   typedef eosio::multi_index< N(rexpool), rex_pool > rex_pool_table;
+
+   struct rex_balance {
+      account_name owner;
+      asset        vote_stake; /// the amount of CORE_SYMBOL currently included in owner's vote
+      asset        rex_balance; /// the amount of REX owned by owner
+
+      uint64_t primary_key()const { return owner; }
+   };
+
+   typedef eosio::multi_index< N(rexbal), rex_balance > rex_balance_table;
+
+   struct rex_loan {
+      account_name        from;
+      account_name        receiver;
+      asset               loan_payment;
+      asset               total_staked;
+      uint64_t            loan_num;
+      eosio::time_point   expiration;
+      
+      bool                auto_renew = false;
+      asset               balance;
+
+      uint64_t primary_key()const { return loan_num;                   }
+      uint64_t by_expr()const     { return expiration.elapsed.count(); }
+      uint64_t by_owner()const    { return from;                       }
+   };
+
+   typedef eosio::multi_index< N(cpuloan), rex_loan,
+                               indexed_by<N(byexpr),  const_mem_fun<rex_loan, uint64_t, &rex_loan::by_expr>>,
+                               indexed_by<N(byowner), const_mem_fun<rex_loan, uint64_t, &rex_loan::by_owner>>
+                             > rex_cpu_loan_table;
+
+   typedef eosio::multi_index< N(netloan), rex_loan,
+                               indexed_by<N(byexpr),  const_mem_fun<rex_loan, uint64_t, &rex_loan::by_expr>>,
+                               indexed_by<N(byowner), const_mem_fun<rex_loan, uint64_t, &rex_loan::by_owner>>
+                             > rex_net_loan_table;
+
+   struct loan_refund {
+      account_name  owner;
+      asset         balance;
+         
+      uint64_t primary_key()const { return owner; }
+   };
+
+   typedef eosio::multi_index< N(loanrefunds), loan_refund > loan_refund_table;
+
+   struct rex_order {
+      account_name        owner;
+      asset               rex_requested;
+      asset               proceeds;
+      asset               unstake_quant;
+      eosio::time_point   order_time;
+      bool                is_open = true;
+      
+      void close()            { is_open = false; }
+      auto primary_key()const { return owner;    }
+      uint64_t by_time()const { return is_open ? order_time.elapsed.count() : -order_time.elapsed.count(); }
+   };
+
+   typedef eosio::multi_index< N(rexqueue), rex_order,
+                               indexed_by<N(bytime), const_mem_fun<rex_order, uint64_t, &rex_order::by_time>>> rex_order_table;
 
    class system_contract : public native {
       private:
@@ -185,6 +258,8 @@ namespace eosiosystem {
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
          rammarket               _rammarket;
+         rex_pool_table          _rextable;
+         rex_balance_table       _rexbalance;
 
       public:
          system_contract( account_name s );
@@ -205,6 +280,54 @@ namespace eosiosystem {
          void delegatebw( account_name from, account_name receiver,
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
+
+         /**
+          * Transfers SYS tokens from user balance and credits converts them to REX stake.
+          */
+         void buyrex( account_name from, asset amount );
+
+         /**
+          * Converts REX stake back into SYS tokens at current exchange rate. If order cannot be 
+          * processed, it gets queued until it can be there is enough REX to fill order.
+          */
+         void sellrex( account_name from, asset rex );
+         
+         /**
+          * Cancels queued sellrex order.
+          */
+         void cnclrexorder( account_name owner );
+
+         /**
+          * Transfers processed sellrex order that had been queued proceeds to owner account. Fails if 
+          * order hasn't been filled.
+          */
+         void claimrex( account_name owner );
+
+         /**
+          * Use payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
+          * after 30 days the rented SYS delegation of CPU or NET will expire unless auto_renew == true.
+          * If auto_renew == true, loan creator can fund that specific loan. Upon expiration, if loan has enough funds, it 
+          * gets renewed at current market price, otherwise, the loan is closed and remaining balance if refunded to loan 
+          * creator. User claims the refund in a separate action.
+          */
+         void rentcpu( account_name from, account_name receiver, asset payment, bool auto_renew );
+         void rentnet( account_name from, account_name receiver, asset payment, bool auto_renew );
+
+         /**
+          * Loan initiator funds a given CPU or NET loan. Loan must've been set as autorenew.
+          */
+         void fundcpuloan( account_name from, uint64_t loan_num, asset payment );
+         void fundnetloan( account_name from, uint64_t loan_num, asset payment );
+
+         /**
+          * Transfers remaining balance of closed auto-renew loans to owner account.
+          */
+         void claimrefund( account_name owner );
+         
+         /**
+          * Updates REX vote stake of owner to its current value.
+          */
+         void updaterex( account_name owner );
 
          /**
           *  Decreases the total tokens delegated by from to receiver and/or
@@ -277,23 +400,31 @@ namespace eosiosystem {
       private:
          // Implementation details:
 
-         //defined in eosio.system.cpp
+         // defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
          static time_point current_time_point();
          static block_timestamp current_block_time();
          void update_ram_supply();
+         // defined in rex.cpp
+         void runrex( uint16_t max );
+         std::tuple<bool, int64_t, int64_t> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
+         void deposit_rex( const account_name& from, const asset& amount );
+         template <typename T>
+         int64_t rentrex( T& table, account_name from, account_name receiver, const asset& payment, bool auto_renew,
+                          const std::string& memo );
+         template <typename T>
+         void fundrexloan( T& table, account_name from, uint64_t loan_num, const asset& payment, const std::string& memo );
 
-         //defined in delegate_bandwidth.cpp
+         // defined in delegate_bandwidth.cpp
          void changebw( account_name from, account_name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
+         void update_resource_limits( account_name receiver, int64_t delta_cpu, int64_t delta_net );
+         void update_voting_power( const account_name& voter, const asset& total_update );
 
-         //defined in voting.hpp
+         // defined in voting.hpp
          void update_elected_producers( block_timestamp timestamp );
          void update_votes( const account_name voter, const account_name proxy, const std::vector<account_name>& producers, bool voting );
-
-         // defined in voting.cpp
          void propagate_weight_change( const voter_info& voter );
-
          double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
                                                time_point ct,
                                                double shares_rate, bool reset_to_zero = false );

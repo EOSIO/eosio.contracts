@@ -127,8 +127,9 @@ namespace eosiosystem {
       if( fee.amount > 0 ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {payer,N(active)},
                                                        { payer, N(eosio.ramfee), fee, std::string("ram fee") } );
+         deposit_rex( N(eosio.ramfee), fee );
       }
-
+      
       int64_t bytes_out;
 
       const auto& market = _rammarket.get(S(4,RAMCORE), "ram market does not exist");
@@ -200,7 +201,8 @@ namespace eosiosystem {
       // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
       if( fee > 0 ) {
          INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {account,N(active)},
-            { account, N(eosio.ramfee), asset(fee), std::string("sell ram fee") } );
+            { account, N(eosio.ramfee), asset(fee, system_token_symbol), std::string("sell ram fee") } );
+         deposit_rex( N(eosio.ramfee), asset(fee, system_token_symbol) );
       }
    }
 
@@ -361,28 +363,32 @@ namespace eosiosystem {
          }
       }
 
-      // update voting power
-      {
-         asset total_update = stake_net_delta + stake_cpu_delta;
-         auto from_voter = _voters.find(from);
-         if( from_voter == _voters.end() ) {
-            from_voter = _voters.emplace( from, [&]( auto& v ) {
-                  v.owner  = from;
-                  v.staked = total_update.amount;
-               });
-         } else {
-            _voters.modify( from_voter, 0, [&]( auto& v ) {
-                  v.staked += total_update.amount;
-               });
-         }
-         eosio_assert( 0 <= from_voter->staked, "stake for voting cannot be negative");
-         if( from == N(b1) ) {
-            validate_b1_vesting( from_voter->staked );
-         }
+      update_voting_power( from, stake_net_delta + stake_cpu_delta );
 
-         if( from_voter->producers.size() || from_voter->proxy ) {
-            update_votes( from, from_voter->proxy, from_voter->producers, false );
-         }
+   }
+
+   void system_contract::update_voting_power( const account_name& voter, const asset& total_update )
+   {
+      auto voter_itr = _voters.find( voter );
+      if( voter_itr == _voters.end() ) {
+         voter_itr = _voters.emplace( voter, [&]( auto& v ) {
+            v.owner  = voter;
+            v.staked = total_update.amount;
+         });
+      } else {
+         _voters.modify( voter_itr, 0, [&]( auto& v ) {
+            v.staked += total_update.amount;
+         });
+      }
+
+      eosio_assert( 0 <= voter_itr->staked, "stake for voting cannot be negative");
+
+      if( voter == N(b1) ) {
+         validate_b1_vesting( voter_itr->staked );
+      }
+
+      if( voter_itr->producers.size() || voter_itr->proxy ) {
+         update_votes( voter, voter_itr->proxy, voter_itr->producers, false );
       }
    }
 
