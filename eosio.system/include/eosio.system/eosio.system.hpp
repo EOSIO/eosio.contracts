@@ -24,6 +24,7 @@ namespace eosiosystem {
    using eosio::block_timestamp;
    using eosio::time_point;
    using eosio::microseconds;
+   using eosio::datastream;
 
    struct name_bid {
      name            newname;
@@ -201,7 +202,7 @@ namespace eosiosystem {
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
          static constexpr symbol ram_symbol     = symbol(symbol_code("RAM"), 0);
 
-         system_contract( name s );
+         system_contract( name s, datastream<const char*> ds );
          ~system_contract();
 
          static symbol get_core_symbol( const rammarket& rm );

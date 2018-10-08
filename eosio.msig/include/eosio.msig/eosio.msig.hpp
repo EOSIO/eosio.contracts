@@ -1,36 +1,46 @@
 #pragma once
 #include <eosiolib/eosio.hpp>
+#include <eosiolib/ignore.hpp>
 #include <eosiolib/transaction.hpp>
 
 namespace eosio {
 
-   class multisig : public contract {
+   class [[eosio::contract]] multisig : public contract {
       public:
-         multisig( name self ):contract(self){}
-
-         void propose();
+         multisig( name self, datastream<const char*> ds ):contract(self, ds){}
+         
+         [[eosio::action]]
+         void propose(ignore<name> proposer, ignore<name> proposal_name, 
+               ignore<std::vector<permission_level>> requested, ignore<transaction> trx);
+         [[eosio::action]]
          void approve( name proposer, name proposal_name, permission_level level );
+         [[eosio::action]]
          void unapprove( name proposer, name proposal_name, permission_level level );
+         [[eosio::action]]
          void cancel( name proposer, name proposal_name, name canceler );
+         [[eosio::action]]
          void exec( name proposer, name proposal_name, name executer );
+         [[eosio::action]]
          void invalidate( name account );
 
       private:
-         struct proposal {
+         struct [[eosio::table]] proposal {
             name                            proposal_name;
             std::vector<char>               packed_transaction;
 
             uint64_t primary_key()const { return proposal_name.value; }
          };
+
          typedef eosio::multi_index< "proposal"_n, proposal > proposals;
 
-         struct old_approvals_info {
+         struct [[eosio::table]] old_approvals_info {
             name                            proposal_name;
             std::vector<permission_level>   requested_approvals;
             std::vector<permission_level>   provided_approvals;
 
             uint64_t primary_key()const { return proposal_name.value; }
          };
+         typedef eosio::multi_index< "approvals"_n, old_approvals_info > old_approvals22;
          typedef eosio::multi_index< "approvals"_n, old_approvals_info > old_approvals;
 
          struct approval {
@@ -38,7 +48,7 @@ namespace eosio {
             time_point       time;
          };
 
-         struct approvals_info {
+         struct [[eosio::table]] approvals_info {
             uint8_t                 version = 1;
             name                    proposal_name;
             //requested approval doesn't need to cointain time, but we want requested approval
@@ -51,7 +61,7 @@ namespace eosio {
          };
          typedef eosio::multi_index< "approvals2"_n, approvals_info > approvals;
 
-         struct invalidation {
+         struct [[eosio::table]] invalidation {
             name         account;
             time_point   last_invalidation_time;
 

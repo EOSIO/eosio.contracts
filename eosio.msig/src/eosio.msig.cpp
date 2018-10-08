@@ -21,47 +21,48 @@ void multisig::propose( name proposer,
                         transaction  trx)
 */
 
-void multisig::propose() {
+void multisig::propose(ignore<name> proposer, ignore<name> proposal_name, 
+      ignore<std::vector<permission_level>> requested, ignore<transaction> trx) {
    constexpr size_t max_stack_buffer_size = 512;
-   size_t size = action_data_size();
-   char* buffer = (char*)( max_stack_buffer_size < size ? malloc(size) : alloca(size) );
-   read_action_data( buffer, size );
 
-   name proposer;
-   name proposal_name;
-   std::vector<permission_level> requested;
-   transaction_header trx_header;
+   name _proposer;
+   name _proposal_name;
+   std::vector<permission_level> _requested;
+   transaction_header _trx_header;
 
-   datastream<const char*> ds( buffer, size );
-   ds >> proposer >> proposal_name >> requested;
+   _ds >> _proposer >> _proposal_name >> _requested;
 
-   size_t trx_pos = ds.tellp();
-   ds >> trx_header;
+   const char* trx_pos = _ds.pos();
+   size_t size    = _ds.remaining();
+   _ds >> _trx_header;
 
-   require_auth( proposer );
-   eosio_assert( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
+   require_auth( _proposer );
+   eosio_assert( _trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
    //eosio_assert( trx_header.actions.size() > 0, "transaction must have at least one action" );
 
-   proposals proptable( _self, proposer.value );
-   eosio_assert( proptable.find( proposal_name.value ) == proptable.end(), "proposal with the same name exists" );
+   proposals proptable( _self, _proposer.value );
+   eosio_assert( proptable.find( _proposal_name.value ) == proptable.end(), "proposal with the same name exists" );
 
-   auto packed_requested = pack(requested);
-   auto res = ::check_transaction_authorization( buffer+trx_pos, size-trx_pos,
+   auto packed_requested = pack(_requested);
+   auto res = ::check_transaction_authorization( trx_pos, size,
                                                  (const char*)0, 0,
                                                  packed_requested.data(), packed_requested.size()
                                                );
    eosio_assert( res > 0, "transaction authorization failed" );
 
-   proptable.emplace( proposer, [&]( auto& prop ) {
-      prop.proposal_name       = proposal_name;
-      prop.packed_transaction  = std::vector<char>( buffer+trx_pos, buffer+size );
+   std::vector<char> pkd_trans;
+   pkd_trans.resize(size);
+   memcpy((char*)pkd_trans.data(), trx_pos, size);
+   proptable.emplace( _proposer, [&]( auto& prop ) {
+      prop.proposal_name       = _proposal_name;
+      prop.packed_transaction  = pkd_trans;
    });
 
-   approvals apptable(  _self, proposer.value );
-   apptable.emplace( proposer, [&]( auto& a ) {
-      a.proposal_name       = proposal_name;
-      a.requested_approvals.reserve( requested.size() );
-      for ( auto& level : requested ) {
+   approvals apptable(  _self, _proposer.value );
+   apptable.emplace( _proposer, [&]( auto& a ) {
+      a.proposal_name       = _proposal_name;
+      a.requested_approvals.reserve( _requested.size() );
+      for ( auto& level : _requested ) {
          a.requested_approvals.push_back( approval{ level, time_point{ microseconds{0} } } );
       }
    });
@@ -207,4 +208,4 @@ void multisig::invalidate( name account ) {
 
 } /// namespace eosio
 
-EOSIO_ABI( eosio::multisig, (propose)(approve)(unapprove)(cancel)(exec)(invalidate) )
+EOSIO_DISPATCH( eosio::multisig, (propose)(approve)(unapprove)(cancel)(exec)(invalidate) )

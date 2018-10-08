@@ -20,6 +20,7 @@ namespace eosio {
    class token : public contract {
       public:
          token( name self ):contract(self){}
+         token( name self, datastream<const char*> ds ):contract(self,ds){}
 
          void create( name   issuer,
                       asset  maximum_supply);

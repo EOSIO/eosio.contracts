@@ -10,8 +10,8 @@
 
 namespace eosiosystem {
 
-   system_contract::system_contract( name s )
-   :native(s),
+   system_contract::system_contract( name s, datastream<const char*> ds )
+   :native(s,ds),
     _voters(_self, _self.value),
     _producers(_self, _self.value),
     _producers2(_self, _self.value),
@@ -20,6 +20,7 @@ namespace eosiosystem {
     _global3(_self, _self.value),
     _rammarket(_self, _self.value)
    {
+
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
@@ -318,7 +319,7 @@ namespace eosiosystem {
 } /// eosio.system
 
 
-EOSIO_ABI( eosiosystem::system_contract,
+EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
