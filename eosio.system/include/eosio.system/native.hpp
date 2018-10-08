@@ -133,5 +133,8 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setabi( name acnt, const std::vector<char>& abi );
+
+         [[eosio::action]]
+         void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
    };
 }
