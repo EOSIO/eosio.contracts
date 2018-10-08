@@ -20,9 +20,9 @@ namespace eosio {
          bios( name self, datastream<const char*> ds ):contract(self,ds){}
 
          [[eosio::action]]
-         void setpriv( name account, uint8_t ispriv ) {
+         void setpriv( name account, uint8_t is_priv ) {
             require_auth( _self );
-            set_privileged( account.value, ispriv );
+            set_privileged( account.value, is_priv );
          }
 
          [[eosio::action]]

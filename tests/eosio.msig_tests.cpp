@@ -62,9 +62,9 @@ public:
 
       trx.actions.emplace_back( get_action( N(eosio), N(buyram), vector<permission_level>{{creator,config::active_name}},
                                             mvo()
-                                            ("payer", creator)
+                                            ("buyer", creator)
                                             ("receiver", a)
-                                            ("quant", ramfunds) )
+                                            ("tokens", ramfunds) )
                               );
 
       trx.actions.emplace_back( get_action( N(eosio), N(delegatebw), vector<permission_level>{{creator,config::active_name}},

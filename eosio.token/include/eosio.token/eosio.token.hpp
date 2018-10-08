@@ -17,25 +17,31 @@ namespace eosio {
 
    using std::string;
 
-   class token : public contract {
+   class [[eosio::contract]] token : public contract {
       public:
          token( name self ):contract(self){}
          token( name self, datastream<const char*> ds ):contract(self,ds){}
-
+         
+         [[eosio::action]]
          void create( name   issuer,
                       asset  maximum_supply);
 
+         [[eosio::action]]
          void issue( name to, asset quantity, string memo );
 
+         [[eosio::action]]
          void retire( asset quantity, string memo );
 
+         [[eosio::action]]
          void transfer( name    from,
                         name    to,
                         asset   quantity,
                         string  memo );
 
-         void open( name owner, const symbol& symbol, name payer );
+         [[eosio::action]]
+         void open( name owner, const symbol& symbol, name ram_payer );
 
+         [[eosio::action]]
          void close( name owner, const symbol& symbol );
 
          inline asset get_supply( symbol_code sym_code )const;
@@ -43,13 +49,13 @@ namespace eosio {
          inline asset get_balance( name owner, symbol_code sym_code )const;
 
       private:
-         struct account {
+         struct [[eosio::table]] account {
             asset    balance;
 
             uint64_t primary_key()const { return balance.symbol.code().raw(); }
          };
 
-         struct currency_stats {
+         struct [[eosio::table]] currency_stats {
             asset    supply;
             asset    max_supply;
             name     issuer;

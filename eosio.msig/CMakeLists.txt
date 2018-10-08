@@ -1,5 +1,3 @@
-#configure_file("${CMAKE_CURRENT_SOURCE_DIR}/abi/eosio.msig.abi" "${CMAKE_CURRENT_BINARY_DIR}" COPYONLY)
-
 add_eosio_cdt_executable(multisig eosio.msig ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.msig.cpp)
 target_include_directories(eosio.msig.wasm
    PUBLIC 
@@ -8,5 +6,3 @@ target_include_directories(eosio.msig.wasm
 set_target_properties(eosio.msig.wasm
    PROPERTIES
    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-#install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/ DESTINATION ${WASM_ROOT}/eosio.wasmsdk/include)

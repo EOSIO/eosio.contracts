@@ -40,7 +40,6 @@ namespace eosio {
 
             uint64_t primary_key()const { return proposal_name.value; }
          };
-         typedef eosio::multi_index< "approvals"_n, old_approvals_info > old_approvals22;
          typedef eosio::multi_index< "approvals"_n, old_approvals_info > old_approvals;
 
          struct approval {
