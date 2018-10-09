@@ -6,7 +6,6 @@
 
 #include <eosiolib/action.hpp>
 #include <eosiolib/public_key.hpp>
-#include <eosiolib/types.hpp>
 #include <eosiolib/print.hpp>
 #include <eosiolib/privileged.h>
 #include <eosiolib/optional.hpp>
@@ -14,14 +13,13 @@
 #include <eosiolib/contract.hpp>
 
 namespace eosiosystem {
+   using eosio::name;
    using eosio::permission_level;
    using eosio::public_key;
 
-   typedef std::vector<char> bytes;
-
    struct permission_level_weight {
       permission_level  permission;
-      weight_type       weight;
+      uint16_t          weight;
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( permission_level_weight, (permission)(weight) )
@@ -29,15 +27,15 @@ namespace eosiosystem {
 
    struct key_weight {
       eosio::public_key  key;
-      weight_type        weight;
+      uint16_t           weight;
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( key_weight, (key)(weight) )
    };
 
    struct wait_weight {
-      uint32_t     wait_sec;
-      weight_type  weight;
+      uint32_t           wait_sec;
+      uint16_t           weight;
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( wait_weight, (wait_sec)(weight) )
@@ -55,11 +53,11 @@ namespace eosiosystem {
 
    struct block_header {
       uint32_t                                  timestamp;
-      account_name                              producer;
+      name                                      producer;
       uint16_t                                  confirmed = 0;
-      block_id_type                             previous;
-      checksum256                               transaction_mroot;
-      checksum256                               action_mroot;
+      capi_checksum256                          previous;
+      capi_checksum256                          transaction_mroot;
+      capi_checksum256                          action_mroot;
       uint32_t                                  schedule_version = 0;
       eosio::optional<eosio::producer_schedule> new_producers;
 
@@ -70,9 +68,9 @@ namespace eosiosystem {
 
 
    struct abi_hash {
-      account_name owner;
-      checksum256  hash;
-      auto primary_key()const { return owner; }
+      name              owner;
+      capi_checksum256  hash;
+      uint64_t primary_key()const { return owner.value; }
 
       EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
    };
@@ -97,33 +95,34 @@ namespace eosiosystem {
           *     therefore, this method will execute an inline buyram from receiver for newacnt in
           *     an amount equal to the current new account creation fee.
           */
-         void newaccount( account_name     creator,
-                          account_name     newact
+         void newaccount( name             creator,
+                          name             newact
                           /*  no need to parse authorites
                           const authority& owner,
                           const authority& active*/ );
 
 
-         void updateauth( /*account_name     account,
-                                 permission_name  permission,
-                                 permission_name  parent,
-                                 const authority& data*/ ) {}
+         void updateauth( /* name  account,
+                             name  permission,
+                             name  parent,
+                             const authority& data */ ) {}
 
-         void deleteauth( /*account_name account, permission_name permission*/ ) {}
+         void deleteauth( /* name  account,
+                             name  permission */ ) {}
 
-         void linkauth( /*account_name    account,
-                               account_name    code,
-                               action_name     type,
-                               permission_name requirement*/ ) {}
+         void linkauth( /* name    account,
+                           name    code,
+                           name    type,
+                           name    requirement */ ) {}
 
-         void unlinkauth( /*account_name account,
-                                 account_name code,
-                                 action_name  type*/ ) {}
+         void unlinkauth( /* name  account,
+                             name  code,
+                             name  type*/ ) {}
 
-         void canceldelay( /*permission_level canceling_auth, transaction_id_type trx_id*/ ) {}
+         void canceldelay( /* permission_level canceling_auth, checksum256 trx_id */ ) {}
 
-         void onerror( /*const bytes&*/ ) {}
+         void onerror( /* const std::vector<char>& */ ) {}
 
-         void setabi( account_name acnt, const bytes& abi );
+         void setabi( name acnt, const std::vector<char>& abi );
    };
 }
