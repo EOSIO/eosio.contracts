@@ -1,4 +1,4 @@
-add_eosio_cdt_executable(token eosio.token ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.token.cpp)
+add_contract(token eosio.token ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.token.cpp)
 target_include_directories(eosio.token.wasm
    PUBLIC 
    ${CMAKE_CURRENT_SOURCE_DIR}/include)

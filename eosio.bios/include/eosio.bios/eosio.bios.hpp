@@ -17,7 +17,7 @@ namespace eosio {
 
    class [[eosio::contract]] bios : public contract {
       public:
-         bios( name self, datastream<const char*> ds ):contract(self,ds){}
+         bios( name self, name code, datastream<const char*> ds ):contract(self,code,ds){}
 
          [[eosio::action]]
          void setpriv( name account, uint8_t is_priv ) {

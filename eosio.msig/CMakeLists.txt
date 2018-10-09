@@ -1,4 +1,4 @@
-add_eosio_cdt_executable(multisig eosio.msig ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.msig.cpp)
+add_contract(multisig eosio.msig ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.msig.cpp)
 target_include_directories(eosio.msig.wasm
    PUBLIC 
    ${CMAKE_CURRENT_SOURCE_DIR}/include)

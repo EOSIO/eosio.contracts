@@ -8,7 +8,7 @@ namespace eosio {
 
    class [[eosio::contract]] sudo : public contract {
       public:
-         sudo( name self, datastream<const char*> ds ):contract(self, ds){}
+         sudo( name self, name code, datastream<const char*> ds ):contract(self,code,ds){}
 
          [[eosio::action]]
          void exec(ignore<name> executer, ignore<transaction> trx);

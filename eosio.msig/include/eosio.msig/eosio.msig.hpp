@@ -7,7 +7,7 @@ namespace eosio {
 
    class [[eosio::contract]] multisig : public contract {
       public:
-         multisig( name self, datastream<const char*> ds ):contract(self, ds){}
+         multisig( name self, name code, datastream<const char*> ds ):contract(self,code,ds){}
          
          [[eosio::action]]
          void propose(ignore<name> proposer, ignore<name> proposal_name, 

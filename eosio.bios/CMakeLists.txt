@@ -1,4 +1,4 @@
-add_eosio_cdt_executable(bios eosio.bios ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.bios.cpp)
+add_contract(bios eosio.bios ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.bios.cpp)
 target_include_directories(eosio.bios.wasm
    PUBLIC 
    ${CMAKE_CURRENT_SOURCE_DIR}/include)
