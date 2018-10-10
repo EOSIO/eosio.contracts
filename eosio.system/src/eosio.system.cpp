@@ -43,19 +43,6 @@ namespace eosiosystem {
       return cbt;
    }
 
-   symbol system_contract::get_core_symbol( const rammarket& rm ) {
-      auto itr = rm.find(ramcore_symbol.raw());
-      eosio_assert(itr != rm.end(), "system contract must first be initialized");
-      return itr->quote.balance.symbol;
-   }
-
-   symbol system_contract::get_core_symbol() {
-      rammarket rm("eosio"_n, "eosio"_n.value);
-      const static auto sym = get_core_symbol( rm );
-      return sym;
-   }
-
-
    symbol system_contract::core_symbol()const {
       const static auto sym = get_core_symbol( _rammarket );
       return sym;
@@ -301,7 +288,7 @@ namespace eosiosystem {
       auto itr = _rammarket.find(ramcore_symbol.raw());
       eosio_assert( itr == _rammarket.end(), "system contract has already been initialized" );
 
-      auto system_token_supply   = eosio::token(token_account, name(), {nullptr, 0}).get_supply( core.code() );
+      auto system_token_supply   = eosio::token::get_supply(token_account, core.code() );
       eosio_assert( system_token_supply.symbol == core, "specified core symbol does not exist (precision mismatch)" );
 
       if( system_token_supply.amount > 0 ) {

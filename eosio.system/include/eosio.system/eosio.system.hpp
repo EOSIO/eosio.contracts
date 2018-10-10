@@ -205,9 +205,11 @@ namespace eosiosystem {
          system_contract( name s, name code, datastream<const char*> ds );
          ~system_contract();
 
-         static symbol get_core_symbol( const rammarket& rm );
-         static symbol get_core_symbol();
-         symbol core_symbol()const;
+         static symbol get_core_symbol( name system_account = "eosio"_n ) {
+            rammarket rm(system_account, system_account.value);
+            const static auto sym = get_core_symbol( rm );
+            return sym;
+         }
 
          // Actions:
          [[eosio::action]]
@@ -318,10 +320,18 @@ namespace eosiosystem {
       private:
          // Implementation details:
 
+         static symbol get_core_symbol( const rammarket& rm ) {
+            auto itr = rm.find(ramcore_symbol.raw());
+            eosio_assert(itr != rm.end(), "system contract must first be initialized");
+            return itr->quote.balance.symbol;
+         }
+
          //defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
          static time_point current_time_point();
          static block_timestamp current_block_time();
+
+         symbol core_symbol()const;
 
          void update_ram_supply();
 
