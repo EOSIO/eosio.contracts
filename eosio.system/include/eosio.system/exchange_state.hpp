@@ -13,7 +13,7 @@ namespace eosiosystem {
     *  bancor exchange is entirely contained within this struct. There are no external
     *  side effects associated with using this API.
     */
-   struct [[eosio::table, eosio::contract("system_contract")]] exchange_state {
+   struct [[eosio::table, eosio::contract("eosio.system")]] exchange_state {
       asset    supply;
 
       struct connector {

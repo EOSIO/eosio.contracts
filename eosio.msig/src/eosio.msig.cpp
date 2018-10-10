@@ -4,27 +4,16 @@
 
 namespace eosio {
 
-static time_point current_time_point() {
+time_point current_time_point() {
    const static time_point ct{ microseconds{ static_cast<int64_t>( current_time() ) } };
    return ct;
 }
 
-/*
-propose function manually parses input data (instead of taking parsed arguments from dispatcher)
-because parsing data in the dispatcher uses too much CPU in case if proposed transaction is big
-
-If we use dispatcher the function signature should be:
-
-void multisig::propose( name proposer,
-                        name proposal_name,
-                        std::vector<permission_level> requested,
-                        transaction  trx)
-*/
-
-void multisig::propose(ignore<name> proposer, ignore<name> proposal_name, 
-      ignore<std::vector<permission_level>> requested, ignore<transaction> trx) {
-   constexpr size_t max_stack_buffer_size = 512;
-
+void multisig::propose( ignore<name> proposer,
+                        ignore<name> proposal_name,
+                        ignore<std::vector<permission_level>> requested,
+                        ignore<transaction> trx )
+{
    name _proposer;
    name _proposal_name;
    std::vector<permission_level> _requested;

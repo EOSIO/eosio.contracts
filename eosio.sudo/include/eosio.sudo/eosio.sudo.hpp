@@ -6,12 +6,12 @@
 
 namespace eosio {
 
-   class [[eosio::contract]] sudo : public contract {
+   class [[eosio::contract("eosio.sudo")]] sudo : public contract {
       public:
-         sudo( name self, name code, datastream<const char*> ds ):contract(self,code,ds){}
+         using contract::contract;
 
          [[eosio::action]]
-         void exec(ignore<name> executer, ignore<transaction> trx);
+         void exec( ignore<name> executer, ignore<transaction> trx );
 
    };
 

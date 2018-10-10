@@ -26,7 +26,7 @@ namespace eosiosystem {
    using eosio::microseconds;
    using eosio::datastream;
 
-   struct [[eosio::table, eosio::contract("system_contract")]] name_bid {
+   struct [[eosio::table, eosio::contract("eosio.system")]] name_bid {
      name            newname;
      name            high_bidder;
      int64_t         high_bid = 0; ///< negative high_bid == closed auction waiting to be claimed
@@ -36,7 +36,7 @@ namespace eosiosystem {
      uint64_t by_high_bid()const { return static_cast<uint64_t>(-high_bid); }
    };
 
-   struct [[eosio::table, eosio::contract("system_contract")]] bid_refund {
+   struct [[eosio::table, eosio::contract("eosio.system")]] bid_refund {
       name         bidder;
       asset        amount;
 
@@ -49,7 +49,7 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "bidrefunds"_n, bid_refund > bid_refund_table;
 
-   struct [[eosio::table("global"), eosio::contract("system_contract")]] eosio_global_state : eosio::blockchain_parameters {
+   struct [[eosio::table("global"), eosio::contract("eosio.system")]] eosio_global_state : eosio::blockchain_parameters {
       uint64_t free_ram()const { return max_ram_size - total_ram_bytes_reserved; }
 
       uint64_t             max_ram_size = 64ll*1024 * 1024 * 1024;
@@ -78,7 +78,7 @@ namespace eosiosystem {
    /**
     * Defines new global state parameters added after version 1.0
     */
-   struct [[eosio::table("global2"), eosio::contract("system_contract")]] eosio_global_state2 {
+   struct [[eosio::table("global2"), eosio::contract("eosio.system")]] eosio_global_state2 {
       eosio_global_state2(){}
 
       uint16_t          new_ram_per_block = 0;
@@ -91,7 +91,7 @@ namespace eosiosystem {
                         (total_producer_votepay_share)(revision) )
    };
 
-   struct [[eosio::table("global3"), eosio::contract("system_contract")]] eosio_global_state3 {
+   struct [[eosio::table("global3"), eosio::contract("eosio.system")]] eosio_global_state3 {
       eosio_global_state3() { }
       time_point        last_vpay_state_update;
       double            total_vpay_share_change_rate = 0;
@@ -99,7 +99,7 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
    };
 
-   struct [[eosio::table, eosio::contract("system_contract")]] producer_info {
+   struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
       name                  owner;
       double                total_votes = 0;
       eosio::public_key     producer_key; /// a packed public key object
@@ -119,7 +119,7 @@ namespace eosiosystem {
                         (unpaid_blocks)(last_claim_time)(location) )
    };
 
-   struct [[eosio::table, eosio::contract("system_contract")]] producer_info2 {
+   struct [[eosio::table, eosio::contract("eosio.system")]] producer_info2 {
       name            owner;
       double          votepay_share = 0;
       time_point      last_votepay_share_update;
@@ -130,7 +130,7 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
    };
 
-   struct [[eosio::table, eosio::contract("system_contract")]] voter_info {
+   struct [[eosio::table, eosio::contract("eosio.system")]] voter_info {
       name                owner;     /// the voter
       name                proxy;     /// the proxy set by the voter, if any
       std::vector<name>   producers; /// the producers approved by this voter if no proxy set
@@ -176,7 +176,7 @@ namespace eosiosystem {
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
 
-   class [[eosio::contract]] system_contract : public native {
+   class [[eosio::contract("eosio.system")]] system_contract : public native {
       private:
          voters_table            _voters;
          producers_table         _producers;

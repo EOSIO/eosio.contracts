@@ -60,7 +60,7 @@ namespace eosiosystem {
       capi_checksum256                          transaction_mroot;
       capi_checksum256                          action_mroot;
       uint32_t                                  schedule_version = 0;
-      std::optional<eosio::producer_schedule> new_producers;
+      std::optional<eosio::producer_schedule>   new_producers;
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE(block_header, (timestamp)(producer)(confirmed)(previous)(transaction_mroot)(action_mroot)
@@ -68,7 +68,7 @@ namespace eosiosystem {
    };
 
 
-   struct [[eosio::table("abihash"), eosio::contract("system_contract")]] abi_hash {
+   struct [[eosio::table("abihash"), eosio::contract("eosio.system")]] abi_hash {
       name              owner;
       capi_checksum256  hash;
       uint64_t primary_key()const { return owner.value; }
@@ -79,7 +79,7 @@ namespace eosiosystem {
    /*
     * Method parameters commented out to prevent generation of code that parses input data.
     */
-   class [[eosio::contract("system_contract")]] native : public eosio::contract {
+   class [[eosio::contract("eosio.system")]] native : public eosio::contract {
       public:
 
          using eosio::contract::contract;
