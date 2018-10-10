@@ -288,7 +288,7 @@ namespace eosiosystem {
       auto itr = _rammarket.find(ramcore_symbol.raw());
       eosio_assert( itr == _rammarket.end(), "system contract has already been initialized" );
 
-      auto system_token_supply   = eosio::token(token_account, name()).get_supply( core.code() );
+      auto system_token_supply   = eosio::token::get_supply(token_account, core.code() );
       eosio_assert( system_token_supply.symbol == core, "specified core symbol does not exist (precision mismatch)" );
 
       if( system_token_supply.amount > 0 ) {

@@ -21,7 +21,7 @@ namespace eosio {
       public:
          token( name self, name code ):contract(self,code){}
          token( name self, name code, datastream<const char*> ds ):contract(self,code,ds){}
-         
+
          [[eosio::action]]
          void create( name   issuer,
                       asset  maximum_supply);
@@ -44,9 +44,19 @@ namespace eosio {
          [[eosio::action]]
          void close( name owner, const symbol& symbol );
 
-         inline asset get_supply( symbol_code sym_code )const;
+         static asset get_supply( name token_contract_account, symbol_code sym_code )
+         {
+            stats statstable( token_contract_account, sym_code.raw() );
+            const auto& st = statstable.get( sym_code.raw() );
+            return st.supply;
+         }
 
-         inline asset get_balance( name owner, symbol_code sym_code )const;
+         static asset get_balance( name token_contract_account, name owner, symbol_code sym_code )
+         {
+            accounts accountstable( token_contract_account, owner.value );
+            const auto& ac = accountstable.get( sym_code.raw() );
+            return ac.balance;
+         }
 
       private:
          struct [[eosio::table]] account {
@@ -77,19 +87,5 @@ namespace eosio {
             string   memo;
          };
    };
-
-   asset token::get_supply( symbol_code sym_code )const
-   {
-      stats statstable( _self, sym_code.raw() );
-      const auto& st = statstable.get( sym_code.raw() );
-      return st.supply;
-   }
-
-   asset token::get_balance( name owner, symbol_code sym_code )const
-   {
-      accounts accountstable( _self, owner.value );
-      const auto& ac = accountstable.get( sym_code.raw() );
-      return ac.balance;
-   }
 
 } /// namespace eosio
