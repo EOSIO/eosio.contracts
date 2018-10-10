@@ -7,6 +7,7 @@
 
 #include <fc/variant_object.hpp>
 #include "contracts.hpp"
+#include "test_symbol.hpp"
 
 using namespace eosio::testing;
 using namespace eosio;
@@ -18,7 +19,6 @@ using mvo = fc::mutable_variant_object;
 
 class eosio_msig_tester : public tester {
 public:
-
    eosio_msig_tester() {
       create_accounts( { N(eosio.msig), N(eosio.stake), N(eosio.ram), N(eosio.ramfee), N(alice), N(bob), N(carol) } );
       produce_block();
@@ -40,7 +40,7 @@ public:
    }
 
    transaction_trace_ptr create_account_with_resources( account_name a, account_name creator, asset ramfunds, bool multisig,
-                                                        asset net = core_from_string("10.0000"), asset cpu = core_from_string("10.0000") ) {
+                                                        asset net = core_sym::from_string("10.0000"), asset cpu = core_sym::from_string("10.0000") ) {
       signed_transaction trx;
       set_transaction_headers(trx);
 
@@ -113,14 +113,14 @@ public:
 
       // the balance is implied to be 0 if either the table or row does not exist
       if (tbl) {
-         const auto *obj = db.find<key_value_object, by_scope_primary>(boost::make_tuple(tbl->id, symbol(CORE_SYMBOL).to_symbol_code()));
+         const auto *obj = db.find<key_value_object, by_scope_primary>(boost::make_tuple(tbl->id, symbol(CORE_SYM).to_symbol_code()));
          if (obj) {
             // balance is the first field in the serialization
             fc::datastream<const char *> ds(obj->value.data(), obj->value.size());
             fc::raw::unpack(ds, result);
          }
       }
-      return asset( result, symbol(CORE_SYMBOL) );
+      return asset( result, symbol(CORE_SYM) );
    }
 
    transaction_trace_ptr push_action( const account_name& signer, const action_name& name, const variant_object& data, bool auth = true ) {
@@ -406,21 +406,24 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
    set_code( N(eosio.token), contracts::token_wasm() );
    set_abi( N(eosio.token), contracts::token_abi().data() );
 
-   create_currency( N(eosio.token), config::system_account_name, core_from_string("10000000000.0000") );
-   issue(config::system_account_name, core_from_string("1000000000.0000"));
-   BOOST_REQUIRE_EQUAL( core_from_string("1000000000.0000"),
+   create_currency( N(eosio.token), config::system_account_name, core_sym::from_string("10000000000.0000") );
+   issue(config::system_account_name, core_sym::from_string("1000000000.0000"));
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
                         get_balance("eosio") + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
 
    set_code( config::system_account_name, contracts::system_wasm() );
    set_abi( config::system_account_name, contracts::system_abi().data() );
-
+   base_tester::push_action( config::system_account_name, N(init),
+                             config::system_account_name,  mutable_variant_object()
+                              ("version", 0)
+                              ("core", CORE_SYM_STR)
+   );
    produce_blocks();
+   create_account_with_resources( N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false );
+   create_account_with_resources( N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false );
+   create_account_with_resources( N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false );
 
-   create_account_with_resources( N(alice1111111), N(eosio), core_from_string("1.0000"), false );
-   create_account_with_resources( N(bob111111111), N(eosio), core_from_string("0.4500"), false );
-   create_account_with_resources( N(carol1111111), N(eosio), core_from_string("1.0000"), false );
-
-   BOOST_REQUIRE_EQUAL( core_from_string("1000000000.0000"),
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
                         get_balance("eosio") + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
 
    vector<permission_level> perm = { { N(alice), config::active_name }, { N(bob), config::active_name },
@@ -496,7 +499,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
 
    // can't create account because system contract was replace by the test_api contract
 
-   BOOST_REQUIRE_EXCEPTION( create_account_with_resources( N(alice1111112), N(eosio), core_from_string("1.0000"), false ),
+   BOOST_REQUIRE_EXCEPTION( create_account_with_resources( N(alice1111112), N(eosio), core_sym::from_string("1.0000"), false ),
                             eosio_assert_message_exception, eosio_assert_message_is("Unknown Test")
 
    );
@@ -518,20 +521,24 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
    set_code( N(eosio.token), contracts::token_wasm() );
    set_abi( N(eosio.token), contracts::token_abi().data() );
 
-   create_currency( N(eosio.token), config::system_account_name, core_from_string("10000000000.0000") );
-   issue(config::system_account_name, core_from_string("1000000000.0000"));
-   BOOST_REQUIRE_EQUAL( core_from_string("1000000000.0000"), get_balance( "eosio" ) );
+   create_currency( N(eosio.token), config::system_account_name, core_sym::from_string("10000000000.0000") );
+   issue(config::system_account_name, core_sym::from_string("1000000000.0000"));
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance( "eosio" ) );
 
    set_code( config::system_account_name, contracts::system_wasm() );
    set_abi( config::system_account_name, contracts::system_abi().data() );
-
+   base_tester::push_action( config::system_account_name, N(init),
+                             config::system_account_name,  mutable_variant_object()
+                                 ("version", 0)
+                                 ("core", CORE_SYM_STR)
+   );
    produce_blocks();
 
-   create_account_with_resources( N(alice1111111), N(eosio), core_from_string("1.0000"), false );
-   create_account_with_resources( N(bob111111111), N(eosio), core_from_string("0.4500"), false );
-   create_account_with_resources( N(carol1111111), N(eosio), core_from_string("1.0000"), false );
+   create_account_with_resources( N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false );
+   create_account_with_resources( N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false );
+   create_account_with_resources( N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false );
 
-   BOOST_REQUIRE_EQUAL( core_from_string("1000000000.0000"),
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
                         get_balance("eosio") + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
 
    vector<permission_level> perm = { { N(alice), config::active_name }, { N(bob), config::active_name },
@@ -619,7 +626,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
 
    // can't create account because system contract was replace by the test_api contract
 
-   BOOST_REQUIRE_EXCEPTION( create_account_with_resources( N(alice1111112), N(eosio), core_from_string("1.0000"), false ),
+   BOOST_REQUIRE_EXCEPTION( create_account_with_resources( N(alice1111112), N(eosio), core_sym::from_string("1.0000"), false ),
                             eosio_assert_message_exception, eosio_assert_message_is("Unknown Test")
 
    );

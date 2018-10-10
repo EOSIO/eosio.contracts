@@ -9,17 +9,17 @@ struct contracts {
    static std::vector<char>    system_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.system/eosio.system.abi"); }
    static std::vector<uint8_t> token_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.token/eosio.token.wasm"); }
    static std::string          token_wast() { return read_wast("${CMAKE_BINARY_DIR}/../eosio.token/eosio.token.wast"); }
-   static std::vector<char>    token_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.token/eosio.token.abi"); } 
+   static std::vector<char>    token_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.token/eosio.token.abi"); }
    static std::vector<uint8_t> msig_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.msig/eosio.msig.wasm"); }
    static std::string          msig_wast() { return read_wast("${CMAKE_BINARY_DIR}/../eosio.msig/eosio.msig.wast"); }
    static std::vector<char>    msig_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.msig/eosio.msig.abi"); }
-   static std::vector<uint8_t> sudo_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.sudo/eosio.sudo.wasm"); }
-   static std::string          sudo_wast() { return read_wast("${CMAKE_BINARY_DIR}/../eosio.sudo/eosio.sudo.wast"); }
-   static std::vector<char>    sudo_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.sudo/eosio.sudo.abi"); }
+   static std::vector<uint8_t> wrap_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.wrap/eosio.wrap.wasm"); }
+   static std::string          wrap_wast() { return read_wast("${CMAKE_BINARY_DIR}/../eosio.wrap/eosio.wrap.wast"); }
+   static std::vector<char>    wrap_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.wrap/eosio.wrap.abi"); }
    static std::vector<uint8_t> bios_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.bios/eosio.bios.wasm"); }
    static std::string          bios_wast() { return read_wast("${CMAKE_BINARY_DIR}/../eosio.bios/eosio.bios.wast"); }
    static std::vector<char>    bios_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.bios/eosio.bios.abi"); }
-   
+
    struct util {
       static std::vector<uint8_t> test_api_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/test_api.wasm"); }
       static std::vector<uint8_t> exchange_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/exchange.wasm"); }
