@@ -215,7 +215,7 @@ namespace eosiosystem {
          [[eosio::action]]
          void init( unsigned_int version, symbol core );
          [[eosio::action]]
-         void onblock( block_timestamp timestamp, name producer, ignore<block_header> header );
+         void onblock( ignore<block_header> header );
 
          [[eosio::action]]
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
