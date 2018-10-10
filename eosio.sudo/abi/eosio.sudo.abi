@@ -64,7 +64,7 @@
   "actions": [{
       "name": "exec",
       "type": "exec",
-      "ricardian_contract": ""
+      "ricardian_contract": "Allows block producers to bypass authorization checks or run privileged actions with 15/21 producer approval"
     }
   ],
   "tables": [],
