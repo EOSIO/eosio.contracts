@@ -140,9 +140,8 @@ void token::open( name owner, const symbol& symbol, name ram_payer )
 {
    require_auth( ram_payer );
   
-   auto sym_name = symbol.name();
-   stats statstable( _self, sym_name );
-   auto existing = statstable.find( sym_name );
+   stats statstable( _self, symbol.code().raw() );
+   auto existing = statstable.find( symbol.code().raw() );
    eosio_assert( existing != statstable.end(), "token with symbol does not exist" );
    eosio_assert( existing->supply.symbol == symbol, "symbol precision mismatch" );
   
