@@ -6,7 +6,7 @@
 
 namespace eosio {
 
-   class [[eosio::contract("eosio.sudo")]] sudo : public contract {
+   class [[eosio::contract("eosio.wrap")]] wrap : public contract {
       public:
          using contract::contract;
 

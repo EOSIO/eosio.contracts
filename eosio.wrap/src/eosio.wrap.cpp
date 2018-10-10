@@ -1,8 +1,8 @@
-#include <eosio.sudo/eosio.sudo.hpp>
+#include <eosio.wrap/eosio.wrap.hpp>
 
 namespace eosio {
 
-void sudo::exec( ignore<name>, ignore<transaction> ) {
+void wrap::exec( ignore<name>, ignore<transaction> ) {
    require_auth( _self );
 
    name executer;
@@ -15,4 +15,4 @@ void sudo::exec( ignore<name>, ignore<transaction> ) {
 
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::sudo, (exec) )
+EOSIO_DISPATCH( eosio::wrap, (exec) )
