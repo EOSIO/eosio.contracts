@@ -213,11 +213,10 @@ namespace eosiosystem {
          [[eosio::action]]
          void init( unsigned_int version, symbol core );
          [[eosio::action]]
-         void onblock( block_timestamp timestamp, name producer );
-                      // const block_header& header ); /// only parse first 3 fields of block header
+         void onblock( block_timestamp timestamp, name producer, ignore<block_header> header );
 
          [[eosio::action]]
-         void setalimits( name act, int64_t ram, int64_t net, int64_t cpu );
+         void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
          // functions defined in delegate_bandwidth.cpp
 
          /**
@@ -257,16 +256,16 @@ namespace eosiosystem {
           * tokens will be executed.
           */
          [[eosio::action]]
-         void buyram( name buyer, name receiver, asset tokens );
+         void buyram( name payer, name receiver, asset quant );
          [[eosio::action]]
-         void buyrambytes( name buyer, name receiver, uint32_t bytes );
+         void buyrambytes( name payer, name receiver, uint32_t bytes );
 
          /**
           *  Reduces quota my bytes and then performs an inline transfer of tokens
           *  to receiver based upon the average purchase price of the original quota.
           */
          [[eosio::action]]
-         void sellram( name receiver, int64_t bytes );
+         void sellram( name account, int64_t bytes );
 
          /**
           *  This action is called after the delegation-period to claim all pending

@@ -144,7 +144,7 @@ public:
 
       trx.actions.emplace_back( get_action( config::system_account_name, N(buyrambytes), vector<permission_level>{{creator,config::active_name}},
                                             mvo()
-                                            ("buyer", creator)
+                                            ("payer", creator)
                                             ("receiver", a)
                                             ("bytes", ram_bytes) )
                               );
@@ -186,9 +186,9 @@ public:
 
       trx.actions.emplace_back( get_action( config::system_account_name, N(buyram), vector<permission_level>{{creator,config::active_name}},
                                             mvo()
-                                            ("buyer", creator)
+                                            ("payer", creator)
                                             ("receiver", a)
-                                            ("tokens", ramfunds) )
+                                            ("quant", ramfunds) )
                               );
 
       trx.actions.emplace_back( get_action( config::system_account_name, N(delegatebw), vector<permission_level>{{creator,config::active_name}},
@@ -228,9 +228,9 @@ public:
 
          trx.actions.emplace_back( get_action( config::system_account_name, N(buyram), vector<permission_level>{ {creator, config::active_name} },
                                                mvo()
-                                               ("buyer", creator)
+                                               ("payer", creator)
                                                ("receiver", a)
-                                               ("tokens", ram) )
+                                               ("quant", ram) )
                                    );
 
          trx.actions.emplace_back( get_action( config::system_account_name, N(delegatebw), vector<permission_level>{ {creator, config::active_name} },
@@ -250,14 +250,14 @@ public:
    }
 
    action_result buyram( const account_name& payer, account_name receiver, const asset& eosin ) {
-      return push_action( payer, N(buyram), mvo()( "buyer",payer)("receiver",receiver)("tokens",eosin) );
+      return push_action( payer, N(buyram), mvo()( "payer",payer)("receiver",receiver)("quant",eosin) );
    }
    action_result buyrambytes( const account_name& payer, account_name receiver, uint32_t numbytes ) {
-      return push_action( payer, N(buyrambytes), mvo()( "buyer",payer)("receiver",receiver)("bytes",numbytes) );
+      return push_action( payer, N(buyrambytes), mvo()( "payer",payer)("receiver",receiver)("bytes",numbytes) );
    }
 
    action_result sellram( const account_name& account, uint64_t numbytes ) {
-      return push_action( account, N(sellram), mvo()( "receiver", account)("bytes",numbytes) );
+      return push_action( account, N(sellram), mvo()( "account", account)("bytes",numbytes) );
    }
 
    action_result push_action( const account_name& signer, const action_name &name, const variant_object &data, bool auth = true ) {

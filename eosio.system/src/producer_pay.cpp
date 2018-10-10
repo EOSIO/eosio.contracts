@@ -16,7 +16,7 @@ namespace eosiosystem {
    const int64_t  useconds_per_day      = 24 * 3600 * int64_t(1000000);
    const int64_t  useconds_per_year     = seconds_per_year*1000000ll;
 
-   void system_contract::onblock( block_timestamp timestamp, name producer ) {
+   void system_contract::onblock( block_timestamp timestamp, name producer, ignore<block_header> ) {
       using namespace eosio;
 
       require_auth(_self);
@@ -83,7 +83,7 @@ namespace eosiosystem {
 
       eosio_assert( ct - prod.last_claim_time > microseconds(useconds_per_day), "already claimed rewards within past day" );
 
-      const asset token_supply   = token(token_account, name()).get_supply( core_symbol().code() );
+      const asset token_supply   = token(token_account, name(), {nullptr,0}).get_supply( core_symbol().code() );
       const auto usecs_since_last_fill = (ct - _gstate.last_pervote_bucket_fill).count();
 
       if( usecs_since_last_fill > 0 && _gstate.last_pervote_bucket_fill > time_point() ) {

@@ -8,7 +8,6 @@
 #include <eosiolib/public_key.hpp>
 #include <eosiolib/print.hpp>
 #include <eosiolib/privileged.h>
-#include <eosiolib/optional.hpp>
 #include <eosiolib/producer_schedule.hpp>
 #include <eosiolib/contract.hpp>
 #include <eosiolib/ignore.hpp>
@@ -61,7 +60,7 @@ namespace eosiosystem {
       capi_checksum256                          transaction_mroot;
       capi_checksum256                          action_mroot;
       uint32_t                                  schedule_version = 0;
-      eosio::optional<eosio::producer_schedule> new_producers;
+      std::optional<eosio::producer_schedule> new_producers;
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE(block_header, (timestamp)(producer)(confirmed)(previous)(transaction_mroot)(action_mroot)
@@ -132,7 +131,7 @@ namespace eosiosystem {
          void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {}
 
          [[eosio::action]]
-         void setabi( name acnt, const std::vector<char>& abi );
+         void setabi( name account, const std::vector<char>& abi );
 
          [[eosio::action]]
          void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}

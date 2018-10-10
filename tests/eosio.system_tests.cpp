@@ -2293,43 +2293,7 @@ BOOST_AUTO_TEST_CASE(votepay_transition2, * boost::unit_test::tolerance(1e-10)) 
    const asset cpu = old_core_from_string("80.0000");
    const std::vector<account_name> voters = { N(producvotera), N(producvoterb), N(producvoterc), N(producvoterd) };
    for (const auto& v: voters) {
-      {
-         signed_transaction trx;
-         t.set_transaction_headers(trx);
-
-         authority owner_auth;
-         owner_auth =  authority( t.get_public_key( account_name(v), "owner" ) );
-
-         trx.actions.emplace_back( vector<permission_level>{{config::system_account_name,config::active_name}},
-                                   newaccount{
-                                      .creator  = config::system_account_name,
-                                      .name     = account_name(v),
-                                      .owner    = owner_auth,
-                                      .active   = authority( t.get_public_key( account_name(v), "active" ) )
-                                   });
-
-         trx.actions.emplace_back( t.get_action( config::system_account_name, N(buyram), vector<permission_level>{{config::system_account_name,config::active_name}},
-                                               mvo()
-                                               ("payer", account_name(config::system_account_name).to_string())
-                                               ("receiver", v)
-                                               ("quant", old_core_from_string("1.0000") ) )
-                                 );
-
-         trx.actions.emplace_back( t.get_action( config::system_account_name, N(delegatebw), vector<permission_level>{{config::system_account_name,config::active_name}},
-                                               mvo()
-                                               ("from", account_name(config::system_account_name).to_string())
-                                               ("receiver", v)
-                                               ("stake_net_quantity", net )
-                                               ("stake_cpu_quantity", cpu )
-                                               ("transfer", 0 )
-                                             )
-                                   );
-
-         t.set_transaction_headers(trx);
-         trx.sign( t.get_private_key( config::system_account_name, "active" ), t.control->get_chain_id()  );
-         t.push_transaction( trx );
-      }
-
+      t.create_account_with_resources( v, config::system_account_name, old_core_from_string("1.0000"), false, net, cpu );
       t.transfer( config::system_account_name, v, old_core_from_string("100000000.0000"), config::system_account_name );
       BOOST_REQUIRE_EQUAL(t.success(), t.stake(v, old_core_from_string("30000000.0000"), old_core_from_string("30000000.0000")) );
    }
@@ -2344,44 +2308,8 @@ BOOST_AUTO_TEST_CASE(votepay_transition2, * boost::unit_test::tolerance(1e-10)) 
             producer_names.emplace_back(root + std::string(1, c));
          }
       }
-      {
-         account_name creator(config::system_account_name);
-         signed_transaction trx;
-         t.set_transaction_headers(trx);
-
-         for (const auto& a: producer_names) {
-            authority owner_auth( t.get_public_key( a, "owner" ) );
-            trx.actions.emplace_back( vector<permission_level>{{creator,config::active_name}},
-                                      newaccount{
-                                            .creator  = creator,
-                                            .name     = a,
-                                            .owner    = owner_auth,
-                                            .active   = authority( t.get_public_key( a, "active" ) )
-                                            });
-
-            trx.actions.emplace_back( t.get_action( config::system_account_name, N(buyram), vector<permission_level>{ {creator, config::active_name} },
-                                                  mvo()
-                                                  ("payer", creator)
-                                                  ("receiver", a)
-                                                  ("quant", old_core_from_string("1.0000")) )
-                                      );
-
-            trx.actions.emplace_back( t.get_action( config::system_account_name, N(delegatebw), vector<permission_level>{ {creator, config::active_name} },
-                                                  mvo()
-                                                  ("from", creator)
-                                                  ("receiver", a)
-                                                  ("stake_net_quantity", old_core_from_string("80.0000"))
-                                                  ("stake_cpu_quantity", old_core_from_string("80.0000") )
-                                                  ("transfer", 0 )
-                                                  )
-                                      );
-         }
-
-         t.set_transaction_headers(trx);
-         trx.sign( t.get_private_key( creator, "active" ), t.control->get_chain_id()  );
-         t.push_transaction( trx );
-      }
-
+     t.setup_producer_accounts( producer_names, old_core_from_string("1.0000"),
+                     old_core_from_string("80.0000"), old_core_from_string("80.0000") );
       for (const auto& p: producer_names) {
          BOOST_REQUIRE_EQUAL( t.success(), t.regproducer(p) );
          BOOST_TEST_REQUIRE(0 == t.get_producer_info(p)["total_votes"].as_double());

@@ -61,12 +61,12 @@ namespace eosio {
          }
 
          [[eosio::action]]
-         void setabi( name acnt, const std::vector<char>& abi ) {
+         void setabi( name account, const std::vector<char>& abi ) {
             abi_hash_table table(_self, _self.value);
-            auto itr = table.find( acnt.value );
+            auto itr = table.find( account.value );
             if( itr == table.end() ) {
-               table.emplace( acnt, [&]( auto& row ) {
-                  row.owner = acnt;
+               table.emplace( account, [&]( auto& row ) {
+                  row.owner = account;
                   sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
                });
             } else {
