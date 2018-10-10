@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
-project(eosio_contracts VERSION 1.3.1)
+project(eosio_contracts VERSION 1.4.0)
 
-set(EOSIO_CDT_VERSION_MIN "1.2") # REMINDER: Change this to 1.3 before release
+set(EOSIO_CDT_VERSION_MIN "1.3")
 set(EOSIO_CDT_VERSION_SOFT_MAX "1.3")
 #set(EOSIO_CDT_VERSION_HARD_MAX "")
 
