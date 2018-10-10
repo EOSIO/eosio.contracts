@@ -139,8 +139,15 @@ void token::add_balance( name owner, asset value, name ram_payer )
 void token::open( name owner, const symbol& symbol, name ram_payer )
 {
    require_auth( ram_payer );
+
+   auto sym_code_raw = symbol.code().raw();
+
+   stats statstable( _self, sym_code_raw );
+   const auto& st = statstable.get( sym_code_raw, "symbol does not exist" );
+   eosio_assert( st.supply.symbol == symbol, "symbol precision mismatch" );
+
    accounts acnts( _self, owner.value );
-   auto it = acnts.find( symbol.code().raw() );
+   auto it = acnts.find( sym_code_raw );
    if( it == acnts.end() ) {
       acnts.emplace( ram_payer, [&]( auto& a ){
         a.balance = asset{0, symbol};

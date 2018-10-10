@@ -105,7 +105,7 @@ public:
                        account_name ram_payer    ) {
       return push_action( ram_payer, N(open), mvo()
            ( "owner", owner )
-           ( "symbol", "0,CERO" )
+           ( "symbol", symbolname )
            ( "ram_payer", ram_payer )
       );
    }
@@ -376,6 +376,12 @@ BOOST_FIXTURE_TEST_CASE( open_tests, eosio_token_tester ) try {
    REQUIRE_MATCHING_OBJECT( bob_balance, mvo()
       ("balance", "200 CERO")
    );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "symbol does not exist" ),
+                        open( N(carol), "0,INVALID", N(alice) ) );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "symbol precision mismatch" ),
+                        open( N(carol), "1,CERO", N(alice) ) );
 
 } FC_LOG_AND_RETHROW()
 
