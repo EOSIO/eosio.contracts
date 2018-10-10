@@ -5,12 +5,12 @@
 
 namespace eosio {
 
-   class [[eosio::contract]] multisig : public contract {
+   class [[eosio::contract("eosio.msig")]] multisig : public contract {
       public:
-         multisig( name self, name code, datastream<const char*> ds ):contract(self,code,ds){}
-         
+         using contract::contract;
+
          [[eosio::action]]
-         void propose(ignore<name> proposer, ignore<name> proposal_name, 
+         void propose(ignore<name> proposer, ignore<name> proposal_name,
                ignore<std::vector<permission_level>> requested, ignore<transaction> trx);
          [[eosio::action]]
          void approve( name proposer, name proposal_name, permission_level level );
@@ -68,6 +68,6 @@ namespace eosio {
          };
 
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
-};
+   };
 
 } /// namespace eosio

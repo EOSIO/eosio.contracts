@@ -31,7 +31,7 @@ namespace eosiosystem {
    static constexpr uint32_t refund_delay_sec = 3*24*3600;
    static constexpr int64_t  ram_gift_bytes = 1400;
 
-   struct [[eosio::table, eosio::contract("system_contract")]] user_resources {
+   struct [[eosio::table, eosio::contract("eosio.system")]] user_resources {
       name          owner;
       asset         net_weight;
       asset         cpu_weight;
@@ -47,7 +47,7 @@ namespace eosiosystem {
    /**
     *  Every user 'from' has a scope/table that uses every receipient 'to' as the primary key.
     */
-   struct [[eosio::table, eosio::contract("system_contract")]] delegated_bandwidth {
+   struct [[eosio::table, eosio::contract("eosio.system")]] delegated_bandwidth {
       name          from;
       name          to;
       asset         net_weight;
@@ -60,7 +60,7 @@ namespace eosiosystem {
 
    };
 
-   struct [[eosio::table, eosio::contract("system_contract")]] refund_request {
+   struct [[eosio::table, eosio::contract("eosio.system")]] refund_request {
       name            owner;
       time_point_sec  request_time;
       eosio::asset    net_amount;

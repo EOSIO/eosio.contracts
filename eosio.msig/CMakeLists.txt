@@ -1,6 +1,6 @@
-add_contract(multisig eosio.msig ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.msig.cpp)
+add_contract(eosio.msig eosio.msig ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.msig.cpp)
 target_include_directories(eosio.msig.wasm
-   PUBLIC 
+   PUBLIC
    ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 set_target_properties(eosio.msig.wasm

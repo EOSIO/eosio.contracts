@@ -17,7 +17,7 @@ namespace eosio {
 
    using std::string;
 
-   class [[eosio::contract]] token : public contract {
+   class [[eosio::contract("eosio.token")]] token : public contract {
       public:
          using contract::contract;
 
@@ -77,14 +77,6 @@ namespace eosio {
 
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
-
-      public:
-         struct transfer_args {
-            name     from;
-            name     to;
-            asset    quantity;
-            string   memo;
-         };
    };
 
 } /// namespace eosio

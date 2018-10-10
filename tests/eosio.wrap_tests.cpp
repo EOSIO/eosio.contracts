@@ -16,10 +16,10 @@ using namespace fc;
 
 using mvo = fc::mutable_variant_object;
 
-class eosio_sudo_tester : public tester {
+class eosio_wrap_tester : public tester {
 public:
 
-   eosio_sudo_tester() {
+   eosio_wrap_tester() {
       create_accounts( { N(eosio.msig), N(prod1), N(prod2), N(prod3), N(prod4), N(prod5), N(alice), N(bob), N(carol) } );
       produce_block();
 
@@ -41,7 +41,7 @@ public:
       trx.actions.emplace_back( vector<permission_level>{{config::system_account_name, config::active_name}},
                                 newaccount{
                                    .creator  = config::system_account_name,
-                                   .name     = N(eosio.sudo),
+                                   .name     = N(eosio.wrap),
                                    .owner    = auth,
                                    .active   = auth,
                                 });
@@ -52,13 +52,13 @@ public:
 
       base_tester::push_action(config::system_account_name, N(setpriv),
                                  config::system_account_name,  mutable_variant_object()
-                                 ("account", "eosio.sudo")
+                                 ("account", "eosio.wrap")
                                  ("is_priv", 1)
       );
 
       auto system_private_key = get_private_key( config::system_account_name, "active" );
-      set_code( N(eosio.sudo), contracts::sudo_wasm(), &system_private_key );
-      set_abi( N(eosio.sudo), contracts::sudo_abi().data(), &system_private_key );
+      set_code( N(eosio.wrap), contracts::wrap_wasm(), &system_private_key );
+      set_abi( N(eosio.wrap), contracts::wrap_abi().data(), &system_private_key );
 
       produce_blocks();
 
@@ -74,7 +74,7 @@ public:
 
       produce_blocks();
 
-      const auto& accnt = control->db().get<account_object,by_name>( N(eosio.sudo) );
+      const auto& accnt = control->db().get<account_object,by_name>( N(eosio.wrap) );
       abi_def abi;
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
       abi_ser.set_abi(abi, abi_serializer_max_time);
@@ -109,25 +109,25 @@ public:
       );
    }
 
-   transaction sudo_exec( account_name executer, const transaction& trx, uint32_t expiration = base_tester::DEFAULT_EXPIRATION_DELTA );
+   transaction wrap_exec( account_name executer, const transaction& trx, uint32_t expiration = base_tester::DEFAULT_EXPIRATION_DELTA );
 
    transaction reqauth( account_name from, const vector<permission_level>& auths, uint32_t expiration = base_tester::DEFAULT_EXPIRATION_DELTA );
 
    abi_serializer abi_ser;
 };
 
-transaction eosio_sudo_tester::sudo_exec( account_name executer, const transaction& trx, uint32_t expiration ) {
+transaction eosio_wrap_tester::wrap_exec( account_name executer, const transaction& trx, uint32_t expiration ) {
    fc::variants v;
    v.push_back( fc::mutable_variant_object()
                   ("actor", executer)
                   ("permission", name{config::active_name})
               );
   v.push_back( fc::mutable_variant_object()
-                 ("actor", "eosio.sudo")
+                 ("actor", "eosio.wrap")
                  ("permission", name{config::active_name})
              );
    auto act_obj = fc::mutable_variant_object()
-                     ("account", "eosio.sudo")
+                     ("account", "eosio.wrap")
                      ("name", "exec")
                      ("authorization", v)
                      ("data", fc::mutable_variant_object()("executer", executer)("trx", trx) );
@@ -139,7 +139,7 @@ transaction eosio_sudo_tester::sudo_exec( account_name executer, const transacti
    return trx2;
 }
 
-transaction eosio_sudo_tester::reqauth( account_name from, const vector<permission_level>& auths, uint32_t expiration ) {
+transaction eosio_wrap_tester::reqauth( account_name from, const vector<permission_level>& auths, uint32_t expiration ) {
    fc::variants v;
    for ( auto& level : auths ) {
       v.push_back(fc::mutable_variant_object()
@@ -160,30 +160,30 @@ transaction eosio_sudo_tester::reqauth( account_name from, const vector<permissi
    return trx;
 }
 
-BOOST_AUTO_TEST_SUITE(eosio_sudo_tests)
+BOOST_AUTO_TEST_SUITE(eosio_wrap_tests)
 
-BOOST_FIXTURE_TEST_CASE( sudo_exec_direct, eosio_sudo_tester ) try {
+BOOST_FIXTURE_TEST_CASE( wrap_exec_direct, eosio_wrap_tester ) try {
    auto trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
 
    transaction_trace_ptr trace;
    control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
 
    {
-      signed_transaction sudo_trx( sudo_exec( N(alice), trx ), {}, {} );
+      signed_transaction wrap_trx( wrap_exec( N(alice), trx ), {}, {} );
       /*
-      set_transaction_headers( sudo_trx );
-      sudo_trx.actions.emplace_back( get_action( N(eosio.sudo), N(exec),
-                                                 {{N(alice), config::active_name}, {N(eosio.sudo), config::active_name}},
+      set_transaction_headers( wrap_trx );
+      wrap_trx.actions.emplace_back( get_action( N(eosio.wrap), N(exec),
+                                                 {{N(alice), config::active_name}, {N(eosio.wrap), config::active_name}},
                                                  mvo()
                                                    ("executer", "alice")
                                                    ("trx", trx)
       ) );
       */
-      sudo_trx.sign( get_private_key( N(alice), "active" ), control->get_chain_id() );
+      wrap_trx.sign( get_private_key( N(alice), "active" ), control->get_chain_id() );
       for( const auto& actor : {"prod1", "prod2", "prod3", "prod4"} ) {
-         sudo_trx.sign( get_private_key( actor, "active" ), control->get_chain_id() );
+         wrap_trx.sign( get_private_key( actor, "active" ), control->get_chain_id() );
       }
-      push_transaction( sudo_trx );
+      push_transaction( wrap_trx );
    }
 
    produce_block();
@@ -196,16 +196,16 @@ BOOST_FIXTURE_TEST_CASE( sudo_exec_direct, eosio_sudo_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( sudo_with_msig, eosio_sudo_tester ) try {
+BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
    auto trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
-   auto sudo_trx = sudo_exec( N(alice), trx );
+   auto wrap_trx = wrap_exec( N(alice), trx );
 
    propose( N(carol), N(first),
             { {N(alice), N(active)},
               {N(prod1), N(active)}, {N(prod2), N(active)}, {N(prod3), N(active)}, {N(prod4), N(active)}, {N(prod5), N(active)} },
-            sudo_trx );
+            wrap_trx );
 
-   approve( N(carol), N(first), N(alice) ); // alice must approve since she is the executer of the sudo::exec action
+   approve( N(carol), N(first), N(alice) ); // alice must approve since she is the executer of the wrap::exec action
 
    // More than 2/3 of block producers approve
    approve( N(carol), N(first), N(prod1) );
@@ -232,7 +232,7 @@ BOOST_FIXTURE_TEST_CASE( sudo_with_msig, eosio_sudo_tester ) try {
    BOOST_REQUIRE_EQUAL( 2, traces.size() );
 
    BOOST_REQUIRE_EQUAL( 1, traces[0]->action_traces.size() );
-   BOOST_REQUIRE_EQUAL( "eosio.sudo", name{traces[0]->action_traces[0].act.account} );
+   BOOST_REQUIRE_EQUAL( "eosio.wrap", name{traces[0]->action_traces[0].act.account} );
    BOOST_REQUIRE_EQUAL( "exec", name{traces[0]->action_traces[0].act.name} );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, traces[0]->receipt->status );
 
@@ -243,16 +243,16 @@ BOOST_FIXTURE_TEST_CASE( sudo_with_msig, eosio_sudo_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( sudo_with_msig_unapprove, eosio_sudo_tester ) try {
+BOOST_FIXTURE_TEST_CASE( wrap_with_msig_unapprove, eosio_wrap_tester ) try {
    auto trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
-   auto sudo_trx = sudo_exec( N(alice), trx );
+   auto wrap_trx = wrap_exec( N(alice), trx );
 
    propose( N(carol), N(first),
             { {N(alice), N(active)},
               {N(prod1), N(active)}, {N(prod2), N(active)}, {N(prod3), N(active)}, {N(prod4), N(active)}, {N(prod5), N(active)} },
-            sudo_trx );
+            wrap_trx );
 
-   approve( N(carol), N(first), N(alice) ); // alice must approve since she is the executer of the sudo::exec action
+   approve( N(carol), N(first), N(alice) ); // alice must approve since she is the executer of the wrap::exec action
 
    // 3 of the 4 needed producers approve
    approve( N(carol), N(first), N(prod1) );
@@ -267,7 +267,7 @@ BOOST_FIXTURE_TEST_CASE( sudo_with_msig_unapprove, eosio_sudo_tester ) try {
 
    produce_block();
 
-   // The proposal should not have sufficient approvals to pass the authorization checks of eosio.sudo::exec.
+   // The proposal should not have sufficient approvals to pass the authorization checks of eosio.wrap::exec.
    BOOST_REQUIRE_EXCEPTION( push_action( N(eosio.msig), N(exec), N(alice), mvo()
                                           ("proposer",      "carol")
                                           ("proposal_name", "first")
@@ -278,18 +278,18 @@ BOOST_FIXTURE_TEST_CASE( sudo_with_msig_unapprove, eosio_sudo_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( sudo_with_msig_producers_change, eosio_sudo_tester ) try {
+BOOST_FIXTURE_TEST_CASE( wrap_with_msig_producers_change, eosio_wrap_tester ) try {
    create_accounts( { N(newprod1) } );
 
    auto trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
-   auto sudo_trx = sudo_exec( N(alice), trx, 36000 );
+   auto wrap_trx = wrap_exec( N(alice), trx, 36000 );
 
    propose( N(carol), N(first),
             { {N(alice), N(active)},
               {N(prod1), N(active)}, {N(prod2), N(active)}, {N(prod3), N(active)}, {N(prod4), N(active)}, {N(prod5), N(active)} },
-            sudo_trx );
+            wrap_trx );
 
-   approve( N(carol), N(first), N(alice) ); // alice must approve since she is the executer of the sudo::exec action
+   approve( N(carol), N(first), N(alice) ); // alice must approve since she is the executer of the wrap::exec action
 
    // 2 of the 4 needed producers approve
    approve( N(carol), N(first), N(prod1) );
@@ -309,7 +309,7 @@ BOOST_FIXTURE_TEST_CASE( sudo_with_msig_producers_change, eosio_sudo_tester ) tr
 
    produce_block();
 
-   // The proposal has four of the five requested approvals but they are not sufficient to satisfy the authorization checks of eosio.sudo::exec.
+   // The proposal has four of the five requested approvals but they are not sufficient to satisfy the authorization checks of eosio.wrap::exec.
    BOOST_REQUIRE_EXCEPTION( push_action( N(eosio.msig), N(exec), N(alice), mvo()
                                           ("proposer",      "carol")
                                           ("proposal_name", "first")
@@ -346,7 +346,7 @@ BOOST_FIXTURE_TEST_CASE( sudo_with_msig_producers_change, eosio_sudo_tester ) tr
    BOOST_REQUIRE_EQUAL( 2, traces.size() );
 
    BOOST_REQUIRE_EQUAL( 1, traces[0]->action_traces.size() );
-   BOOST_REQUIRE_EQUAL( "eosio.sudo", name{traces[0]->action_traces[0].act.account} );
+   BOOST_REQUIRE_EQUAL( "eosio.wrap", name{traces[0]->action_traces[0].act.account} );
    BOOST_REQUIRE_EQUAL( "exec", name{traces[0]->action_traces[0].act.name} );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, traces[0]->receipt->status );
 

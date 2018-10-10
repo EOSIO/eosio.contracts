@@ -5,19 +5,9 @@
 
 namespace eosio {
 
-   struct [[eosio::contract("bios"), eosio::table]] abi_hash {
-      name              owner;
-      capi_checksum256  hash;
-      uint64_t primary_key()const { return owner.value; }
-
-      EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
-   };
-
-   typedef eosio::multi_index< "abihash"_n, abi_hash > abi_hash_table;
-
-   class [[eosio::contract]] bios : public contract {
+   class [[eosio::contract("eosio.bios")]] bios : public contract {
       public:
-         bios( name self, name code, datastream<const char*> ds ):contract(self,code,ds){}
+         using contract::contract;
 
          [[eosio::action]]
          void setpriv( name account, uint8_t is_priv ) {
@@ -75,6 +65,16 @@ namespace eosio {
                });
             }
          }
+
+         struct [[eosio::table]] abi_hash {
+            name              owner;
+            capi_checksum256  hash;
+            uint64_t primary_key()const { return owner.value; }
+
+            EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
+         };
+
+         typedef eosio::multi_index< "abihash"_n, abi_hash > abi_hash_table;
    };
 
 } /// namespace eosio
