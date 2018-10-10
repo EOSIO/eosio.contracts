@@ -8,14 +8,15 @@
 #include <eosiolib/public_key.hpp>
 #include <eosiolib/print.hpp>
 #include <eosiolib/privileged.h>
-#include <eosiolib/optional.hpp>
 #include <eosiolib/producer_schedule.hpp>
 #include <eosiolib/contract.hpp>
+#include <eosiolib/ignore.hpp>
 
 namespace eosiosystem {
    using eosio::name;
    using eosio::permission_level;
    using eosio::public_key;
+   using eosio::ignore;
 
    struct permission_level_weight {
       permission_level  permission;
@@ -59,7 +60,7 @@ namespace eosiosystem {
       capi_checksum256                          transaction_mroot;
       capi_checksum256                          action_mroot;
       uint32_t                                  schedule_version = 0;
-      eosio::optional<eosio::producer_schedule> new_producers;
+      std::optional<eosio::producer_schedule> new_producers;
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE(block_header, (timestamp)(producer)(confirmed)(previous)(transaction_mroot)(action_mroot)
@@ -67,7 +68,7 @@ namespace eosiosystem {
    };
 
 
-   struct abi_hash {
+   struct [[eosio::table("abihash"), eosio::contract("system_contract")]] abi_hash {
       name              owner;
       capi_checksum256  hash;
       uint64_t primary_key()const { return owner.value; }
@@ -78,7 +79,7 @@ namespace eosiosystem {
    /*
     * Method parameters commented out to prevent generation of code that parses input data.
     */
-   class native : public eosio::contract {
+   class [[eosio::contract("system_contract")]] native : public eosio::contract {
       public:
 
          using eosio::contract::contract;
@@ -95,34 +96,44 @@ namespace eosiosystem {
           *     therefore, this method will execute an inline buyram from receiver for newacnt in
           *     an amount equal to the current new account creation fee.
           */
+         [[eosio::action]]
          void newaccount( name             creator,
-                          name             newact
-                          /*  no need to parse authorites
-                          const authority& owner,
-                          const authority& active*/ );
+                          name             newact,
+                          ignore<authority> owner,
+                          ignore<authority> active);
 
 
-         void updateauth( /* name  account,
-                             name  permission,
-                             name  parent,
-                             const authority& data */ ) {}
+         [[eosio::action]]
+         void updateauth(  ignore<name>  account,
+                           ignore<name>  permission,
+                           ignore<name>  parent,
+                           ignore<authority> auth ) {}
 
-         void deleteauth( /* name  account,
-                             name  permission */ ) {}
+         [[eosio::action]]
+         void deleteauth( ignore<name>  account,
+                          ignore<name>  permission ) {}
 
-         void linkauth( /* name    account,
-                           name    code,
-                           name    type,
-                           name    requirement */ ) {}
+         [[eosio::action]]
+         void linkauth(  ignore<name>    account,
+                         ignore<name>    code,
+                         ignore<name>    type,
+                         ignore<name>    requirement  ) {}
 
-         void unlinkauth( /* name  account,
-                             name  code,
-                             name  type*/ ) {}
+         [[eosio::action]]
+         void unlinkauth( ignore<name>  account,
+                          ignore<name>  code,
+                          ignore<name>  type ) {}
 
-         void canceldelay( /* permission_level canceling_auth, checksum256 trx_id */ ) {}
+         [[eosio::action]]
+         void canceldelay( ignore<permission_level> canceling_auth, ignore<capi_checksum256> trx_id ) {}
 
-         void onerror( /* const std::vector<char>& */ ) {}
+         [[eosio::action]]
+         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {}
 
-         void setabi( name acnt, const std::vector<char>& abi );
+         [[eosio::action]]
+         void setabi( name account, const std::vector<char>& abi );
+
+         [[eosio::action]]
+         void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
    };
 }

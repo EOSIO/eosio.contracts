@@ -10,8 +10,8 @@
 
 namespace eosiosystem {
 
-   system_contract::system_contract( name s )
-   :native(s),
+   system_contract::system_contract( name s, name code, datastream<const char*> ds )
+   :native(s,code,ds),
     _voters(_self, _self.value),
     _producers(_self, _self.value),
     _producers2(_self, _self.value),
@@ -20,6 +20,7 @@ namespace eosiosystem {
     _global3(_self, _self.value),
     _rammarket(_self, _self.value)
    {
+
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
@@ -41,19 +42,6 @@ namespace eosiosystem {
       const static block_timestamp cbt{ current_time_point() };
       return cbt;
    }
-
-   symbol system_contract::get_core_symbol( const rammarket& rm ) {
-      auto itr = rm.find(ramcore_symbol.raw());
-      eosio_assert(itr != rm.end(), "system contract must first be initialized");
-      return itr->quote.balance.symbol;
-   }
-
-   symbol system_contract::get_core_symbol() {
-      rammarket rm("eosio"_n, "eosio"_n.value);
-      const static auto sym = get_core_symbol( rm );
-      return sym;
-   }
-
 
    symbol system_contract::core_symbol()const {
       const static auto sym = get_core_symbol( _rammarket );
@@ -239,11 +227,10 @@ namespace eosiosystem {
     *  who can create accounts with the creator's name as a suffix.
     *
     */
-   void native::newaccount( name             creator,
-                            name             newact
-                            /*  no need to parse authorites
-                            const authority& owner,
-                            const authority& active*/ ) {
+   void native::newaccount( name              creator,
+                            name              newact,
+                            ignore<authority> owner,
+                            ignore<authority> active ) {
 
       if( creator != _self ) {
          uint64_t tmp = newact.value >> 4;
@@ -301,7 +288,7 @@ namespace eosiosystem {
       auto itr = _rammarket.find(ramcore_symbol.raw());
       eosio_assert( itr == _rammarket.end(), "system contract has already been initialized" );
 
-      auto system_token_supply   = eosio::token(token_account).get_supply( core.code() );
+      auto system_token_supply   = eosio::token::get_supply(token_account, core.code() );
       eosio_assert( system_token_supply.symbol == core, "specified core symbol does not exist (precision mismatch)" );
 
       if( system_token_supply.amount > 0 ) {
@@ -318,7 +305,7 @@ namespace eosiosystem {
 } /// eosio.system
 
 
-EOSIO_ABI( eosiosystem::system_contract,
+EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp

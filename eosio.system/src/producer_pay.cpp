@@ -16,10 +16,14 @@ namespace eosiosystem {
    const int64_t  useconds_per_day      = 24 * 3600 * int64_t(1000000);
    const int64_t  useconds_per_year     = seconds_per_year*1000000ll;
 
-   void system_contract::onblock( block_timestamp timestamp, name producer ) {
+   void system_contract::onblock( ignore<block_header> ) {
       using namespace eosio;
 
       require_auth(_self);
+
+      block_timestamp timestamp;
+      name producer;
+      _ds >> timestamp >> producer;
 
       // _gstate2.last_block_num is not used anywhere in the system contract code anymore.
       // Although this field is deprecated, we will continue updating it for now until the last_block_num field
@@ -83,7 +87,7 @@ namespace eosiosystem {
 
       eosio_assert( ct - prod.last_claim_time > microseconds(useconds_per_day), "already claimed rewards within past day" );
 
-      const asset token_supply   = token(token_account).get_supply( core_symbol().code() );
+      const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
       const auto usecs_since_last_fill = (ct - _gstate.last_pervote_bucket_fill).count();
 
       if( usecs_since_last_fill > 0 && _gstate.last_pervote_bucket_fill > time_point() ) {

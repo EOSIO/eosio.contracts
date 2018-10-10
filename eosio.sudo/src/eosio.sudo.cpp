@@ -1,5 +1,4 @@
 #include <eosio.sudo/eosio.sudo.hpp>
-#include <eosiolib/transaction.hpp>
 
 namespace eosio {
 
@@ -13,25 +12,20 @@ void sudo::exec( name executer,
                  transaction  trx )
 */
 
-void sudo::exec() {
+void sudo::exec(ignore<name>, ignore<transaction>) {
    require_auth( _self );
 
    constexpr size_t max_stack_buffer_size = 512;
-   size_t size = action_data_size();
-   char* buffer = (char*)( max_stack_buffer_size < size ? malloc(size) : alloca(size) );
-   read_action_data( buffer, size );
 
    name executer;
 
-   datastream<const char*> ds( buffer, size );
-   ds >> executer;
+   _ds >> executer;
 
    require_auth( executer );
 
-   size_t trx_pos = ds.tellp();
-   send_deferred( (uint128_t(executer.value) << 64) | current_time(), executer.value, buffer+trx_pos, size-trx_pos );
+   send_deferred( (uint128_t(executer.value) << 64) | current_time(), executer.value, _ds.pos(), _ds.remaining() );
 }
 
 } /// namespace eosio
 
-EOSIO_ABI( eosio::sudo, (exec) )
+EOSIO_DISPATCH( eosio::sudo, (exec) )

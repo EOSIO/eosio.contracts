@@ -17,38 +17,54 @@ namespace eosio {
 
    using std::string;
 
-   class token : public contract {
+   class [[eosio::contract]] token : public contract {
       public:
-         token( name self ):contract(self){}
+         using contract::contract;
 
+         [[eosio::action]]
          void create( name   issuer,
                       asset  maximum_supply);
 
+         [[eosio::action]]
          void issue( name to, asset quantity, string memo );
 
+         [[eosio::action]]
          void retire( asset quantity, string memo );
 
+         [[eosio::action]]
          void transfer( name    from,
                         name    to,
                         asset   quantity,
                         string  memo );
 
-         void open( name owner, const symbol& symbol, name payer );
+         [[eosio::action]]
+         void open( name owner, const symbol& symbol, name ram_payer );
 
+         [[eosio::action]]
          void close( name owner, const symbol& symbol );
 
-         inline asset get_supply( symbol_code sym_code )const;
+         static asset get_supply( name token_contract_account, symbol_code sym_code )
+         {
+            stats statstable( token_contract_account, sym_code.raw() );
+            const auto& st = statstable.get( sym_code.raw() );
+            return st.supply;
+         }
 
-         inline asset get_balance( name owner, symbol_code sym_code )const;
+         static asset get_balance( name token_contract_account, name owner, symbol_code sym_code )
+         {
+            accounts accountstable( token_contract_account, owner.value );
+            const auto& ac = accountstable.get( sym_code.raw() );
+            return ac.balance;
+         }
 
       private:
-         struct account {
+         struct [[eosio::table]] account {
             asset    balance;
 
             uint64_t primary_key()const { return balance.symbol.code().raw(); }
          };
 
-         struct currency_stats {
+         struct [[eosio::table]] currency_stats {
             asset    supply;
             asset    max_supply;
             name     issuer;
@@ -70,19 +86,5 @@ namespace eosio {
             string   memo;
          };
    };
-
-   asset token::get_supply( symbol_code sym_code )const
-   {
-      stats statstable( _self, sym_code.raw() );
-      const auto& st = statstable.get( sym_code.raw() );
-      return st.supply;
-   }
-
-   asset token::get_balance( name owner, symbol_code sym_code )const
-   {
-      accounts accountstable( _self, owner.value );
-      const auto& ac = accountstable.get( sym_code.raw() );
-      return ac.balance;
-   }
 
 } /// namespace eosio

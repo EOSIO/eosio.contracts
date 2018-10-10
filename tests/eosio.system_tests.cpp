@@ -1214,7 +1214,6 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
    transfer( config::system_account_name, "producvotera", core_sym::from_string("400000000.0000"), config::system_account_name);
    BOOST_REQUIRE_EQUAL(success(), stake("producvotera", core_sym::from_string("100000000.0000"), core_sym::from_string("100000000.0000")));
    BOOST_REQUIRE_EQUAL(success(), vote( N(producvotera), { N(defproducera) }));
-
    // defproducera is the only active producer
    // produce enough blocks so new schedule kicks in and defproducera produces some blocks
    {
@@ -2290,7 +2289,6 @@ BOOST_AUTO_TEST_CASE(votepay_transition2, * boost::unit_test::tolerance(1e-10)) 
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
       t.abi_ser.set_abi(abi, eosio_system_tester::abi_serializer_max_time);
    }
-
    const asset net = old_core_from_string("80.0000");
    const asset cpu = old_core_from_string("80.0000");
    const std::vector<account_name> voters = { N(producvotera), N(producvoterb), N(producvoterc), N(producvoterd) };
@@ -2310,8 +2308,8 @@ BOOST_AUTO_TEST_CASE(votepay_transition2, * boost::unit_test::tolerance(1e-10)) 
             producer_names.emplace_back(root + std::string(1, c));
          }
       }
-      t.setup_producer_accounts( producer_names, old_core_from_string("1.0000"),
-                                 old_core_from_string("80.0000"), old_core_from_string("80.0000") );
+     t.setup_producer_accounts( producer_names, old_core_from_string("1.0000"),
+                     old_core_from_string("80.0000"), old_core_from_string("80.0000") );
       for (const auto& p: producer_names) {
          BOOST_REQUIRE_EQUAL( t.success(), t.regproducer(p) );
          BOOST_TEST_REQUIRE(0 == t.get_producer_info(p)["total_votes"].as_double());
@@ -2387,7 +2385,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
          ("expiration", "2020-01-01T00:30")
          ("ref_block_num", 2)
          ("ref_block_prefix", 3)
-         ("max_net_usage_words", 0)
+         ("net_usage_words", 0)
          ("max_cpu_usage_ms", 0)
          ("delay_sec", 0)
          ("actions", fc::variants({
@@ -3163,7 +3161,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
          ("expiration", "2020-01-01T00:30")
          ("ref_block_num", 2)
          ("ref_block_prefix", 3)
-         ("max_net_usage_words", 0)
+         ("net_usage_words", 0)
          ("max_cpu_usage_ms", 0)
          ("delay_sec", 0)
          ("actions", fc::variants({

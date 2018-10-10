@@ -24,8 +24,9 @@ namespace eosiosystem {
    using eosio::block_timestamp;
    using eosio::time_point;
    using eosio::microseconds;
+   using eosio::datastream;
 
-   struct name_bid {
+   struct [[eosio::table, eosio::contract("system_contract")]] name_bid {
      name            newname;
      name            high_bidder;
      int64_t         high_bid = 0; ///< negative high_bid == closed auction waiting to be claimed
@@ -35,7 +36,7 @@ namespace eosiosystem {
      uint64_t by_high_bid()const { return static_cast<uint64_t>(-high_bid); }
    };
 
-   struct bid_refund {
+   struct [[eosio::table, eosio::contract("system_contract")]] bid_refund {
       name         bidder;
       asset        amount;
 
@@ -48,7 +49,7 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "bidrefunds"_n, bid_refund > bid_refund_table;
 
-   struct eosio_global_state : eosio::blockchain_parameters {
+   struct [[eosio::table("global"), eosio::contract("system_contract")]] eosio_global_state : eosio::blockchain_parameters {
       uint64_t free_ram()const { return max_ram_size - total_ram_bytes_reserved; }
 
       uint64_t             max_ram_size = 64ll*1024 * 1024 * 1024;
@@ -77,7 +78,7 @@ namespace eosiosystem {
    /**
     * Defines new global state parameters added after version 1.0
     */
-   struct eosio_global_state2 {
+   struct [[eosio::table("global2"), eosio::contract("system_contract")]] eosio_global_state2 {
       eosio_global_state2(){}
 
       uint16_t          new_ram_per_block = 0;
@@ -90,7 +91,7 @@ namespace eosiosystem {
                         (total_producer_votepay_share)(revision) )
    };
 
-   struct eosio_global_state3 {
+   struct [[eosio::table("global3"), eosio::contract("system_contract")]] eosio_global_state3 {
       eosio_global_state3() { }
       time_point        last_vpay_state_update;
       double            total_vpay_share_change_rate = 0;
@@ -98,7 +99,7 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
    };
 
-   struct producer_info {
+   struct [[eosio::table, eosio::contract("system_contract")]] producer_info {
       name                  owner;
       double                total_votes = 0;
       eosio::public_key     producer_key; /// a packed public key object
@@ -118,7 +119,7 @@ namespace eosiosystem {
                         (unpaid_blocks)(last_claim_time)(location) )
    };
 
-   struct producer_info2 {
+   struct [[eosio::table, eosio::contract("system_contract")]] producer_info2 {
       name            owner;
       double          votepay_share = 0;
       time_point      last_votepay_share_update;
@@ -129,7 +130,7 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
    };
 
-   struct voter_info {
+   struct [[eosio::table, eosio::contract("system_contract")]] voter_info {
       name                owner;     /// the voter
       name                proxy;     /// the proxy set by the voter, if any
       std::vector<name>   producers; /// the producers approved by this voter if no proxy set
@@ -175,7 +176,7 @@ namespace eosiosystem {
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
 
-   class system_contract : public native {
+   class [[eosio::contract]] system_contract : public native {
       private:
          voters_table            _voters;
          producers_table         _producers;
@@ -201,19 +202,23 @@ namespace eosiosystem {
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
          static constexpr symbol ram_symbol     = symbol(symbol_code("RAM"), 0);
 
-         system_contract( name s );
+         system_contract( name s, name code, datastream<const char*> ds );
          ~system_contract();
 
-         static symbol get_core_symbol( const rammarket& rm );
-         static symbol get_core_symbol();
-         symbol core_symbol()const;
+         static symbol get_core_symbol( name system_account = "eosio"_n ) {
+            rammarket rm(system_account, system_account.value);
+            const static auto sym = get_core_symbol( rm );
+            return sym;
+         }
 
          // Actions:
+         [[eosio::action]]
          void init( unsigned_int version, symbol core );
-         void onblock( block_timestamp timestamp, name producer );
-                      // const block_header& header ); /// only parse first 3 fields of block header
+         [[eosio::action]]
+         void onblock( ignore<block_header> header );
 
-         void setalimits( name act, int64_t ram, int64_t net, int64_t cpu );
+         [[eosio::action]]
+         void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
          // functions defined in delegate_bandwidth.cpp
 
          /**
@@ -221,6 +226,7 @@ namespace eosiosystem {
           *  If transfer == true, then 'receiver' can unstake to their account
           *  Else 'from' can unstake at any time.
           */
+         [[eosio::action]]
          void delegatebw( name from, name receiver,
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
@@ -241,6 +247,7 @@ namespace eosiosystem {
           *  The 'from' account loses voting power as a result of this call and
           *  all producer tallies are updated.
           */
+         [[eosio::action]]
          void undelegatebw( name from, name receiver,
                             asset unstake_net_quantity, asset unstake_cpu_quantity );
 
@@ -250,56 +257,81 @@ namespace eosiosystem {
           * tokens provided. An inline transfer from receiver to system contract of
           * tokens will be executed.
           */
-         void buyram( name buyer, name receiver, asset tokens );
-         void buyrambytes( name buyer, name receiver, uint32_t bytes );
+         [[eosio::action]]
+         void buyram( name payer, name receiver, asset quant );
+         [[eosio::action]]
+         void buyrambytes( name payer, name receiver, uint32_t bytes );
 
          /**
           *  Reduces quota my bytes and then performs an inline transfer of tokens
           *  to receiver based upon the average purchase price of the original quota.
           */
-         void sellram( name receiver, int64_t bytes );
+         [[eosio::action]]
+         void sellram( name account, int64_t bytes );
 
          /**
           *  This action is called after the delegation-period to claim all pending
           *  unstaked tokens belonging to owner
           */
+         [[eosio::action]]
          void refund( name owner );
 
          // functions defined in voting.cpp
 
+         [[eosio::action]]
          void regproducer( const name producer, const public_key& producer_key, const std::string& url, uint16_t location );
 
+         [[eosio::action]]
          void unregprod( const name producer );
 
+         [[eosio::action]]
          void setram( uint64_t max_ram_size );
+         [[eosio::action]]
          void setramrate( uint16_t bytes_per_block );
 
+         [[eosio::action]]
          void voteproducer( const name voter, const name proxy, const std::vector<name>& producers );
 
+         [[eosio::action]]
          void regproxy( const name proxy, bool isproxy );
 
+         [[eosio::action]]
          void setparams( const eosio::blockchain_parameters& params );
 
          // functions defined in producer_pay.cpp
+         [[eosio::action]]
          void claimrewards( const name owner );
 
-         void setpriv( name account, uint8_t ispriv );
+         [[eosio::action]]
+         void setpriv( name account, uint8_t is_priv );
 
+         [[eosio::action]]
          void rmvproducer( name producer );
 
+         [[eosio::action]]
          void updtrevision( uint8_t revision );
 
+         [[eosio::action]]
          void bidname( name bidder, name newname, asset bid );
 
+         [[eosio::action]]
          void bidrefund( name bidder, name newname );
 
       private:
          // Implementation details:
 
+         static symbol get_core_symbol( const rammarket& rm ) {
+            auto itr = rm.find(ramcore_symbol.raw());
+            eosio_assert(itr != rm.end(), "system contract must first be initialized");
+            return itr->quote.balance.symbol;
+         }
+
          //defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
          static time_point current_time_point();
          static block_timestamp current_block_time();
+
+         symbol core_symbol()const;
 
          void update_ram_supply();
 

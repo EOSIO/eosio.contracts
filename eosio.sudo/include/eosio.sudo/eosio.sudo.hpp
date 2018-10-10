@@ -1,14 +1,17 @@
 #pragma once
 
 #include <eosiolib/eosio.hpp>
+#include <eosiolib/ignore.hpp>
+#include <eosiolib/transaction.hpp>
 
 namespace eosio {
 
-   class sudo : public contract {
+   class [[eosio::contract]] sudo : public contract {
       public:
-         sudo( name self ):contract(self){}
+         sudo( name self, name code, datastream<const char*> ds ):contract(self,code,ds){}
 
-         void exec();
+         [[eosio::action]]
+         void exec(ignore<name> executer, ignore<transaction> trx);
 
    };
 

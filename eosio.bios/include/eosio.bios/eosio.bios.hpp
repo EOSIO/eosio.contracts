@@ -5,7 +5,7 @@
 
 namespace eosio {
 
-   struct abi_hash {
+   struct [[eosio::contract("bios"), eosio::table]] abi_hash {
       name              owner;
       capi_checksum256  hash;
       uint64_t primary_key()const { return owner.value; }
@@ -15,25 +15,29 @@ namespace eosio {
 
    typedef eosio::multi_index< "abihash"_n, abi_hash > abi_hash_table;
 
-   class bios : public contract {
+   class [[eosio::contract]] bios : public contract {
       public:
-         bios( name self ):contract(self){}
+         bios( name self, name code, datastream<const char*> ds ):contract(self,code,ds){}
 
-         void setpriv( name account, uint8_t ispriv ) {
+         [[eosio::action]]
+         void setpriv( name account, uint8_t is_priv ) {
             require_auth( _self );
-            set_privileged( account.value, ispriv );
+            set_privileged( account.value, is_priv );
          }
 
+         [[eosio::action]]
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight ) {
             require_auth( _self );
             set_resource_limits( account.value, ram_bytes, net_weight, cpu_weight );
          }
 
+         [[eosio::action]]
          void setglimits( uint64_t ram, uint64_t net, uint64_t cpu ) {
             (void)ram; (void)net; (void)cpu;
             require_auth( _self );
          }
 
+         [[eosio::action]]
          void setprods( std::vector<eosio::producer_key> schedule ) {
             (void)schedule; // schedule argument just forces the deserialization of the action data into vector<producer_key> (necessary check)
             require_auth( _self );
@@ -45,21 +49,24 @@ namespace eosio {
             set_proposed_producers(buffer, size);
          }
 
+         [[eosio::action]]
          void setparams( const eosio::blockchain_parameters& params ) {
             require_auth( _self );
             set_blockchain_parameters( params );
          }
 
+         [[eosio::action]]
          void reqauth( name from ) {
             require_auth( from );
          }
 
-         void setabi( name acnt, const std::vector<char>& abi ) {
+         [[eosio::action]]
+         void setabi( name account, const std::vector<char>& abi ) {
             abi_hash_table table(_self, _self.value);
-            auto itr = table.find( acnt.value );
+            auto itr = table.find( account.value );
             if( itr == table.end() ) {
-               table.emplace( acnt, [&]( auto& row ) {
-                  row.owner = acnt;
+               table.emplace( account, [&]( auto& row ) {
+                  row.owner = account;
                   sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
                });
             } else {
@@ -68,8 +75,6 @@ namespace eosio {
                });
             }
          }
-
-      private:
    };
 
 } /// namespace eosio
