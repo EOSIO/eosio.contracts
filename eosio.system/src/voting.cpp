@@ -21,7 +21,6 @@
 namespace eosiosystem {
    using eosio::indexed_by;
    using eosio::const_mem_fun;
-   using eosio::bytes;
    using eosio::print;
    using eosio::singleton;
    using eosio::transaction;
@@ -34,12 +33,12 @@ namespace eosiosystem {
     *  @pre authority of producer to register
     *
     */
-   void system_contract::regproducer( const account_name producer, const eosio::public_key& producer_key, const std::string& url, uint16_t location ) {
+   void system_contract::regproducer( const name producer, const eosio::public_key& producer_key, const std::string& url, uint16_t location ) {
       eosio_assert( url.size() < 512, "url too long" );
       eosio_assert( producer_key != eosio::public_key(), "public key should not be the default value" );
       require_auth( producer );
 
-      auto prod = _producers.find( producer );
+      auto prod = _producers.find( producer.value );
       const auto ct = current_time_point();
 
       if ( prod != _producers.end() ) {
@@ -52,7 +51,7 @@ namespace eosiosystem {
                info.last_claim_time = ct;
          });
 
-         auto prod2 = _producers2.find( producer );
+         auto prod2 = _producers2.find( producer.value );
          if ( prod2 == _producers2.end() ) {
             _producers2.emplace( producer, [&]( producer_info2& info ){
                info.owner                     = producer;
@@ -79,11 +78,11 @@ namespace eosiosystem {
 
    }
 
-   void system_contract::unregprod( const account_name producer ) {
+   void system_contract::unregprod( const name producer ) {
       require_auth( producer );
 
-      const auto& prod = _producers.get( producer, "producer not found" );
-      _producers.modify( prod, 0, [&]( producer_info& info ){
+      const auto& prod = _producers.get( producer.value, "producer not found" );
+      _producers.modify( prod, same_payer, [&]( producer_info& info ){
          info.deactivate();
       });
    }
@@ -91,7 +90,7 @@ namespace eosiosystem {
    void system_contract::update_elected_producers( block_timestamp block_time ) {
       _gstate.last_producer_schedule_update = block_time;
 
-      auto idx = _producers.get_index<N(prototalvote)>();
+      auto idx = _producers.get_index<"prototalvote"_n>();
 
       std::vector< std::pair<eosio::producer_key,uint16_t> > top_producers;
       top_producers.reserve(21);
@@ -113,7 +112,7 @@ namespace eosiosystem {
       for( const auto& item : top_producers )
          producers.push_back(item.first);
 
-      bytes packed_schedule = pack(producers);
+      auto packed_schedule = pack(producers);
 
       if( set_proposed_producers( packed_schedule.data(),  packed_schedule.size() ) >= 0 ) {
          _gstate.last_producer_schedule_size = static_cast<decltype(_gstate.last_producer_schedule_size)>( top_producers.size() );
@@ -165,7 +164,7 @@ namespace eosiosystem {
       }
 
       double new_votepay_share = prod_itr->votepay_share + delta_votepay_share;
-      _producers2.modify( prod_itr, 0, [&](auto& p) {
+      _producers2.modify( prod_itr, same_payer, [&](auto& p) {
          if( reset_to_zero )
             p.votepay_share = 0.0;
          else
@@ -193,12 +192,12 @@ namespace eosiosystem {
     *
     *  If voting for a proxy, the producer votes will not change until the proxy updates their own vote.
     */
-   void system_contract::voteproducer( const account_name voter_name, const account_name proxy, const std::vector<account_name>& producers ) {
+   void system_contract::voteproducer( const name voter_name, const name proxy, const std::vector<name>& producers ) {
       require_auth( voter_name );
       update_votes( voter_name, proxy, producers, true );
    }
 
-   void system_contract::update_votes( const account_name voter_name, const account_name proxy, const std::vector<account_name>& producers, bool voting ) {
+   void system_contract::update_votes( const name voter_name, const name proxy, const std::vector<name>& producers, bool voting ) {
       //validate input
       if ( proxy ) {
          eosio_assert( producers.size() == 0, "cannot vote for producers and proxy at same time" );
@@ -211,7 +210,7 @@ namespace eosiosystem {
          }
       }
 
-      auto voter = _voters.find(voter_name);
+      auto voter = _voters.find( voter_name.value );
       eosio_assert( voter != _voters.end(), "user must stake before they can vote" ); /// staking creates voter object
       eosio_assert( !proxy || !voter->is_proxy, "account registered as a proxy is not allowed to use a proxy" );
 
@@ -232,12 +231,12 @@ namespace eosiosystem {
          new_vote_weight += voter->proxied_vote_weight;
       }
 
-      boost::container::flat_map<account_name, pair<double, bool /*new*/> > producer_deltas;
+      boost::container::flat_map<name, pair<double, bool /*new*/> > producer_deltas;
       if ( voter->last_vote_weight > 0 ) {
          if( voter->proxy ) {
-            auto old_proxy = _voters.find( voter->proxy );
+            auto old_proxy = _voters.find( voter->proxy.value );
             eosio_assert( old_proxy != _voters.end(), "old proxy not found" ); //data corruption
-            _voters.modify( old_proxy, 0, [&]( auto& vp ) {
+            _voters.modify( old_proxy, same_payer, [&]( auto& vp ) {
                   vp.proxied_vote_weight -= voter->last_vote_weight;
                });
             propagate_weight_change( *old_proxy );
@@ -251,11 +250,11 @@ namespace eosiosystem {
       }
 
       if( proxy ) {
-         auto new_proxy = _voters.find( proxy );
+         auto new_proxy = _voters.find( proxy.value );
          eosio_assert( new_proxy != _voters.end(), "invalid proxy specified" ); //if ( !voting ) { data corruption } else { wrong vote }
          eosio_assert( !voting || new_proxy->is_proxy, "proxy not found" );
          if ( new_vote_weight >= 0 ) {
-            _voters.modify( new_proxy, 0, [&]( auto& vp ) {
+            _voters.modify( new_proxy, same_payer, [&]( auto& vp ) {
                   vp.proxied_vote_weight += new_vote_weight;
                });
             propagate_weight_change( *new_proxy );
@@ -274,11 +273,11 @@ namespace eosiosystem {
       double delta_change_rate         = 0.0;
       double total_inactive_vpay_share = 0.0;
       for( const auto& pd : producer_deltas ) {
-         auto pitr = _producers.find( pd.first );
+         auto pitr = _producers.find( pd.first.value );
          if( pitr != _producers.end() ) {
             eosio_assert( !voting || pitr->active() || !pd.second.second /* not from new set */, "producer is not currently registered" );
             double init_total_votes = pitr->total_votes;
-            _producers.modify( pitr, 0, [&]( auto& p ) {
+            _producers.modify( pitr, same_payer, [&]( auto& p ) {
                p.total_votes += pd.second.first;
                if ( p.total_votes < 0 ) { // floating point arithmetics can give small negative numbers
                   p.total_votes = 0;
@@ -286,7 +285,7 @@ namespace eosiosystem {
                _gstate.total_producer_vote_weight += pd.second.first;
                //eosio_assert( p.total_votes >= 0, "something bad happened" );
             });
-            auto prod2 = _producers2.find( pd.first );
+            auto prod2 = _producers2.find( pd.first.value );
             if( prod2 != _producers2.end() ) {
                const auto last_claim_plus_3days = pitr->last_claim_time + microseconds(3 * useconds_per_day);
                bool crossed_threshold       = (last_claim_plus_3days <= ct);
@@ -313,7 +312,7 @@ namespace eosiosystem {
 
       update_total_votepay_share( ct, -total_inactive_vpay_share, delta_change_rate );
 
-      _voters.modify( voter, 0, [&]( auto& av ) {
+      _voters.modify( voter, same_payer, [&]( auto& av ) {
          av.last_vote_weight = new_vote_weight;
          av.producers = producers;
          av.proxy     = proxy;
@@ -329,14 +328,14 @@ namespace eosiosystem {
     *  @pre proxy must have something staked (existing row in voters table)
     *  @pre new state must be different than current state
     */
-   void system_contract::regproxy( const account_name proxy, bool isproxy ) {
+   void system_contract::regproxy( const name proxy, bool isproxy ) {
       require_auth( proxy );
 
-      auto pitr = _voters.find(proxy);
+      auto pitr = _voters.find( proxy.value );
       if ( pitr != _voters.end() ) {
          eosio_assert( isproxy != pitr->is_proxy, "action has no effect" );
          eosio_assert( !isproxy || !pitr->proxy, "account that uses a proxy is not allowed to become a proxy" );
-         _voters.modify( pitr, 0, [&]( auto& p ) {
+         _voters.modify( pitr, same_payer, [&]( auto& p ) {
                p.is_proxy = isproxy;
             });
          propagate_weight_change( *pitr );
@@ -349,7 +348,7 @@ namespace eosiosystem {
    }
 
    void system_contract::propagate_weight_change( const voter_info& voter ) {
-      eosio_assert( voter.proxy == 0 || !voter.is_proxy, "account registered as a proxy is not allowed to use a proxy" );
+      eosio_assert( !voter.proxy || !voter.is_proxy, "account registered as a proxy is not allowed to use a proxy" );
       double new_weight = stake2vote( voter.staked );
       if ( voter.is_proxy ) {
          new_weight += voter.proxied_vote_weight;
@@ -358,8 +357,8 @@ namespace eosiosystem {
       /// don't propagate small changes (1 ~= epsilon)
       if ( fabs( new_weight - voter.last_vote_weight ) > 1 )  {
          if ( voter.proxy ) {
-            auto& proxy = _voters.get( voter.proxy, "proxy not found" ); //data corruption
-            _voters.modify( proxy, 0, [&]( auto& p ) {
+            auto& proxy = _voters.get( voter.proxy.value, "proxy not found" ); //data corruption
+            _voters.modify( proxy, same_payer, [&]( auto& p ) {
                   p.proxied_vote_weight += new_weight - voter.last_vote_weight;
                }
             );
@@ -370,13 +369,13 @@ namespace eosiosystem {
             double delta_change_rate         = 0;
             double total_inactive_vpay_share = 0;
             for ( auto acnt : voter.producers ) {
-               auto& prod = _producers.get( acnt, "producer not found" ); //data corruption
+               auto& prod = _producers.get( acnt.value, "producer not found" ); //data corruption
                const double init_total_votes = prod.total_votes;
-               _producers.modify( prod, 0, [&]( auto& p ) {
+               _producers.modify( prod, same_payer, [&]( auto& p ) {
                   p.total_votes += delta;
                   _gstate.total_producer_vote_weight += delta;
                });
-               auto prod2 = _producers2.find( acnt );
+               auto prod2 = _producers2.find( acnt.value );
                if ( prod2 != _producers2.end() ) {
                   const auto last_claim_plus_3days = prod.last_claim_time + microseconds(3 * useconds_per_day);
                   bool crossed_threshold       = (last_claim_plus_3days <= ct);
@@ -401,7 +400,7 @@ namespace eosiosystem {
             update_total_votepay_share( ct, -total_inactive_vpay_share, delta_change_rate );
          }
       }
-      _voters.modify( voter, 0, [&]( auto& v ) {
+      _voters.modify( voter, same_payer, [&]( auto& v ) {
             v.last_vote_weight = new_weight;
          }
       );
