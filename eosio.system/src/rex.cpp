@@ -5,7 +5,44 @@
 #include <eosio.system/eosio.system.hpp>
 
 namespace eosiosystem {
-   
+
+   void system_contract::deposit( name owner, asset amount ) {
+      
+      require_auth( owner );
+
+      eosio_assert( amount.symbol == core_symbol(), "must deposit core token" );
+
+      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { owner, active_permission },
+                                                    { owner, rex_account, amount, "deposit into REX fund" } );
+      auto itr = _rexfunds.find( owner.value );
+      if( itr == _rexfunds.end()  ) {
+         _rexfunds.emplace( owner, [&]( auto& fund ) {
+            fund.owner   = owner;
+            fund.balance = amount;
+         });
+      } else {
+         _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
+            fund.balance.amount += amount.amount;
+         });
+      }
+   }
+
+   void system_contract::withdraw( name owner, asset amount ) {
+
+      require_auth( owner );
+
+      eosio_assert( amount.symbol == core_symbol(), "must withdraw core token" );
+
+      auto itr = _rexfunds.require_find( owner.value, "account has no REX funds" );
+      eosio_assert( amount <= itr->balance, "insufficient funds");
+      _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
+         fund.balance.amount -= amount.amount;
+      });      
+
+      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { rex_account, active_permission },
+                                                    { rex_account, owner, amount, "withdraw from REX fund" } );
+   }
+
    /**
     * Transfers SYS tokens from user balance and credits converts them to REX stake.
     */
@@ -23,8 +60,7 @@ namespace eosiosystem {
                        "must vote for proxy or at least 21 producers before buying REX" );
       }
 
-      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, {from,active_permission},
-                                                    { from, rex_account, amount, "buy REX" } );
+      transfer_from_fund( from, amount );
 
       asset rex_received( 0, rex_symbol );
 
@@ -105,8 +141,7 @@ namespace eosiosystem {
       auto result = close_rex_order( bitr, rex );
       if( std::get<0>(result) ) {
          /// sellrex has been processed successfuly, transfer tokens and update voting power
-         INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { rex_account, active_permission },
-                                                       { rex_account, from, asset( std::get<1>(result), core_symbol() ), "sell REX" } );
+         transfer_to_fund( from, asset( std::get<1>(result), core_symbol() ) );
          update_voting_power( from, asset( -(std::get<2>(result)), core_symbol() ) );
       } else {
          /**
@@ -205,21 +240,21 @@ namespace eosiosystem {
     * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
     * after 30 days the rented SYS delegation of CPU or NET will expire.
     */
-   void system_contract::rentcpu( name from, name receiver, asset payment, bool auto_renew ) {
+   void system_contract::rentcpu( name from, name receiver, asset loan_payment, asset loan_fund ) {
 
       require_auth( from );
 
       rex_cpu_loan_table cpu_loans( _self, _self.value );
-      int64_t rented_tokens = rentrex( cpu_loans, from, receiver, payment, auto_renew, "rent CPU" );
+      int64_t rented_tokens = rentrex( cpu_loans, from, receiver, loan_payment, loan_fund );
       update_resource_limits( receiver, rented_tokens, 0 );
    }
    
-   void system_contract::rentnet( name from, name receiver, asset payment, bool auto_renew ) {
+   void system_contract::rentnet( name from, name receiver, asset loan_payment, asset loan_fund ) {
 
       require_auth( from );
 
       rex_net_loan_table net_loans( _self, _self.value );
-      int64_t rented_tokens = rentrex( net_loans, from, receiver, payment, auto_renew, "rent NET" );
+      int64_t rented_tokens = rentrex( net_loans, from, receiver, loan_payment, loan_fund );
       update_resource_limits( receiver, 0, rented_tokens );
    }
 
@@ -228,7 +263,7 @@ namespace eosiosystem {
       require_auth( from );
 
       rex_cpu_loan_table cpu_loans( _self, _self.value );
-      fundrexloan( cpu_loans, from, loan_num, payment, "fund CPU loan" );
+      fundrexloan( cpu_loans, from, loan_num, payment  );
    }
 
    void system_contract::fundnetloan( name from, uint64_t loan_num, asset payment ) {
@@ -236,7 +271,7 @@ namespace eosiosystem {
       require_auth( from );
 
       rex_net_loan_table net_loans( _self, _self.value );
-      fundrexloan( net_loans, from, loan_num, payment, "fund NET loan" );
+      fundrexloan( net_loans, from, loan_num, payment );
    }
 
    void system_contract::claimrefund( name owner ) {
@@ -291,27 +326,27 @@ namespace eosiosystem {
 
          bool    delete_loan = false;
          int64_t delta_stake = 0;
-         if( itr->auto_renew && itr->loan_payment <= itr->balance ) {
+         if( itr->payment <= itr->balance ) {
             int64_t rented_tokens = 0;
             _rextable.modify( rexi, same_payer, [&]( auto& rt ) {
                rented_tokens = bancor_convert( rt.total_rent.amount,
                                                rt.total_unlent.amount,
-                                               itr->loan_payment.amount );
+                                               itr->payment.amount );
                rt.total_lent.amount    += rented_tokens;
-               rt.total_unlent.amount  += itr->loan_payment.amount;
+               rt.total_unlent.amount  += itr->payment.amount;
                rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
             });
             idx.modify ( itr, same_payer, [&]( auto& loan ) {
                delta_stake              = rented_tokens - loan.total_staked.amount;
                loan.total_staked.amount = rented_tokens;
                loan.expiration         += eosio::days(30);
-               loan.balance.amount     -= loan.loan_payment.amount;
+               loan.balance.amount     -= loan.payment.amount;
             });
          } else {
             delete_loan = true;
             delta_stake = -( itr->total_staked.amount );
             /// refund "from" account if the closed loan balance is positive
-            if( itr->auto_renew && itr->balance.amount > 0 ) {
+            if( itr->balance.amount > 0 ) {
                loan_refund_table loan_refunds( _self, _self.value );
                auto ref_itr = loan_refunds.find( itr->from.value );
                if( ref_itr == loan_refunds.end() ) {
@@ -397,13 +432,13 @@ namespace eosiosystem {
    }
 
    template <typename T>
-   int64_t system_contract::rentrex( T& table, name from, name receiver, const asset& payment,
-                                     bool auto_renew, const std::string& memo ) {
+   int64_t system_contract::rentrex( T& table, name from, name receiver, const asset& payment, const asset& fund ) {
+
       runrex(2);
 
-      eosio_assert( payment.symbol == core_symbol(), "asset must be system token" );
-      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { from, active_permission },
-                                                    { from, rex_account, payment, memo } );
+      eosio_assert( payment.symbol == core_symbol() && fund.symbol == core_symbol(), "must use core token" );
+      
+      transfer_from_fund( from, payment + fund );
 
       auto itr = _rextable.begin();
       eosio_assert( itr != _rextable.end(), "rex system not initialized yet" );
@@ -420,13 +455,11 @@ namespace eosiosystem {
       table.emplace( from, [&]( auto& c ) {
          c.from         = from;
          c.receiver     = receiver;
-         c.loan_payment = payment;
+         c.payment      = payment;
+         c.balance      = fund;
          c.total_staked = asset( rented_tokens, core_symbol() );
          c.expiration   = current_time_point() + eosio::days(30);
          c.loan_num     = itr->loan_num;
-         
-         c.auto_renew   = auto_renew;
-         c.balance      = asset( 0, core_symbol() );
       });
 
       return rented_tokens;
@@ -470,17 +503,30 @@ namespace eosiosystem {
    }
 
    template <typename T>
-   void system_contract::fundrexloan( T& table, name from, uint64_t loan_num, const asset& payment, const std::string& memo ) {
+   void system_contract::fundrexloan( T& table, name from, uint64_t loan_num, const asset& payment  ) {
       eosio_assert( payment.symbol == core_symbol(), "asset must be system token" );
-      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { from, active_permission },
-                                                    { from, rex_account, payment, memo } );
+      transfer_from_fund( from, payment );
       auto itr = table.find( loan_num );
       eosio_assert( itr != table.end(), "loan not found" );
       eosio_assert( itr->from == from, "actor has to be loan creator" );
-      eosio_assert( itr->auto_renew, "loan must be set as auto-renew" );
       eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
       table.modify( itr, same_payer, [&]( auto& loan ) {
          loan.balance.amount += payment.amount;
+      });
+   }
+
+   void system_contract::transfer_from_fund( name owner, const asset& amount ) {
+      auto itr = _rexfunds.require_find( owner.value, "must deposit to REX fund first" );
+      eosio_assert( amount <= itr->balance, "insufficient funds");
+      _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
+         fund.balance.amount -= amount.amount;
+      });
+   }
+
+   void system_contract::transfer_to_fund( name owner, const asset& amount ) {
+      auto itr = _rexfunds.require_find( owner.value, "programmer error" );
+      _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
+         fund.balance.amount += amount.amount;
       });
    }
 

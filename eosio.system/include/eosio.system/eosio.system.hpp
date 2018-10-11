@@ -189,6 +189,15 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "rexpool"_n, rex_pool > rex_pool_table;
 
+   struct [[eosio::table,eosio::contract("eosio.system")]] rex_fund {
+      name    owner;
+      asset   balance;
+
+      uint64_t primary_key()const { return owner.value; }
+   };
+
+   typedef eosio::multi_index< "rexfund"_n, rex_fund > rex_fund_table;
+
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_balance {
       name    owner;
       asset   vote_stake; /// the amount of CORE_SYMBOL currently included in owner's vote
@@ -202,13 +211,11 @@ namespace eosiosystem {
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_loan {
       name                from;
       name                receiver;
-      asset               loan_payment;
+      asset               payment;
+      asset               balance;
       asset               total_staked;
       uint64_t            loan_num;
-      eosio::time_point   expiration;
-      
-      bool                auto_renew = false;
-      asset               balance;
+      eosio::time_point   expiration;      
 
       uint64_t primary_key()const { return loan_num;                   }
       uint64_t by_expr()const     { return expiration.elapsed.count(); }
@@ -264,6 +271,7 @@ namespace eosiosystem {
          eosio_global_state3     _gstate3;
          rammarket               _rammarket;
          rex_pool_table          _rextable;
+         rex_fund_table          _rexfunds;
          rex_balance_table       _rexbalance;
 
       public:
@@ -310,6 +318,12 @@ namespace eosiosystem {
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
 
+         [[eosio::action]]
+         void deposit( name owner, asset amount );
+         
+         [[eosio::action]]
+         void withdraw( name owner, asset amount );
+
          /**
           * Transfers SYS tokens from user balance and credits converts them to REX stake.
           */
@@ -344,9 +358,9 @@ namespace eosiosystem {
           * creator. User claims the refund in a separate action.
           */
          [[eosio::action]]
-         void rentcpu( name from, name receiver, asset payment, bool auto_renew );
+         void rentcpu( name from, name receiver, asset loan_payment, asset loan_fund );
          [[eosio::action]]
-         void rentnet( name from, name receiver, asset payment, bool auto_renew );
+         void rentnet( name from, name receiver, asset loan_payment, asset loan_fund );
 
          /**
           * Loan initiator funds a given CPU or NET loan. Loan must've been set as autorenew.
@@ -478,10 +492,12 @@ namespace eosiosystem {
          std::tuple<bool, int64_t, int64_t> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
          void deposit_rex( const name& from, const asset& amount );
          template <typename T>
-         int64_t rentrex( T& table, name from, name receiver, const asset& payment, bool auto_renew,
-                          const std::string& memo );
+         int64_t rentrex( T& table, name from, name receiver, const asset& loan_payment, const asset& loan_fund );
          template <typename T>
-         void fundrexloan( T& table, name from, uint64_t loan_num, const asset& payment, const std::string& memo );
+         void fundrexloan( T& table, name from, uint64_t loan_num, const asset& payment );
+
+         void transfer_from_fund( name owner, const asset& amount );
+         void transfer_to_fund( name owner, const asset& amount );
 
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,

@@ -20,6 +20,7 @@ namespace eosiosystem {
     _global3(_self, _self.value),
     _rammarket(_self, _self.value),
     _rextable(_self, _self.value),
+    _rexfunds(_self, _self.value),
     _rexbalance(_self, _self.value)
    {
 
