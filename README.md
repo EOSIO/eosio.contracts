@@ -1,21 +1,21 @@
 # eosio.contracts
 
-## Version : 1.3.1
+## Version : 1.4.0
 
-The design of the EOSIO blockchain calls for a number of smart contracts that are run at a privileged permission level in order to support functions such as block producer registration and voting, token staking for CPU and network bandwidth, RAM purchasing, multi-sig, etc.  These smart contracts are referred to as the system, token, msig and sudo contracts.
+The design of the EOSIO blockchain calls for a number of smart contracts that are run at a privileged permission level in order to support functions such as block producer registration and voting, token staking for CPU and network bandwidth, RAM purchasing, multi-sig, etc.  These smart contracts are referred to as the system, token, msig and wrap (formerly known as sudo) contracts.
 
 This repository contains examples of these privileged contracts that are useful when deploying, managing, and/or using an EOSIO blockchain.  They are provided for reference purposes:
 
    * [eosio.system](https://github.com/eosio/eosio.contracts/tree/master/eosio.system)
    * [eosio.msig](https://github.com/eosio/eosio.contracts/tree/master/eosio.msig)
-   * [eosio.sudo](https://github.com/eosio/eosio.contracts/tree/master/eosio.sudo)
+   * [eosio.wrap](https://github.com/eosio/eosio.contracts/tree/master/eosio.wrap)
 
 The following unprivileged contract(s) are also part of the system.
    * [eosio.token](https://github.com/eosio/eosio.contracts/tree/master/eosio.token)
 
 Dependencies:
-* [eosio v1.2.x](https://github.com/EOSIO/eos/releases/tag/v1.2.6)
-* [eosio.cdt v1.2.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.2.1)
+* [eosio v1.3.x](https://github.com/EOSIO/eos/releases/tag/v1.3.2)
+* [eosio.cdt v1.3.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.3.0)
 
 To build the contracts and the unit tests:
 * First, ensure that your __eosio__ is compiled to the core symbol for the EOSIO blockchain that intend to deploy to.
