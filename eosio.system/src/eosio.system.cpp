@@ -314,8 +314,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // eosio.system.cpp
      (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
      // rex.cpp
-     (buyrex)(sellrex)(cnclrexorder)(claimrex)(rentcpu)(rentnet)(fundcpuloan)(fundnetloan)
-     (claimrefund)(updaterex)
+     (deposit)(withdraw)(buyrex)(sellrex)(cnclrexorder)(rentcpu)(rentnet)(fundcpuloan)(fundnetloan)(updaterex)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

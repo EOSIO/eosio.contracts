@@ -25,6 +25,8 @@ namespace eosiosystem {
             fund.balance.amount += amount.amount;
          });
       }
+      
+      update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
 
    void system_contract::withdraw( name owner, asset amount ) {
@@ -32,6 +34,8 @@ namespace eosiosystem {
       require_auth( owner );
 
       eosio_assert( amount.symbol == core_symbol(), "must withdraw core token" );
+
+      update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
 
       auto itr = _rexfunds.require_find( owner.value, "account has no REX funds" );
       eosio_assert( amount <= itr->balance, "insufficient funds");
@@ -116,9 +120,9 @@ namespace eosiosystem {
          });
       }
 
-      update_voting_power( from, amount );
-
       runrex(2);
+
+      update_rex_account( from, asset( 0, core_symbol() ), amount );
    }
 
    /**
@@ -133,22 +137,16 @@ namespace eosiosystem {
       auto itr = _rextable.begin();
       eosio_assert( itr != _rextable.end(), "rex system not initialized yet" );
 
-      auto bitr = _rexbalance.find( from.value );
-      eosio_assert( bitr != _rexbalance.end(), "user must first buyrex" );
+      auto bitr = _rexbalance.require_find( from.value, "user must first buyrex" );
       eosio_assert( bitr->rex_balance.symbol == rex.symbol, "asset symbol must be (4, REX)" );
       eosio_assert( bitr->rex_balance >= rex, "insufficient funds" );
 
-      auto result = close_rex_order( bitr, rex );
-      if( std::get<0>(result) ) {
-         /// sellrex has been processed successfuly, transfer tokens and update voting power
-         transfer_to_fund( from, asset( std::get<1>(result), core_symbol() ) );
-         update_voting_power( from, asset( -(std::get<2>(result)), core_symbol() ) );
-      } else {
+      auto current_order = close_rex_order( bitr, rex );
+      update_rex_account( from, current_order.proceeds, -current_order.unstake_quant );
+      if( !current_order.success ) {
          /**
           * REX order couldn't be filled and is added to queue.
           * If account already has an open order, requested rex is added to existing order.
-          * If account has a closed order, action fails and account must claimrex first in order
-          * to delete closed order from queue.
           */
          rex_order_table rex_orders( _self, _self.value );
          auto oitr = rex_orders.find( from.value );
@@ -156,12 +154,12 @@ namespace eosiosystem {
             rex_orders.emplace( from, [&]( auto& ordr ) {
                ordr.owner         = from;
                ordr.rex_requested = rex;
+               ordr.is_open       = true;
                ordr.proceeds      = asset( 0, core_symbol() );
                ordr.unstake_quant = asset( 0, core_symbol() );
                ordr.order_time    = current_time_point();
             });
          } else {
-            eosio_assert( oitr->is_open, "user has a closed rex order in queue, must claimrex first");
             rex_orders.modify( oitr, same_payer, [&]( auto& ordr ) {
                ordr.rex_requested.amount += rex.amount;
                eosio_assert( bitr->rex_balance >= ordr.rex_requested, "insufficient funds for current and scheduled orders");
@@ -175,25 +173,8 @@ namespace eosiosystem {
       require_auth( owner );
 
       rex_order_table rexorders( _self, _self.value );
-      auto itr = rexorders.find( owner.value );
-      eosio_assert( itr != rexorders.end(), "no sellrex order is scheduled" );
+      auto itr = rexorders.require_find( owner.value, "no sellrex order is scheduled" );
       eosio_assert( itr->is_open, "sellrex order has been closed and cannot be canceled" );
-      rexorders.erase( itr );
-   }
-
-   void system_contract::claimrex( name owner ) {
-
-      require_auth( owner );
-
-      runrex(2);
-
-      rex_order_table rexorders( _self, _self.value );
-      auto itr = rexorders.find( owner.value );
-      eosio_assert( itr != rexorders.end(), "no sellrex order is scheduled" );
-      eosio_assert( !itr->is_open, "sellrex order has not been closed" );
-      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { rex_account, active_permission },
-                                                    { rex_account, itr->owner, itr->proceeds, "claim REX proceeds" } );
-      update_voting_power( owner, -( itr->unstake_quant ) );
       rexorders.erase( itr );
    }
 
@@ -274,25 +255,12 @@ namespace eosiosystem {
       fundrexloan( net_loans, from, loan_num, payment );
    }
 
-   void system_contract::claimrefund( name owner ) {
-      
-      require_auth( owner );
-      
-      loan_refund_table loan_refunds( _self, _self.value );      
-      auto itr = loan_refunds.find( owner.value );
-      eosio_assert( itr != loan_refunds.end(), "no refund to be claimed" );
-      if( itr->balance.amount > 0 )
-         INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { rex_account, active_permission },
-                                                       { rex_account, owner, itr->balance, "claim REX loan refund" } );
-      loan_refunds.erase( itr );
-   }
-
    void system_contract::updaterex( name owner ) {
       
       require_auth( owner );
       
       auto itr = _rexbalance.find( owner.value );
-      eosio_assert( itr != _rexbalance.end() && itr->rex_balance.amount > 0, "account has no REX balance");
+      eosio_assert( itr != _rexbalance.end() && itr->rex_balance.amount > 0, "account has no REX balance" );
       const asset init_stake = itr->vote_stake;
 
       runrex(2);
@@ -307,7 +275,8 @@ namespace eosiosystem {
          rb.vote_stake = current_stake;
       });
 
-      update_voting_power( owner, current_stake - init_stake );
+      asset delta_stake = current_stake - init_stake;
+      update_rex_account( owner, asset( 0, core_symbol() ), delta_stake );
    }
 
    /**
@@ -347,18 +316,7 @@ namespace eosiosystem {
             delta_stake = -( itr->total_staked.amount );
             /// refund "from" account if the closed loan balance is positive
             if( itr->balance.amount > 0 ) {
-               loan_refund_table loan_refunds( _self, _self.value );
-               auto ref_itr = loan_refunds.find( itr->from.value );
-               if( ref_itr == loan_refunds.end() ) {
-                  loan_refunds.emplace( itr->from, [&]( auto& ref ) {
-                     ref.owner   = itr->from;
-                     ref.balance = itr->balance;
-                  });
-               } else {
-                  loan_refunds.modify( ref_itr, itr->from, [&]( auto& ref ) {
-                     ref.balance.amount += itr->balance.amount;
-                  });
-               }
+               transfer_to_fund( itr->from, itr->balance );
             }
          }
          
@@ -418,10 +376,10 @@ namespace eosiosystem {
             auto result = close_rex_order( bitr, oitr->rex_requested );
             auto next   = oitr;
             ++next;
-            if( std::get<0>( result ) ) {
+            if( result.success ) {
                idx.modify( oitr, same_payer, [&]( auto& rt ) {
-                  rt.proceeds.amount      = std::get<1>( result );
-                  rt.unstake_quant.amount = std::get<2>( result ); 
+                  rt.proceeds.amount      = result.proceeds.amount;
+                  rt.unstake_quant.amount = result.unstake_quant.amount; 
                   rt.close();
                });
             }
@@ -438,6 +396,7 @@ namespace eosiosystem {
 
       eosio_assert( payment.symbol == core_symbol() && fund.symbol == core_symbol(), "must use core token" );
       
+      update_rex_account( from, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( from, payment + fund );
 
       auto itr = _rextable.begin();
@@ -465,28 +424,32 @@ namespace eosiosystem {
       return rented_tokens;
    }
 
-   std::tuple<bool, int64_t, int64_t> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
+   rex_order_output system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
       auto rexitr = _rextable.begin();
       const auto S0 = rexitr->total_lendable.amount;
       const auto R0 = rexitr->total_rex.amount;
       const auto R1 = R0 - rex.amount;
       const auto S1 = (uint128_t(R1) * S0) / R0;
-      const int64_t proceeds      = S0 - S1;  // asset( S0 - S1, core_symbol() );
-      const int64_t unstake_quant = ( uint128_t(rex.amount) * bitr->vote_stake.amount ) / bitr->rex_balance.amount;
+      asset proceeds( S0 - S1, core_symbol() );
+      asset unstake_quant( ( uint128_t(rex.amount) * bitr->vote_stake.amount ) / bitr->rex_balance.amount,
+                           core_symbol() );
       bool success = false;
-      if( proceeds <= rexitr->total_unlent.amount ) {
+      if( proceeds.amount <= rexitr->total_unlent.amount ) {
          _rextable.modify( rexitr, same_payer, [&]( auto& rt ) {
             rt.total_rex.amount      = R1;
             rt.total_lendable.amount = S1;
             rt.total_unlent.amount   = rt.total_lendable.amount - rt.total_lent.amount;
          });
          _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
-            rb.vote_stake.amount  -= unstake_quant;
+            rb.vote_stake.amount  -= unstake_quant.amount;
             rb.rex_balance.amount -= rex.amount;
          });
          success = true;
+      } else {
+         proceeds.amount      = 0;
+         unstake_quant.amount = 0;
       }
-      return std::make_tuple( success, proceeds, unstake_quant );
+      return { success, proceeds, unstake_quant };
    }
 
    void system_contract::deposit_rex( const name& from, const asset& amount ) {
@@ -504,10 +467,9 @@ namespace eosiosystem {
 
    template <typename T>
    void system_contract::fundrexloan( T& table, name from, uint64_t loan_num, const asset& payment  ) {
-      eosio_assert( payment.symbol == core_symbol(), "asset must be system token" );
+      eosio_assert( payment.symbol == core_symbol(), "must use core token" );
       transfer_from_fund( from, payment );
-      auto itr = table.find( loan_num );
-      eosio_assert( itr != table.end(), "loan not found" );
+      auto itr = table.require_find( loan_num, "loan not found" );
       eosio_assert( itr->from == from, "actor has to be loan creator" );
       eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
       table.modify( itr, same_payer, [&]( auto& loan ) {
@@ -528,6 +490,20 @@ namespace eosiosystem {
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
          fund.balance.amount += amount.amount;
       });
+   }
+
+   void system_contract::update_rex_account( name owner, asset proceeds, asset delta_stake ) {
+      rex_order_table rex_orders( _self, _self.value );
+      auto itr = rex_orders.find( owner.value );
+      if( itr != rex_orders.end() && !itr->is_open ) {
+         proceeds.amount    += itr->proceeds.amount;
+         delta_stake.amount -= itr->unstake_quant.amount;
+         rex_orders.erase( itr );
+      }
+      if( proceeds.amount > 0 )
+         transfer_to_fund( owner, proceeds );
+      if( delta_stake.amount != 0 )
+         update_voting_power( owner, delta_stake );
    }
 
 }; /// namespace eosiosystem

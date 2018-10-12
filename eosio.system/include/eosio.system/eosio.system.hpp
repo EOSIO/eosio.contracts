@@ -232,15 +232,6 @@ namespace eosiosystem {
                                indexed_by<"byowner"_n, const_mem_fun<rex_loan, uint64_t, &rex_loan::by_owner>>
                              > rex_net_loan_table;
 
-   struct [[eosio::table,eosio::contract("eosio.system")]] loan_refund {
-      name  owner;
-      asset balance;
-
-      uint64_t primary_key()const { return owner.value; }
-   };
-
-   typedef eosio::multi_index< "loanrefunds"_n, loan_refund > loan_refund_table;
-
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_order {
       name                owner;
       asset               rex_requested;
@@ -256,6 +247,12 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "rexqueue"_n, rex_order,
                                indexed_by<"bytime"_n, const_mem_fun<rex_order, uint64_t, &rex_order::by_time>>> rex_order_table;
+
+   struct rex_order_output {
+      bool  success;
+      asset proceeds;
+      asset unstake_quant;
+   };
 
    class [[eosio::contract("eosio.system")]] system_contract : public native {
       
@@ -344,13 +341,6 @@ namespace eosiosystem {
          void cnclrexorder( name owner );
 
          /**
-          * Transfers processed sellrex order that had been queued proceeds to owner account. Fails if 
-          * order hasn't been filled.
-          */
-         [[eosio::action]]
-         void claimrex( name owner );
-
-         /**
           * Use payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
           * after 30 days the rented SYS delegation of CPU or NET will expire unless auto_renew == true.
           * If auto_renew == true, loan creator can fund that specific loan. Upon expiration, if loan has enough funds, it 
@@ -370,12 +360,6 @@ namespace eosiosystem {
          [[eosio::action]]
          void fundnetloan( name from, uint64_t loan_num, asset payment );
 
-         /**
-          * Transfers remaining balance of closed auto-renew loans to owner account.
-          */
-         [[eosio::action]]
-         void claimrefund( name owner );
-         
          /**
           * Updates REX vote stake of owner to its current value.
           */
@@ -489,13 +473,13 @@ namespace eosiosystem {
 
          // defined in rex.cpp
          void runrex( uint16_t max );
-         std::tuple<bool, int64_t, int64_t> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
+         rex_order_output close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
+         void update_rex_account( name owner, asset proceeds, asset unstake_quant );
          void deposit_rex( const name& from, const asset& amount );
          template <typename T>
          int64_t rentrex( T& table, name from, name receiver, const asset& loan_payment, const asset& loan_fund );
          template <typename T>
          void fundrexloan( T& table, name from, uint64_t loan_num, const asset& payment );
-
          void transfer_from_fund( name owner, const asset& amount );
          void transfer_to_fund( name owner, const asset& amount );
 
