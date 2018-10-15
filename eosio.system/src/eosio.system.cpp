@@ -21,9 +21,9 @@ namespace eosiosystem {
     _rammarket(_self, _self.value),
     _rextable(_self, _self.value),
     _rexfunds(_self, _self.value),
-    _rexbalance(_self, _self.value)
+    _rexbalance(_self, _self.value),
+    _rexorders(_self, _self.value)
    {
-
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
@@ -314,7 +314,8 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // eosio.system.cpp
      (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
      // rex.cpp
-     (deposit)(withdraw)(buyrex)(sellrex)(cnclrexorder)(rentcpu)(rentnet)(fundcpuloan)(fundnetloan)(updaterex)
+     (deposit)(withdraw)(buyrex)(sellrex)(cnclrexorder)(rentcpu)(rentnet)(fundcpuloan)(fundnetloan)
+     (defcpuloan)(defnetloan)(updaterex)(rexexec)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

@@ -312,6 +312,20 @@ public:
       return unstake( acnt, acnt, net, cpu );
    }
 
+   action_result deposit( const account_name& owner, const asset& amount ) {
+      return push_action( name(owner), N(deposit), mvo()
+                          ("owner",  owner)
+                          ("amount", amount)
+      );
+   }
+
+   action_result withdraw( const account_name& owner, const asset& amount ) {
+      return push_action( name(owner), N(withdraw), mvo()
+                          ("owner",  owner)
+                          ("amount", amount)
+      );
+   }
+
    action_result buyrex( const account_name& from, const asset& amount ) {
       return push_action( name(from), N(buyrex), mvo()
                           ("from",   from)
@@ -328,10 +342,6 @@ public:
 
    action_result cancelrexorder( const account_name& owner ) {
       return push_action( name(owner), N(cnclrexorder), mvo()("owner", owner) );
-   }
-
-   action_result claimrex( const account_name& owner ) {
-      return push_action( name(owner), N(claimrex), mvo()("owner", owner) );
    }
 
    action_result rentcpu( const account_name& from, const account_name& receiver, const asset& payment, bool auto_renew = false ) {
@@ -368,8 +378,21 @@ public:
       );
    }
 
-   action_result claimrefund( const account_name& owner ) {
-      return push_action( name(owner), N(claimrefund), mvo()("owner", owner) );
+
+   action_result defundcpuloan( const account_name& from, const uint64_t loan_num, const asset& amount ) {
+      return push_action( name(from), N(defcpuloan), mvo()
+                          ("from",     from)
+                          ("loan_num", loan_num)
+                          ("amount",   amount)
+      );
+   }
+
+   action_result defundnetloan( const account_name& from, const uint64_t loan_num, const asset& amount ) {
+      return push_action( name(from), N(defnetloan), mvo()
+                          ("from",     from)
+                          ("loan_num", loan_num)
+                          ("amount",   amount)
+      );
    }
 
    action_result updaterex( const account_name& owner ) {

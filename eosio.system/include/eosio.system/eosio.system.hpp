@@ -270,6 +270,7 @@ namespace eosiosystem {
          rex_pool_table          _rextable;
          rex_fund_table          _rexfunds;
          rex_balance_table       _rexbalance;
+         rex_order_table         _rexorders;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -359,12 +360,19 @@ namespace eosiosystem {
          void fundcpuloan( name from, uint64_t loan_num, asset payment );
          [[eosio::action]]
          void fundnetloan( name from, uint64_t loan_num, asset payment );
+         [[eosio::action]]
+         void defcpuloan( name from, uint64_t loan_num, asset amount );
+         [[eosio::action]]
+         void defnetloan( name from, uint64_t loan_num, asset amount );
 
          /**
           * Updates REX vote stake of owner to its current value.
           */
          [[eosio::action]]
          void updaterex( name owner );
+
+         [[eosio::action]]
+         void rexexec( uint16_t max );
 
          /**
           *  Decreases the total tokens delegated by from to receiver and/or
@@ -477,9 +485,11 @@ namespace eosiosystem {
          void update_rex_account( name owner, asset proceeds, asset unstake_quant );
          void deposit_rex( const name& from, const asset& amount );
          template <typename T>
-         int64_t rentrex( T& table, name from, name receiver, const asset& loan_payment, const asset& loan_fund );
+         int64_t rent_rex( T& table, name from, name receiver, const asset& loan_payment, const asset& loan_fund );
          template <typename T>
-         void fundrexloan( T& table, name from, uint64_t loan_num, const asset& payment );
+         void fund_rex_loan( T& table, name from, uint64_t loan_num, const asset& payment );
+         template <typename T>
+         void defund_rex_loan( T& table, name from, uint64_t loan_num, const asset& amount );
          void transfer_from_fund( name owner, const asset& amount );
          void transfer_to_fund( name owner, const asset& amount );
 

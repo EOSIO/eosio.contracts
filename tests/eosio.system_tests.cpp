@@ -3591,10 +3591,12 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
    // wait for 30 days minus 1 hour
    produce_block( fc::hours(29*24 + 23) );
    
+   /*
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("sellrex order has not been closed"), claimrex( alice ) );
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("sellrex order has not been closed"), claimrex( bob ) );
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("sellrex order has not been closed"), claimrex( carol ) );
-   
+   */
+
    // wait for 2 more hours, by now frank's loan has expired and there is enough balance in 
    // total_unlent to close some sellrex orders. only two are processed, bob's and carol's
    // alices's order is still open
@@ -3606,8 +3608,8 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( true,            get_rex_order(alice)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( init_alice_rex,  get_rex_order(alice)["rex_requested"].as<asset>() );
    BOOST_REQUIRE_EQUAL( 0,               get_rex_order(alice)["proceeds"].as<asset>().get_amount() );
-   BOOST_REQUIRE_EQUAL( wasm_assert_msg("sellrex order has not been closed"),
-                        claimrex( alice ) );
+   //   BOOST_REQUIRE_EQUAL( wasm_assert_msg("sellrex order has not been closed"),
+   //                        claimrex( alice ) );
    BOOST_REQUIRE_EQUAL( false,                  get_rex_order(bob)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( init_bob_rex,           get_rex_order(bob)["rex_requested"].as<asset>() );
    BOOST_REQUIRE      ( 0 <                     get_rex_order(bob)["proceeds"].as<asset>().get_amount() );
@@ -3617,17 +3619,17 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( init_carol_rex, get_rex_order(carol)["rex_requested"].as<asset>() );
    BOOST_REQUIRE      ( 0 <             get_rex_order(carol)["proceeds"].as<asset>().get_amount() );
    
-   BOOST_REQUIRE_EQUAL( success(),      claimrex( bob ) );   
-   BOOST_REQUIRE_EQUAL( success(),      claimrex( carol ) );
+   //   BOOST_REQUIRE_EQUAL( success(),      claimrex( bob ) );   
+   //   BOOST_REQUIRE_EQUAL( success(),      claimrex( carol ) );
    BOOST_REQUIRE_EQUAL( 0,              get_rex_vote_stake( bob ).get_amount() );
    BOOST_REQUIRE_EQUAL( init_stake,     get_voter_info( bob )["staked"].as<int64_t>() );
    BOOST_REQUIRE_EQUAL( init_stake,     get_voter_info( carol )["staked"].as<int64_t>() );
 
-   BOOST_REQUIRE_EQUAL( wasm_assert_msg("sellrex order has not been closed"),
-                        claimrex( alice ) );
+   //   BOOST_REQUIRE_EQUAL( wasm_assert_msg("sellrex order has not been closed"),
+   //                        claimrex( alice ) );
    
    BOOST_REQUIRE_EQUAL( success(),      buyrex( emily, core_sym::from_string("100.0000")) );
-   BOOST_REQUIRE_EQUAL( success(),      claimrex( alice ) );
+   //   BOOST_REQUIRE_EQUAL( success(),      claimrex( alice ) );
 
 } FC_LOG_AND_RETHROW()
 
@@ -3708,7 +3710,7 @@ BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
    }
    
    BOOST_REQUIRE_EQUAL( success(),            sellrex( alice, asset::from_string("1.0000 REX") ) );
-   BOOST_REQUIRE_EQUAL( claimrefund( frank ), wasm_assert_msg("no refund to be claimed") );
+   //   BOOST_REQUIRE_EQUAL( claimrefund( frank ), wasm_assert_msg("no refund to be claimed") );
    
    loan_info = get_cpu_loan(1);
    BOOST_REQUIRE_EQUAL( payment,                     loan_info["loan_payment"].as<asset>() );
@@ -3730,13 +3732,13 @@ BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(),  buyrex( alice, core_sym::from_string("10.0000") ) );
    BOOST_REQUIRE_EQUAL( true,       get_cpu_loan(1).is_null() );
    BOOST_REQUIRE_EQUAL( init_stake, get_cpu_limit( bob ) );
-   BOOST_REQUIRE_EQUAL( success(),  claimrefund( frank ) );
+   //   BOOST_REQUIRE_EQUAL( success(),  claimrefund( frank ) );
    old_frank_balance = cur_frank_balance;
    cur_frank_balance = get_balance( frank );
    BOOST_REQUIRE_EQUAL( fund - payment,     cur_frank_balance - old_frank_balance );
    BOOST_REQUIRE      ( old_frank_balance < cur_frank_balance );
 
-   BOOST_REQUIRE_EQUAL( claimrefund( frank ), wasm_assert_msg("no refund to be claimed") );
+   //   BOOST_REQUIRE_EQUAL( claimrefund( frank ), wasm_assert_msg("no refund to be claimed") );
 
 } FC_LOG_AND_RETHROW()
 
