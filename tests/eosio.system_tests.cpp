@@ -3659,7 +3659,7 @@ BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
                                               payment.get_amount() );
    const int64_t init_stake = get_cpu_limit( frank ); 
 
-   // frank rents cpu for bob
+   // create 2 cpu and 3 net loans
    BOOST_REQUIRE_EQUAL( success(), rentcpu( frank, bob,   payment ) ); // loan_num = 1
    BOOST_REQUIRE_EQUAL( success(), rentcpu( alice, emily, payment ) ); // loan_num = 2
    BOOST_REQUIRE_EQUAL( 2,         get_last_cpu_loan()["loan_num"].as_uint64() );
@@ -3790,9 +3790,7 @@ BOOST_FIXTURE_TEST_CASE( ramfee_namebid_to_rex, eosio_system_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 
-BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester ) try {
-
-   auto bancor_convert = [](int64_t S, int64_t R, int64_t T) -> int64_t { return int64_t( double(R * T)  / double(S + T) ); };
+BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::tolerance(1e-10) ) try {
 
    const int64_t ratio        = 10000;
    const asset   init_balance = core_sym::from_string("10000.0000");
@@ -3810,6 +3808,47 @@ BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(),                              updaterex( alice ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("300.0000"),      get_rex_vote_stake(alice) );
    BOOST_REQUIRE_EQUAL( get_rex_vote_stake(alice).get_amount(), get_voter_info( alice )["staked"].as<int64_t>() - init_stake );
+
+   // create accounts {defproducera, defproducerb, ..., defproducerz} and register as producers
+   std::vector<account_name> producer_names;
+   {
+      producer_names.reserve('z' - 'a' + 1);
+      const std::string root("defproducer");
+      for ( char c = 'a'; c <= 'z'; ++c ) {
+         producer_names.emplace_back(root + std::string(1, c));
+      }
+
+      setup_producer_accounts(producer_names);
+      for ( const auto& p: producer_names ) {
+         BOOST_REQUIRE_EQUAL( success(), regproducer(p) );
+         BOOST_TEST_REQUIRE( 0 == get_producer_info(p)["total_votes"].as<double>() );
+      }
+   }
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("voter holding REX must vote for a proxy or at least 21 producers"),
+                        vote( alice, std::vector<account_name>(producer_names.begin(), producer_names.begin() + 20) ) );
+   BOOST_REQUIRE_EQUAL( success(),
+                        vote( alice, std::vector<account_name>(producer_names.begin(), producer_names.begin() + 21) ) );
+
+   BOOST_TEST_REQUIRE( stake2votes( asset( get_voter_info( alice )["staked"].as<int64_t>(), symbol{CORE_SYM} ) ) 
+                       == get_producer_info(producer_names[0])["total_votes"].as<double>() );
+   BOOST_TEST_REQUIRE( stake2votes( asset( get_voter_info( alice )["staked"].as<int64_t>(), symbol{CORE_SYM} ) )
+                       == get_producer_info(producer_names[20])["total_votes"].as<double>() );
+
+   const asset init_rex        = get_rex_balance( alice );
+   const asset init_rex_stake  = get_rex_vote_stake( alice );
+   const asset rex_sell_amount( get_rex_balance(alice).get_amount() / 4, symbol( SY(4,REX) ) );  
+   BOOST_REQUIRE_EQUAL( success(),                                       sellrex( alice, rex_sell_amount ) );
+   BOOST_REQUIRE_EQUAL( init_rex,                                        get_rex_balance( alice ) + rex_sell_amount );
+   BOOST_REQUIRE_EQUAL( 3 * init_rex_stake.get_amount(),                 4 * get_rex_vote_stake( alice ).get_amount() );
+   BOOST_REQUIRE_EQUAL( get_voter_info( alice )["staked"].as<int64_t>(), init_stake + get_rex_vote_stake(alice).get_amount() );
+   BOOST_TEST_REQUIRE( stake2votes( asset( get_voter_info( alice )["staked"].as<int64_t>(), symbol{CORE_SYM} ) )
+                       == get_producer_info(producer_names[0])["total_votes"].as<double>() );
+
+   produce_block( fc::days(31) );
+   BOOST_REQUIRE_EQUAL( success(), sellrex( alice, get_rex_balance( alice ) ) );
+   BOOST_REQUIRE_EQUAL( 0,         get_rex_balance( alice ).get_amount() );
+   BOOST_REQUIRE_EQUAL( success(), vote( alice, { producer_names[0], producer_names[4] } ) );
 
 } FC_LOG_AND_RETHROW()
 
