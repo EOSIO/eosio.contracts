@@ -146,12 +146,26 @@ namespace eosiosystem {
 
    void system_contract::bidname( name bidder, name newname, asset bid ) {
       require_auth( bidder );
-      eosio_assert( newname.suffix() == newname, "you can only bid on top-level suffix" );
+      // eosio_assert( newname.suffix() == newname, "you can only bid on top-level suffix" );
 
       eosio_assert( (bool)newname, "the empty name is not a valid account name to bid on" );
       eosio_assert( (newname.value & 0xFull) == 0, "13 character names are not valid account names to bid on" );
       eosio_assert( (newname.value & 0x1F0ull) == 0, "accounts with 12 character names and no dots can be created without bidding required" );
       eosio_assert( !is_account( newname ), "account already exists" );
+      
+      auto suffix = newname.suffix();
+      eosio_assert( suffix.value == (0x12ull << 59) , "you can only bid on suffix is ‘.m’" );//竞拍名字中是否包含.m
+      bool has_dot = false; 
+      uint32_t dot_count = 0; 
+      for( int32_t moving_bits = 4; moving_bits <= 59; moving_bits += 5 ) { //判断点的数量是否小于2
+         if( (newname.value & (0x1full << moving_bits)) ){  
+            has_dot = true;
+         }
+         if( !(newname.value & (0x1full << moving_bits)) && has_dot ){
+            dot_count +=1;
+            eosio_assert( dot_count < 2, "only dots less than 2 can bid on" );
+         }
+      }
       eosio_assert( bid.symbol == core_symbol(), "asset must be system token" );
       eosio_assert( bid.amount > 0, "insufficient bid" );
 
@@ -235,14 +249,20 @@ namespace eosiosystem {
       if( creator != _self ) {
          uint64_t tmp = newact.value >> 4;
          bool has_dot = false;
+         uint32_t dot_count = 0;
 
          for( uint32_t i = 0; i < 12; ++i ) {
            has_dot |= !(tmp & 0x1f);
+           if( !(tmp & 0x1f) ){ // the number of dat
+                dot_count += 1;
+            }
            tmp >>= 5;
          }
          if( has_dot ) { // or is less than 12 characters
             auto suffix = newact.suffix();
-            if( suffix == newact ) {
+            // if( suffix == newact ) {
+            if( (newact.value & 0x1F0ull) == 0 ) { //是否为短用户名
+               eosio_assert(!(suffix == newact) &&  suffix.value == (0x12ull << 59),"suffix must '.m' ");//短用户名中是否有".m"
                name_bid_table bids(_self, _self.value);
                auto current = bids.find( newact.value );
                eosio_assert( current != bids.end(), "no active bid for name" );
@@ -250,8 +270,12 @@ namespace eosiosystem {
                eosio_assert( current->high_bid < 0, "auction for name is not closed yet" );
                bids.erase( current );
             } else {
-               eosio_assert( creator == suffix, "only suffix may create this account" );
+            //    eosio_assert( creator == suffix, "only suffix may create this account" );
+               eosio_assert( suffix.value == (0x12ull << 59 ), "only suffix is '.m' may create this account" ); // 用户名.m的判断
+               eosio_assert( dot_count < 2, "only dots less than 2 may create this account" ); // 用户名中点的个数是否超过2
             }
+         }else{
+            eosio_assert( has_dot, "only suffix is '.m' may create this account" ); // 正常用户是否含“.m”
          }
       }
 
