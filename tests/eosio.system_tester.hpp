@@ -344,21 +344,21 @@ public:
       return push_action( name(owner), N(cnclrexorder), mvo()("owner", owner) );
    }
 
-   action_result rentcpu( const account_name& from, const account_name& receiver, const asset& payment, bool auto_renew = false ) {
+   action_result rentcpu( const account_name& from, const account_name& receiver, const asset& payment, const asset& fund = core_sym::from_string("0.0000") ) {
       return push_action( name(from), N(rentcpu), mvo()
-                          ("from",       from)
-                          ("receiver",   receiver)
-                          ("payment",    payment)
-                          ("auto_renew", auto_renew)
+                          ("from",         from)
+                          ("receiver",     receiver)
+                          ("loan_payment", payment)
+                          ("loan_fund",    fund)
       );
    }
 
-   action_result rentnet( const account_name& from, const account_name& receiver, const asset& payment, bool auto_renew = false ) {
+   action_result rentnet( const account_name& from, const account_name& receiver, const asset& payment, const asset& fund = core_sym::from_string("0.0000") ) {
       return push_action( name(from), N(rentnet), mvo()
-                          ("from",       from)
-                          ("receiver",   receiver)
-                          ("payment",    payment)
-                          ("auto_renew", auto_renew)
+                          ("from",         from)
+                          ("receiver",     receiver)
+                          ("loan_payment", payment)
+                          ("loan_fund",    fund)
       );
    }
 
@@ -452,6 +452,11 @@ public:
       return data.empty() ? asset(0, symbol(SY(4, REX))) : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["rex_balance"].as<asset>();
    }
 
+   asset get_rex_fund( const account_name& act ) const {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexfund), act );
+      return data.empty() ? asset(0, symbol{CORE_SYM}) : abi_ser.binary_to_variant("rex_fund", data, abi_serializer_max_time)["balance"].as<asset>();
+   }
+
    asset get_rex_vote_stake( const account_name& act ) const {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexbal), act );
       return data.empty() ? core_sym::from_string("0.0000") : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["vote_stake"].as<asset>();
@@ -486,7 +491,8 @@ public:
    void setup_rex_accounts( const std::vector<account_name>& accounts,
                             const asset& init_balance,
                             const asset& net = core_sym::from_string("80.0000"),
-                            const asset& cpu = core_sym::from_string("80.0000") ) {
+                            const asset& cpu = core_sym::from_string("80.0000"),
+                            bool deposit_into_rex = true ) {
       const asset nstake = core_sym::from_string("10.0000");
       const asset cstake = core_sym::from_string("10.0000");
       create_account_with_resources( N(proxyaccount), config::system_account_name, core_sym::from_string("1.0000"), false, net, cpu );
@@ -498,6 +504,11 @@ public:
          BOOST_REQUIRE_EQUAL( success(),                        vote( a, { }, N(proxyaccount) ) );
          BOOST_REQUIRE_EQUAL( init_balance,                     get_balance(a) );
          BOOST_REQUIRE_EQUAL( asset::from_string("0.0000 REX"), get_rex_balance(a) );
+         if (deposit_into_rex) {
+            BOOST_REQUIRE_EQUAL( success(),    deposit( a, init_balance ) );
+            BOOST_REQUIRE_EQUAL( init_balance, get_rex_fund( a ) );
+            BOOST_REQUIRE_EQUAL( 0,            get_balance( a ).get_amount() );
+         }
       }
    }
 

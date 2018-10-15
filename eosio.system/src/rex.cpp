@@ -273,8 +273,7 @@ namespace eosiosystem {
       
       require_auth( owner );
       
-      auto itr = _rexbalance.find( owner.value );
-      eosio_assert( itr != _rexbalance.end() && itr->rex_balance.amount > 0, "account has no REX balance" );
+      auto itr = _rexbalance.require_find( owner.value, "account has no REX balance" );
       const asset init_stake = itr->vote_stake;
 
       runrex(2);
@@ -316,7 +315,7 @@ namespace eosiosystem {
 
          bool    delete_loan = false;
          int64_t delta_stake = 0;
-         if( itr->payment <= itr->balance && _rexorders.begin() == _rexorders.end() ) {
+         if( itr->payment <= itr->balance && rex_loans_available() ) {
             int64_t rented_tokens = 0;
             _rextable.modify( rexi, same_payer, [&]( auto& rt ) {
                rented_tokens = bancor_convert( rt.total_rent.amount,
@@ -350,27 +349,6 @@ namespace eosiosystem {
          _rextable.modify( rexi, same_payer, [&]( auto& rt ) {
             rt.namebid_proceeds.amount = 0;
          });
-      }
-
-      /// process sellrex orders
-      {
-         auto idx = _rexorders.get_index<"bytime"_n>();
-         auto oitr = idx.begin();
-         for( uint16_t i = 0; i < max; ++i ) {
-            if( oitr == idx.end() || !oitr->is_open ) break;
-            auto bitr   = _rexbalance.find( oitr->owner.value ); // bitr != _rexbalance.end()
-            auto result = close_rex_order( bitr, oitr->rex_requested );
-            auto next   = oitr;
-            ++next;
-            if( result.success ) {
-               idx.modify( oitr, same_payer, [&]( auto& rt ) {
-                  rt.proceeds.amount      = result.proceeds.amount;
-                  rt.unstake_quant.amount = result.unstake_quant.amount;
-                  rt.close();
-               });
-            }
-            oitr = next;
-         }
       }
 
       /// process cpu loans
@@ -407,6 +385,27 @@ namespace eosiosystem {
          }
       }
 
+      /// process sellrex orders
+      {
+         auto idx = _rexorders.get_index<"bytime"_n>();
+         auto oitr = idx.begin();
+         for( uint16_t i = 0; i < max; ++i ) {
+            if( oitr == idx.end() || !oitr->is_open ) break;
+            auto bitr   = _rexbalance.find( oitr->owner.value ); // bitr != _rexbalance.end()
+            auto result = close_rex_order( bitr, oitr->rex_requested );
+            auto next   = oitr;
+            ++next;
+            if( result.success ) {
+               idx.modify( oitr, same_payer, [&]( auto& rt ) {
+                  rt.proceeds.amount      = result.proceeds.amount;
+                  rt.unstake_quant.amount = result.unstake_quant.amount;
+                  rt.close();
+               });
+            }
+            oitr = next;
+         }
+      }
+
    }
 
    template <typename T>
@@ -414,7 +413,7 @@ namespace eosiosystem {
 
       runrex(2);
 
-      eosio_assert( _rexorders.begin() == _rexorders.end(), "rex loans are not currently available" );
+      eosio_assert(  rex_loans_available(), "rex loans are not currently available" );
       eosio_assert( payment.symbol == core_symbol() && fund.symbol == core_symbol(), "must use core token" );
       
       update_rex_account( from, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );

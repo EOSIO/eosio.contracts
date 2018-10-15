@@ -492,6 +492,7 @@ namespace eosiosystem {
          void defund_rex_loan( T& table, name from, uint64_t loan_num, const asset& amount );
          void transfer_from_fund( name owner, const asset& amount );
          void transfer_to_fund( name owner, const asset& amount );
+         bool rex_loans_available()const { return _rexorders.begin() == _rexorders.end(); }
 
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,
