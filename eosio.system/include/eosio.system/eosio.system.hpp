@@ -372,7 +372,7 @@ namespace eosiosystem {
          void updaterex( name owner );
 
          [[eosio::action]]
-         void rexexec( uint16_t max );
+         void rexexec( name user, uint16_t max );
 
          /**
           *  Decreases the total tokens delegated by from to receiver and/or

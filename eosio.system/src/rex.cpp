@@ -292,9 +292,9 @@ namespace eosiosystem {
       update_rex_account( owner, asset( 0, core_symbol() ), delta_stake );
    }
 
-   void system_contract::rexexec( uint16_t max ) {
+   void system_contract::rexexec( name user, uint16_t max ) {
 
-      require_auth( _self );
+      require_auth( user );
       
       runrex( max );
    }
@@ -503,7 +503,7 @@ namespace eosiosystem {
       auto itr = table.require_find( loan_num, "loan not found" );
       eosio_assert( itr->from == from, "actor has to be loan creator" );
       eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
-      eosio_assert( itr->balance >= amount, "insufficent loan balane" );
+      eosio_assert( itr->balance >= amount, "insufficent loan balance" );
       table.modify( itr, same_payer, [&]( auto& loan ) {
          loan.balance.amount -= amount.amount;
       });

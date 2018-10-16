@@ -3691,6 +3691,26 @@ BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( fund,              loan_info["balance"].as<asset>() );
    BOOST_REQUIRE_EQUAL( payment,           loan_info["payment"].as<asset>() );
 
+   // in the meantime, defund then fund the same amount and test the balances
+   {
+      const asset amount = core_sym::from_string("7.5000");
+      BOOST_REQUIRE_EQUAL( defundnetloan( frank, 1, fund ),                             wasm_assert_msg("loan not found") );
+      BOOST_REQUIRE_EQUAL( defundcpuloan( alice, 1, fund ),                             wasm_assert_msg("actor has to be loan creator") );
+      BOOST_REQUIRE_EQUAL( defundcpuloan( frank, 1, core_sym::from_string("75.0000") ), wasm_assert_msg("insufficent loan balance") );
+      old_frank_balance = cur_frank_balance;
+      asset old_loan_balance = get_cpu_loan(1)["balance"].as<asset>();
+      BOOST_REQUIRE_EQUAL( defundcpuloan( frank, 1, amount ), success() );
+      BOOST_REQUIRE_EQUAL( old_loan_balance,                  get_cpu_loan(1)["balance"].as<asset>() + amount );
+      cur_frank_balance = get_rex_fund( frank );
+      old_loan_balance  = get_cpu_loan(1)["balance"].as<asset>();
+      BOOST_REQUIRE_EQUAL( old_frank_balance + amount,        cur_frank_balance );
+      old_frank_balance = cur_frank_balance;
+      BOOST_REQUIRE_EQUAL( fundcpuloan( frank, 1, amount ),   success() );
+      BOOST_REQUIRE_EQUAL( old_loan_balance + amount,         get_cpu_loan(1)["balance"].as<asset>() );
+      cur_frank_balance = get_rex_fund( frank );
+      BOOST_REQUIRE_EQUAL( old_frank_balance - amount,        cur_frank_balance ); 
+   }
+
    // wait for 30 days, frank's loan will be renewed at the current price
    produce_block( fc::hours(30*24 + 1) );
    rex_pool = get_rex_pool();
@@ -3704,7 +3724,7 @@ BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
                                        payment.get_amount() );
    }
    
-   BOOST_REQUIRE_EQUAL( success(),            sellrex( alice, asset::from_string("1.0000 REX") ) );
+   BOOST_REQUIRE_EQUAL( success(), sellrex( alice, asset::from_string("1.0000 REX") ) );
    
    loan_info = get_cpu_loan(1);
    BOOST_REQUIRE_EQUAL( payment,                     loan_info["payment"].as<asset>() );
@@ -3849,6 +3869,38 @@ BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::to
    BOOST_REQUIRE_EQUAL( success(), sellrex( alice, get_rex_balance( alice ) ) );
    BOOST_REQUIRE_EQUAL( 0,         get_rex_balance( alice ).get_amount() );
    BOOST_REQUIRE_EQUAL( success(), vote( alice, { producer_names[0], producer_names[4] } ) );
+
+} FC_LOG_AND_RETHROW()
+
+
+BOOST_FIXTURE_TEST_CASE( deposit_rex_fund, eosio_system_tester ) try {
+
+   const asset   init_balance = core_sym::from_string("1000.0000");
+   const asset   init_net     = core_sym::from_string("70.0000");
+   const asset   init_cpu     = core_sym::from_string("90.0000");
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount) };
+   account_name alice = accounts[0], bob = accounts[1];
+   setup_rex_accounts( accounts, init_balance, init_net, init_cpu, false );
+
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000"),             get_rex_fund( alice ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("account has no REX funds"), withdraw( alice, core_sym::from_string("0.0001") ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("overdrawn balance"),        deposit( alice, init_balance + init_balance ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("must deposit core token"),  deposit( alice, asset::from_string("1.0000 RNDM") ) );
+   
+   asset deposit_quant( init_balance.get_amount() / 5, init_balance.get_symbol() );
+   BOOST_REQUIRE_EQUAL( success(),                             deposit( alice, deposit_quant ) );
+   BOOST_REQUIRE_EQUAL( get_balance( alice ),                  init_balance - deposit_quant );
+   BOOST_REQUIRE_EQUAL( get_rex_fund( alice ),                 deposit_quant );
+   BOOST_REQUIRE_EQUAL( success(),                             deposit( alice, deposit_quant ) );
+   BOOST_REQUIRE_EQUAL( get_rex_fund( alice ),                 deposit_quant + deposit_quant );
+   BOOST_REQUIRE_EQUAL( get_balance( alice ),                  init_balance - deposit_quant - deposit_quant );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient funds"), withdraw( alice, get_rex_fund( alice ) + core_sym::from_string("0.0001")) );
+   BOOST_REQUIRE_EQUAL( success(),                             withdraw( alice, deposit_quant ) );
+   BOOST_REQUIRE_EQUAL( get_rex_fund( alice ),                 deposit_quant );
+   BOOST_REQUIRE_EQUAL( get_balance( alice ),                  init_balance - deposit_quant );
+   BOOST_REQUIRE_EQUAL( success(),                             withdraw( alice, get_rex_fund( alice ) ) );
+   BOOST_REQUIRE_EQUAL( get_rex_fund( alice ).get_amount(),    0 );
+   BOOST_REQUIRE_EQUAL( get_balance( alice ),                  init_balance );
 
 } FC_LOG_AND_RETHROW()
 
