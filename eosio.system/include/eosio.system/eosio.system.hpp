@@ -236,7 +236,6 @@ namespace eosiosystem {
       name                owner;
       asset               rex_requested;
       asset               proceeds;
-      asset               unstake_quant;
       eosio::time_point   order_time;
       bool                is_open = true;
       
@@ -247,12 +246,6 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "rexqueue"_n, rex_order,
                                indexed_by<"bytime"_n, const_mem_fun<rex_order, uint64_t, &rex_order::by_time>>> rex_order_table;
-
-   struct rex_order_output {
-      bool  success;
-      asset proceeds;
-      asset unstake_quant;
-   };
 
    class [[eosio::contract("eosio.system")]] system_contract : public native {
       
@@ -481,7 +474,7 @@ namespace eosiosystem {
 
          // defined in rex.cpp
          void runrex( uint16_t max );
-         rex_order_output close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
+         std::pair<bool, asset> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
          void update_rex_account( name owner, asset proceeds, asset unstake_quant );
          void deposit_rex( const name& from, const asset& amount );
          template <typename T>
@@ -498,7 +491,7 @@ namespace eosiosystem {
          void changebw( name from, name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
          void update_resource_limits( name receiver, int64_t delta_cpu, int64_t delta_net );
-         void update_voting_power( const name& voter, const asset& total_update );
+         void update_voting_power( const name& voter, const asset& total_update, bool update_votes_flag = true );
 
          // defined in voting.hpp
          void update_elected_producers( block_timestamp timestamp );

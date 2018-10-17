@@ -3397,9 +3397,12 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_rex, eosio_system_tester ) try {
    account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3], frank = accounts[4];
    setup_rex_accounts( accounts, init_balance );
 
-   BOOST_REQUIRE_EQUAL( success(), buyrex( alice, core_sym::from_string("30.0000") ) );
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("970.0000"), get_rex_fund(alice) );
-   BOOST_REQUIRE_EQUAL( ratio * asset::from_string("30.0000 REX").get_amount(), get_rex_balance(alice).get_amount() );
+   BOOST_REQUIRE_EQUAL( success(),                           buyrex( alice, core_sym::from_string("13.0000") ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("13.0000"),    get_rex_vote_stake( alice ) );
+   BOOST_REQUIRE_EQUAL( success(),                           buyrex( alice, core_sym::from_string("17.0000") ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("30.0000"),    get_rex_vote_stake( alice ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("970.0000"),   get_rex_fund(alice) );
+   BOOST_REQUIRE_EQUAL( get_rex_balance(alice).get_amount(), ratio * asset::from_string("30.0000 REX").get_amount() );
    auto rex_pool = get_rex_pool();
    BOOST_REQUIRE_EQUAL( core_sym::from_string("30.0000"),  rex_pool["total_lendable"].as<asset>() );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("30.0000"),  rex_pool["total_unlent"].as<asset>() );
@@ -3563,11 +3566,14 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
    auto init_carol_rex = get_rex_balance(carol);
    
    BOOST_REQUIRE_EQUAL( success(), rentcpu( frank, frank, core_sym::from_string("1100.0000") ) );
+   const auto    init_rex_pool        = get_rex_pool();
+   const int64_t init_alice_rex_stake = ( init_alice_rex.get_amount() * init_rex_pool["total_lendable"].as<asset>().get_amount() ) 
+                                         / init_rex_pool["total_rex"].as<asset>().get_amount();
    BOOST_REQUIRE_EQUAL( success(), sellrex( alice, asset( (3*get_rex_balance(alice).get_amount())/4, symbol(SY(4,REX)) ) ) );
 
    BOOST_REQUIRE_EQUAL( init_alice_rex.get_amount() / 4, get_rex_balance(alice).get_amount() );
-   BOOST_REQUIRE_EQUAL( purchase1.get_amount() / 4,      get_rex_vote_stake( alice ).get_amount() );
-   BOOST_REQUIRE_EQUAL( purchase1.get_amount() / 4,      get_voter_info(alice)["staked"].as<int64_t>() - init_stake );
+   BOOST_REQUIRE_EQUAL( init_alice_rex_stake / 4,        get_rex_vote_stake( alice ).get_amount() );
+   BOOST_REQUIRE_EQUAL( init_alice_rex_stake / 4,        get_voter_info(alice)["staked"].as<int64_t>() - init_stake );
 
    init_alice_rex = get_rex_balance(alice);
    BOOST_REQUIRE_EQUAL( success(), sellrex( bob,   get_rex_balance(bob) ) );
@@ -3604,16 +3610,15 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex loans are not currently available"),
                         rentcpu( frank, frank, core_sym::from_string("0.0001") ) );
 
-   BOOST_REQUIRE_EQUAL( success(),       buyrex( frank, core_sym::from_string("0.0001") ) );
+   BOOST_REQUIRE_EQUAL( success(),      buyrex( frank, core_sym::from_string("0.0001") ) );
 
-   BOOST_REQUIRE_EQUAL( true,            get_rex_order(alice)["is_open"].as<bool>() );
-   BOOST_REQUIRE_EQUAL( init_alice_rex,  get_rex_order(alice)["rex_requested"].as<asset>() );
-   BOOST_REQUIRE_EQUAL( 0,               get_rex_order(alice)["proceeds"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( true,           get_rex_order(alice)["is_open"].as<bool>() );
+   BOOST_REQUIRE_EQUAL( init_alice_rex, get_rex_order(alice)["rex_requested"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( 0,              get_rex_order(alice)["proceeds"].as<asset>().get_amount() );
 
-   BOOST_REQUIRE_EQUAL( false,                  get_rex_order(bob)["is_open"].as<bool>() );
-   BOOST_REQUIRE_EQUAL( init_bob_rex,           get_rex_order(bob)["rex_requested"].as<asset>() );
-   BOOST_REQUIRE      ( 0 <                     get_rex_order(bob)["proceeds"].as<asset>().get_amount() );
-   BOOST_REQUIRE_EQUAL( purchase2.get_amount(), get_rex_order(bob)["unstake_quant"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( false,          get_rex_order(bob)["is_open"].as<bool>() );
+   BOOST_REQUIRE_EQUAL( init_bob_rex,   get_rex_order(bob)["rex_requested"].as<asset>() );
+   BOOST_REQUIRE      ( 0 <             get_rex_order(bob)["proceeds"].as<asset>().get_amount() );
 
    BOOST_REQUIRE_EQUAL( false,          get_rex_order(carol)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( init_carol_rex, get_rex_order(carol)["rex_requested"].as<asset>() );
@@ -3855,12 +3860,14 @@ BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::to
    BOOST_TEST_REQUIRE( stake2votes( asset( get_voter_info( alice )["staked"].as<int64_t>(), symbol{CORE_SYM} ) )
                        == get_producer_info(producer_names[20])["total_votes"].as<double>() );
 
-   const asset init_rex        = get_rex_balance( alice );
-   const asset init_rex_stake  = get_rex_vote_stake( alice );
+   const asset   init_rex             = get_rex_balance( alice );
+   const auto    current_rex_pool     = get_rex_pool();
+   const int64_t init_alice_rex_stake = ( init_rex.get_amount() * current_rex_pool["total_lendable"].as<asset>().get_amount() )
+                                          / current_rex_pool["total_rex"].as<asset>().get_amount();
    const asset rex_sell_amount( get_rex_balance(alice).get_amount() / 4, symbol( SY(4,REX) ) );  
    BOOST_REQUIRE_EQUAL( success(),                                       sellrex( alice, rex_sell_amount ) );
    BOOST_REQUIRE_EQUAL( init_rex,                                        get_rex_balance( alice ) + rex_sell_amount );
-   BOOST_REQUIRE_EQUAL( 3 * init_rex_stake.get_amount(),                 4 * get_rex_vote_stake( alice ).get_amount() );
+   BOOST_REQUIRE_EQUAL( 3 * init_alice_rex_stake,                        4 * get_rex_vote_stake( alice ).get_amount() );
    BOOST_REQUIRE_EQUAL( get_voter_info( alice )["staked"].as<int64_t>(), init_stake + get_rex_vote_stake(alice).get_amount() );
    BOOST_TEST_REQUIRE( stake2votes( asset( get_voter_info( alice )["staked"].as<int64_t>(), symbol{CORE_SYM} ) )
                        == get_producer_info(producer_names[0])["total_votes"].as<double>() );
