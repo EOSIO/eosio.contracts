@@ -298,8 +298,49 @@ namespace eosiosystem {
       runrex( max );
    }
 
+   void system_contract::closerex( const name& user ) {
+      
+      require_auth( user );
+      
+      runrex(2);
+      
+      update_rex_account( user, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
+      
+      /// check for any outstanding cpu loans
+      {
+         rex_cpu_loan_table cpu_loans( _self, _self.value );
+         auto cpu_idx = cpu_loans.get_index<"byowner"_n>();
+         eosio_assert( cpu_idx.find( user.value ) == cpu_idx.end(), "account has outstanding CPU loan" );
+      }
+      
+      /// check for any outstanding net loans
+      {
+         rex_net_loan_table net_loans( _self, _self.value );
+         auto net_idx = net_loans.get_index<"byowner"_n>();
+         eosio_assert( net_idx.find( user.value ) == net_idx.end(), "account has outstanding NET loan" );
+      }
+
+      /// check for remaining rex balance
+      {
+         auto rex_itr = _rexbalance.find( user.value );
+         if( rex_itr != _rexbalance.end() ) {
+            eosio_assert( rex_itr->rex_balance.amount == 0, "account has remaining REX, must sell first");
+            _rexbalance.erase( rex_itr );
+         }
+      }
+
+      /// check for remaining rex fund balance
+      {
+         auto fund_itr =_rexfunds.find( user.value );
+         if( fund_itr != _rexfunds.end() ) {
+            eosio_assert( fund_itr->balance.amount == 0, "account has remaining funds, must withdraw first");
+            _rexfunds.erase( fund_itr );
+         }
+      }
+   }
+
    /**
-    * Perform maitenance operations on expired rex
+    * Perform maintenance operations on expired rex
     */
    void system_contract::runrex( uint16_t max ) {
 
@@ -539,9 +580,9 @@ namespace eosiosystem {
          to_stake.amount-= itr->proceeds.amount;
          _rexorders.erase( itr );
       }
-      if( proceeds.amount > 0 )
+      if( to_fund.amount > 0 )
          transfer_to_fund( owner, to_fund );
-      if( delta_stake.amount != 0 )
+      if( to_stake.amount != 0 )
          update_voting_power( owner, to_stake );
    }
 

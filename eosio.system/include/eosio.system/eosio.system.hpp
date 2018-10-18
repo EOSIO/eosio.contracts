@@ -367,6 +367,9 @@ namespace eosiosystem {
          [[eosio::action]]
          void rexexec( const name& user, uint16_t max );
 
+         [[eosio::action]]
+         void closerex( const name& user );
+
          /**
           *  Decreases the total tokens delegated by from to receiver and/or
           *  frees the memory associated with the delegation if there is nothing
