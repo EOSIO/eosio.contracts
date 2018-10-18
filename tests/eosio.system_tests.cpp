@@ -3817,8 +3817,7 @@ BOOST_FIXTURE_TEST_CASE( ramfee_namebid_to_rex, eosio_system_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::tolerance(1e-10) ) try {
 
-   const int64_t ratio        = 10000;
-   const asset   init_balance = core_sym::from_string("10000.0000");
+   const asset init_balance = core_sym::from_string("10000.0000");
    const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount), N(frankaccount) };
    account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3], frank = accounts[4];
    setup_rex_accounts( accounts, init_balance );
@@ -3908,6 +3907,68 @@ BOOST_FIXTURE_TEST_CASE( deposit_rex_fund, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(),                             withdraw( alice, get_rex_fund( alice ) ) );
    BOOST_REQUIRE_EQUAL( get_rex_fund( alice ).get_amount(),    0 );
    BOOST_REQUIRE_EQUAL( get_balance( alice ),                  init_balance );
+
+} FC_LOG_AND_RETHROW()
+
+
+BOOST_FIXTURE_TEST_CASE( close_rex, eosio_system_tester ) try {
+
+   const asset init_balance = core_sym::from_string("200.0000");
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount) };
+   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3];
+   setup_rex_accounts( accounts, init_balance );
+
+   BOOST_REQUIRE_EQUAL( false,             get_rex_fund_obj( alice ).is_null() );
+   BOOST_REQUIRE_EQUAL( init_balance,      get_rex_fund( alice ) );
+   BOOST_REQUIRE_EQUAL( closerex( alice ), wasm_assert_msg("account has remaining funds, must withdraw first") );
+   BOOST_REQUIRE_EQUAL( success(),         withdraw( alice, init_balance ) );
+   BOOST_REQUIRE_EQUAL( success(),         closerex( alice ) );
+   BOOST_REQUIRE_EQUAL( true,              get_rex_fund_obj( alice).is_null() );
+   BOOST_REQUIRE_EQUAL( success(),         deposit( alice, init_balance ) );
+   BOOST_REQUIRE_EQUAL( false,             get_rex_fund_obj( alice).is_null() );
+
+   BOOST_REQUIRE_EQUAL( true,              get_rex_balance_obj( bob ).is_null() );
+   BOOST_REQUIRE_EQUAL( success(),         buyrex( bob, init_balance ) );
+   BOOST_REQUIRE_EQUAL( false,             get_rex_balance_obj( bob ).is_null() );
+   BOOST_REQUIRE_EQUAL( false,             get_rex_fund_obj( bob ).is_null() );
+   BOOST_REQUIRE_EQUAL( 0,                 get_rex_fund( bob ).get_amount() );
+   BOOST_REQUIRE_EQUAL( closerex( bob ),   wasm_assert_msg("account has remaining REX, must sell first") );
+   BOOST_REQUIRE_EQUAL( success(),         sellrex( bob, get_rex_balance( bob ) ) );
+   BOOST_REQUIRE_EQUAL( closerex( bob ),   wasm_assert_msg("account has remaining funds, must withdraw first") );
+   BOOST_REQUIRE_EQUAL( success(),         withdraw( bob, get_rex_fund( bob ) ) );
+   BOOST_REQUIRE_EQUAL( success(),         closerex( bob ) );
+   BOOST_REQUIRE_EQUAL( true,              get_rex_balance_obj( bob ).is_null() );
+   BOOST_REQUIRE_EQUAL( true,              get_rex_fund_obj( bob ).is_null() );
+
+   BOOST_REQUIRE_EQUAL( success(),         deposit( bob, init_balance ) );
+   BOOST_REQUIRE_EQUAL( success(),         buyrex( bob, init_balance ) );
+   
+   BOOST_REQUIRE_EQUAL( success(),         rentcpu( carol, emily, init_balance ) );
+
+   produce_block( fc::days(20) );
+
+   BOOST_REQUIRE_EQUAL( closerex( carol ), wasm_assert_msg("account has outstanding CPU loan") );
+
+   produce_block( fc::days(10) );
+
+   BOOST_REQUIRE_EQUAL( success(),         closerex( carol ) );
+   BOOST_REQUIRE_EQUAL( true,              get_rex_balance_obj( carol ).is_null() );
+   BOOST_REQUIRE_EQUAL( true,              get_rex_fund_obj( carol ).is_null() );
+   
+   BOOST_REQUIRE_EQUAL( success(),         rentnet( emily, emily, init_balance ) );
+   BOOST_REQUIRE_EQUAL( closerex( emily ), wasm_assert_msg("account has outstanding NET loan") );
+
+   BOOST_REQUIRE_EQUAL( success(),         sellrex( bob, get_rex_balance( bob ) ) );
+   BOOST_REQUIRE_EQUAL( closerex( bob ),   wasm_assert_msg("account has remaining REX, must sell first") );
+
+   produce_block( fc::days(30) );
+
+   //   BOOST_REQUIRE_EQUAL( closerex( bob ),   wasm_assert_msg("account has remaining funds, must withdraw first") );
+   //   BOOST_REQUIRE_EQUAL( 0,                 get_rex_fund( bob ).get_amount() );
+   //   BOOST_REQUIRE_EQUAL( success(),         withdraw( bob, get_rex_fund( bob ) ) );
+   //   BOOST_REQUIRE_EQUAL( success(),         closerex( bob ) );
+   //   BOOST_REQUIRE_EQUAL( true,              get_rex_balance_obj( bob ).is_null() );
+   //   BOOST_REQUIRE_EQUAL( true,              get_rex_fund_obj( bob ).is_null() );
 
 } FC_LOG_AND_RETHROW()
 

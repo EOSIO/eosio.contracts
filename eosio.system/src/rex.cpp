@@ -298,31 +298,32 @@ namespace eosiosystem {
       runrex( max );
    }
 
-   void system_contract::closerex( const name& user ) {
+   void system_contract::closerex( const name& owner ) {
+
+      require_auth( owner );
       
-      require_auth( user );
+      if( _rextable.begin() != _rextable.end() )
+         runrex(2);
       
-      runrex(2);
-      
-      update_rex_account( user, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
+      update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       
       /// check for any outstanding cpu loans
       {
          rex_cpu_loan_table cpu_loans( _self, _self.value );
          auto cpu_idx = cpu_loans.get_index<"byowner"_n>();
-         eosio_assert( cpu_idx.find( user.value ) == cpu_idx.end(), "account has outstanding CPU loan" );
+         eosio_assert( cpu_idx.find( owner.value ) == cpu_idx.end(), "account has outstanding CPU loan" );
       }
       
       /// check for any outstanding net loans
       {
          rex_net_loan_table net_loans( _self, _self.value );
          auto net_idx = net_loans.get_index<"byowner"_n>();
-         eosio_assert( net_idx.find( user.value ) == net_idx.end(), "account has outstanding NET loan" );
+         eosio_assert( net_idx.find( owner.value ) == net_idx.end(), "account has outstanding NET loan" );
       }
 
       /// check for remaining rex balance
       {
-         auto rex_itr = _rexbalance.find( user.value );
+         auto rex_itr = _rexbalance.find( owner.value );
          if( rex_itr != _rexbalance.end() ) {
             eosio_assert( rex_itr->rex_balance.amount == 0, "account has remaining REX, must sell first");
             _rexbalance.erase( rex_itr );
@@ -331,7 +332,7 @@ namespace eosiosystem {
 
       /// check for remaining rex fund balance
       {
-         auto fund_itr =_rexfunds.find( user.value );
+         auto fund_itr =_rexfunds.find( owner.value );
          if( fund_itr != _rexfunds.end() ) {
             eosio_assert( fund_itr->balance.amount == 0, "account has remaining funds, must withdraw first");
             _rexfunds.erase( fund_itr );
@@ -576,8 +577,8 @@ namespace eosiosystem {
       asset to_stake( delta_stake );
       auto itr = _rexorders.find( owner.value );
       if( itr != _rexorders.end() && !itr->is_open ) {
-         to_fund.amount += itr->proceeds.amount;
-         to_stake.amount-= itr->proceeds.amount;
+         to_fund.amount  += itr->proceeds.amount;
+         to_stake.amount -= itr->proceeds.amount;
          _rexorders.erase( itr );
       }
       if( to_fund.amount > 0 )

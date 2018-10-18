@@ -399,6 +399,14 @@ public:
       return push_action( name(owner), N(updaterex), mvo()("owner", owner) );
    }
 
+   action_result rexexec( const account_name& user, uint16_t max ) {
+      return push_action( name(user), N(rexexec), mvo()("user", user)("max", max) );
+   }
+
+   action_result closerex( const account_name& owner ) {
+      return push_action( name(owner), N(closerex), mvo()("owner", owner) );
+   }
+
    fc::variant get_last_loan(bool cpu) {
       vector<char> data;
       const auto& db = control->db();
@@ -452,9 +460,19 @@ public:
       return data.empty() ? asset(0, symbol(SY(4, REX))) : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["rex_balance"].as<asset>();
    }
 
+   fc::variant get_rex_balance_obj( const account_name& act ) const {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexbal), act );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time);
+   }
+
    asset get_rex_fund( const account_name& act ) const {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexfund), act );
       return data.empty() ? asset(0, symbol{CORE_SYM}) : abi_ser.binary_to_variant("rex_fund", data, abi_serializer_max_time)["balance"].as<asset>();
+   }
+
+   fc::variant get_rex_fund_obj( const account_name& act ) const {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexfund), act );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "rex_fund", data, abi_serializer_max_time );
    }
 
    asset get_rex_vote_stake( const account_name& act ) const {
@@ -465,7 +483,7 @@ public:
    fc::variant get_rex_order( const account_name& act ) {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexqueue), act );
       return abi_ser.binary_to_variant( "rex_order", data, abi_serializer_max_time );
-   }  
+   }
 
    fc::variant get_rex_pool() const {
       vector<char> data;
