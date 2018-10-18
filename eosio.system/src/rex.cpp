@@ -6,7 +6,7 @@
 
 namespace eosiosystem {
 
-   void system_contract::deposit( name owner, asset amount ) {
+   void system_contract::deposit( const name& owner, const asset& amount ) {
       
       require_auth( owner );
 
@@ -29,7 +29,7 @@ namespace eosiosystem {
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
 
-   void system_contract::withdraw( name owner, asset amount ) {
+   void system_contract::withdraw( const name& owner, const asset& amount ) {
 
       require_auth( owner );
 
@@ -50,7 +50,7 @@ namespace eosiosystem {
    /**
     * Transfers SYS tokens from user balance and credits converts them to REX stake.
     */
-   void system_contract::buyrex( name from, asset amount ) {
+   void system_contract::buyrex( const name& from, const asset& amount ) {
       
       require_auth( from );
 
@@ -70,8 +70,8 @@ namespace eosiosystem {
 
       auto itr = _rextable.begin();
       if( itr == _rextable.end() ) {
-         /// eosio.token open action for eosio.rex account
-         _rextable.emplace( _self, [&]( auto& rp ){
+         /// initialize REX pool
+         _rextable.emplace( _self, [&]( auto& rp ) {
             rex_received.amount = amount.amount * rex_ratio;
 
             rp.total_lendable   = amount;
@@ -134,7 +134,7 @@ namespace eosiosystem {
    /**
     * Converts REX stake back into SYS tokens at current exchange rate
     */
-   void system_contract::sellrex( name from, asset rex ) {
+   void system_contract::sellrex( const name& from, const asset& rex ) {
 
       runrex(2);
 
@@ -172,7 +172,7 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::cnclrexorder( name owner ) {
+   void system_contract::cnclrexorder( const name& owner ) {
 
       require_auth( owner );
 
@@ -204,7 +204,7 @@ namespace eosiosystem {
       return out;
    }
 
-   void system_contract::update_resource_limits( name receiver, int64_t delta_cpu, int64_t delta_net ) {
+   void system_contract::update_resource_limits( const name& receiver, int64_t delta_cpu, int64_t delta_net ) {
       user_resources_table   totals_tbl( _self, receiver.value );
       auto tot_itr = totals_tbl.find( receiver.value );
       eosio_assert( tot_itr !=  totals_tbl.end(), "expected to find resource table" );
@@ -224,7 +224,7 @@ namespace eosiosystem {
     * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
     * after 30 days the rented SYS delegation of CPU or NET will expire.
     */
-   void system_contract::rentcpu( name from, name receiver, asset loan_payment, asset loan_fund ) {
+   void system_contract::rentcpu( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund ) {
 
       require_auth( from );
 
@@ -233,7 +233,7 @@ namespace eosiosystem {
       update_resource_limits( receiver, rented_tokens, 0 );
    }
    
-   void system_contract::rentnet( name from, name receiver, asset loan_payment, asset loan_fund ) {
+   void system_contract::rentnet( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund ) {
 
       require_auth( from );
 
@@ -242,7 +242,7 @@ namespace eosiosystem {
       update_resource_limits( receiver, 0, rented_tokens );
    }
 
-   void system_contract::fundcpuloan( name from, uint64_t loan_num, asset payment ) {
+   void system_contract::fundcpuloan( const name& from, uint64_t loan_num, const asset& payment ) {
 
       require_auth( from );
 
@@ -250,7 +250,7 @@ namespace eosiosystem {
       fund_rex_loan( cpu_loans, from, loan_num, payment  );
    }
 
-   void system_contract::fundnetloan( name from, uint64_t loan_num, asset payment ) {
+   void system_contract::fundnetloan( const name& from, uint64_t loan_num, const asset& payment ) {
 
       require_auth( from );
 
@@ -258,7 +258,7 @@ namespace eosiosystem {
       fund_rex_loan( net_loans, from, loan_num, payment );
    }
 
-   void system_contract::defcpuloan( name from, uint64_t loan_num, asset amount ) {
+   void system_contract::defcpuloan( const name& from, uint64_t loan_num, const asset& amount ) {
       
       require_auth( from );
       
@@ -266,7 +266,7 @@ namespace eosiosystem {
       defund_rex_loan( cpu_loans, from, loan_num, amount );
    }
 
-   void system_contract::defnetloan( name from, uint64_t loan_num, asset amount ) {
+   void system_contract::defnetloan( const name& from, uint64_t loan_num, const asset& amount ) {
 
       require_auth( from );
 
@@ -274,7 +274,7 @@ namespace eosiosystem {
       defund_rex_loan( net_loans, from, loan_num, amount );
    }
 
-   void system_contract::updaterex( name owner ) {
+   void system_contract::updaterex( const name& owner ) {
       
       require_auth( owner );
       
@@ -297,7 +297,7 @@ namespace eosiosystem {
       update_rex_account( owner, asset( 0, core_symbol() ), delta_stake );
    }
 
-   void system_contract::rexexec( name user, uint16_t max ) {
+   void system_contract::rexexec( const name& user, uint16_t max ) {
 
       require_auth( user );
       
@@ -414,7 +414,7 @@ namespace eosiosystem {
    }
 
    template <typename T>
-   int64_t system_contract::rent_rex( T& table, name from, name receiver, const asset& payment, const asset& fund ) {
+   int64_t system_contract::rent_rex( T& table, const name& from, const name& receiver, const asset& payment, const asset& fund ) {
 
       runrex(2);
 
@@ -497,7 +497,7 @@ namespace eosiosystem {
    }
 
    template <typename T>
-   void system_contract::fund_rex_loan( T& table, name from, uint64_t loan_num, const asset& payment  ) {
+   void system_contract::fund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& payment  ) {
       eosio_assert( payment.symbol == core_symbol(), "must use core token" );
       transfer_from_fund( from, payment );
       auto itr = table.require_find( loan_num, "loan not found" );
@@ -509,7 +509,7 @@ namespace eosiosystem {
    }
 
    template <typename T>
-   void system_contract::defund_rex_loan( T& table, name from, uint64_t loan_num, const asset& amount  ) {
+   void system_contract::defund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& amount  ) {
       eosio_assert( amount.symbol == core_symbol(), "must use core token" );
       auto itr = table.require_find( loan_num, "loan not found" );
       eosio_assert( itr->from == from, "actor has to be loan creator" );
@@ -521,7 +521,7 @@ namespace eosiosystem {
       transfer_to_fund( from, amount );
    }
 
-   void system_contract::transfer_from_fund( name owner, const asset& amount ) {
+   void system_contract::transfer_from_fund( const name& owner, const asset& amount ) {
       auto itr = _rexfunds.require_find( owner.value, "must deposit to REX fund first" );
       eosio_assert( amount <= itr->balance, "insufficient funds");
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
@@ -529,24 +529,26 @@ namespace eosiosystem {
       });
    }
 
-   void system_contract::transfer_to_fund( name owner, const asset& amount ) {
+   void system_contract::transfer_to_fund( const name& owner, const asset& amount ) {
       auto itr = _rexfunds.require_find( owner.value, "programmer error" );
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
          fund.balance.amount += amount.amount;
       });
    }
 
-   void system_contract::update_rex_account( name owner, asset proceeds, asset delta_stake ) {
+   void system_contract::update_rex_account( const name& owner, const asset& proceeds, const asset& delta_stake ) {
+      asset to_fund( proceeds );
+      asset to_stake( delta_stake );
       auto itr = _rexorders.find( owner.value );
       if( itr != _rexorders.end() && !itr->is_open ) {
-         proceeds.amount    += itr->proceeds.amount;
-         delta_stake.amount -= itr->proceeds.amount;
+         to_fund.amount += itr->proceeds.amount;
+         to_stake.amount-= itr->proceeds.amount;
          _rexorders.erase( itr );
       }
       if( proceeds.amount > 0 )
-         transfer_to_fund( owner, proceeds );
+         transfer_to_fund( owner, to_fund );
       if( delta_stake.amount != 0 )
-         update_voting_power( owner, delta_stake );
+         update_voting_power( owner, to_stake );
    }
 
 }; /// namespace eosiosystem

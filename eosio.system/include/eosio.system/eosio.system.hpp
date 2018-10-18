@@ -310,29 +310,29 @@ namespace eosiosystem {
 
 
          [[eosio::action]]
-         void deposit( name owner, asset amount );
+         void deposit( const name& owner, const asset& amount );
          
          [[eosio::action]]
-         void withdraw( name owner, asset amount );
+         void withdraw( const name& owner, const asset& amount );
 
          /**
           * Transfers SYS tokens from user balance and credits converts them to REX stake.
           */
          [[eosio::action]]
-         void buyrex( name from, asset amount );
+         void buyrex( const name& from, const asset& amount );
 
          /**
           * Converts REX stake back into SYS tokens at current exchange rate. If order cannot be 
           * processed, it gets queued until it can be there is enough REX to fill order.
           */
          [[eosio::action]]
-         void sellrex( name from, asset rex );
+         void sellrex( const name& from, const asset& rex );
          
          /**
           * Cancels queued sellrex order.
           */
          [[eosio::action]]
-         void cnclrexorder( name owner );
+         void cnclrexorder( const name& owner );
 
          /**
           * Use payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
@@ -342,30 +342,30 @@ namespace eosiosystem {
           * creator. User claims the refund in a separate action.
           */
          [[eosio::action]]
-         void rentcpu( name from, name receiver, asset loan_payment, asset loan_fund );
+         void rentcpu( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund );
          [[eosio::action]]
-         void rentnet( name from, name receiver, asset loan_payment, asset loan_fund );
+         void rentnet( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund );
 
          /**
           * Loan initiator funds a given CPU or NET loan. Loan must've been set as autorenew.
           */
          [[eosio::action]]
-         void fundcpuloan( name from, uint64_t loan_num, asset payment );
+         void fundcpuloan( const name& from, uint64_t loan_num, const asset& payment );
          [[eosio::action]]
-         void fundnetloan( name from, uint64_t loan_num, asset payment );
+         void fundnetloan( const name& from, uint64_t loan_num, const asset& payment );
          [[eosio::action]]
-         void defcpuloan( name from, uint64_t loan_num, asset amount );
+         void defcpuloan( const name& from, uint64_t loan_num, const asset& amount );
          [[eosio::action]]
-         void defnetloan( name from, uint64_t loan_num, asset amount );
+         void defnetloan( const name& from, uint64_t loan_num, const asset& amount );
 
          /**
           * Updates REX vote stake of owner to its current value.
           */
          [[eosio::action]]
-         void updaterex( name owner );
+         void updaterex( const name& owner );
 
          [[eosio::action]]
-         void rexexec( name user, uint16_t max );
+         void rexexec( const name& user, uint16_t max );
 
          /**
           *  Decreases the total tokens delegated by from to receiver and/or
@@ -474,23 +474,23 @@ namespace eosiosystem {
 
          // defined in rex.cpp
          void runrex( uint16_t max );
+         void update_resource_limits( const name& receiver, int64_t delta_cpu, int64_t delta_net );
          std::pair<bool, asset> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
-         void update_rex_account( name owner, asset proceeds, asset unstake_quant );
+         void update_rex_account( const name& owner, const asset& proceeds, const asset& unstake_quant );
          void deposit_rex( const name& from, const asset& amount );
          template <typename T>
-         int64_t rent_rex( T& table, name from, name receiver, const asset& loan_payment, const asset& loan_fund );
+         int64_t rent_rex( T& table, const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund );
          template <typename T>
-         void fund_rex_loan( T& table, name from, uint64_t loan_num, const asset& payment );
+         void fund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& payment );
          template <typename T>
-         void defund_rex_loan( T& table, name from, uint64_t loan_num, const asset& amount );
-         void transfer_from_fund( name owner, const asset& amount );
-         void transfer_to_fund( name owner, const asset& amount );
+         void defund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& amount );
+         void transfer_from_fund( const name& owner, const asset& amount );
+         void transfer_to_fund( const name& owner, const asset& amount );
          bool rex_loans_available()const { return _rexorders.begin() == _rexorders.end(); }
 
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
-         void update_resource_limits( name receiver, int64_t delta_cpu, int64_t delta_net );
          void update_voting_power( const name& voter, const asset& total_update, bool update_votes_flag = true );
 
          // defined in voting.hpp
