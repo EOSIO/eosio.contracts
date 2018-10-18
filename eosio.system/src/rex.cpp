@@ -34,14 +34,8 @@ namespace eosiosystem {
       require_auth( owner );
 
       eosio_assert( amount.symbol == core_symbol(), "must withdraw core token" );
-
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
-
-      auto itr = _rexfunds.require_find( owner.value, "account has no REX funds" );
-      eosio_assert( amount <= itr->balance, "insufficient funds");
-      _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
-         fund.balance.amount -= amount.amount;
-      });      
+      transfer_from_fund( owner, amount );
 
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { rex_account, active_permission },
                                                     { rex_account, owner, amount, "withdraw from REX fund" } );
