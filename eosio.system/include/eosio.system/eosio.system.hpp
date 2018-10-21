@@ -236,6 +236,7 @@ namespace eosiosystem {
       name                owner;
       asset               rex_requested;
       asset               proceeds;
+      asset               stake_change;
       eosio::time_point   order_time;
       bool                is_open = true;
       
@@ -246,6 +247,12 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "rexqueue"_n, rex_order,
                                indexed_by<"bytime"_n, const_mem_fun<rex_order, uint64_t, &rex_order::by_time>>> rex_order_table;
+
+   struct rex_order_outcome {
+      bool success;
+      asset proceeds;
+      asset stake_change;
+   };
 
    class [[eosio::contract("eosio.system")]] system_contract : public native {
       
@@ -478,7 +485,7 @@ namespace eosiosystem {
          // defined in rex.cpp
          void runrex( uint16_t max );
          void update_resource_limits( const name& receiver, int64_t delta_cpu, int64_t delta_net );
-         std::pair<bool, asset> close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
+         rex_order_outcome close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
          void update_rex_account( const name& owner, const asset& proceeds, const asset& unstake_quant );
          void deposit_rex( const name& from, const asset& amount );
          template <typename T>

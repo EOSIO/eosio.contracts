@@ -142,8 +142,8 @@ namespace eosiosystem {
       eosio_assert( bitr->rex_balance >= rex, "insufficient funds" );
 
       auto current_order = close_rex_order( bitr, rex );
-      update_rex_account( from, current_order.second, -current_order.second );
-      if( !current_order.first ) {
+      update_rex_account( from, current_order.proceeds, current_order.stake_change );
+      if( !current_order.success ) {
          /**
           * REX order couldn't be filled and is added to queue.
           * If account already has an open order, requested rex is added to existing order.
@@ -155,6 +155,7 @@ namespace eosiosystem {
                order.rex_requested = rex;
                order.is_open       = true;
                order.proceeds      = asset( 0, core_symbol() );
+               order.stake_change  = asset( 0, core_symbol() );
                order.order_time    = current_time_point();
             });
          } else {
@@ -271,18 +272,21 @@ namespace eosiosystem {
    void system_contract::updaterex( const name& owner ) {
       
       require_auth( owner );
-      
-      auto itr = _rexbalance.require_find( owner.value, "account has no REX balance" );
-      const asset init_stake = itr->vote_stake;
 
       runrex(2);
 
-      auto rexp_itr = _rextable.begin();
-      const asset& total_rex      = rexp_itr->total_rex;
-      const asset& total_lendable = rexp_itr->total_lendable;
+      auto itr = _rexbalance.require_find( owner.value, "account has no REX balance" );
+      const asset init_stake = itr->vote_stake;
 
+      auto rexp_itr = _rextable.begin();
+      const int64_t total_rex      = rexp_itr->total_rex.amount;
+      const int64_t total_lendable = rexp_itr->total_lendable.amount;
+      const int64_t rex_balance    = itr->rex_balance.amount;
+      
       asset current_stake( 0, core_symbol() );
-      current_stake.amount = ( uint128_t(itr->rex_balance.amount) * total_lendable.amount ) / total_rex.amount;
+      if ( total_rex > 0 ) {
+         current_stake.amount = ( uint128_t(rex_balance) * total_lendable ) / total_rex;
+      }
       _rexbalance.modify( itr, same_payer, [&]( auto& rb ) {
          rb.vote_stake = current_stake;
       });
@@ -437,9 +441,10 @@ namespace eosiosystem {
             auto result = close_rex_order( bitr, oitr->rex_requested );
             auto next   = oitr;
             ++next;
-            if( result.first ) {
+            if( result.success ) {
                idx.modify( oitr, same_payer, [&]( auto& order ) {
-                  order.proceeds.amount = result.second.amount;
+                  order.proceeds.amount     = result.proceeds.amount;
+                  order.stake_change.amount = result.stake_change.amount;
                   order.close();
                });
             }
@@ -485,38 +490,35 @@ namespace eosiosystem {
       return rented_tokens;
    }
 
-   std::pair<bool, asset> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
+   //   std::pair<bool, asset> system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
+   rex_order_outcome system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
       auto rexitr = _rextable.begin();
       const auto S0 = rexitr->total_lendable.amount;
       const auto R0 = rexitr->total_rex.amount;
       const auto R1 = R0 - rex.amount;
       const auto S1 = (uint128_t(R1) * S0) / R0;
       asset proceeds( S0 - S1, core_symbol() );
-
-      /// update vote_stake to its current value whether sell order is processed or not
-      /// that is, value right before sell order is processed
-      int64_t current_stake_value = ( uint128_t(bitr->rex_balance.amount) * S0 ) / R0;
-      update_voting_power( bitr->owner, asset( current_stake_value - bitr->vote_stake.amount, core_symbol() ), false );
-      _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
-         rb.vote_stake.amount = current_stake_value;
-      });
-
+      asset stake_change( 0, core_symbol() );
+      
       bool success = false;
       if( proceeds.amount <= rexitr->total_unlent.amount ) {
+         const int64_t init_vote_stake_amount = bitr->vote_stake.amount;
+         const int64_t current_stake_value = ( uint128_t(bitr->rex_balance.amount) * S0 ) / R0;
          _rextable.modify( rexitr, same_payer, [&]( auto& rt ) {
             rt.total_rex.amount      = R1;
             rt.total_lendable.amount = S1;
             rt.total_unlent.amount   = rt.total_lendable.amount - rt.total_lent.amount;
          });
          _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
-            rb.vote_stake.amount  -= proceeds.amount;
+            rb.vote_stake.amount   = current_stake_value - proceeds.amount;
             rb.rex_balance.amount -= rex.amount;
          });
+         stake_change.amount = bitr->vote_stake.amount - init_vote_stake_amount;
          success = true;
       } else {
          proceeds.amount = 0;
       }
-      return { success, proceeds };
+      return { success, proceeds, stake_change };
    }
 
    void system_contract::deposit_rex( const name& from, const asset& amount ) {
@@ -578,7 +580,7 @@ namespace eosiosystem {
       auto itr = _rexorders.find( owner.value );
       if( itr != _rexorders.end() && !itr->is_open ) {
          to_fund.amount  += itr->proceeds.amount;
-         to_stake.amount -= itr->proceeds.amount;
+         to_stake.amount += itr->stake_change.amount;
          _rexorders.erase( itr );
       }
       if( to_fund.amount > 0 )

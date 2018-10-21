@@ -3963,12 +3963,13 @@ BOOST_FIXTURE_TEST_CASE( close_rex, eosio_system_tester ) try {
 
    produce_block( fc::days(30) );
 
-   //   BOOST_REQUIRE_EQUAL( closerex( bob ),   wasm_assert_msg("account has remaining funds, must withdraw first") );
-   //   BOOST_REQUIRE_EQUAL( 0,                 get_rex_fund( bob ).get_amount() );
-   //   BOOST_REQUIRE_EQUAL( success(),         withdraw( bob, get_rex_fund( bob ) ) );
-   //   BOOST_REQUIRE_EQUAL( success(),         closerex( bob ) );
-   //   BOOST_REQUIRE_EQUAL( true,              get_rex_balance_obj( bob ).is_null() );
-   //   BOOST_REQUIRE_EQUAL( true,              get_rex_fund_obj( bob ).is_null() );
+   BOOST_REQUIRE_EQUAL( closerex( bob ),   wasm_assert_msg("account has remaining funds, must withdraw first") );
+   BOOST_REQUIRE_EQUAL( 0,                 get_rex_fund( bob ).get_amount() );
+   BOOST_REQUIRE_EQUAL( success(),         updaterex( bob ) );
+   BOOST_REQUIRE_EQUAL( success(),         withdraw( bob, get_rex_fund( bob ) ) );
+   BOOST_REQUIRE_EQUAL( success(),         closerex( bob ) );
+   BOOST_REQUIRE_EQUAL( true,              get_rex_balance_obj( bob ).is_null() );
+   BOOST_REQUIRE_EQUAL( true,              get_rex_fund_obj( bob ).is_null() );
 
 } FC_LOG_AND_RETHROW()
 
