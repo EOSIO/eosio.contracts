@@ -315,38 +315,51 @@ namespace eosiosystem {
          void delegatebw( name from, name receiver,
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
-
+         /**
+          * Deposits core tokens to user REX fund. All proceeds and expenses related to REX are added to
+          * or taken out of this fund. Inline token transfer from user balance is executed.
+          */
          [[eosio::action]]
          void deposit( const name& owner, const asset& amount );
          
+         /**
+          * Withdraws core tokens from user REX fund. Inline token transfer to user balance is executed.
+          */
          [[eosio::action]]
          void withdraw( const name& owner, const asset& amount );
 
          /**
-          * Transfers SYS tokens from user balance and credits converts them to REX stake.
+          * Transfers core tokens from user REX fund and converts them to REX stake.
+          * User votes are updated following this action.
           */
          [[eosio::action]]
          void buyrex( const name& from, const asset& amount );
 
          /**
-          * Converts REX stake back into SYS tokens at current exchange rate. If order cannot be 
-          * processed, it gets queued until it can be there is enough REX to fill order.
+          * Converts REX stake back into core tokens at current exchange rate. If order cannot be 
+          * processed, it gets queued until there is enough in REX pool to fill order.
+          * If successful, user votes are updated.
           */
          [[eosio::action]]
          void sellrex( const name& from, const asset& rex );
          
          /**
-          * Cancels queued sellrex order.
+          * Cancels queued sellrex order. Order cannot be cancelled once it's been filled.
           */
          [[eosio::action]]
          void cnclrexorder( const name& owner );
 
          /**
-          * Use payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
-          * after 30 days the rented SYS delegation of CPU or NET will expire unless auto_renew == true.
-          * If auto_renew == true, loan creator can fund that specific loan. Upon expiration, if loan has enough funds, it 
-          * gets renewed at current market price, otherwise, the loan is closed and remaining balance if refunded to loan 
-          * creator. User claims the refund in a separate action.
+          * Use payment to rent as many SYS tokens as possible and stake them for either CPU or NET for the 
+          * benefit of receiver, after 30 days the rented SYS delegation of CPU or NET will expire unless loan
+          * balance is larger than or equal to payment.
+          *
+          * If loan has enough balance, it gets renewed at current market price, otherwise, the is is closed
+          * and remaining balance is refunded to loan owner.
+          *
+          * Owner can fund or defund a loan at any time before its expiration.
+          *
+          * All loan expenses and refunds come out of or are added to owner's REX fund.
           */
          [[eosio::action]]
          void rentcpu( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund );
@@ -354,12 +367,15 @@ namespace eosiosystem {
          void rentnet( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund );
 
          /**
-          * Loan initiator funds a given CPU or NET loan. Loan must've been set as autorenew.
+          * Loan owner funds a given CPU or NET loan.
           */
          [[eosio::action]]
          void fundcpuloan( const name& from, uint64_t loan_num, const asset& payment );
          [[eosio::action]]
          void fundnetloan( const name& from, uint64_t loan_num, const asset& payment );
+         /**
+          * Loan owner defunds a given CPU or NET loan.
+          */
          [[eosio::action]]
          void defcpuloan( const name& from, uint64_t loan_num, const asset& amount );
          [[eosio::action]]
@@ -371,9 +387,17 @@ namespace eosiosystem {
          [[eosio::action]]
          void updaterex( const name& owner );
 
+         /**
+          * Processes max CPU loans, max NET loans, and max queued sellrex orders.
+          * Action does not execute anything related to a specific user.
+          */
          [[eosio::action]]
          void rexexec( const name& user, uint16_t max );
 
+         /**
+          * Deletes owner records from REX tables and frees used RAM. Owner must have no outstanding loans,
+          * REX balance, or remaining REX fund balance.
+          */
          [[eosio::action]]
          void closerex( const name& owner );
 

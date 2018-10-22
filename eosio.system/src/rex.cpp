@@ -125,9 +125,6 @@ namespace eosiosystem {
       update_rex_account( from, asset( 0, core_symbol() ), current_rex_stake - init_rex_stake );
    }
 
-   /**
-    * Converts REX stake back into SYS tokens at current exchange rate
-    */
    void system_contract::sellrex( const name& from, const asset& rex ) {
 
       runrex(2);
@@ -490,6 +487,13 @@ namespace eosiosystem {
       return rented_tokens;
    }
 
+   /**
+    * close_rex_order processes an incoming of already scheduled sellrex order. If REX pool has enough core
+    * tokens (not frozen in loans), order can be filled. In this case, REX pool totals, user rex_balance
+    * and user vote_stake are updated. However, user voting power is not updated inside this function. The
+    * function returns success flag, order proceeds, and vote stake change. These are used later to finish
+    * order processing, which includes transfering proceeds and updating user vote weight.
+    */
    rex_order_outcome system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
       auto rexitr = _rexpool.begin();
       const auto S0 = rexitr->total_lendable.amount;
@@ -497,9 +501,9 @@ namespace eosiosystem {
       const auto R1 = R0 - rex.amount;
       const auto S1 = (uint128_t(R1) * S0) / R0;
       asset proceeds( S0 - S1, core_symbol() );
-      asset stake_change( 0, core_symbol() );
-      
+      asset stake_change( 0, core_symbol() );      
       bool success = false;
+      
       if( proceeds.amount <= rexitr->total_unlent.amount ) {
          const int64_t init_vote_stake_amount = bitr->vote_stake.amount;
          const int64_t current_stake_value = ( uint128_t(bitr->rex_balance.amount) * S0 ) / R0;
@@ -572,6 +576,13 @@ namespace eosiosystem {
       });
    }
 
+   /**
+    * update_rex_account checks if user has a scheduled sellrex order that has been closed, completes its processing,
+    * and deletes it.
+    * Processing entails transfering proceeds to user REX fund and updating user vote weight.
+    * Additional proceeds and stake change can be passed.
+    * This function is called only by actions pushed by owner, unlike close_rex_order.
+    */
    void system_contract::update_rex_account( const name& owner, const asset& proceeds, const asset& delta_stake ) {
       asset to_fund( proceeds );
       asset to_stake( delta_stake );
