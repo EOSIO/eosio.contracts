@@ -267,7 +267,7 @@ namespace eosiosystem {
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
          rammarket               _rammarket;
-         rex_pool_table          _rextable;
+         rex_pool_table          _rexpool;
          rex_fund_table          _rexfunds;
          rex_balance_table       _rexbalance;
          rex_order_table         _rexorders;
@@ -496,7 +496,9 @@ namespace eosiosystem {
          void defund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& amount );
          void transfer_from_fund( const name& owner, const asset& amount );
          void transfer_to_fund( const name& owner, const asset& amount );
-         bool rex_loans_available()const { return _rexorders.begin() == _rexorders.end(); }
+         bool rex_loans_available()const { return _rexorders.begin() == _rexorders.end() && rex_available(); }
+         bool rex_system_initialized()const { return _rexpool.begin() != _rexpool.end(); }
+         bool rex_available()const { return rex_system_initialized() && _rexpool.begin()->total_rex.amount > 0; }
 
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,

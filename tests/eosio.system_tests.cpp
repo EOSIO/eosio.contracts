@@ -3914,8 +3914,8 @@ BOOST_FIXTURE_TEST_CASE( deposit_rex_fund, eosio_system_tester ) try {
 BOOST_FIXTURE_TEST_CASE( close_rex, eosio_system_tester ) try {
 
    const asset init_balance = core_sym::from_string("200.0000");
-   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount) };
-   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3];
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount), N(frankaccount) };
+   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3], frank = accounts[4];
    setup_rex_accounts( accounts, init_balance );
 
    BOOST_REQUIRE_EQUAL( false,             get_rex_fund_obj( alice ).is_null() );
@@ -3970,6 +3970,11 @@ BOOST_FIXTURE_TEST_CASE( close_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(),         closerex( bob ) );
    BOOST_REQUIRE_EQUAL( true,              get_rex_balance_obj( bob ).is_null() );
    BOOST_REQUIRE_EQUAL( true,              get_rex_fund_obj( bob ).is_null() );
+
+   BOOST_REQUIRE_EQUAL( 0,                 get_rex_pool()["total_rex"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( 0,                 get_rex_pool()["total_lendable"].as<asset>().get_amount() );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex loans are not currently available"),
+                        rentcpu( frank, frank, core_sym::from_string("1.0000") ) );
 
 } FC_LOG_AND_RETHROW()
 
