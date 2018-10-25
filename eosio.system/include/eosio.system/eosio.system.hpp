@@ -354,8 +354,8 @@ namespace eosiosystem {
           * benefit of receiver, after 30 days the rented SYS delegation of CPU or NET will expire unless loan
           * balance is larger than or equal to payment.
           *
-          * If loan has enough balance, it gets renewed at current market price, otherwise, the is is closed
-          * and remaining balance is refunded to loan owner.
+          * If loan has enough balance, it gets renewed at current market price, otherwise, it is closed and
+          * remaining balance is refunded to loan owner.
           *
           * Owner can fund or defund a loan at any time before its expiration.
           *
@@ -511,7 +511,8 @@ namespace eosiosystem {
          void update_resource_limits( const name& receiver, int64_t delta_cpu, int64_t delta_net );
          rex_order_outcome close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
          void update_rex_account( const name& owner, const asset& proceeds, const asset& unstake_quant );
-         void deposit_rex( const name& from, const asset& amount );
+         void channel_to_rex( const name& from, const asset& amount );
+         void channel_namebid_to_rex( const int64_t highest_bid );
          template <typename T>
          int64_t rent_rex( T& table, const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund );
          template <typename T>

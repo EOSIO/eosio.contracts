@@ -388,7 +388,7 @@ namespace eosiosystem {
 
       /// transfer from eosio.names to eosio.rex
       if( rexi->namebid_proceeds.amount > 0 ) {
-         deposit_rex( names_account, rexi->namebid_proceeds );
+         channel_to_rex( names_account, rexi->namebid_proceeds );
          _rexpool.modify( rexi, same_payer, [&]( auto& rt ) {
             rt.namebid_proceeds.amount = 0;
          });
@@ -524,18 +524,6 @@ namespace eosiosystem {
       return { success, proceeds, stake_change };
    }
 
-   void system_contract::deposit_rex( const name& from, const asset& amount ) {
-      if( rex_available() ) {
-         _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
-            rp.total_unlent.amount   += amount.amount;
-            rp.total_lendable.amount += amount.amount;
-         });
-         
-         INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { from, active_permission },
-            { from, rex_account, amount, std::string("transfer from ") + name{from}.to_string() + " REX"} );
-      }
-   }
-
    template <typename T>
    void system_contract::fund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& payment  ) {
       eosio_assert( payment.symbol == core_symbol(), "must use core token" );
@@ -596,6 +584,26 @@ namespace eosiosystem {
          transfer_to_fund( owner, to_fund );
       if( to_stake.amount != 0 )
          update_voting_power( owner, to_stake );
+   }
+
+   void system_contract::channel_to_rex( const name& from, const asset& amount ) {
+      if( rex_available() ) {
+         _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
+            rp.total_unlent.amount   += amount.amount;
+            rp.total_lendable.amount += amount.amount;
+         });
+
+         INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { from, active_permission },
+            { from, rex_account, amount, std::string("transfer from ") + name{from}.to_string() + " REX"} );
+      }
+   }
+
+   void system_contract::channel_namebid_to_rex( const int64_t highest_bid ) {
+      if( rex_available() ) {
+         _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
+            rp.namebid_proceeds.amount += highest_bid;
+         });
+      }
    }
 
 }; /// namespace eosiosystem

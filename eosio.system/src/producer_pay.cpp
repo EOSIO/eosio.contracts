@@ -65,11 +65,7 @@ namespace eosiosystem {
                 (current_time_point() - _gstate.thresh_activated_stake_time) > microseconds(14 * useconds_per_day)
             ) {
                _gstate.last_name_close = timestamp;
-               if( rex_available() ) {
-                  _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
-                     rp.namebid_proceeds.amount += highest->high_bid;
-                  });
-               }
+               channel_namebid_to_rex( highest->high_bid );
                idx.modify( highest, same_payer, [&]( auto& b ){
                   b.high_bid = -b.high_bid;
                });
