@@ -1,5 +1,5 @@
 {
-   "version": "eosio::abi/1.0",
+   "version": "cyberway::abi/1.0",
    "types": [{
       "new_type_name": "account_name",
       "type": "name"
@@ -82,7 +82,7 @@
       "name": "abi_hash",
       "base": "",
       "fields": [
-         {"name":"owner",  "type":"account_name"},
+         {"name":"owner",  "type":"name"},
          {"name":"hash",   "type":"checksum256"}
       ]
     },{
@@ -235,9 +235,15 @@
    "tables": [{
       "name": "abihash",
       "type": "abi_hash",
-      "index_type": "i64",
-      "key_names": ["owner"],
-      "key_types": ["account_name"]
+      "indexes": [
+         {
+            "name": "primary",
+            "unique": "true",
+            "orders": [
+                {"field": "owner", "order": "asc"}
+            ]
+         }
+      ]
     }],
    "ricardian_clauses": [],
    "abi_extensions": []
