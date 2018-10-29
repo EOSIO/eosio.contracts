@@ -242,7 +242,7 @@ namespace eosiosystem {
       
       void close()                { is_open = false;    }
       uint64_t primary_key()const { return owner.value; }
-      uint64_t by_time()const     { return is_open ? order_time.elapsed.count() : -order_time.elapsed.count(); }
+      uint64_t by_time()const     { return is_open ? order_time.elapsed.count() : std::numeric_limits<uint64_t>::max(); }
    };
 
    typedef eosio::multi_index< "rexqueue"_n, rex_order,
