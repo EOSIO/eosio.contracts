@@ -1,5 +1,5 @@
 {
-  "version": "eosio::abi/1.0",
+  "version": "cyberway::abi/1.0",
   "types": [{
       "new_type_name": "account_name",
       "type": "name"
@@ -134,7 +134,7 @@
       "name": "invalidation",
       "base": "",
       "fields": [
-        {"name": "account",                "type": "account_name"},
+        {"name": "account",                "type": "name"},
         {"name": "last_invalidation_time", "type": "time_point"}
       ]
     }
@@ -169,21 +169,51 @@
   "tables": [{
       "name": "proposal",
       "type": "proposal",
-      "index_type": "i64",
-      "key_names" : ["proposal_name"],
-      "key_types" : ["name"]
+      "indexes": [
+         {
+            "name": "primary",
+            "unique": "true",
+            "orders": [
+                {"field": "proposal_name", "order": "asc"}
+            ]
+         }
+      ]
     },{
       "name": "approvals",
       "type": "old_approvals_info",
-      "index_type": "i64",
-      "key_names" : ["proposal_name"],
-      "key_types" : ["name"]
+      "indexes": [
+         {
+            "name": "primary",
+            "unique": "true",
+            "orders": [
+                {"field": "proposal_name", "order": "asc"}
+            ]
+         }
+      ]
     },{
       "name": "approvals2",
       "type": "approvals_info",
-      "index_type": "i64",
-      "key_names" : ["proposal_name"],
-      "key_types" : ["name"]
+      "indexes": [
+         {
+            "name": "primary",
+            "unique": "true",
+            "orders": [
+                {"field": "proposal_name", "order": "asc"}
+            ]
+         }
+      ]
+    },{
+      "name": "invals",
+      "type": "invalidation",
+      "indexes": [
+         {
+            "name": "primary",
+            "unique": "true",
+            "orders": [
+                {"field": "account", "order": "asc"}
+            ]
+         }
+      ]
     }
   ],
   "ricardian_clauses": [],
