@@ -39,11 +39,13 @@ def run(args):
         sys.exit(1)
 
 def retry(args):
-    while True:
+    count = 5
+    while count:
+        count = count-1
         print('bios-boot-tutorial.py:', args)
         logFile.write(args + '\n')
         if subprocess.call(args, shell=True):
-            print('*** Retry')
+            print('*** Retry: ', count)
         else:
             break
 
@@ -132,7 +134,7 @@ def startProducers(b, e):
 
 def createSystemAccounts():
     for a in systemAccounts:
-        run(args.cleos + 'create account eosio ' + a + ' ' + args.public_key)
+        retry(args.cleos + 'create account eosio ' + a + ' ' + args.public_key)
 
 def intToCurrency(i):
     return '%d.%04d %s' % (i // 10000, i % 10000, args.symbol)
@@ -141,7 +143,7 @@ def allocateFunds(b, e):
     dist = numpy.random.pareto(1.161, e - b).tolist() # 1.161 = 80/20 rule
     dist.sort()
     dist.reverse()
-    factor = 1_000_000_000 / sum(dist)
+    factor = 1000000000 / sum(dist)
     total = 0
     for i in range(b, e):
         funds = round(factor * dist[i - b] * 10000)
@@ -209,7 +211,7 @@ def proxyVotes(b, e):
         retry(args.cleos + 'system voteproducer proxy ' + voter + ' ' + proxy)
 
 def updateAuth(account, permission, parent, controller):
-    run(args.cleos + 'push action eosio updateauth' + jsonArg({
+    retry(args.cleos + 'push action eosio updateauth' + jsonArg({
         'account': account,
         'permission': permission,
         'parent': parent,
@@ -226,7 +228,7 @@ def resign(account, controller):
     updateAuth(account, 'owner', '', controller)
     updateAuth(account, 'active', 'owner', controller)
     sleep(1)
-    run(args.cleos + 'get account ' + account)
+    retry(args.cleos + 'get account ' + account)
 
 def randomTransfer(b, e):
     for j in range(20):
@@ -243,12 +245,12 @@ def msigProposeReplaceSystem(proposer, proposalName):
     trxPermissions = [{'actor': 'eosio', 'permission': 'active'}]
     with open(fastUnstakeSystem, mode='rb') as f:
         setcode = {'account': 'eosio', 'vmtype': 0, 'vmversion': 0, 'code': f.read().hex()}
-    run(args.cleos + 'multisig propose ' + proposalName + jsonArg(requestedPermissions) + 
+    retry(args.cleos + 'multisig propose ' + proposalName + jsonArg(requestedPermissions) + 
         jsonArg(trxPermissions) + 'eosio setcode' + jsonArg(setcode) + ' -p ' + proposer)
 
 def msigApproveReplaceSystem(proposer, proposalName):
     for i in range(firstProducer, firstProducer + numProducers):
-        run(args.cleos + 'multisig approve ' + proposer + ' ' + proposalName +
+        retry(args.cleos + 'multisig approve ' + proposer + ' ' + proposalName +
             jsonArg({'actor': accounts[i]['name'], 'permission': 'active'}) +
             '-p ' + accounts[i]['name'])
 
@@ -256,7 +258,7 @@ def msigExecReplaceSystem(proposer, proposalName):
     retry(args.cleos + 'multisig exec ' + proposer + ' ' + proposalName + ' -p ' + proposer)
 
 def msigReplaceSystem():
-    run(args.cleos + 'push action eosio buyrambytes' + jsonArg(['eosio', accounts[0]['name'], 200000]) + '-p eosio')
+    retry(args.cleos + 'push action eosio buyrambytes' + jsonArg(['eosio', accounts[0]['name'], 200000]) + '-p eosio')
     sleep(1)
     msigProposeReplaceSystem(accounts[0]['name'], 'fast.unstake')
     sleep(1)
@@ -265,7 +267,7 @@ def msigReplaceSystem():
 
 def produceNewAccounts():
     with open('newusers', 'w') as f:
-        for i in range(120_000, 200_000):
+        for i in range(120000, 200000):
             x = getOutput(args.cleos + 'create key --to-console')
             r = re.match('Private key: *([^ \n]*)\nPublic key: *([^ \n]*)', x, re.DOTALL | re.MULTILINE)
             name = 'user'
@@ -282,19 +284,19 @@ def stepStartWallet():
     importKeys()
 def stepStartBoot():
     startNode(0, {'name': 'eosio', 'pvt': args.private_key, 'pub': args.public_key})
-    sleep(1.5)
+    sleep(7)
 def stepInstallSystemContracts():
-    run(args.cleos + 'set contract eosio.token ' + args.contracts_dir + 'eosio.token/')
-    run(args.cleos + 'set contract eosio.msig ' + args.contracts_dir + 'eosio.msig/')
+    retry(args.cleos + 'set contract eosio.token ' + args.contracts_dir + 'eosio.token/')
+    retry(args.cleos + 'set contract eosio.msig ' + args.contracts_dir + 'eosio.msig/')
 def stepCreateTokens():
-    run(args.cleos + 'push action eosio.token create \'["eosio", "10000000000.0000 %s"]\' -p eosio.token' % (args.symbol))
+    retry(args.cleos + 'push action eosio.token create \'["eosio", "10000000000.0000 %s"]\' -p eosio.token' % (args.symbol))
     totalAllocation = allocateFunds(0, len(accounts))
-    run(args.cleos + 'push action eosio.token issue \'["eosio", "%s", "memo"]\' -p eosio' % intToCurrency(totalAllocation))
+    retry(args.cleos + 'push action eosio.token issue \'["eosio", "%s", "memo"]\' -p eosio' % intToCurrency(totalAllocation))
     sleep(1)
 def stepSetSystemContract():
-    retry(args.cleos + 'set contract eosio ' + args.contracts_dir + 'eosio.system/')
+    retry(args.cleos + 'set contract eosio ' + args.contracts_dir + 'eosio.bios/')
     sleep(1)
-    run(args.cleos + 'push action eosio setpriv' + jsonArg(['eosio.msig', 1]) + '-p eosio@active')
+    retry(args.cleos + 'push action eosio setpriv' + jsonArg(['eosio.msig', 1]) + '-p eosio@active')
 def stepCreateStakedAccounts():
     createStakedAccounts(0, len(accounts))
 def stepRegProducers():
@@ -333,23 +335,24 @@ commands = [
     ('c', 'contracts',      stepInstallSystemContracts, True,    "Install system contracts (token, msig)"),
     ('t', 'tokens',         stepCreateTokens,           True,    "Create tokens"),
     ('S', 'sys-contract',   stepSetSystemContract,      True,    "Set system contract"),
-    ('T', 'stake',          stepCreateStakedAccounts,   True,    "Create staked accounts"),
-    ('p', 'reg-prod',       stepRegProducers,           True,    "Register producers"),
-    ('P', 'start-prod',     stepStartProducers,         True,    "Start producers"),
-    ('v', 'vote',           stepVote,                   True,    "Vote for producers"),
-    ('R', 'claim',          claimRewards,               True,    "Claim rewards"),
-    ('x', 'proxy',          stepProxyVotes,             True,    "Proxy votes"),
-    ('q', 'resign',         stepResign,                 True,    "Resign eosio"),
+    ('T', 'stake',          stepCreateStakedAccounts,   False,    "Create staked accounts"),
+    ('p', 'reg-prod',       stepRegProducers,           False,    "Register producers"),
+    ('P', 'start-prod',     stepStartProducers,         False,    "Start producers"),
+    ('v', 'vote',           stepVote,                   False,    "Vote for producers"),
+    ('R', 'claim',          claimRewards,               False,    "Claim rewards"),
+    ('x', 'proxy',          stepProxyVotes,             False,    "Proxy votes"),
+    ('q', 'resign',         stepResign,                 False,    "Resign eosio"),
     ('m', 'msg-replace',    msigReplaceSystem,          False,   "Replace system contract using msig"),
     ('X', 'xfer',           stepTransfer,               False,   "Random transfer tokens (infinite loop)"),
-    ('l', 'log',            stepLog,                    True,    "Show tail of node's log"),
+    ('l', 'log',            stepLog,                    False,    "Show tail of node's log"),
 ]
 
 parser.add_argument('--public-key', metavar='', help="EOSIO Public Key", default='GLS8Znrtgwt8TfpmbVpTKvA2oB8Nqey625CLN8bCN3TEbgx86Dsvr', dest="public_key")
 parser.add_argument('--private-Key', metavar='', help="EOSIO Private Key", default='5K463ynhZoCDDa4RDcr63cUwWLTnKqmdcoTKTHBjqoKfv4u5V7p', dest="private_key")
-parser.add_argument('--cleos', metavar='', help="Cleos command", default='../../build/programs/cleos/cleos --wallet-url http://127.0.0.1:6666 ')
-parser.add_argument('--nodeos', metavar='', help="Path to nodeos binary", default='../../build/programs/nodeos/nodeos')
-parser.add_argument('--keosd', metavar='', help="Path to keosd binary", default='../../build/programs/keosd/keosd')
+parser.add_argument('--programs-dir', metavar='', help="Programs directory for cleos, nodeos, keosd", default='../../build/programs');
+parser.add_argument('--cleos', metavar='', help="Cleos command (default in programs-dir)", default='cleos/cleos')
+parser.add_argument('--nodeos', metavar='', help="Path to nodeos binary (default in programs-dir)", default='nodeos/nodeos')
+parser.add_argument('--keosd', metavar='', help="Path to keosd binary (default in programs-dir", default='keosd/keosd')
 parser.add_argument('--contracts-dir', metavar='', help="Path to contracts directory", default='../../build/contracts/')
 parser.add_argument('--nodes-dir', metavar='', help="Path to nodes directory", default='./nodes/')
 parser.add_argument('--genesis', metavar='', help="Path to genesis.json", default="./genesis.json")
@@ -381,7 +384,16 @@ for (flag, command, function, inAll, help) in commands:
         
 args = parser.parse_args()
 
-args.cleos += '--url http://127.0.0.1:%d ' % args.http_port
+if (parser.get_default('cleos') == args.cleos):
+    args.cleos = args.programs_dir + '/' + args.cleos
+
+if (parser.get_default('nodeos') == args.nodeos):
+    args.nodeos = args.programs_dir + '/' + args.nodeos
+
+if (parser.get_default('keosd') == args.keosd):
+    args.keosd = args.programs_dir + '/' + args.keosd
+
+args.cleos += ' --wallet-url http://127.0.0.1:6666 --url http://127.0.0.1:%d ' % args.http_port
 
 logFile = open(args.log_path, 'a')
 
