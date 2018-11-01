@@ -6,6 +6,7 @@
 
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
+#include <eosiolib/time.hpp>
 
 #include <string>
 
@@ -16,6 +17,7 @@ namespace eosiosystem {
 namespace eosio {
 
    using std::string;
+   using eosio::permission_level;
 
    class [[eosio::contract("eosio.token")]] token : public contract {
       public:
@@ -42,6 +44,15 @@ namespace eosio {
 
          [[eosio::action]]
          void close( name owner, const symbol& symbol );
+
+         [[eosio::action]]
+         void lock( name owner, asset quantity, uint32_t unlock_delay_sec );
+
+         [[eosio::action]]      
+         void unlock( name owner, asset quantity );
+
+         [[eosio::action]]
+         void dounlock( name owner, asset quantity );
 
          static asset get_supply( name token_contract_account, symbol_code sym_code )
          {
@@ -72,8 +83,17 @@ namespace eosio {
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
 
+         struct [[eosio::table]] locked_account {
+               asset balance;
+               uint32_t unlock_delay_sec;
+               time_point_sec unlock_request_time;
+
+               uint64_t primary_key()const { return balance.symbol.code().raw(); }
+         };
+
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
+         typedef eosio::multi_index< "locked"_n, locked_account > locked_accounts;
 
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
