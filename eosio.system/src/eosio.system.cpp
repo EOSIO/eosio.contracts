@@ -54,26 +54,6 @@ namespace eosiosystem {
       _global3.set( _gstate3, _self );
    }
 
-   void system_contract::setram( uint64_t max_ram_size ) {
-      require_auth( _self );
-
-      eosio_assert( _gstate.max_ram_size < max_ram_size, "ram may only be increased" ); /// decreasing ram might result market maker issues
-      eosio_assert( max_ram_size < 1024ll*1024*1024*1024*1024, "ram size is unrealistic" );
-      eosio_assert( max_ram_size > _gstate.total_ram_bytes_reserved, "attempt to set max below reserved" );
-
-      auto delta = int64_t(max_ram_size) - int64_t(_gstate.max_ram_size);
-      auto itr = _rammarket.find(ramcore_symbol.raw());
-
-      /**
-       *  Increase the amount of ram for sale based upon the change in max ram size.
-       */
-      _rammarket.modify( itr, same_payer, [&]( auto& m ) {
-         m.base.balance.amount += delta;
-      });
-
-      _gstate.max_ram_size = max_ram_size;
-   }
-
    void system_contract::update_ram_supply() {
       auto cbt = current_block_time();
 
@@ -92,40 +72,6 @@ namespace eosiosystem {
       _gstate2.last_ram_increase = cbt;
    }
 
-   /**
-    *  Sets the rate of increase of RAM in bytes per block. It is capped by the uint16_t to
-    *  a maximum rate of 3 TB per year.
-    *
-    *  If update_ram_supply hasn't been called for the most recent block, then new ram will
-    *  be allocated at the old rate up to the present block before switching the rate.
-    */
-   void system_contract::setramrate( uint16_t bytes_per_block ) {
-      require_auth( _self );
-
-      update_ram_supply();
-      _gstate2.new_ram_per_block = bytes_per_block;
-   }
-
-   void system_contract::setparams( const eosio::blockchain_parameters& params ) {
-      require_auth( _self );
-      (eosio::blockchain_parameters&)(_gstate) = params;
-      eosio_assert( 3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3" );
-      set_blockchain_parameters( params );
-   }
-
-   void system_contract::setpriv( name account, uint8_t ispriv ) {
-      require_auth( _self );
-      set_privileged( account.value, ispriv );
-   }
-
-   void system_contract::setalimits( name account, int64_t ram, int64_t net, int64_t cpu ) {
-      require_auth( _self );
-      user_resources_table userres( _self, account.value );
-      auto ritr = userres.find( account.value );
-      eosio_assert( ritr == userres.end(), "only supports unlimited accounts" );
-      set_resource_limits( account.value, ram, net, cpu );
-   }
-
    void system_contract::rmvproducer( name producer ) {
       require_auth( _self );
       auto prod = _producers.find( producer.value );
@@ -133,15 +79,6 @@ namespace eosiosystem {
       _producers.modify( prod, same_payer, [&](auto& p) {
             p.deactivate();
          });
-   }
-
-   void system_contract::updtrevision( uint8_t revision ) {
-      require_auth( _self );
-      eosio_assert( _gstate2.revision < 255, "can not increment revision" ); // prevent wrap around
-      eosio_assert( revision == _gstate2.revision + 1, "can only increment revision by one" );
-      eosio_assert( revision <= 1, // set upper bound to greatest revision supported in the code
-                    "specified revision is not yet supported by the code" );
-      _gstate2.revision = revision;
    }
 
    void system_contract::bidname( name bidder, name newname, asset bid ) {
