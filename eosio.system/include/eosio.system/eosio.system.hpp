@@ -412,12 +412,17 @@ namespace eosiosystem {
          //defined in system_kick.cpp 
          bool crossed_missed_blocks_threshold(uint32_t amountBlocksMissed, uint32_t schedule_size);
          void reset_schedule_metrics(name producer);
-         void update_missed_blocks_per_rotation();
          void update_producer_missed_blocks(name producer);
          bool is_new_schedule_activated(capi_name active_schedule[], uint32_t size);
          bool check_missed_blocks(block_timestamp timestamp, name producer);
 
-
+         //define in system_rotation.cpp
+         void set_bps_rotation(name bpOut, name sbpIn); 
+         void update_rotation_time(block_timestamp block_time);
+         void update_missed_blocks_per_rotation();
+         void restart_missed_blocks_per_rotation(std::vector<eosio::producer_key> prods);
+         bool is_in_range(int32_t index, int32_t low_bound, int32_t up_bound);
+         std::vector<eosio::producer_key> check_rotation_state(std::vector<eosio::producer_key> producers, block_timestamp block_time);
    };
 
 } /// eosiosystem

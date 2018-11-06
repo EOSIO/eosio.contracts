@@ -1,7 +1,5 @@
 #include <eosio.system/eosio.system.hpp>
-
 #include <eosio.token/eosio.token.hpp>
-
 #include "system_kick.cpp"
 
 namespace eosiosystem {

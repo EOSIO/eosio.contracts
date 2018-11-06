@@ -15,6 +15,8 @@
 #include <eosiolib/transaction.hpp>
 #include <eosio.token/eosio.token.hpp>
 
+#include "system_rotation.cpp"
+
 #include <algorithm>
 #include <cmath>
 
@@ -78,30 +80,39 @@ namespace eosiosystem {
 
       auto idx = _producers.get_index<"prototalvote"_n>();
 
-      std::vector< std::pair<eosio::producer_key,uint16_t> > top_producers;
-      top_producers.reserve(21);
+      uint32_t totalActiveVotedProds = uint32_t(std::distance(idx.begin(), idx.end()));
+      totalActiveVotedProds = totalActiveVotedProds > MAX_PRODUCERS ? MAX_PRODUCERS : totalActiveVotedProds;
 
-      for ( auto it = idx.cbegin(); it != idx.cend() && top_producers.size() < 21 && 0 < it->total_votes && it->active(); ++it ) {
-         top_producers.emplace_back( std::pair<eosio::producer_key,uint16_t>({{it->owner, it->producer_key}, it->location}) );
+      std::vector<eosio::producer_key> prods;
+      prods.reserve(size_t(totalActiveVotedProds));
+
+      for ( auto it = idx.cbegin(); it != idx.cend() && prods.size() < totalActiveVotedProds && it->total_votes > 0 && it->active(); ++it ) {
+         prods.emplace_back( eosio::producer_key{it->owner, it->producer_key} );
       }
 
-      if ( top_producers.size() < _gstate.last_producer_schedule_size ) {
-         return;
-      }
+      std::vector<eosio::producer_key> top_producers = check_rotation_state(prods, block_time);
 
       /// sort by producer name
       std::sort( top_producers.begin(), top_producers.end() );
+      auto packed_schedule = pack(top_producers);
 
-      std::vector<eosio::producer_key> producers;
+      auto schedule_version = set_proposed_producers( packed_schedule.data(),  packed_schedule.size());
+      if (schedule_version >= 0) {
+        print("\n**new schedule was proposed**");
+        
+        _gstate.last_proposed_schedule_update = block_time;
 
-      producers.reserve(top_producers.size());
-      for( const auto& item : top_producers )
-         producers.push_back(item.first);
-
-      auto packed_schedule = pack(producers);
-
-      if( set_proposed_producers( packed_schedule.data(),  packed_schedule.size() ) >= 0 ) {
-         _gstate.last_producer_schedule_size = static_cast<decltype(_gstate.last_producer_schedule_size)>( top_producers.size() );
+        _gschedule_metrics.producers_metric.erase( _gschedule_metrics.producers_metric.begin(), _gschedule_metrics.producers_metric.end());
+        
+        std::vector<producer_metric> psm;
+        std::for_each(top_producers.begin(), top_producers.end(), [&psm](auto &tp) {
+          auto bp_name = tp.producer_name;
+          psm.emplace_back(producer_metric{ bp_name, 12 });
+        });
+ 
+        _gschedule_metrics.producers_metric = psm;
+        
+        _gstate.last_producer_schedule_size = static_cast<decltype(_gstate.last_producer_schedule_size)>(top_producers.size());
       }
    }
 
