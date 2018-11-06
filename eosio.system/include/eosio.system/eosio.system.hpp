@@ -200,6 +200,7 @@ namespace eosiosystem {
       name                proxy;     /// the proxy set by the voter, if any
       std::vector<name>   producers; /// the producers approved by this voter if no proxy set
       int64_t             staked = 0;
+      int64_t             last_stake = 0;
 
       /**
        *  Every time a vote is cast we must first "undo" the last vote weight, before casting the
@@ -408,6 +409,8 @@ namespace eosiosystem {
 
          // defined in voting.cpp
          void propagate_weight_change( const voter_info& voter );
+         double inverse_vote_weight(double staked, double amountVotedProducers);
+         void recalculate_votes();
 
          //defined in system_kick.cpp 
          bool crossed_missed_blocks_threshold(uint32_t amountBlocksMissed, uint32_t schedule_size);

@@ -54,6 +54,8 @@ namespace eosiosystem {
          });
       }
 
+      recalculate_votes();
+
       /// only update block producers once every minute, block_timestamp is in half seconds
       if( timestamp.slot - _gstate.last_producer_schedule_update.slot > 120 ) {
          update_elected_producers( timestamp );
