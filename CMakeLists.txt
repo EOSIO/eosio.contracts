@@ -5,8 +5,6 @@ set(EOSIO_CDT_VERSION_MIN "1.3")
 set(EOSIO_CDT_VERSION_SOFT_MAX "1.3")
 #set(EOSIO_CDT_VERSION_HARD_MAX "")
 
-include(CheckVersion.txt)
-
 find_package(eosio.cdt)
 
 ### Check the version of eosio.cdt
