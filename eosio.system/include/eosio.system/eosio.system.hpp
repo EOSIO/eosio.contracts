@@ -207,17 +207,6 @@ namespace eosiosystem {
                         (location)(kick_reason_id)(kick_reason)(times_kicked)(kick_penalty_hours)(last_time_kicked) )
    };
 
-   struct [[eosio::table, eosio::contract("eosio.system")]] producer_info2 {
-      name            owner;
-      double          votepay_share = 0;
-      time_point      last_votepay_share_update;
-
-      uint64_t primary_key()const { return owner.value; }
-
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
-   };
-
    struct [[eosio::table, eosio::contract("eosio.system")]] voter_info {
       name                owner;     /// the voter
       name                proxy;     /// the proxy set by the voter, if any
@@ -255,20 +244,18 @@ namespace eosiosystem {
    typedef eosio::multi_index< "producers"_n, producer_info,
                                indexed_by<"prototalvote"_n, const_mem_fun<producer_info, double, &producer_info::by_votes>  >
                              > producers_table;
-   typedef eosio::multi_index< "producers2"_n, producer_info2 > producers_table2;
-
+   
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
    typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
-  //  static constexpr uint32_t     seconds_per_day = 24 * 3600;
+   static constexpr uint32_t     seconds_per_day = 24 * 3600;
 
    class [[eosio::contract("eosio.system")]] system_contract : public native {
       private:
          voters_table            _voters;
          producers_table         _producers;
-         producers_table2        _producers2;
          global_state_singleton  _global;
          global_state2_singleton _global2;
          global_state3_singleton _global3;
@@ -439,12 +426,6 @@ namespace eosiosystem {
 
          // defined in voting.cpp
          void propagate_weight_change( const voter_info& voter );
-
-         double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
-                                               time_point ct,
-                                               double shares_rate, bool reset_to_zero = false );
-         double update_total_votepay_share( time_point ct,
-                                            double additional_shares_delta = 0.0, double shares_rate_delta = 0.0 );
    };
 
 } /// eosiosystem

@@ -14,7 +14,6 @@ namespace eosiosystem {
    :native(s,code,ds),
     _voters(_self, _self.value),
     _producers(_self, _self.value),
-    _producers2(_self, _self.value),
     _global(_self, _self.value),
     _global2(_self, _self.value),
     _global3(_self, _self.value),

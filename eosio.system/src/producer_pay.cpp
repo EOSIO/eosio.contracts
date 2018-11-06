@@ -123,7 +123,7 @@ namespace eosiosystem {
          _gstate.last_pervote_bucket_fill = ct;
       }
 
-      auto prod2 = _producers2.find( owner.value );
+      
 
       /// New metric to be used in pervote pay calculation. Instead of vote weight ratio, we combine vote weight and
       /// time duration the vote weight has been held into one metric.
@@ -131,14 +131,7 @@ namespace eosiosystem {
 
       bool crossed_threshold       = (last_claim_plus_3days <= ct);
       bool updated_after_threshold = true;
-      if ( prod2 != _producers2.end() ) {
-         updated_after_threshold = (last_claim_plus_3days <= prod2->last_votepay_share_update);
-      } else {
-         prod2 = _producers2.emplace( owner, [&]( producer_info2& info  ) {
-            info.owner                     = owner;
-            info.last_votepay_share_update = ct;
-         });
-      }
+      
 
       // Note: updated_after_threshold implies cross_threshold (except if claiming rewards when the producers2 table row did not exist).
       // The exception leads to updated_after_threshold to be treated as true regardless of whether the threshold was crossed.
@@ -150,26 +143,9 @@ namespace eosiosystem {
          producer_per_block_pay = (_gstate.perblock_bucket * prod.unpaid_blocks) / _gstate.total_unpaid_blocks;
       }
 
-      double new_votepay_share = update_producer_votepay_share( prod2,
-                                    ct,
-                                    updated_after_threshold ? 0.0 : prod.total_votes,
-                                    true // reset votepay_share to zero after updating
-                                 );
-
+     
       int64_t producer_per_vote_pay = 0;
-      if( _gstate2.revision > 0 ) {
-         double total_votepay_share = update_total_votepay_share( ct );
-         if( total_votepay_share > 0 && !crossed_threshold ) {
-            producer_per_vote_pay = int64_t((new_votepay_share * _gstate.pervote_bucket) / total_votepay_share);
-            if( producer_per_vote_pay > _gstate.pervote_bucket )
-               producer_per_vote_pay = _gstate.pervote_bucket;
-         }
-      } else {
-         if( _gstate.total_producer_vote_weight > 0 ) {
-            producer_per_vote_pay = int64_t((_gstate.pervote_bucket * prod.total_votes) / _gstate.total_producer_vote_weight);
-         }
-      }
-
+    
       if( producer_per_vote_pay < min_pervote_daily_pay ) {
          producer_per_vote_pay = 0;
       }
@@ -177,8 +153,6 @@ namespace eosiosystem {
       _gstate.pervote_bucket      -= producer_per_vote_pay;
       _gstate.perblock_bucket     -= producer_per_block_pay;
       _gstate.total_unpaid_blocks -= prod.unpaid_blocks;
-
-      update_total_votepay_share( ct, -new_votepay_share, (updated_after_threshold ? prod.total_votes : 0.0) );
 
       _producers.modify( prod, same_payer, [&](auto& p) {
          p.last_claim_time = ct;
