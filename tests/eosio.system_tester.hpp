@@ -510,7 +510,7 @@ public:
                             const asset& init_balance,
                             const asset& net = core_sym::from_string("80.0000"),
                             const asset& cpu = core_sym::from_string("80.0000"),
-                            bool deposit_into_rex = true ) {
+                            bool deposit_into_rex_fund = true ) {
       const asset nstake = core_sym::from_string("10.0000");
       const asset cstake = core_sym::from_string("10.0000");
       create_account_with_resources( N(proxyaccount), config::system_account_name, core_sym::from_string("1.0000"), false, net, cpu );
@@ -522,7 +522,7 @@ public:
          BOOST_REQUIRE_EQUAL( success(),                        vote( a, { }, N(proxyaccount) ) );
          BOOST_REQUIRE_EQUAL( init_balance,                     get_balance(a) );
          BOOST_REQUIRE_EQUAL( asset::from_string("0.0000 REX"), get_rex_balance(a) );
-         if (deposit_into_rex) {
+         if (deposit_into_rex_fund) {
             BOOST_REQUIRE_EQUAL( success(),    deposit( a, init_balance ) );
             BOOST_REQUIRE_EQUAL( init_balance, get_rex_fund( a ) );
             BOOST_REQUIRE_EQUAL( 0,            get_balance( a ).get_amount() );

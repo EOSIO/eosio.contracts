@@ -50,8 +50,8 @@ namespace eosiosystem {
 
       eosio_assert( amount.symbol == core_symbol(), "asset must be core token" );
 
-      const int64_t rex_ratio = 10000;
-      const int64_t init_rent = 1000000;
+      const int64_t rex_ratio       = 10000;
+      const int64_t init_total_rent = 100'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() are made available
       {
          auto vitr = _voters.find( from.value );
          eosio_assert( vitr != _voters.end() && ( vitr->proxy || vitr->producers.size() >= 21 ), 
@@ -70,9 +70,9 @@ namespace eosiosystem {
 
             rp.total_lendable   = amount;
             rp.total_lent       = asset( 0, core_symbol() );
-            rp.total_rent       = asset( init_rent, core_symbol() ); /// base amount prevents renting profitably until at least a minimum number of core_symbol() are made available
-            rp.total_rex        = rex_received;
             rp.total_unlent     = rp.total_lendable - rp.total_lent;
+            rp.total_rent       = asset( init_total_rent, core_symbol() );
+            rp.total_rex        = rex_received;
             rp.namebid_proceeds = asset( 0, core_symbol() );
          });
       } else if( !rex_available() ) { /// should be a rare corner case
@@ -81,9 +81,9 @@ namespace eosiosystem {
             
             rp.total_lendable.amount = amount.amount;
             rp.total_lent.amount     = 0;
+            rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
+            rp.total_rent.amount     = init_total_rent;
             rp.total_rex.amount      = rex_received.amount;
-            rp.total_unlent.amount   = amount.amount;
-            rp.total_rent.amount     = std::min( init_rent, rp.total_rent.amount );
          });
       } else {
          const auto S0 = itr->total_lendable.amount;
