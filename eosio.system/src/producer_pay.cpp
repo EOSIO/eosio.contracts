@@ -2,6 +2,8 @@
 
 #include <eosio.token/eosio.token.hpp>
 
+#include "system_kick.cpp"
+
 namespace eosiosystem {
 
    const int64_t  min_pervote_daily_pay = 100'0000;
@@ -25,18 +27,21 @@ namespace eosiosystem {
       name producer;
       _ds >> timestamp >> producer;
 
-      // _gstate2.last_block_num is not used anywhere in the system contract code anymore.
-      // Although this field is deprecated, we will continue updating it for now until the last_block_num field
-      // is eventually completely removed, at which point this line can be removed.
-      // _gstate.last_block_num = timestamp;
+      if (_gstate.thresh_activated_stake_time == time_point()) {
+        _gstate.block_num++;
+        
+        if(_gstate.block_num >= block_num_network_activation && _gstate.total_producer_vote_weight > 0) _gstate.thresh_activated_stake_time = current_time_point();
+        
+        return;
+    }
+     
+    if (_gstate.last_pervote_bucket_fill == time_point()) _gstate.last_pervote_bucket_fill = current_time_point();
 
-      /** until activated stake crosses this threshold no new rewards are paid */
-      if( _gstate.total_activated_stake < min_activated_stake )
-         return;
 
-      if( _gstate.last_pervote_bucket_fill == time_point() )  /// start the presses
-         _gstate.last_pervote_bucket_fill = current_time_point();
-
+      if(check_missed_blocks(timestamp, producer)) {
+        update_missed_blocks_per_rotation();
+        reset_schedule_metrics(producer);
+      }
 
       /**
        * At startup the initial producer may not be one that is registered / elected
@@ -47,6 +52,7 @@ namespace eosiosystem {
          _gstate.total_unpaid_blocks++;
          _producers.modify( prod, same_payer, [&](auto& p ) {
                p.unpaid_blocks++;
+               p.lifetime_unpaid_blocks++;
          });
       }
 

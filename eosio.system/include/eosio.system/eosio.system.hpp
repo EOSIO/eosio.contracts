@@ -27,6 +27,8 @@ namespace eosiosystem {
    using eosio::microseconds;
    using eosio::datastream;
 
+   const uint32_t block_num_network_activation = 10800; 
+
    struct[[ eosio::table, eosio::contract("eosio.system") ]] payment_info {
      name bp;
      asset pay;
@@ -406,6 +408,16 @@ namespace eosiosystem {
 
          // defined in voting.cpp
          void propagate_weight_change( const voter_info& voter );
+
+         //defined in system_kick.cpp 
+         bool crossed_missed_blocks_threshold(uint32_t amountBlocksMissed, uint32_t schedule_size);
+         void reset_schedule_metrics(name producer);
+         void update_missed_blocks_per_rotation();
+         void update_producer_missed_blocks(name producer);
+         bool is_new_schedule_activated(capi_name active_schedule[], uint32_t size);
+         bool check_missed_blocks(block_timestamp timestamp, name producer);
+
+
    };
 
 } /// eosiosystem
