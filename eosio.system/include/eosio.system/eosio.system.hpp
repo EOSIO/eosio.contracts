@@ -403,11 +403,12 @@ namespace eosiosystem {
          void changebw( name from, name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
-         //defined in voting.hpp
-         void update_elected_producers( block_timestamp timestamp );
-         void update_votes( const name voter, const name proxy, const std::vector<name>& producers, bool voting );
+         // defined in producer_pay.cpp 
+         void claimrewards_snapshot(); 
 
          // defined in voting.cpp
+         void update_elected_producers( block_timestamp timestamp );
+         void update_votes( const name voter, const name proxy, const std::vector<name>& producers, bool voting );
          void propagate_weight_change( const voter_info& voter );
          double inverse_vote_weight(double staked, double amountVotedProducers);
          void recalculate_votes();
