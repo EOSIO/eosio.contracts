@@ -11,6 +11,7 @@
 #include <eosiolib/singleton.hpp>
 #include <eosio.system/exchange_state.hpp>
 
+#include <cmath>  
 #include <string>
 
 namespace eosiosystem {
@@ -25,6 +26,49 @@ namespace eosiosystem {
    using eosio::time_point;
    using eosio::microseconds;
    using eosio::datastream;
+
+   struct[[ eosio::table, eosio::contract("eosio.system") ]] payment_info {
+     name bp;
+     asset pay;
+
+     uint64_t primary_key() const { return bp.value; }
+     EOSLIB_SERIALIZE(payment_info, (bp)(pay))
+   };
+
+   typedef eosio::multi_index< "payments"_n, payment_info > payments_table;
+
+   struct [[eosio::table("schedulemetr"), eosio::contract("eosio.system")]] schedule_metrics_state {
+     name                     last_onblock_caller;
+     int32_t                          block_counter_correction;  
+     std::vector<producer_metric>     producers_metric;
+
+     uint64_t primary_key()const { return last_onblock_caller.value; }
+     // explicit serialization macro is not necessary, used here only to improve compilation time
+     EOSLIB_SERIALIZE(schedule_metrics_state, (last_onblock_caller)(block_counter_correction)(producers_metric))
+   };
+
+   typedef eosio::singleton< "schedulemetr"_n, schedule_metrics_state > schedule_metrics_singleton;
+   
+   struct [[eosio::table("rotations"), eosio::contract("eosio.system")]] rotation_state {
+      // bool                            is_rotation_active = true;
+      name                    bp_currently_out;
+      name                    sbp_currently_in;
+      uint32_t                bp_out_index;
+      uint32_t                sbp_in_index;
+      block_timestamp         next_rotation_time;
+      block_timestamp         last_rotation_time;
+
+      //NOTE: This might not be the best place for this information
+
+      // bool                            is_kick_active = true;
+      // account_name                    last_onblock_caller;
+      // block_timestamp                 last_time_block_produced;
+      
+      EOSLIB_SERIALIZE( rotation_state, /*(is_rotation_active)*/(bp_currently_out)(sbp_currently_in)(bp_out_index)(sbp_in_index)(next_rotation_time)
+                        (last_rotation_time)/*(is_kick_active)(last_onblock_caller)(last_time_block_produced)*/ )
+   };
+
+   typedef eosio::singleton< "rotations"_n, rotation_state> rotation_singleton;
 
    struct [[eosio::table, eosio::contract("eosio.system")]] name_bid {
      name            newname;
@@ -99,6 +143,12 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
    };
 
+  enum class kick_type {
+     REACHED_TRESHOLD = 1,
+    //  PREVENT_LIB_STOP_MOVING = 2,
+     BPS_VOTING = 2
+   };
+
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
       name                  owner;
       double                total_votes = 0;
@@ -106,17 +156,55 @@ namespace eosiosystem {
       bool                  is_active = true;
       std::string           url;
       uint32_t              unpaid_blocks = 0;
+      uint32_t              lifetime_unpaid_blocks = 0;
+      uint32_t              missed_blocks_per_rotation = 0;
+      uint32_t              lifetime_missed_blocks = 0;
       time_point            last_claim_time;
       uint16_t              location = 0;
+      
+      uint32_t              kick_reason_id = 0;
+      std::string           kick_reason;
+      uint32_t              times_kicked = 0;
+      uint32_t              kick_penalty_hours = 0; 
+      block_timestamp       last_time_kicked;
 
       uint64_t primary_key()const { return owner.value;                             }
       double   by_votes()const    { return is_active ? -total_votes : total_votes;  }
       bool     active()const      { return is_active;                               }
       void     deactivate()       { producer_key = public_key(); is_active = false; }
 
+      void kick(kick_type kt, uint32_t penalty = 0) {
+        times_kicked++;
+        last_time_kicked = block_timestamp(eosio::time_point(eosio::microseconds(int64_t(current_time()))));
+        
+        if(penalty == 0) kick_penalty_hours  = uint32_t(std::pow(2, times_kicked));
+        
+        switch(kt) {
+          case kick_type::REACHED_TRESHOLD:
+            kick_reason_id = uint32_t(kick_type::REACHED_TRESHOLD);
+            kick_reason = "Producer account was deactivated because it reached the maximum missed blocks in this rotation timeframe.";
+          break;
+          // case kick_type::PREVENT_LIB_STOP_MOVING:
+          //   kick_reason_id = uint32_t(kick_type::PREVENT_LIB_STOP_MOVING);
+          //   kick_reason = "Producer account was deactivated to prevent the LIB from halting.";
+          // break;
+          case kick_type::BPS_VOTING:
+            kick_reason_id = uint32_t(kick_type::BPS_VOTING);
+            kick_reason = "Producer account was deactivated by vote.";
+            kick_penalty_hours = penalty;
+          break;
+        }
+        lifetime_missed_blocks += missed_blocks_per_rotation;
+        missed_blocks_per_rotation = 0;
+        // print("\nblock producer: ", name{owner}, " was kicked.");
+        deactivate();
+      } 
+      
+
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
-                        (unpaid_blocks)(last_claim_time)(location) )
+                        (unpaid_blocks)(lifetime_unpaid_blocks)(missed_blocks_per_rotation)(lifetime_missed_blocks)(last_claim_time)
+                        (location)(kick_reason_id)(kick_reason)(times_kicked)(kick_penalty_hours)(last_time_kicked) )
    };
 
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info2 {
@@ -174,7 +262,7 @@ namespace eosiosystem {
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
-   static constexpr uint32_t     seconds_per_day = 24 * 3600;
+  //  static constexpr uint32_t     seconds_per_day = 24 * 3600;
 
    class [[eosio::contract("eosio.system")]] system_contract : public native {
       private:
@@ -188,6 +276,12 @@ namespace eosiosystem {
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
          rammarket               _rammarket;
+
+         schedule_metrics_singleton  _schedule_metrics;
+         schedule_metrics_state      _gschedule_metrics;
+         rotation_singleton          _rotation;
+         rotation_state              _grotation;
+         payments_table              _payments;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};

@@ -18,6 +18,15 @@ namespace eosiosystem {
    using eosio::public_key;
    using eosio::ignore;
 
+   struct producer_metric {
+     name bp_name;
+     uint32_t missed_blocks_per_cycle = 12;
+
+     // explicit serialization macro is not necessary, used here only to improve
+     // compilation time
+     EOSLIB_SERIALIZE(producer_metric, (bp_name)(missed_blocks_per_cycle))
+   };
+
    struct permission_level_weight {
       permission_level  permission;
       uint16_t          weight;

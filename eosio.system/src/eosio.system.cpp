@@ -18,13 +18,19 @@ namespace eosiosystem {
     _global(_self, _self.value),
     _global2(_self, _self.value),
     _global3(_self, _self.value),
-    _rammarket(_self, _self.value)
+    _rammarket(_self, _self.value),
+    _schedule_metrics(_self, _self.value),
+    _rotation(_self, _self.value),
+    _payments(_self, _self.value)
    {
-
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
       _gstate3 = _global3.exists() ? _global3.get() : eosio_global_state3{};
+      
+
+      _gschedule_metrics = _schedule_metrics.get_or_create(_self, schedule_metrics_state{ name(0), 0, std::vector<producer_metric>() });
+      _grotation = _rotation.get_or_create(_self, rotation_state{ name(0), name(0), 21, 75, block_timestamp(), block_timestamp() });
    }
 
    eosio_global_state system_contract::get_default_parameters() {
@@ -52,6 +58,9 @@ namespace eosiosystem {
       _global.set( _gstate, _self );
       _global2.set( _gstate2, _self );
       _global3.set( _gstate3, _self );
+
+      _schedule_metrics.set(_gschedule_metrics, _self);
+      _rotation.set(_grotation, _self);
    }
 
    void system_contract::setram( uint64_t max_ram_size ) {
