@@ -96,11 +96,12 @@ namespace eosiosystem {
    struct [[eosio::table("global"), eosio::contract("eosio.system")]] eosio_global_state : eosio::blockchain_parameters {
       uint64_t free_ram()const { return max_ram_size - total_ram_bytes_reserved; }
 
-      uint64_t             max_ram_size = 64ll*1024 * 1024 * 1024;
+      uint64_t             max_ram_size = 12ll*1024 * 1024 * 1024;
       uint64_t             total_ram_bytes_reserved = 0;
       int64_t              total_ram_stake = 0;
 
       block_timestamp      last_producer_schedule_update;
+      block_timestamp      last_proposed_schedule_update;
       time_point           last_pervote_bucket_fill;
       int64_t              pervote_bucket = 0;
       int64_t              perblock_bucket = 0;
@@ -110,37 +111,22 @@ namespace eosiosystem {
       uint16_t             last_producer_schedule_size = 0;
       double               total_producer_vote_weight = 0; /// the sum of all producer votes
       block_timestamp      last_name_close;
+      uint32_t             block_num = 12;
+      uint32_t             last_claimrewards = 0;
+      uint32_t             next_payment = 0;
+      uint16_t             new_ram_per_block = 0;
+      block_timestamp      last_ram_increase;
+      block_timestamp      last_block_num; /* deprecated */
+      double               total_producer_votepay_share = 0;
+      uint8_t              revision = 0; ///< used to track version updates in the future.
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE_DERIVED( eosio_global_state, eosio::blockchain_parameters,
                                 (max_ram_size)(total_ram_bytes_reserved)(total_ram_stake)
-                                (last_producer_schedule_update)(last_pervote_bucket_fill)
+                                (last_producer_schedule_update)(last_proposed_schedule_update)(last_pervote_bucket_fill)
                                 (pervote_bucket)(perblock_bucket)(total_unpaid_blocks)(total_activated_stake)(thresh_activated_stake_time)
-                                (last_producer_schedule_size)(total_producer_vote_weight)(last_name_close) )
-   };
-
-   /**
-    * Defines new global state parameters added after version 1.0
-    */
-   struct [[eosio::table("global2"), eosio::contract("eosio.system")]] eosio_global_state2 {
-      eosio_global_state2(){}
-
-      uint16_t          new_ram_per_block = 0;
-      block_timestamp   last_ram_increase;
-      block_timestamp   last_block_num; /* deprecated */
-      double            total_producer_votepay_share = 0;
-      uint8_t           revision = 0; ///< used to track version updates in the future.
-
-      EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)
-                        (total_producer_votepay_share)(revision) )
-   };
-
-   struct [[eosio::table("global3"), eosio::contract("eosio.system")]] eosio_global_state3 {
-      eosio_global_state3() { }
-      time_point        last_vpay_state_update;
-      double            total_vpay_share_change_rate = 0;
-
-      EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
+                                (last_producer_schedule_size)(total_producer_vote_weight)(last_name_close)(block_num)(last_claimrewards)(next_payment)
+                                (new_ram_per_block)(last_ram_increase)(last_block_num)(total_producer_votepay_share)(revision) )
    };
 
   enum class kick_type {
@@ -246,23 +232,17 @@ namespace eosiosystem {
                              > producers_table;
    
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
-   typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
-   typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
 
    class [[eosio::contract("eosio.system")]] system_contract : public native {
       private:
-         voters_table            _voters;
-         producers_table         _producers;
-         global_state_singleton  _global;
-         global_state2_singleton _global2;
-         global_state3_singleton _global3;
-         eosio_global_state      _gstate;
-         eosio_global_state2     _gstate2;
-         eosio_global_state3     _gstate3;
-         rammarket               _rammarket;
+         voters_table                _voters;
+         producers_table             _producers;
+         global_state_singleton      _global;
+         eosio_global_state          _gstate;
+         rammarket                   _rammarket;
 
          schedule_metrics_singleton  _schedule_metrics;
          schedule_metrics_state      _gschedule_metrics;
