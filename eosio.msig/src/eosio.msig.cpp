@@ -59,7 +59,7 @@ void multisig::propose( ignore<name> proposer,
 }
 
 void multisig::approve( name proposer, name proposal_name, permission_level level,
-                        const eosio::binary_extension<eosio::digest256>& proposal_hash )
+                        const eosio::binary_extension<eosio::checksum256>& proposal_hash )
 {
    require_auth( level );
 
