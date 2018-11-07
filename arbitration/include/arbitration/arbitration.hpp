@@ -79,7 +79,6 @@ public:
   // NOTE: diminishing subsequent response (default) times
   // NOTE: initial deposit saved
   // NOTE: class of claim where neither party can pay fees, TF pays instead
-  /// @abi table context i64
   struct [[eosio::table("configs"), eosio::contract("arbitration")]] config {
     name publisher;
     uint16_t max_arbs;
@@ -92,72 +91,69 @@ public:
     EOSLIB_SERIALIZE(config, (publisher)(max_arbs)(default_time))
   };
 
-  /// @abi table elections i64
-  struct [[eosio::table]] election {
-    name candidate;
-    string credentials;
-    uint32_t yes_votes;
-    uint32_t no_votes;
-    uint32_t abstain_votes;
-    uint32_t expire_time;
-    uint16_t election_status;
+
+    struct [[eosio::table]] election {
+        name candidate;
+        string credentials;
+        uint32_t yes_votes;
+        uint32_t no_votes;
+        uint32_t abstain_votes;
+        uint32_t expire_time;
+        uint16_t election_status;
 
     uint64_t primary_key() const { return candidate.value; }
     EOSLIB_SERIALIZE(election, (candidate)(credentials)(yes_votes)(no_votes)(
                                    abstain_votes)(expire_time)(election_status))
         };
 
-        /// @abi table arbitrators i64
-        struct [[eosio::table]] arbitrator {
-            name arb;
-            uint16_t arb_status;
-            vector<uint64_t> open_case_ids;
-            vector<uint64_t> closed_case_ids;
-            //string credentials; //ipfs_url of credentials
-            //vector<string> languages; //NOTE: language codes for space
+    struct [[eosio::table]] arbitrator {
+        name arb;
+        uint16_t arb_status;
+        vector<uint64_t> open_case_ids;
+        vector<uint64_t> closed_case_ids;
+        //string credentials; //ipfs_url of credentials
+        //vector<string> languages; //NOTE: language codes for space
 
-            uint64_t primary_key() const { return arb.value; }
-            EOSLIB_SERIALIZE(arbitrator, (arb)(arb_status)(open_case_ids)(closed_case_ids))
-        };
+        uint64_t primary_key() const { return arb.value; }
+        EOSLIB_SERIALIZE(arbitrator, (arb)(arb_status)(open_case_ids)(closed_case_ids))
+    };
 
-        struct [[eosio::table]] claim {
-            uint16_t class_suggestion;
-            vector<string> submitted_pending_evidence; //submitted by claimant
-            vector<uint64_t> accepted_ev_ids; //accepted and emplaced by arb
-            uint16_t class_decision; //initialized to UNDECIDED (0)
+    struct [[eosio::table]] claim {
+        uint16_t class_suggestion;
+        vector<string> submitted_pending_evidence; //submitted by claimant
+        vector<uint64_t> accepted_ev_ids; //accepted and emplaced by arb
+        uint16_t class_decision; //initialized to UNDECIDED (0)
 
-            EOSLIB_SERIALIZE(claim, (class_suggestion)(submitted_pending_evidence)(accepted_ev_ids)(class_decision))
-        };
+        EOSLIB_SERIALIZE(claim, (class_suggestion)(submitted_pending_evidence)(accepted_ev_ids)(class_decision))
+    };
 
-        //TODO: evidence types?
-        //NOTE: add metadata
-        /// @abi table evidence i64
-        struct [[eosio::table]] evidence {
-            uint64_t ev_id;
-            string ipfs_url;
+    //TODO: evidence types?
+    //NOTE: add metadata
+    struct [[eosio::table]] evidence {
+        uint64_t ev_id;
+        string ipfs_url;
 
-            uint64_t primary_key() const { return ev_id; }
-            EOSLIB_SERIALIZE(evidence, (ev_id)(ipfs_url))
-        };
+        uint64_t primary_key() const { return ev_id; }
+        EOSLIB_SERIALIZE(evidence, (ev_id)(ipfs_url))
+    };
 
-        //NOTE: joinders saved in separate table
-        /// @abi table casefiles i64
-        struct [[eosio::table]] casefile {
-            uint64_t case_id;
-            name claimant; //TODO: add vector for claimant's party? same for respondant and their party?
-            name respondant; //NOTE: can be set to 0
-            vector<claim> claims;
-            vector<name> arbitrators; //CLARIFY: do arbitrators get added when joining?
-            uint16_t case_status;
-            uint32_t last_edit;
-            vector<string> findings_ipfs;
-            //vector<asset> additional_fees; //NOTE: case by case?
-            //TODO: add messages field
+    //NOTE: joinders saved in separate table  
+    struct [[eosio::table]] casefile {
+        uint64_t case_id;
+        name claimant; //TODO: add vector for claimant's party? same for respondant and their party?
+        name respondant; //NOTE: can be set to 0
+        vector<claim> claims;
+        vector<name> arbitrators; //CLARIFY: do arbitrators get added when joining?
+        uint16_t case_status;
+        uint32_t last_edit;
+        vector<string> findings_ipfs;
+        //vector<asset> additional_fees; //NOTE: case by case?
+        //TODO: add messages field
 
-            uint64_t primary_key() const { return case_id; }
-            uint64_t by_claimant() const { return claimant.value; }
-            EOSLIB_SERIALIZE(casefile, (case_id)(claimant)(claims)(arbitrators)(case_status)(last_edit)(findings_ipfs))
-        };
+        uint64_t primary_key() const { return case_id; }
+        uint64_t by_claimant() const { return claimant.value; }
+        EOSLIB_SERIALIZE(casefile, (case_id)(claimant)(claims)(arbitrators)(case_status)(last_edit)(findings_ipfs))
+    };
 
     #pragma endregion Structs
  
