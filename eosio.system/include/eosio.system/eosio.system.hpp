@@ -11,6 +11,7 @@
 #include <eosiolib/singleton.hpp>
 #include <eosio.system/exchange_state.hpp>
 
+#include <cmath>  
 #include <string>
 
 namespace eosiosystem {
@@ -25,6 +26,51 @@ namespace eosiosystem {
    using eosio::time_point;
    using eosio::microseconds;
    using eosio::datastream;
+
+   const uint32_t block_num_network_activation = 10800; 
+
+   struct[[ eosio::table, eosio::contract("eosio.system") ]] payment_info {
+     name bp;
+     asset pay;
+
+     uint64_t primary_key() const { return bp.value; }
+     EOSLIB_SERIALIZE(payment_info, (bp)(pay))
+   };
+
+   typedef eosio::multi_index< "payments"_n, payment_info > payments_table;
+
+   struct [[eosio::table("schedulemetr"), eosio::contract("eosio.system")]] schedule_metrics_state {
+     name                     last_onblock_caller;
+     int32_t                          block_counter_correction;  
+     std::vector<producer_metric>     producers_metric;
+
+     uint64_t primary_key()const { return last_onblock_caller.value; }
+     // explicit serialization macro is not necessary, used here only to improve compilation time
+     EOSLIB_SERIALIZE(schedule_metrics_state, (last_onblock_caller)(block_counter_correction)(producers_metric))
+   };
+
+   typedef eosio::singleton< "schedulemetr"_n, schedule_metrics_state > schedule_metrics_singleton;
+   
+   struct [[eosio::table("rotations"), eosio::contract("eosio.system")]] rotation_state {
+      // bool                            is_rotation_active = true;
+      name                    bp_currently_out;
+      name                    sbp_currently_in;
+      uint32_t                bp_out_index;
+      uint32_t                sbp_in_index;
+      block_timestamp         next_rotation_time;
+      block_timestamp         last_rotation_time;
+
+      //NOTE: This might not be the best place for this information
+
+      // bool                            is_kick_active = true;
+      // account_name                    last_onblock_caller;
+      // block_timestamp                 last_time_block_produced;
+      
+      EOSLIB_SERIALIZE( rotation_state, /*(is_rotation_active)*/(bp_currently_out)(sbp_currently_in)(bp_out_index)(sbp_in_index)(next_rotation_time)
+                        (last_rotation_time)/*(is_kick_active)(last_onblock_caller)(last_time_block_produced)*/ )
+   };
+
+   typedef eosio::singleton< "rotations"_n, rotation_state> rotation_singleton;
 
    struct [[eosio::table, eosio::contract("eosio.system")]] name_bid {
      name            newname;
@@ -52,11 +98,12 @@ namespace eosiosystem {
    struct [[eosio::table("global"), eosio::contract("eosio.system")]] eosio_global_state : eosio::blockchain_parameters {
       uint64_t free_ram()const { return max_ram_size - total_ram_bytes_reserved; }
 
-      uint64_t             max_ram_size = 64ll*1024 * 1024 * 1024;
+      uint64_t             max_ram_size = 12ll*1024 * 1024 * 1024;
       uint64_t             total_ram_bytes_reserved = 0;
       int64_t              total_ram_stake = 0;
 
       block_timestamp      last_producer_schedule_update;
+      block_timestamp      last_proposed_schedule_update;
       time_point           last_pervote_bucket_fill;
       int64_t              pervote_bucket = 0;
       int64_t              perblock_bucket = 0;
@@ -66,37 +113,28 @@ namespace eosiosystem {
       uint16_t             last_producer_schedule_size = 0;
       double               total_producer_vote_weight = 0; /// the sum of all producer votes
       block_timestamp      last_name_close;
+      uint32_t             block_num = 12;
+      uint32_t             last_claimrewards = 0;
+      uint32_t             next_payment = 0;
+      uint16_t             new_ram_per_block = 0;
+      block_timestamp      last_ram_increase;
+      block_timestamp      last_block_num; /* deprecated */
+      double               total_producer_votepay_share = 0;
+      uint8_t              revision = 0; ///< used to track version updates in the future.
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE_DERIVED( eosio_global_state, eosio::blockchain_parameters,
                                 (max_ram_size)(total_ram_bytes_reserved)(total_ram_stake)
-                                (last_producer_schedule_update)(last_pervote_bucket_fill)
+                                (last_producer_schedule_update)(last_proposed_schedule_update)(last_pervote_bucket_fill)
                                 (pervote_bucket)(perblock_bucket)(total_unpaid_blocks)(total_activated_stake)(thresh_activated_stake_time)
-                                (last_producer_schedule_size)(total_producer_vote_weight)(last_name_close) )
+                                (last_producer_schedule_size)(total_producer_vote_weight)(last_name_close)(block_num)(last_claimrewards)(next_payment)
+                                (new_ram_per_block)(last_ram_increase)(last_block_num)(total_producer_votepay_share)(revision) )
    };
 
-   /**
-    * Defines new global state parameters added after version 1.0
-    */
-   struct [[eosio::table("global2"), eosio::contract("eosio.system")]] eosio_global_state2 {
-      eosio_global_state2(){}
-
-      uint16_t          new_ram_per_block = 0;
-      block_timestamp   last_ram_increase;
-      block_timestamp   last_block_num; /* deprecated */
-      double            total_producer_votepay_share = 0;
-      uint8_t           revision = 0; ///< used to track version updates in the future.
-
-      EOSLIB_SERIALIZE( eosio_global_state2, (new_ram_per_block)(last_ram_increase)(last_block_num)
-                        (total_producer_votepay_share)(revision) )
-   };
-
-   struct [[eosio::table("global3"), eosio::contract("eosio.system")]] eosio_global_state3 {
-      eosio_global_state3() { }
-      time_point        last_vpay_state_update;
-      double            total_vpay_share_change_rate = 0;
-
-      EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
+  enum class kick_type {
+     REACHED_TRESHOLD = 1,
+    //  PREVENT_LIB_STOP_MOVING = 2,
+     BPS_VOTING = 2
    };
 
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
@@ -106,28 +144,55 @@ namespace eosiosystem {
       bool                  is_active = true;
       std::string           url;
       uint32_t              unpaid_blocks = 0;
+      uint32_t              lifetime_unpaid_blocks = 0;
+      uint32_t              missed_blocks_per_rotation = 0;
+      uint32_t              lifetime_missed_blocks = 0;
       time_point            last_claim_time;
       uint16_t              location = 0;
+      
+      uint32_t              kick_reason_id = 0;
+      std::string           kick_reason;
+      uint32_t              times_kicked = 0;
+      uint32_t              kick_penalty_hours = 0; 
+      block_timestamp       last_time_kicked;
 
       uint64_t primary_key()const { return owner.value;                             }
       double   by_votes()const    { return is_active ? -total_votes : total_votes;  }
       bool     active()const      { return is_active;                               }
       void     deactivate()       { producer_key = public_key(); is_active = false; }
 
+      void kick(kick_type kt, uint32_t penalty = 0) {
+        times_kicked++;
+        last_time_kicked = block_timestamp(eosio::time_point(eosio::microseconds(int64_t(current_time()))));
+        
+        if(penalty == 0) kick_penalty_hours  = uint32_t(std::pow(2, times_kicked));
+        
+        switch(kt) {
+          case kick_type::REACHED_TRESHOLD:
+            kick_reason_id = uint32_t(kick_type::REACHED_TRESHOLD);
+            kick_reason = "Producer account was deactivated because it reached the maximum missed blocks in this rotation timeframe.";
+          break;
+          // case kick_type::PREVENT_LIB_STOP_MOVING:
+          //   kick_reason_id = uint32_t(kick_type::PREVENT_LIB_STOP_MOVING);
+          //   kick_reason = "Producer account was deactivated to prevent the LIB from halting.";
+          // break;
+          case kick_type::BPS_VOTING:
+            kick_reason_id = uint32_t(kick_type::BPS_VOTING);
+            kick_reason = "Producer account was deactivated by vote.";
+            kick_penalty_hours = penalty;
+          break;
+        }
+        lifetime_missed_blocks += missed_blocks_per_rotation;
+        missed_blocks_per_rotation = 0;
+        // print("\nblock producer: ", name{owner}, " was kicked.");
+        deactivate();
+      } 
+      
+
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
-                        (unpaid_blocks)(last_claim_time)(location) )
-   };
-
-   struct [[eosio::table, eosio::contract("eosio.system")]] producer_info2 {
-      name            owner;
-      double          votepay_share = 0;
-      time_point      last_votepay_share_update;
-
-      uint64_t primary_key()const { return owner.value; }
-
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
+                        (unpaid_blocks)(lifetime_unpaid_blocks)(missed_blocks_per_rotation)(lifetime_missed_blocks)(last_claim_time)
+                        (location)(kick_reason_id)(kick_reason)(times_kicked)(kick_penalty_hours)(last_time_kicked) )
    };
 
    struct [[eosio::table, eosio::contract("eosio.system")]] voter_info {
@@ -135,6 +200,7 @@ namespace eosiosystem {
       name                proxy;     /// the proxy set by the voter, if any
       std::vector<name>   producers; /// the producers approved by this voter if no proxy set
       int64_t             staked = 0;
+      int64_t             last_stake = 0;
 
       /**
        *  Every time a vote is cast we must first "undo" the last vote weight, before casting the
@@ -167,27 +233,25 @@ namespace eosiosystem {
    typedef eosio::multi_index< "producers"_n, producer_info,
                                indexed_by<"prototalvote"_n, const_mem_fun<producer_info, double, &producer_info::by_votes>  >
                              > producers_table;
-   typedef eosio::multi_index< "producers2"_n, producer_info2 > producers_table2;
-
+   
    typedef eosio::singleton< "global"_n, eosio_global_state >   global_state_singleton;
-   typedef eosio::singleton< "global2"_n, eosio_global_state2 > global_state2_singleton;
-   typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
 
    class [[eosio::contract("eosio.system")]] system_contract : public native {
       private:
-         voters_table            _voters;
-         producers_table         _producers;
-         producers_table2        _producers2;
-         global_state_singleton  _global;
-         global_state2_singleton _global2;
-         global_state3_singleton _global3;
-         eosio_global_state      _gstate;
-         eosio_global_state2     _gstate2;
-         eosio_global_state3     _gstate3;
-         rammarket               _rammarket;
+         voters_table                _voters;
+         producers_table             _producers;
+         global_state_singleton      _global;
+         eosio_global_state          _gstate;
+         rammarket                   _rammarket;
+
+         schedule_metrics_singleton  _schedule_metrics;
+         schedule_metrics_state      _gschedule_metrics;
+         rotation_singleton          _rotation;
+         rotation_state              _grotation;
+         payments_table              _payments;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -339,18 +403,30 @@ namespace eosiosystem {
          void changebw( name from, name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
-         //defined in voting.hpp
-         void update_elected_producers( block_timestamp timestamp );
-         void update_votes( const name voter, const name proxy, const std::vector<name>& producers, bool voting );
+         // defined in producer_pay.cpp 
+         void claimrewards_snapshot(); 
 
          // defined in voting.cpp
+         void update_elected_producers( block_timestamp timestamp );
+         void update_votes( const name voter, const name proxy, const std::vector<name>& producers, bool voting );
          void propagate_weight_change( const voter_info& voter );
+         double inverse_vote_weight(double staked, double amountVotedProducers);
+         void recalculate_votes();
 
-         double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
-                                               time_point ct,
-                                               double shares_rate, bool reset_to_zero = false );
-         double update_total_votepay_share( time_point ct,
-                                            double additional_shares_delta = 0.0, double shares_rate_delta = 0.0 );
+         //defined in system_kick.cpp 
+         bool crossed_missed_blocks_threshold(uint32_t amountBlocksMissed, uint32_t schedule_size);
+         void reset_schedule_metrics(name producer);
+         void update_producer_missed_blocks(name producer);
+         bool is_new_schedule_activated(capi_name active_schedule[], uint32_t size);
+         bool check_missed_blocks(block_timestamp timestamp, name producer);
+
+         //define in system_rotation.cpp
+         void set_bps_rotation(name bpOut, name sbpIn); 
+         void update_rotation_time(block_timestamp block_time);
+         void update_missed_blocks_per_rotation();
+         void restart_missed_blocks_per_rotation(std::vector<eosio::producer_key> prods);
+         bool is_in_range(int32_t index, int32_t low_bound, int32_t up_bound);
+         std::vector<eosio::producer_key> check_rotation_state(std::vector<eosio::producer_key> producers, block_timestamp block_time);
    };
 
 } /// eosiosystem
