@@ -32,36 +32,39 @@ def jsonArg(a):
     return " '" + json.dumps(a) + "' "
 
 def run(args):
-    print('bios-boot-tutorial.py:', args)
+    print('bios-boot-sequence.py:', args)
     logFile.write(args + '\n')
     if subprocess.call(args, shell=True):
-        print('bios-boot-tutorial.py: exiting because of error')
+        print('bios-boot-sequence.py: exiting because of error')
         sys.exit(1)
 
 def retry(args):
     count = 5
     while count:
         count = count-1
-        print('bios-boot-tutorial.py:', args)
+        print('bios-boot-sequence.py:', args)
         logFile.write(args + '\n')
         if subprocess.call(args, shell=True):
             print('*** Retry: ', count)
+            sleep(0.5)
         else:
-            break
+            return True
+    print('bios-boot-sequence.py: exiting because of error')
+    sys.exit(1)
 
 def background(args):
-    print('bios-boot-tutorial.py:', args)
+    print('bios-boot-sequence.py:', args)
     logFile.write(args + '\n')
     return subprocess.Popen(args, shell=True)
 
 def getOutput(args):
-    print('bios-boot-tutorial.py:', args)
+    print('bios-boot-sequence.py:', args)
     logFile.write(args + '\n')
     proc = subprocess.Popen(args, shell=True, stdout=subprocess.PIPE)
     return proc.communicate()[0].decode('utf-8')
 
 def getJsonOutput(args):
-    print('bios-boot-tutorial.py:', args)
+    print('bios-boot-sequence.py:', args)
     logFile.write(args + '\n')
     proc = subprocess.Popen(args, shell=True, stdout=subprocess.PIPE)
     return json.loads(proc.communicate()[0])
@@ -76,9 +79,9 @@ def startWallet():
     run('mkdir -p ' + os.path.abspath(args.wallet_dir))
     background(args.keosd + ' --unlock-timeout %d --http-server-address 127.0.0.1:6666 --wallet-dir %s' % (unlockTimeout, os.path.abspath(args.wallet_dir)))
     sleep(.4)
-    run(args.cleos + 'wallet create --to-console')
 
 def importKeys():
+    run(args.cleos + 'wallet create --to-console')
     run(args.cleos + 'wallet import --private-key ' + args.private_key)
     keys = {}
     for a in accounts:
@@ -279,12 +282,9 @@ def produceNewAccounts():
 def stepKillAll():
     run('killall keosd nodeos || true')
     sleep(1.5)
-def stepStartWallet():
-    startWallet()
-    importKeys()
 def stepStartBoot():
     startNode(0, {'name': 'eosio', 'pvt': args.private_key, 'pub': args.public_key})
-    sleep(7)
+    sleep(9)
 def stepInstallSystemContracts():
     retry(args.cleos + 'set contract eosio.token ' + args.contracts_dir + 'eosio.token/')
     retry(args.cleos + 'set contract eosio.msig ' + args.contracts_dir + 'eosio.msig/')
@@ -328,32 +328,34 @@ def stepLog():
 parser = argparse.ArgumentParser()
 
 commands = [
-    ('k', 'kill',           stepKillAll,                True,    "Kill all nodeos and keosd processes"),
-    ('w', 'wallet',         stepStartWallet,            True,    "Start keosd, create wallet, fill with keys"),
-    ('b', 'boot',           stepStartBoot,              True,    "Start boot node"),
-    ('s', 'sys',            createSystemAccounts,       True,    "Create system accounts (eosio.*)"),
-    ('c', 'contracts',      stepInstallSystemContracts, True,    "Install system contracts (token, msig)"),
-    ('t', 'tokens',         stepCreateTokens,           True,    "Create tokens"),
-    ('S', 'sys-contract',   stepSetSystemContract,      True,    "Set system contract"),
-    ('T', 'stake',          stepCreateStakedAccounts,   False,    "Create staked accounts"),
-    ('p', 'reg-prod',       stepRegProducers,           False,    "Register producers"),
-    ('P', 'start-prod',     stepStartProducers,         False,    "Start producers"),
-    ('v', 'vote',           stepVote,                   False,    "Vote for producers"),
-    ('R', 'claim',          claimRewards,               False,    "Claim rewards"),
-    ('x', 'proxy',          stepProxyVotes,             False,    "Proxy votes"),
-    ('q', 'resign',         stepResign,                 False,    "Resign eosio"),
-    ('m', 'msg-replace',    msigReplaceSystem,          False,   "Replace system contract using msig"),
-    ('X', 'xfer',           stepTransfer,               False,   "Random transfer tokens (infinite loop)"),
-    ('l', 'log',            stepLog,                    False,    "Show tail of node's log"),
+#    Short Command          Function                    inAll  inDocker Description
+    ('k', 'kill',           stepKillAll,                True,  False,   "Kill all nodeos and keosd processes"),
+    ('w', 'wallet',         startWallet,                True,  False,   "Start wallet (start keosd)"),
+    ('K', 'keys',           importKeys,                 True,  True,    "Create wallet and fill with keys"),
+    ('b', 'boot',           stepStartBoot,              True,  False,   "Start boot node"),
+    ('s', 'sys',            createSystemAccounts,       True,  True,    "Create system accounts (eosio.*)"),
+    ('c', 'contracts',      stepInstallSystemContracts, True,  True,    "Install system contracts (token, msig)"),
+    ('t', 'tokens',         stepCreateTokens,           True,  True,    "Create tokens"),
+    ('S', 'sys-contract',   stepSetSystemContract,      True,  True,    "Set system contract"),
+    ('T', 'stake',          stepCreateStakedAccounts,   False, False,    "Create staked accounts"),
+    ('p', 'reg-prod',       stepRegProducers,           False, False,    "Register producers"),
+    ('P', 'start-prod',     stepStartProducers,         False, False,    "Start producers"),
+    ('v', 'vote',           stepVote,                   False, False,    "Vote for producers"),
+    ('R', 'claim',          claimRewards,               False, False,    "Claim rewards"),
+    ('x', 'proxy',          stepProxyVotes,             False, False,    "Proxy votes"),
+    ('q', 'resign',         stepResign,                 False, False,    "Resign eosio"),
+    ('m', 'msg-replace',    msigReplaceSystem,          False, False,   "Replace system contract using msig"),
+    ('X', 'xfer',           stepTransfer,               False, False,   "Random transfer tokens (infinite loop)"),
+    ('l', 'log',            stepLog,                    False, False,    "Show tail of node's log"),
 ]
 
 parser.add_argument('--public-key', metavar='', help="EOSIO Public Key", default='GLS8Znrtgwt8TfpmbVpTKvA2oB8Nqey625CLN8bCN3TEbgx86Dsvr', dest="public_key")
-parser.add_argument('--private-Key', metavar='', help="EOSIO Private Key", default='5K463ynhZoCDDa4RDcr63cUwWLTnKqmdcoTKTHBjqoKfv4u5V7p', dest="private_key")
+parser.add_argument('--private-key', metavar='', help="EOSIO Private Key", default='5K463ynhZoCDDa4RDcr63cUwWLTnKqmdcoTKTHBjqoKfv4u5V7p', dest="private_key")
 parser.add_argument('--programs-dir', metavar='', help="Programs directory for cleos, nodeos, keosd", default='../../build/programs');
 parser.add_argument('--cleos', metavar='', help="Cleos command (default in programs-dir)", default='cleos/cleos')
 parser.add_argument('--nodeos', metavar='', help="Path to nodeos binary (default in programs-dir)", default='nodeos/nodeos')
 parser.add_argument('--keosd', metavar='', help="Path to keosd binary (default in programs-dir", default='keosd/keosd')
-parser.add_argument('--contracts-dir', metavar='', help="Path to contracts directory", default='../../build/contracts/')
+parser.add_argument('--contracts-dir', metavar='', help="Path to contracts directory", default='../../build/')
 parser.add_argument('--nodes-dir', metavar='', help="Path to nodes directory", default='./nodes/')
 parser.add_argument('--genesis', metavar='', help="Path to genesis.json", default="./genesis.json")
 parser.add_argument('--wallet-dir', metavar='', help="Path to wallet directory", default='./wallet/')
@@ -370,12 +372,13 @@ parser.add_argument('--num-producers-vote', metavar='', help="Number of producer
 parser.add_argument('--num-voters', metavar='', help="Number of voters", type=int, default=10)
 parser.add_argument('--num-senders', metavar='', help="Number of users to transfer funds randomly", type=int, default=10)
 parser.add_argument('--producer-sync-delay', metavar='', help="Time (s) to sleep to allow producers to sync", type=int, default=80)
+parser.add_argument('--docker', action='store_true', help='Run actions only for Docker (used with -a)')
 parser.add_argument('-a', '--all', action='store_true', help="Do everything marked with (*)")
 parser.add_argument('-H', '--http-port', type=int, default=8000, metavar='', help='HTTP port for cleos')
 
-for (flag, command, function, inAll, help) in commands:
+for (flag, command, function, inAll, inDocker, help) in commands:
     prefix = ''
-    if inAll: prefix += '*'
+    if inAll or inDocker: prefix += ('*' if inAll else ' ') + ('D' if inDocker else ' ')
     if prefix: help = '(' + prefix + ') ' + help
     if flag:
         parser.add_argument('-' + flag, '--' + command, action='store_true', help=help, dest=command)
@@ -386,6 +389,7 @@ args = parser.parse_args()
 
 if (parser.get_default('cleos') == args.cleos):
     args.cleos = args.programs_dir + '/' + args.cleos
+    args.cleos += ' --wallet-url http://127.0.0.1:6666 --url http://127.0.0.1:%d ' % args.http_port
 
 if (parser.get_default('nodeos') == args.nodeos):
     args.nodeos = args.programs_dir + '/' + args.nodeos
@@ -393,13 +397,12 @@ if (parser.get_default('nodeos') == args.nodeos):
 if (parser.get_default('keosd') == args.keosd):
     args.keosd = args.programs_dir + '/' + args.keosd
 
-args.cleos += ' --wallet-url http://127.0.0.1:6666 --url http://127.0.0.1:%d ' % args.http_port
-
 logFile = open(args.log_path, 'a')
 
 logFile.write('\n\n' + '*' * 80 + '\n\n\n')
 
-with open('accounts.json') as f:
+accounts_filename = os.path.dirname(os.path.realpath(__file__)) + '/accounts.json'
+with open(accounts_filename) as f:
     a = json.load(f)
     if args.user_limit:
         del a['users'][args.user_limit:]
@@ -412,10 +415,10 @@ with open('accounts.json') as f:
 maxClients = numProducers + 10
 
 haveCommand = False
-for (flag, command, function, inAll, help) in commands:
-    if getattr(args, command) or inAll and args.all:
+for (flag, command, function, inAll, inDocker, help) in commands:
+    if getattr(args, command) or (inDocker if args.docker else inAll) and args.all:
         if function:
             haveCommand = True
             function()
 if not haveCommand:
-    print('bios-boot-tutorial.py: Tell me what to do. -a does almost everything. -h shows options.')
+    print('bios-boot-sequence.py: Tell me what to do. -a does almost everything. -h shows options.')
