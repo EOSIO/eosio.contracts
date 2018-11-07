@@ -311,7 +311,7 @@ namespace eosiosystem {
 
       if (voter.proxy) { // this part should never happen since the function is called only on proxies
          if(voter.last_stake != totalStake){
-            auto &proxy = _voters.get(voter.proxy, "proxy not found"); // data corruption
+            auto &proxy = _voters.get(voter.proxy.value, "proxy not found"); // data corruption
             _voters.modify(proxy, same_payer, [&](auto &p) { 
                p.proxied_vote_weight += totalStake - voter.last_stake;
             });
@@ -320,7 +320,7 @@ namespace eosiosystem {
          }
       } else {
          for (auto acnt : voter.producers) {
-            auto &pitr = _producers.get(acnt, "producer not found"); // data corruption
+            auto &pitr = _producers.get(acnt.value, "producer not found"); // data corruption
             _producers.modify(pitr, same_payer, [&](auto &p) {
                p.total_votes += delta;
                _gstate.total_producer_vote_weight += delta;
