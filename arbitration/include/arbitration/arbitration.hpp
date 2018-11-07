@@ -215,7 +215,7 @@ public:
     void dismisscase(uint64_t case_id, name arb, string ipfs_url); //TODO: require rationale?
 
     [[eosio::action]]
-    void closecase(uint64_t case_id, name closer, string ipfs_url); //TODO: require decision?
+    void closecase(uint64_t case_id, name arb, string ipfs_url); //TODO: require decision?
 
     [[eosio::action]]
     void dismissev(uint64_t case_id, uint16_t claim_index, uint16_t ev_index, name arb, string ipfs_url); //NOTE: moves to dismissed_evidence table
@@ -251,6 +251,25 @@ public:
     #pragma endregion BP_Multisig_Actions
 
     protected:
+
+    #pragma region Helper_Functions
+
+	void validate_ipfs_url(string ipfs_url);
+
+    bool is_candidate(name candidate);
+
+    bool is_arb(name arb);
+
+    bool is_case(uint64_t case_id);
+
+    bool is_election_open(name candidate);
+
+    bool is_election_expired(name candidate);
+
+    //void require_arb(name arb);
+
+    #pragma endregion Helper_Functions
+
 
     #pragma region Tables
 
