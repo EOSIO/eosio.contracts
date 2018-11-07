@@ -425,7 +425,7 @@ namespace eosiosystem {
       eosio_assert( unstake_cpu_quantity >= zero_asset, "must unstake a positive amount" );
       eosio_assert( unstake_net_quantity >= zero_asset, "must unstake a positive amount" );
       eosio_assert( unstake_cpu_quantity.amount + unstake_net_quantity.amount > 0, "must unstake a positive amount" );
-      eosio_assert( _gstate.block_num > block_num_network_activation || _gstate.thresh_activated_stake_time > 0,
+      eosio_assert( _gstate.block_num > block_num_network_activation || _gstate.thresh_activated_stake_time > time_point(),
                     "cannot undelegate bandwidth until the chain is activated (1,000,000 blocks produced)" );
 
       changebw( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
