@@ -302,37 +302,35 @@ namespace eosiosystem {
    void system_contract::propagate_weight_change( const voter_info& voter ) {
       eosio_assert( voter.proxy == name(0) || !voter.is_proxy, "account registered as a proxy is not allowed to use a proxy");
       
-      auto totalStake = double(voter.staked);
+      auto totalStake = voter.staked;
       if(voter.is_proxy){
          totalStake += voter.proxied_vote_weight;
       } 
-      double new_weight = inverse_vote_weight(totalStake, voter.producers.size());
-    
-      if (new_weight - voter.last_vote_weight > 1){
-         if (voter.proxy) {
-            if(voter.last_stake != int64_t(totalStake)){
-               // this part should never happen since the function is called only on proxies
-               auto &proxy = _voters.get(voter.proxy.value, "proxy not found"); // data corruption
-               _voters.modify(proxy, same_payer, [&](auto &p) { 
-                  p.proxied_vote_weight += totalStake - voter.last_stake;
-               });
-               
-               propagate_weight_change(proxy);
-            }
-         } else {
-            for (auto acnt : voter.producers) {
-               auto &pitr = _producers.get(acnt.value, "producer not found"); // data corruption
-               _producers.modify(pitr, same_payer, [&](auto &p) {
-                  p.total_votes += new_weight;
-                  _gstate.total_producer_vote_weight += new_weight;
-               });
-            }
+      double new_weight = inverse_vote_weight((double)totalStake, voter.producers.size());
+      double delta = new_weight - voter.last_vote_weight;
+
+      if (voter.proxy) { // this part should never happen since the function is called only on proxies
+         if(voter.last_stake != totalStake){
+            auto &proxy = _voters.get(voter.proxy, "proxy not found"); // data corruption
+            _voters.modify(proxy, same_payer, [&](auto &p) { 
+               p.proxied_vote_weight += totalStake - voter.last_stake;
+            });
+            
+            propagate_weight_change(proxy);
+         }
+      } else {
+         for (auto acnt : voter.producers) {
+            auto &pitr = _producers.get(acnt, "producer not found"); // data corruption
+            _producers.modify(pitr, same_payer, [&](auto &p) {
+               p.total_votes += delta;
+               _gstate.total_producer_vote_weight += delta;
+            });
          }
       }
       
       _voters.modify(voter, same_payer, [&](auto &v) { 
          v.last_vote_weight = new_weight; 
-         v.last_stake = int64_t(totalStake);
+         v.last_stake = totalStake;
       });
    }
 
