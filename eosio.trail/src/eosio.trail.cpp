@@ -1,6 +1,6 @@
 #include <eosio.trail.hpp>
 
-trail::trail(account_name self) : contract(self), environment(self, self) {
+trail::trail(name self, name code, datastream<const char*> ds) : contract(self, code, ds), environment(self, self.value) {
     if (!environment.exists()) {
 
         env_struct = env{
@@ -8,7 +8,7 @@ trail::trail(account_name self) : contract(self), environment(self, self) {
             0, //total_tokens
             0, //total_voters
             0, //total_ballots
-            asset(0, S(4, VOTE)), //vote_supply
+            asset(0, symbol("VOTE", 4)), //vote_supply
             now() //time_now
         };
 
@@ -27,20 +27,22 @@ trail::~trail() {
 
 #pragma region Token_Actions
 
-void trail::regtoken(asset native, account_name publisher) {
+void trail::regtoken(asset native, name publisher) {
     require_auth(publisher);
 
-    auto sym = native.symbol.name();
+    auto sym = native.symbol.raw();
 
-    stats statstable(N(eosio.token), sym);
+    stats statstable(name("eosio.token"), sym);
     auto eosio_existing = statstable.find(sym);
     eosio_assert(eosio_existing == statstable.end(), "Token with symbol already exists in eosio.token" );
 
-    registries_table registries(_self, _self);
+    registries_table registries(_self, _self.value);
     auto r = registries.find(sym);
     eosio_assert(r == registries.end(), "Token Registry with that symbol already exists in Trail");
 
     //TODO: assert only 1 token per publisher
+
+    //TODO: require_auth publisher instead?
 
     registries.emplace(publisher, [&]( auto& a ){
         a.native = native;
@@ -52,11 +54,11 @@ void trail::regtoken(asset native, account_name publisher) {
     print("\nToken Registration: SUCCESS");
 }
 
-void trail::unregtoken(asset native, account_name publisher) {
+void trail::unregtoken(asset native, name publisher) {
     require_auth(publisher);
     
-    auto sym = native.symbol.name();
-    registries_table registries(_self, _self);
+    auto sym = native.symbol.raw();
+    registries_table registries(_self, _self.value);
     auto r = registries.find(sym);
 
     eosio_assert(r != registries.end(), "Token Registry does not exist.");
@@ -72,17 +74,17 @@ void trail::unregtoken(asset native, account_name publisher) {
 
 #pragma region Voting_Actions
 
-void trail::regvoter(account_name voter) {
+void trail::regvoter(name voter) {
     require_auth(voter);
 
-    voters_table voters(_self, _self);
-    auto v = voters.find(voter);
+    voters_table voters(_self, _self.value);
+    auto v = voters.find(voter.value);
 
     eosio_assert(v == voters.end(), "Voter already exists");
 
     voters.emplace(voter, [&]( auto& a ){
         a.voter = voter;
-        a.votes = asset(0, S(4, VOTE));
+        a.votes = asset(0, symbol("VOTE", 4));
     });
 
     env_struct.total_voters++;
@@ -90,11 +92,11 @@ void trail::regvoter(account_name voter) {
     print("\nVoterID Registration: SUCCESS");
 }
 
-void trail::unregvoter(account_name voter) {
+void trail::unregvoter(name voter) {
     require_auth(voter);
 
-    voters_table voters(_self, _self);
-    auto v = voters.find(voter);
+    voters_table voters(_self, _self.value);
+    auto v = voters.find(voter.value);
 
     eosio_assert(v != voters.end(), "Voter Doesn't Exist");
 
@@ -109,20 +111,22 @@ void trail::unregvoter(account_name voter) {
     print("\nVoterID Unregistration: SUCCESS");
 }
 
-void trail::regballot(account_name publisher, asset voting_token, uint32_t begin_time, uint32_t end_time, string info_url) {
+void trail::regballot(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
     require_auth(publisher);
 
     //TODO: check for voting_token existence?
 
-    ballots_table ballots(_self, _self);
+    //ODO: change voting_token to voting_symbol?
+
+    ballots_table ballots(_self, _self.value);
 
     ballots.emplace(publisher, [&]( auto& a ){
         a.ballot_id = ballots.available_primary_key();
         a.publisher = publisher;
         a.info_url = info_url;
-        a.no_count = asset(0, voting_token.symbol);
-        a.yes_count = asset(0, voting_token.symbol);
-        a.abstain_count = asset(0, voting_token.symbol);
+        a.no_count = asset(0, voting_symbol);
+        a.yes_count = asset(0, voting_symbol);
+        a.abstain_count = asset(0, voting_symbol);
         a.unique_voters = uint32_t(0);
         a.begin_time = begin_time;
         a.end_time = end_time;
@@ -133,10 +137,10 @@ void trail::regballot(account_name publisher, asset voting_token, uint32_t begin
     print("\nBallot Registration: SUCCESS");
 }
 
-void trail::unregballot(account_name publisher, uint64_t ballot_id) {
-    require_auth(N(eosio.trail));
+void trail::unregballot(name publisher, uint64_t ballot_id) {
+    require_auth(name("eosio.trail"));
 
-    ballots_table ballots(_self, _self);
+    ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
 
     eosio_assert(b != ballots.end(), "Ballot Doesn't Exist");
@@ -152,48 +156,48 @@ void trail::unregballot(account_name publisher, uint64_t ballot_id) {
     print("\nBallot Deletion: SUCCESS");
 }
 
-void trail::mirrorstake(account_name voter, uint32_t lock_period) {
+void trail::mirrorstake(name voter, uint32_t lock_period) {
     require_auth(voter);
     eosio_assert(lock_period >= MIN_LOCK_PERIOD, "lock period must be greater than 1 day (86400 secs)");
     eosio_assert(lock_period <= MAX_LOCK_PERIOD, "lock period must be less than 3 months (7,776,000 secs)");
 
     asset max_votes = get_liquid_tlos(voter) + get_staked_tlos(voter);
-    eosio_assert(max_votes.symbol == S(4, TLOS), "only TLOS can be used to get VOTEs"); //NOTE: redundant?
-    eosio_assert(max_votes > asset(0, S(4, TLOS)), "must get a positive amount of VOTEs"); //NOTE: redundant?
+    eosio_assert(max_votes.symbol == symbol("TLOS", 4), "only TLOS can be used to get VOTEs"); //NOTE: redundant?
+    eosio_assert(max_votes > asset(0, symbol("TLOS", 4)), "must get a positive amount of VOTEs"); //NOTE: redundant?
     
-    voters_table voters(N(eosio.trail), N(eosio.trail));
-    auto v = voters.find(voter);
+    voters_table voters(_self, _self.value);
+    auto v = voters.find(voter.value);
     eosio_assert(v != voters.end(), "voter is not registered");
 
     auto vid = *v;
     eosio_assert(now() >= vid.release_time, "cannot get more votes until lock period is over");
 
-    votelevies_table votelevies(N(eosio.trail), N(eosio.trail));
-    auto vl = votelevies.find(voter);
+    votelevies_table votelevies(_self, _self.value);
+    auto vl = votelevies.find(voter.value);
 
-    auto new_votes = asset(max_votes.amount, S(4, VOTE)); //mirroring TLOS amount, not spending/locking it up
+    auto new_votes = asset(max_votes.amount, symbol("VOTE", 4)); //mirroring TLOS amount, not spending/locking it up
     asset decay_amount = calc_decay(voter, new_votes);
     
     if (vl != votelevies.end()) { //NOTE: if no levy found, give levy of 0
         auto levy = *vl;
         asset new_levy = (levy.levy_amount - decay_amount); //subtracting levy
 
-        if (new_levy < asset(0, S(4, VOTE))) {
-            new_levy = asset(0, S(4, VOTE));
+        if (new_levy < asset(0, symbol("VOTE", 4))) {
+            new_levy = asset(0, symbol("VOTE", 4));
         }
 
         new_votes -= new_levy;
 
-        votelevies.modify(vl, 0, [&]( auto& a ) {
+        votelevies.modify(vl, same_payer, [&]( auto& a ) {
             a.levy_amount = new_levy;
         });
     }
 
-    if (new_votes < asset(0, S(4, VOTE))) { //NOTE: can't have less than 0 votes
-        new_votes = asset(0, S(4, VOTE));
+    if (new_votes < asset(0, symbol("VOTE", 4))) { //NOTE: can't have less than 0 votes
+        new_votes = asset(0, symbol("VOTE", 4));
     }
 
-    voters.modify(v, 0, [&]( auto& a ) {
+    voters.modify(v, same_payer, [&]( auto& a ) {
         a.votes = new_votes;
         a.release_time = now() + lock_period;
     });
@@ -201,17 +205,17 @@ void trail::mirrorstake(account_name voter, uint32_t lock_period) {
     print("\nRegister For Votes: SUCCESS");
 }
 
-void trail::castvote(account_name voter, uint64_t ballot_id, uint16_t direction) {
+void trail::castvote(name voter, uint64_t ballot_id, uint16_t direction) {
     require_auth(voter);
     eosio_assert(direction >= uint16_t(0) && direction <= uint16_t(2), "Invalid Vote. [0 = NO, 1 = YES, 2 = ABSTAIN]");
 
-    voters_table voters(N(eosio.trail), N(eosio.trail));
-    auto v = voters.find(voter);
+    voters_table voters(_self, _self.value);
+    auto v = voters.find(voter.value);
     eosio_assert(v != voters.end(), "voter is not registered");
 
     auto vid = *v;
 
-    ballots_table ballots(N(eosio.trail), N(eosio.trail));
+    ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
     eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
 
@@ -219,7 +223,7 @@ void trail::castvote(account_name voter, uint64_t ballot_id, uint16_t direction)
     eosio_assert(env_struct.time_now >= bal.begin_time && env_struct.time_now <= bal.end_time, "ballot voting window not open");
     //eosio_assert(vid.release_time >= bal.end_time, "can only vote for ballots that end before your lock period is over...prevents double voting!");
 
-    votereceipts_table votereceipts(N(eosio.trail), voter);
+    votereceipts_table votereceipts(_self, voter.value);
     auto vr_itr = votereceipts.find(ballot_id);
     //eosio_assert(vr_itr == votereceipts.end(), "voter has already cast vote for this ballot");
     
@@ -243,7 +247,7 @@ void trail::castvote(account_name voter, uint64_t ballot_id, uint16_t direction)
                 case 2 : bal.abstain_count -= vid.votes; break;
             }
 
-            votereceipts.modify(vr_itr, 0, [&]( auto& a ) {
+            votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
                 a.direction = direction;
                 a.weight = vid.votes;
             });
@@ -252,7 +256,7 @@ void trail::castvote(account_name voter, uint64_t ballot_id, uint16_t direction)
 
             print("\nVote Recast: SUCCESS");
         } else if (vr.expiration < bal.end_time) { //NOTE: vote for new cycle
-            votereceipts.modify(vr_itr, 0, [&]( auto& a ) {
+            votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
                 a.direction = direction;
                 a.weight = vid.votes;
                 a.expiration = bal.end_time;
@@ -266,7 +270,7 @@ void trail::castvote(account_name voter, uint64_t ballot_id, uint16_t direction)
         case 2 : bal.abstain_count += vid.votes; break;
     }
 
-    ballots.modify(b, 0, [&]( auto& a ) {
+    ballots.modify(b, same_payer, [&]( auto& a ) {
         a.no_count = bal.no_count;
         a.yes_count = bal.yes_count;
         a.abstain_count = bal.abstain_count;
@@ -276,26 +280,26 @@ void trail::castvote(account_name voter, uint64_t ballot_id, uint16_t direction)
     print("\nVote: SUCCESS");
 }
 
-void trail::closevote(account_name publisher, uint64_t ballot_id, uint8_t pass) {
+void trail::closevote(name publisher, uint64_t ballot_id, uint8_t pass) {
     require_auth(publisher);
 
-    ballots_table ballots(N(eosio.trail), N(eosio.trail));
+    ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
     eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
 
     auto bal = *b;
     eosio_assert(now() >= bal.end_time, "ballot voting window still open");
 
-    ballots.modify(b, 0, [&]( auto& a ) {
+    ballots.modify(b, same_payer, [&]( auto& a ) {
         a.status = pass;
     });
 
 }
 
-void trail::nextcycle(account_name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
+void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
     require_auth(publisher);
 
-    ballots_table ballots(_self, _self);
+    ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
     eosio_assert(b != ballots.end(), "Ballot Doesn't Exist");
     auto bal = *b;
@@ -314,10 +318,10 @@ void trail::nextcycle(account_name publisher, uint64_t ballot_id, uint32_t new_b
 
 }
 
-void trail::deloldvotes(account_name voter, uint16_t num_to_delete) {
+void trail::deloldvotes(name voter, uint16_t num_to_delete) {
     require_auth(voter);
 
-    votereceipts_table votereceipts(N(eosio.trail), voter);
+    votereceipts_table votereceipts(_self, voter.value);
     auto itr = votereceipts.begin();
 
     while (itr != votereceipts.end() && num_to_delete > 0) {
@@ -335,100 +339,111 @@ void trail::deloldvotes(account_name voter, uint16_t num_to_delete) {
 
 #pragma region Reactions
 
-void trail::update_from_levy(account_name from, asset amount) {
-    votelevies_table fromlevies(N(eosio.trail), N(eosio.trail));
-    auto vl_from_itr = fromlevies.find(from);
+void trail::update_from_levy(name from, asset amount) {
+    votelevies_table fromlevies(_self, _self.value);
+    auto vl_from_itr = fromlevies.find(from.value);
     
     if (vl_from_itr == fromlevies.end()) {
-        fromlevies.emplace(N(eosio.trail), [&]( auto& a ){
+        fromlevies.emplace(_self, [&]( auto& a ){
             a.voter = from;
-            a.levy_amount = asset(0, S(4, VOTE));
+            a.levy_amount = asset(0, symbol("VOTE", 4));
             a.last_decay = env_struct.time_now;
         });
     } else {
         auto vl_from = *vl_from_itr;
         asset new_levy = vl_from.levy_amount - amount;
 
-        if (new_levy < asset(0, S(4, VOTE))) {
-            new_levy = asset(0, S(4, VOTE));
+        if (new_levy < asset(0, symbol("VOTE", 4))) {
+            new_levy = asset(0, symbol("VOTE", 4));
         }
 
-        fromlevies.modify(vl_from_itr, 0, [&]( auto& a ) {
+        fromlevies.modify(vl_from_itr, same_payer, [&]( auto& a ) {
             a.levy_amount = new_levy;
             a.last_decay = env_struct.time_now;
         });
     }
 }
 
-void trail::update_to_levy(account_name to, asset amount) {
-    votelevies_table tolevies(N(eosio.trail), N(eosio.trail));
-    auto vl_to_itr = tolevies.find(to);
+void trail::update_to_levy(name to, asset amount) {
+    votelevies_table tolevies(_self, _self.value);
+    auto vl_to_itr = tolevies.find(to.value);
 
     if (vl_to_itr == tolevies.end()) {
-        tolevies.emplace(N(eosio.trail), [&]( auto& a ){
+        tolevies.emplace(_self, [&]( auto& a ){
             a.voter = to;
-            a.levy_amount = asset(0, S(4, VOTE));
+            a.levy_amount = asset(0, symbol("VOTE", 4));
             a.last_decay = env_struct.time_now;
         });
     } else {
         auto vl_to = *vl_to_itr;
         asset new_levy = vl_to.levy_amount + amount;
 
-        tolevies.modify(vl_to_itr, 0, [&]( auto& a ) {
+        tolevies.modify(vl_to_itr, same_payer, [&]( auto& a ) {
             a.levy_amount = new_levy;
             a.last_decay = env_struct.time_now;
         });
     }
 }
 
-asset trail::calc_decay(account_name voter, asset amount) {
-    votelevies_table votelevies(N(eosio.trail), N(eosio.trail));
-    auto vl_itr = votelevies.find(voter);
+asset trail::calc_decay(name voter, asset amount) {
+    votelevies_table votelevies(_self, _self.value);
+    auto vl_itr = votelevies.find(voter.value);
 
     uint32_t time_delta;
 
     if (vl_itr != votelevies.end()) {
         auto vl = *vl_itr;
         time_delta = env_struct.time_now - vl.last_decay;
-        return asset(int64_t(time_delta / 60), S(4, VOTE));
+        return asset(int64_t(time_delta / 120), symbol("VOTE", 4));
     }
 
-    return asset(0, S(4, VOTE));
+    return asset(0, symbol("VOTE", 4));
 }
 
 #pragma endregion Reactions
 
-//EOSIO_ABI(trail, )
+//EOSIO_DISPATCH(trail, )
 
 extern "C" {
     void apply(uint64_t self, uint64_t code, uint64_t action) {
-        trail trailservice(self);
-        if(code == self && action == N(regtoken)) {
-            execute_action(&trailservice, &trail::regtoken);
-        } else if (code == self && action == N(unregtoken)) {
-            execute_action(&trailservice, &trail::unregtoken);
-        } else if (code == self && action == N(regvoter)) {
-            execute_action(&trailservice, &trail::regvoter);
-        } else if (code == self && action == N(unregvoter)) {
-            execute_action(&trailservice, &trail::unregvoter);
-        } else if (code == self && action == N(regballot)) {
-            execute_action(&trailservice, &trail::regballot);
-        } else if (code == self && action == N(unregballot)) {
-            execute_action(&trailservice, &trail::unregballot);
-        } else if (code == self && action == N(mirrorstake)) {
-            execute_action(&trailservice, &trail::mirrorstake);
-        } else if (code == self && action == N(castvote)) {
-            execute_action(&trailservice, &trail::castvote);
-        } else if (code == self && action == N(closevote)) {
-            execute_action(&trailservice, &trail::closevote);
-        } else if (code == self && action == N(nextcycle)) {
-            execute_action(&trailservice, &trail::nextcycle);
-        } else if (code == self && action == N(deloldvotes)) {
-            execute_action(&trailservice, &trail::deloldvotes);
-        } else if (code == N(eosio.token) && action == N(transfer)) { //NOTE: updates vote_levy after transfers
+
+        size_t size = action_data_size();
+        constexpr size_t max_stack_buffer_size = 512;
+        void* buffer = nullptr;
+        if( size > 0 ) {
+            buffer = max_stack_buffer_size < size ? malloc(size) : alloca(size);
+            read_action_data(buffer, size);
+        }
+        datastream<const char*> ds((char*)buffer, size);
+
+        trail trailservice(name(self), name(code), ds);
+
+        if(code == self && action == name("regtoken").value) {
+            execute_action(name(self), name(code), &trail::regtoken);
+        } else if (code == self && action == name("unregtoken").value) {
+            execute_action(name(self), name(code), &trail::unregtoken);
+        } else if (code == self && action == name("regvoter").value) {
+            execute_action(name(self), name(code), &trail::regvoter);
+        } else if (code == self && action == name("unregvoter").value) {
+            execute_action(name(self), name(code), &trail::unregvoter);
+        } else if (code == self && action == name("regballot").value) {
+            execute_action(name(self), name(code), &trail::regballot);
+        } else if (code == self && action == name("unregballot").value) {
+            execute_action(name(self), name(code), &trail::unregballot);
+        } else if (code == self && action == name("mirrorstake").value) {
+            execute_action(name(self), name(code), &trail::mirrorstake);
+        } else if (code == self && action == name("castvote").value) {
+            execute_action(name(self), name(code), &trail::castvote);
+        } else if (code == self && action == name("closevote").value) {
+            execute_action(name(self), name(code), &trail::closevote);
+        } else if (code == self && action == name("nextcycle").value) {
+            execute_action(name(self), name(code), &trail::nextcycle);
+        } else if (code == self && action == name("deloldvotes").value) {
+            execute_action(name(self), name(code), &trail::deloldvotes);
+        } else if (code == name("eosio.token").value && action == name("transfer").value) { //NOTE: updates vote_levy after transfers
             auto args = unpack_action_data<transfer_args>();
-            trailservice.update_from_levy(args.from, asset(args.quantity.amount, S(4, VOTE)));
-            trailservice.update_to_levy(args.to, asset(args.quantity.amount, S(4, VOTE)));
+            trailservice.update_from_levy(args.from, asset(args.quantity.amount, symbol("VOTE", 4)));
+            trailservice.update_to_levy(args.to, asset(args.quantity.amount, symbol("VOTE", 4)));
         }
     } //end apply
 }; //end dispatcher

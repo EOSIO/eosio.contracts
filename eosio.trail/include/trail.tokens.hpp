@@ -10,7 +10,7 @@
 #include <eosiolib/permission.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/action.hpp>
-#include <eosiolib/types.hpp>
+//#include <eosiolib/types.hpp>
 #include <eosiolib/singleton.hpp>
 
 using namespace std;
@@ -18,47 +18,45 @@ using namespace eosio;
 
 #pragma region Structs
 
-/// @abi table registries i64
-struct registration {
+struct [[eosio::table]] registry {
     asset native;
-    account_name publisher;
+    name publisher;
 
-    uint64_t primary_key() const { return native.symbol.name(); }
-    uint64_t by_publisher() const { return publisher; }
-    EOSLIB_SERIALIZE(registration, (native)(publisher))
+    uint64_t primary_key() const { return native.symbol.raw(); }
+    uint64_t by_publisher() const { return publisher.value; }
+    EOSLIB_SERIALIZE(registry, (native)(publisher))
 };
 
-/// @abi table balances i64
-struct balance {
-    account_name owner;
+struct [[eosio::table]] balance {
+    name owner;
     asset tokens;
 
-    uint64_t primary_key() const { return owner; }
+    uint64_t primary_key() const { return owner.value; }
     EOSLIB_SERIALIZE(balance, (owner)(tokens))
 };
 
-struct trail_transfer_args {
-    account_name sender;
-    account_name recipient;
-    asset tokens;
-};
+// struct trail_transfer_args {
+//     name sender;
+//     name recipient;
+//     asset tokens;
+// };
 
 #pragma endregion Structs
 
 #pragma region Tables
 
-typedef multi_index<N(balances), balance> balances_table;
+typedef multi_index<name("balances"), balance> balances_table;
 
-typedef multi_index<N(registries), registration,
-    indexed_by<N(bypub), const_mem_fun<registration, uint64_t, &registration::by_publisher>>> registries_table;
+typedef multi_index<name("registries"), registry,
+    indexed_by<name("bypub"), const_mem_fun<registry, uint64_t, &registry::by_publisher>>> registries_table;
 
 #pragma endregion Tables
 
 #pragma region Helper_Functions
 
-bool is_trail_token(symbol_name sym) {
-    registries_table registries(N(eosio.trail), N(eosio.trail));
-    auto r = registries.find(sym);
+bool is_trail_token(symbol sym) {
+    registries_table registries(name("eosio.trail"), name("eosio.trail").value);
+    auto r = registries.find(sym.raw());
 
     if (r != registries.end()) {
         return true;
@@ -67,10 +65,10 @@ bool is_trail_token(symbol_name sym) {
     return false;
 }
 
-bool is_registry(account_name publisher) {
-    registries_table registries(N(eosio.trail), N(eosio.trail));
-    auto by_pub = registries.get_index<N(bypub)>();
-    auto itr = by_pub.lower_bound(publisher);
+bool is_registry(name publisher) {
+    registries_table registries(name("eosio.trail"), name("eosio.trail").value);
+    auto by_pub = registries.get_index<name("bypub")>();
+    auto itr = by_pub.lower_bound(publisher.value);
 
     if (itr != by_pub.end()) {
         return true;
@@ -79,9 +77,9 @@ bool is_registry(account_name publisher) {
     return false;
 }
 
-registries_table::const_iterator find_registry(symbol_name sym) {
-    registries_table registries(N(eosio.trail), N(eosio.trail));
-    auto itr = registries.find(sym);
+registries_table::const_iterator find_registry(symbol sym) {
+    registries_table registries(name("eosio.trail"), name("eosio.trail").value);
+    auto itr = registries.find(sym.raw());
 
     if (itr != registries.end()) {
         return itr;
@@ -90,24 +88,24 @@ registries_table::const_iterator find_registry(symbol_name sym) {
     return registries.end();
 }
 
-registration get_registry(symbol_name sym) {
-    registries_table registries(N(eosio.trail), N(eosio.trail));
-    return registries.get(sym);
+registry get_registry(symbol sym) {
+    registries_table registries(name("eosio.trail"), name("eosio.trail").value);
+    return registries.get(sym.raw());
 }
 
-symbol_name get_sym(account_name publisher) {
-    registries_table registries(N(eosio.trail), N(eosio.trail));
-    auto by_pub = registries.get_index<N(bypub)>();
-    auto itr = by_pub.lower_bound(publisher);
+// symbol get_sym(name publisher) {
+//     registries_table registries(name("eosio.trail"), name("eosio.trail").value);
+//     auto by_pub = registries.get_index<name("bypub")>();
+//     auto itr = by_pub.lower_bound(publisher.value);
 
-    return itr->native.symbol.name();
-}
+//     return itr->native.symbol.raw();
+// }
 
-asset get_token_balance(symbol_name sym, account_name voter) {
+asset get_token_balance(symbol sym, name voter) {
     auto reg = get_registry(sym).publisher;
 
-    balances_table balances(reg, voter);
-    auto b = balances.get(voter);
+    balances_table balances(reg, voter.value);
+    auto b = balances.get(voter.value);
 
     return b.tokens;
 }

@@ -10,7 +10,7 @@
 #include <eosiolib/permission.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/action.hpp>
-#include <eosiolib/types.hpp>
+//#include <eosiolib/types.hpp>
 #include <eosiolib/singleton.hpp>
 
 using namespace std;
@@ -19,68 +19,68 @@ using namespace eosio;
 #pragma region Structs
 
 struct account {
-    asset    balance;
+    asset balance;
 
-    uint64_t primary_key() const { return balance.symbol.name(); }
+    uint64_t primary_key() const { return balance.symbol.raw(); }
 };
 
 struct currency_stats {
-    asset          supply;
-    asset          max_supply;
-    account_name   issuer;
+    asset supply;
+    asset max_supply;
+    name issuer;
 
-    uint64_t primary_key() const { return supply.symbol.name(); }
-};
-
-struct transfer_args {
-    account_name  from;
-    account_name  to;
-    asset         quantity;
-    string        memo;
+    uint64_t primary_key() const { return supply.symbol.raw(); }
 };
 
 struct user_resources {
-    account_name  owner;
-    asset         net_weight;
-    asset         cpu_weight;
-    int64_t       ram_bytes = 0;
+    name owner;
+    asset net_weight;
+    asset cpu_weight;
+    int64_t ram_bytes = 0;
 
-    uint64_t primary_key()const { return owner; }
+    uint64_t primary_key()const { return owner.value; }
     EOSLIB_SERIALIZE( user_resources, (owner)(net_weight)(cpu_weight)(ram_bytes) )
 };
 
 struct delegatebw_args {
-    account_name from;
-    account_name receiver;
+    name from;
+    name receiver;
     asset stake_net_quantity;
     asset stake_cpu_quantity;
     bool transfer;
 };
 
 struct undelegatebw_args {
-    account_name from;
-    account_name receiver;
+    name from;
+    name receiver;
     asset unstake_net_quantity;
     asset unstake_cpu_quantity;
+};
+
+struct transfer_args {
+    name from;
+    name to;
+    asset quantity;
+    string memo;
 };
 
 #pragma endregion Structs
 
 #pragma region Tables
 
-typedef eosio::multi_index<N(accounts), account> accounts;
+typedef eosio::multi_index<name("accounts"), account> accounts;
 
-typedef eosio::multi_index<N(stat), currency_stats> stats;
+typedef eosio::multi_index<name("stat"), currency_stats> stats;
 
-typedef eosio::multi_index<N(userres), user_resources> user_resources_table;
+typedef eosio::multi_index<name("userres"), user_resources> user_resources_table;
 
 #pragma endregion Tables
 
-#pragma region Custom_Functions
+#pragma region Helper_Functions
 
-bool is_eosio_token(symbol_name sym, account_name owner) {
-    accounts accountstable(N(eosio.token), owner);
-    auto a = accountstable.find(sym);
+bool is_eosio_token(symbol sym, name owner) {
+    accounts accountstable(name("eosio.token"), owner.value);
+    auto a = accountstable.find(sym.raw());
 
     if (a != accountstable.end()) {
         return true;
@@ -89,18 +89,18 @@ bool is_eosio_token(symbol_name sym, account_name owner) {
     return false;
 }
 
-asset get_eosio_token_balance(symbol_name sym, account_name owner) {
-    accounts accountstable(N(eosio.token), owner);
-    auto acct = accountstable.get(sym);
+asset get_eosio_token_balance(symbol sym, name owner) {
+    accounts accountstable(name("eosio.token"), owner.value);
+    auto acct = accountstable.get(sym.raw());
 
     auto amount = acct.balance;
 
     return amount;
 }
 
-asset get_liquid_tlos(account_name owner) {
-    accounts accountstable(N(eosio.token), owner);
-    auto a = accountstable.find(asset(0).symbol.name());
+asset get_liquid_tlos(name owner) {
+    accounts accountstable(name("eosio.token"), owner.value);
+    auto a = accountstable.find(symbol("TLOS", 4).raw());
 
     int64_t amount = 0;
 
@@ -109,12 +109,12 @@ asset get_liquid_tlos(account_name owner) {
         amount = acct.balance.amount;
     }
     
-    return asset(amount);
+    return asset(amount, symbol("TLOS", 4));
 }
 
-asset get_staked_tlos(account_name owner) {
-    user_resources_table userres(N(eosio), owner);
-    auto r = userres.find(owner);
+asset get_staked_tlos(name owner) {
+    user_resources_table userres(name("eosio"), owner.value);
+    auto r = userres.find(owner.value);
 
     int64_t amount = 0;
 
@@ -123,7 +123,7 @@ asset get_staked_tlos(account_name owner) {
         amount = (res.cpu_weight.amount + res.net_weight.amount);
     }
     
-    return asset(amount);
+    return asset(amount, symbol("TLOS", 4));
 }
 
-#pragma endregion Custom_Functions
+#pragma endregion Helper_Functions

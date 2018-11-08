@@ -11,15 +11,16 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/singleton.hpp>
+#include <eosiolib/dispatcher.hpp>
 #include <string>
 
 using namespace eosio;
 
-class trail : public contract {
+class [[eosio::contract]] trail : public contract {
     
     public:
 
-        trail(account_name self);
+        trail(name self, name code, datastream<const char*> ds);
 
         ~trail();
 
@@ -37,43 +38,32 @@ class trail : public contract {
         #pragma endregion Constants
 
         #pragma region Token_Actions
+        
+        [[eosio::action]] void regtoken(asset native, name publisher);
 
-        /// @abi action
-        void regtoken(asset native, account_name publisher);
-
-        /// @abi action
-        void unregtoken(asset native, account_name publisher);
+        [[eosio::action]] void unregtoken(asset native, name publisher);
 
         #pragma endregion Token_Actions
 
         #pragma region Voting_Actions
 
-        /// @abi action
-        void regvoter(account_name voter);
+        [[eosio::action]] void regvoter(name voter);
 
-        /// @abi action
-        void unregvoter(account_name voter);
+        [[eosio::action]] void unregvoter(name voter);
 
-        /// @abi action
-        void regballot(account_name publisher, asset voting_token, uint32_t begin_time, uint32_t end_time, string info_url);
+        [[eosio::action]] void regballot(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
 
-        /// @abi action
-        void unregballot(account_name publisher, uint64_t ballot_id);
+        [[eosio::action]] void unregballot(name publisher, uint64_t ballot_id);
 
-        /// @abi action
-        void mirrorstake(account_name voter, uint32_t lock_period);
+        [[eosio::action]] void mirrorstake(name voter, uint32_t lock_period);
 
-        /// @abi action
-        void castvote(account_name voter, uint64_t ballot_id, uint16_t direction);
+        [[eosio::action]] void castvote(name voter, uint64_t ballot_id, uint16_t direction);
 
-        /// @abi action
-        void nextcycle(account_name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time);
+        [[eosio::action]] void nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time);
 
-        /// @abi action
-        void deloldvotes(account_name voter, uint16_t num_to_delete);
+        [[eosio::action]] void deloldvotes(name voter, uint16_t num_to_delete);
 
-        /// @abi action
-        void closevote(account_name publisher, uint64_t ballot_id, uint8_t pass);
+        [[eosio::action]] void closevote(name publisher, uint64_t ballot_id, uint8_t pass);
 
         #pragma endregion Voting_Actions
 
@@ -81,11 +71,11 @@ class trail : public contract {
 
         //Reactions are regular functions called only as a trigger from the dispatcher.
 
-        void update_from_levy(account_name from, asset amount);
+        void update_from_levy(name from, asset amount);
 
-        void update_to_levy(account_name to, asset amount);
+        void update_to_levy(name to, asset amount);
 
-        asset calc_decay(account_name voter, asset amount);
+        asset calc_decay(name voter, asset amount);
 
         #pragma endregion Reactions
         
