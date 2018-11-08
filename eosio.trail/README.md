@@ -1,36 +1,65 @@
-# Trail Walkthrough
+# Trail Service User Guide
 
-Trail offers a comprehensive suite of blockchain-based contract services.
+Trail offers a comprehensive suite of blockchain-based voting services available to any prospective voter or contract developer.
 
-## Voting and Ballot/Voter Registration
+Developers can easily integrate with Trail by including the `trail.voting.hpp` plugin in their contracts.
 
-All users on the Telos Blockchain Network can register their account and receive a VoterID card that can be used in any Ballot or Election running on Trail. Developers can easily integrate with Trail by including the `traildef.voting.hpp` plugin in their contracts.
+## Voter Registration
 
-### Voting Actions
+All users on the Telos Blockchain Network can register their account and receive a VoterID card that can be used in any Ballot or Election running on Trail. 
 
 * `regvoter()`
 
-    Calling regvoter will affiliate the given account_name with the given token symbol. Any user with an account_name may call regvoter, thereby allowing the given user to vote on any proposal or in any election powered by Trail.
+    Calling regvoter() will assign a Voter ID to the `member` account and save it to the voters table. 
 
 * `unregvoter()`
 
-    Calling unregvoter will remove the voter registration from the voters table. Since the user pays a small amount of RAM to register, calling unregvoter will reclaim the RAM spent on the registration.
+    The unregvoter() action will remove the `voter` from the voters table. 
+
+## Ballot Registration
 
 * `regballot()`
 
-    RegBallot is called to register a voting contract. After calling regballot, Trail will automatically begin tracking votes on any open proposal/election made by the contract.
+    The regballot() action will register a new ballot to the `ballots` table.
+
+    * 
 
 * `unregballot()`
 
-    Unregballot is called to remove a registered voting contract from the table. This will also cause Trail to stop propagating votes for the unregistered contract.
+    
+
+* `mirrorstake` 
+
+
+
+* `castvote`
+
+
+
+* `nextcycle`
+
+
+
+* `deloldvotes`
+
+
+
+* `closevote`
+
+
 
 ## Token Registration
 
-Developers and organizations can author new and independent token contracts and then register their contract through Trail.
+Developers and organizations can author new and independent token contracts and then register the token contract through Trail.
 
 * `regtoken()`
+
+
+
 * `unregtoken()`
+
+
 
 ## Trail Definitions
 
-## Teclos Example Commands
+
