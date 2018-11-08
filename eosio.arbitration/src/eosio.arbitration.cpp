@@ -5,7 +5,7 @@
  * @copyright defined in telos/LICENSE.txt
  */
 
-#include <arbitration/arbitration.hpp>
+#include <eosio.arbitration/eosio.arbitration.hpp>
 
 arbitration::arbitration(name s, name code, datastream<const char *> ds)
     : eosio::contract(s, code, ds), configs(_self, _self.value) {
