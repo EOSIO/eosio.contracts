@@ -381,6 +381,9 @@ namespace eosiosystem {
          [[eosio::action]]
          void bidrefund( name bidder, name newname );
 
+         [[eosio::action]]
+         void votebpout(name bp, uint32_t penalty_hours);
+
       private:
          // Implementation details:
 
@@ -394,6 +397,7 @@ namespace eosiosystem {
          static eosio_global_state get_default_parameters();
          static time_point current_time_point();
          static block_timestamp current_block_time();
+         
 
          symbol core_symbol()const;
 
