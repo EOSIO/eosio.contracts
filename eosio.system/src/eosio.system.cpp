@@ -14,17 +14,17 @@ namespace eosiosystem {
    :native(s,code,ds),
     _voters(_self, _self.value),
     _producers(_self, _self.value),
-    _producers2(_self, _self.value),
     _global(_self, _self.value),
-    _global2(_self, _self.value),
-    _global3(_self, _self.value),
-    _rammarket(_self, _self.value)
+    _rammarket(_self, _self.value),
+    _schedule_metrics(_self, _self.value),
+    _rotation(_self, _self.value),
+    _payments(_self, _self.value)
    {
-
       //print( "construct system\n" );
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
-      _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
-      _gstate3 = _global3.exists() ? _global3.get() : eosio_global_state3{};
+      
+      _gschedule_metrics = _schedule_metrics.get_or_create(_self, schedule_metrics_state{ name(0), 0, std::vector<producer_metric>() });
+      _grotation = _rotation.get_or_create(_self, rotation_state{ name(0), name(0), 21, 75, block_timestamp(), block_timestamp() });
    }
 
    eosio_global_state system_contract::get_default_parameters() {
@@ -50,8 +50,8 @@ namespace eosiosystem {
 
    system_contract::~system_contract() {
       _global.set( _gstate, _self );
-      _global2.set( _gstate2, _self );
-      _global3.set( _gstate3, _self );
+      _schedule_metrics.set(_gschedule_metrics, _self);
+      _rotation.set(_grotation, _self);
    }
 
    void system_contract::setram( uint64_t max_ram_size ) {
@@ -77,10 +77,10 @@ namespace eosiosystem {
    void system_contract::update_ram_supply() {
       auto cbt = current_block_time();
 
-      if( cbt <= _gstate2.last_ram_increase ) return;
+      if( cbt <= _gstate.last_ram_increase ) return;
 
       auto itr = _rammarket.find(ramcore_symbol.raw());
-      auto new_ram = (cbt.slot - _gstate2.last_ram_increase.slot)*_gstate2.new_ram_per_block;
+      auto new_ram = (cbt.slot - _gstate.last_ram_increase.slot)*_gstate.new_ram_per_block;
       _gstate.max_ram_size += new_ram;
 
       /**
@@ -89,7 +89,7 @@ namespace eosiosystem {
       _rammarket.modify( itr, same_payer, [&]( auto& m ) {
          m.base.balance.amount += new_ram;
       });
-      _gstate2.last_ram_increase = cbt;
+      _gstate.last_ram_increase = cbt;
    }
 
    /**
@@ -103,7 +103,7 @@ namespace eosiosystem {
       require_auth( _self );
 
       update_ram_supply();
-      _gstate2.new_ram_per_block = bytes_per_block;
+      _gstate.new_ram_per_block = bytes_per_block;
    }
 
    void system_contract::setparams( const eosio::blockchain_parameters& params ) {
@@ -137,11 +137,11 @@ namespace eosiosystem {
 
    void system_contract::updtrevision( uint8_t revision ) {
       require_auth( _self );
-      eosio_assert( _gstate2.revision < 255, "can not increment revision" ); // prevent wrap around
-      eosio_assert( revision == _gstate2.revision + 1, "can only increment revision by one" );
+      eosio_assert( _gstate.revision < 255, "can not increment revision" ); // prevent wrap around
+      eosio_assert( revision == _gstate.revision + 1, "can only increment revision by one" );
       eosio_assert( revision <= 1, // set upper bound to greatest revision supported in the code
                     "specified revision is not yet supported by the code" );
-      _gstate2.revision = revision;
+      _gstate.revision = revision;
    }
 
    void system_contract::bidname( name bidder, name newname, asset bid ) {
@@ -302,6 +302,19 @@ namespace eosiosystem {
          });
       }
    }
+
+   void system_contract::votebpout(name bp, uint32_t penalty_hours) {
+     require_auth(_self);
+     eosio_assert(penalty_hours != 0, "The penalty should be greater than zero.");
+
+     auto pitr = _producers.find(bp.value);
+     eosio_assert(pitr != _producers.end(), "Producer account was not found");
+
+     _producers.modify(pitr, same_payer, [&](auto &p) {
+       p.kick(kick_type::BPS_VOTING, penalty_hours);
+     });
+   }
+
 } /// eosio.system
 
 

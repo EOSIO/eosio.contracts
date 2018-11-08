@@ -106,7 +106,7 @@ namespace eosiosystem {
    void system_contract::buyram( name payer, name receiver, asset quant )
    {
       require_auth( payer );
-      update_ram_supply();
+      // update_ram_supply();
 
       eosio_assert( quant.symbol == core_symbol(), "must buy ram with core token" );
       eosio_assert( quant.amount > 0, "must purchase a positive amount" );
@@ -170,7 +170,7 @@ namespace eosiosystem {
     */
    void system_contract::sellram( name account, int64_t bytes ) {
       require_auth( account );
-      update_ram_supply();
+      // update_ram_supply();
 
       eosio_assert( bytes > 0, "cannot sell negative byte" );
 
@@ -214,13 +214,13 @@ namespace eosiosystem {
       }
    }
 
-   void validate_b1_vesting( int64_t stake ) {
-      const int64_t base_time = 1527811200; /// 2018-06-01
-      const int64_t max_claimable = 100'000'000'0000ll;
-      const int64_t claimable = int64_t(max_claimable * double(now()-base_time) / (10*seconds_per_year) );
+//    void validate_b1_vesting( int64_t stake ) {
+//       const int64_t base_time = 1527811200; /// 2018-06-01
+//       const int64_t max_claimable = 100'000'000'0000ll;
+//       const int64_t claimable = int64_t(max_claimable * double(now()-base_time) / (10*seconds_per_year) );
 
-      eosio_assert( max_claimable - claimable <= stake, "b1 can only claim their tokens over 10 years" );
-   }
+//       eosio_assert( max_claimable - claimable <= stake, "b1 can only claim their tokens over 10 years" );
+//    }
 
    void system_contract::changebw( name from, name receiver,
                                    const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
@@ -395,9 +395,9 @@ namespace eosiosystem {
                });
          }
          eosio_assert( 0 <= from_voter->staked, "stake for voting cannot be negative");
-         if( from == "b1"_n ) {
-            validate_b1_vesting( from_voter->staked );
-         }
+      //    if( from == "b1"_n ) {
+      //       validate_b1_vesting( from_voter->staked );
+      //    }
 
          if( from_voter->producers.size() || from_voter->proxy ) {
             update_votes( from, from_voter->proxy, from_voter->producers, false );
@@ -425,8 +425,8 @@ namespace eosiosystem {
       eosio_assert( unstake_cpu_quantity >= zero_asset, "must unstake a positive amount" );
       eosio_assert( unstake_net_quantity >= zero_asset, "must unstake a positive amount" );
       eosio_assert( unstake_cpu_quantity.amount + unstake_net_quantity.amount > 0, "must unstake a positive amount" );
-      eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
-                    "cannot undelegate bandwidth until the chain is activated (at least 15% of all tokens participate in voting)" );
+      eosio_assert( _gstate.block_num > block_num_network_activation || _gstate.thresh_activated_stake_time > time_point(),
+                    "cannot undelegate bandwidth until the chain is activated (1,000,000 blocks produced)" );
 
       changebw( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
    } // undelegatebw
