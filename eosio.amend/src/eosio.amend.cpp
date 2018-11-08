@@ -1,29 +1,25 @@
 #include <eosio.amend.hpp>
-
+#include <eosiolib/symbol.hpp>
 #include <eosiolib/print.hpp>
 
-ratifyamend::ratifyamend(account_name self) : contract(self), configs(self, self) {
+ratifyamend::ratifyamend(name self, name code, datastream<const char*> ds) : contract(self, code, ds), configs(self, self.value) {
     if (!configs.exists()) {
-
         configs_struct = config{
             _self, //publisher
             uint32_t(5000) //expiration_length in seconds (default is 5,000,000 or ~58 days)
         };
-
         configs.set(configs_struct, _self);
     } else {
         configs_struct = configs.get();     
     }
 }
 
-ratifyamend::~ratifyamend() {
-    
-}
+ratifyamend::~ratifyamend() {}
 
 void ratifyamend::insertdoc(string title, vector<string> clauses) {
     require_auth(_self); //only contract owner can insert new document
     
-    documents_table documents(_self, _self);
+    documents_table documents(_self, _self.value);
 
     uint64_t doc_id = documents.available_primary_key();
 
@@ -37,10 +33,10 @@ void ratifyamend::insertdoc(string title, vector<string> clauses) {
     print("\nAssigned Document ID: ", doc_id);
 }
 
-void ratifyamend::makeproposal(string prop_title, uint64_t doc_id, uint8_t new_clause_num, string new_ipfs_url, account_name proposer) {
+void ratifyamend::makeproposal(string prop_title, uint64_t doc_id, uint8_t new_clause_num, string new_ipfs_url, name proposer) {
     require_auth(proposer);
 
-    documents_table documents(_self, _self);
+    documents_table documents(_self, _self.value);
     auto d = documents.find(doc_id);
     eosio_assert(d != documents.end(), "Document Not Found");
     auto doc = *d;
@@ -48,14 +44,14 @@ void ratifyamend::makeproposal(string prop_title, uint64_t doc_id, uint8_t new_c
     eosio_assert(new_clause_num <= doc.clauses.size() + 1 && new_clause_num >= 0, "new clause num is not valid");
 
     //NOTE: 100.0000 TLOS fee, refunded if proposal passes or meets specified lower thresholds
-    action(permission_level{ proposer, N(active) }, N(eosio.token), N(transfer), make_tuple(
+    action(permission_level{ proposer, "active"_n }, "eosio.token"_n, "transfer"_n, make_tuple(
     	proposer,
         _self,
-        asset(int64_t(1000000), S(4, TLOS)),
+        asset(int64_t(1000000), symbol("TLOS", 4)),
         std::string("Ratify/Amend Proposal Fee")
 	)).send();
 
-    proposals_table proposals(_self, _self);
+    proposals_table proposals(_self, _self.value);
     auto prop_id = proposals.available_primary_key();
 
     vector<uint8_t> clause_nums; 
@@ -83,10 +79,10 @@ void ratifyamend::makeproposal(string prop_title, uint64_t doc_id, uint8_t new_c
     print("\nAssigned Proposal ID: ", prop_id);
 }
 
-void ratifyamend::addclause(uint64_t prop_id, uint8_t new_clause_num, string new_ipfs_url, account_name proposer) {
+void ratifyamend::addclause(uint64_t prop_id, uint8_t new_clause_num, string new_ipfs_url, name proposer) {
     require_auth(proposer);
 
-    proposals_table proposals(_self, _self);
+    proposals_table proposals(_self, _self.value);
     auto p = proposals.find(prop_id);
     eosio_assert(p != proposals.end(), "proposal doesn't exist");
     auto prop = *p;
@@ -94,7 +90,7 @@ void ratifyamend::addclause(uint64_t prop_id, uint8_t new_clause_num, string new
     eosio_assert(prop.proposer == proposer, "can't add clauses to proposal you don't own");
     eosio_assert(prop.status == 0, "proposal is no longer in building stage");
 
-    documents_table documents(_self, _self);
+    documents_table documents(_self, _self.value);
     auto d = documents.find(prop.document_id);
     eosio_assert(d != documents.end(), "Document Not Found");
     auto doc = *d;
@@ -113,7 +109,7 @@ void ratifyamend::addclause(uint64_t prop_id, uint8_t new_clause_num, string new
     prop.new_clause_nums.push_back(new_clause_num);
     prop.new_ipfs_urls.push_back(new_ipfs_url);
 
-    proposals.modify(p, 0, [&]( auto& a ) {
+    proposals.modify(p, same_payer, [&]( auto& a ) {
         a.new_clause_nums = prop.new_clause_nums;
         a.new_ipfs_urls = prop.new_ipfs_urls;
     });
@@ -121,22 +117,22 @@ void ratifyamend::addclause(uint64_t prop_id, uint8_t new_clause_num, string new
     print("\nAdd Clause: SUCCESS");
 }
 
-void ratifyamend::linkballot(uint64_t prop_id, uint64_t ballot_id, account_name proposer) {
+void ratifyamend::linkballot(uint64_t prop_id, uint64_t ballot_id, name proposer) {
     require_auth(proposer);
 
-    proposals_table proposals(_self, _self);
+    proposals_table proposals(_self, _self.value);
     auto p = proposals.find(prop_id);
     eosio_assert(p != proposals.end(), "proposal with given id doesn't exist");
     auto prop = *p;
 
-    ballots_table ballots(N(eosio.trail), N(eosio.trail));
+    ballots_table ballots("eosio.trail"_n, "eosio.trail"_n);
     auto b = ballots.find(ballot_id);
     eosio_assert(b != ballots.end(), "ballot with given id doesn't exist");
     auto bal = *b;
 
     eosio_assert(bal.publisher == proposer, "cannot link to a ballot made by another account");
 
-    proposals.modify(p, 0, [&]( auto& a ) {
+    proposals.modify(p, same_payer, [&]( auto& a ) {
         a.ballot_id = bal.ballot_id;
 
         a.begin_time = bal.begin_time;
@@ -146,30 +142,30 @@ void ratifyamend::linkballot(uint64_t prop_id, uint64_t ballot_id, account_name 
     print("\nBallot Link: SUCCESS");
 }
 
-void ratifyamend::readyprop(uint64_t prop_id, account_name proposer) {
+void ratifyamend::readyprop(uint64_t prop_id, name proposer) {
     require_auth(proposer);
 
-    proposals_table proposals(_self, _self);
+    proposals_table proposals(_self, _self.value);
     auto p = proposals.find(prop_id);
     eosio_assert(p != proposals.end(), "Proposal Not Found");
     auto prop = *p;
 
     eosio_assert(prop.status == 0, "proposal is no longer in building stage");
 
-    proposals.modify(p, 0, [&]( auto& a ) {
-        a.status = uint8(1);
+    proposals.modify(p, same_payer, [&]( auto& a ) {
+        a.status = uint8_t(1);
     });
 
     print("\nReady Proposal: SUCCESS");
 }
 
-void ratifyamend::closeprop(uint64_t proposal_id, account_name proposer) {
-    proposals_table proposals(_self, _self);
+void ratifyamend::closeprop(uint64_t proposal_id, name proposer) {
+    proposals_table proposals(_self, _self.value);
     auto p = proposals.find(proposal_id);
     eosio_assert(p != proposals.end(), "Proposal Not Found");
     auto prop = *p;
 
-    ballots_table ballots(N(eosio.trail), N(eosio.trail));
+    ballots_table ballots("eosio.trail"_n, "eosio.trail"_n);
     auto b = ballots.find(prop.ballot_id);
     eosio_assert(b != ballots.end(), "Ballot ID doesn't exist");
     auto bal = *b;
@@ -177,7 +173,7 @@ void ratifyamend::closeprop(uint64_t proposal_id, account_name proposer) {
     eosio_assert(bal.end_time < now(), "Proposal is still open");
     eosio_assert(prop.status == 0 && bal.status == 0, "Proposal is already closed");
 
-    environment_singleton environment(N(eosio.trail), N(eosio.trail));
+    environment_singleton environment("eosio.trail"_n, "eosio.trail"_n);
     auto e = environment.get();
 
     asset total_votes = (bal.yes_count + bal.no_count + bal.abstain_count); //total votes cast on proposal
@@ -194,14 +190,14 @@ void ratifyamend::closeprop(uint64_t proposal_id, account_name proposer) {
 
     if (bal.unique_voters >= quorum_thresh && bal.yes_count >= pass_thresh) { //proposal passed, refund granted
 
-        proposals.modify(p, 0, [&]( auto& a ) {
+        proposals.modify(p, same_payer, [&]( auto& a ) {
             a.status = 1;
         });
 
-        action(permission_level{ _self, N(active) }, N(eosio.token), N(transfer), make_tuple(
+        action(permission_level{ _self, "active"_n }, "eosio.token"_n, "transfer"_n, make_tuple(
             _self,
             prop.proposer,
-            asset(int64_t(1000000), S(4, TLOS)),
+            asset(int64_t(1000000), symbol("TLOS", 4)),
             std::string("Ratify/Amend Proposal Fee Refund")
         )).send();
 
@@ -211,20 +207,20 @@ void ratifyamend::closeprop(uint64_t proposal_id, account_name proposer) {
 
     } else if (bal.unique_voters >= q_refund_thresh && bal.yes_count >= p_refund_thresh) { //proposal failed, refund granted
 
-        proposals.modify(p, 0, [&]( auto& a ) {
+        proposals.modify(p, same_payer, [&]( auto& a ) {
             a.status = 2;
         });
 
-        action(permission_level{ _self, N(active) }, N(eosio.token), N(transfer), make_tuple(
+        action(permission_level{ _self, "active"_n }, "eosio.token"_n, "transfer"_n, make_tuple(
             _self,
             prop.proposer,
-            asset(int64_t(1000000), S(4, TLOS)),
+            asset(int64_t(1000000), symbol("TLOS", 4)),
             std::string("Ratify/Amend Proposal Fee Refund")
         )).send();
         
     } else { //proposal failed, refund witheld
 
-        proposals.modify(p, 0, [&]( auto& a ) {
+        proposals.modify(p, same_payer, [&]( auto& a ) {
             a.status = 2;
         });
 
@@ -243,7 +239,7 @@ void ratifyamend::closeprop(uint64_t proposal_id, account_name proposer) {
 #pragma region Helper_Functions
 
 void ratifyamend::update_doc(uint64_t document_id, vector<uint8_t> new_clause_nums, vector<string> new_ipfs_urls) {
-    documents_table documents(_self, _self);
+    documents_table documents(_self, _self.value);
     auto d = documents.find(document_id);
     auto doc = *d;
 
@@ -257,11 +253,11 @@ void ratifyamend::update_doc(uint64_t document_id, vector<uint8_t> new_clause_nu
         }
     }
 
-    documents.modify(d, 0, [&]( auto& a ) {
+    documents.modify(d, same_payer, [&]( auto& a ) {
         a.clauses = doc.clauses;
     });
 }
 
 #pragma endregion Helper_Functions
 
-EOSIO_ABI(ratifyamend, (insertdoc)(makeproposal)(addclause)(linkballot)(closeprop))
+EOSIO_DISPATCH(ratifyamend, (insertdoc)(makeproposal)(addclause)(linkballot)(closeprop))

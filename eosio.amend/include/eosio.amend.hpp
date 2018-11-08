@@ -9,53 +9,46 @@
  * @copyright defined in telos/LICENSE.txt
  */
 
-#include <trail.voting.hpp>
-#include <trail.system.hpp>
+//#include <trail.voting.hpp>
+//#include <trail.system.hpp>
 
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/permission.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/action.hpp>
-#include <eosiolib/types.hpp>
 #include <eosiolib/singleton.hpp>
 
 using namespace std;
 using namespace eosio;
 
-class ratifyamend : public contract {
+class [[eosio::contract("eosio.amend")]] ratifyamend : public contract {
     public:
 
-        ratifyamend(account_name self);
+        ratifyamend(name self, name code, datastream<const char*> ds);
 
         ~ratifyamend();
 
-        /// @abi action
+		[[eosio::action]]
         void insertdoc(string title, vector<string> clauses);
 
-        /// @abi action
-        void makeproposal(string prop_title, uint64_t doc_id, uint8_t new_clause_num, string new_ipfs_url, account_name proposer);
+		[[eosio::action]]
+        void makeproposal(string prop_title, uint64_t doc_id, uint8_t new_clause_num, string new_ipfs_url, name proposer);
 
-        /// @abi action
-        void addclause(uint64_t prop_id, uint8_t new_clause_num, string new_ipfs_url, account_name proposer);
+		[[eosio::action]]
+        void addclause(uint64_t prop_id, uint8_t new_clause_num, string new_ipfs_url, name proposer);
 
-        /// @abi action
-        void linkballot(uint64_t prop_id, uint64_t ballot_id, account_name proposer);
+		[[eosio::action]]
+        void linkballot(uint64_t prop_id, uint64_t ballot_id, name proposer);
 
-        /// @abi action
-        void readyprop(uint64_t prop_id, account_name proposer);
+		[[eosio::action]]
+        void readyprop(uint64_t prop_id, name proposer);
 
-        /*
-        /// @abi action
-        void vote(uint64_t prop_id, uint16_t direction, account_name voter);
-        */
-
-        /// @abi action
-        void closeprop(uint64_t proposal_id, account_name proposer);
+	   	[[eosio::action]]
+        void closeprop(uint64_t proposal_id, name proposer);
 
     protected:
 
-        /// @abi table documents i64
-        struct document {
+        struct [[eosio::table, eosio::contract("eosio.amend")]] document {
             uint64_t document_id;
             string document_title;
             vector<string> clauses; //vector of ipfs urls
@@ -65,11 +58,10 @@ class ratifyamend : public contract {
             EOSLIB_SERIALIZE(document, (document_id)(document_title)(clauses)(last_amend))
         };
 
-        /// @abi table proposals i64
-        struct proposal {
+        struct [[eosio::table, eosio::contract("eosio.amend")]] proposal {
             uint64_t proposal_id;
             uint64_t ballot_id;
-            account_name proposer;
+            name proposer;
 
             uint64_t document_id; //document to amend
             string proposal_title;
@@ -86,24 +78,23 @@ class ratifyamend : public contract {
                 (begin_time)(end_time)(status))
         };
 
-        /// @abi table configs
-        struct config {
-            account_name publisher;
+        struct [[eosio::table("configs"), eosio::contract("eosio.amend")]] config {
+            name publisher;
 
             uint32_t expiration_length;
 
-            uint64_t primary_key() const { return publisher; }
+            uint64_t primary_key() const { return publisher.value; }
             EOSLIB_SERIALIZE(config, (publisher)
                 (expiration_length))
         };
 
     #pragma region Tables
 
-    typedef multi_index<N(documents), document> documents_table;
+    typedef multi_index<"documents"_n, document> documents_table;
 
-    typedef multi_index<N(proposals), proposal> proposals_table;
+    typedef multi_index<"proposals"_n, proposal> proposals_table;
 
-    typedef singleton<N(configs), config> configs_singleton;
+    typedef singleton<"configs"_n, config> configs_singleton;
     configs_singleton configs;
     config configs_struct;
 
@@ -116,7 +107,7 @@ class ratifyamend : public contract {
     void update_doc(uint64_t document_id, vector<uint8_t> new_clause_nums, vector<string> new_ipfs_urls);
 
     proposals_table::const_iterator find_proposal(uint64_t proposal_id) {
-        proposals_table proposals(_self, _self);
+        proposals_table proposals(_self, _self.value);
         auto p = proposals.find(proposal_id);
 
         if (p != proposals.end()) {
