@@ -125,7 +125,7 @@ void ratifyamend::linkballot(uint64_t prop_id, uint64_t ballot_id, name proposer
     eosio_assert(p != proposals.end(), "proposal with given id doesn't exist");
     auto prop = *p;
 
-    ballots_table ballots("eosio.trail"_n, "eosio.trail"_n);
+    ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
     eosio_assert(b != ballots.end(), "ballot with given id doesn't exist");
     auto bal = *b;
@@ -165,7 +165,7 @@ void ratifyamend::closeprop(uint64_t proposal_id, name proposer) {
     eosio_assert(p != proposals.end(), "Proposal Not Found");
     auto prop = *p;
 
-    ballots_table ballots("eosio.trail"_n, "eosio.trail"_n);
+    ballots_table ballots(_self, _self.value);
     auto b = ballots.find(prop.ballot_id);
     eosio_assert(b != ballots.end(), "Ballot ID doesn't exist");
     auto bal = *b;
@@ -173,7 +173,7 @@ void ratifyamend::closeprop(uint64_t proposal_id, name proposer) {
     eosio_assert(bal.end_time < now(), "Proposal is still open");
     eosio_assert(prop.status == 0 && bal.status == 0, "Proposal is already closed");
 
-    environment_singleton environment("eosio.trail"_n, "eosio.trail"_n);
+    environment_singleton environment(_self, _self.value);
     auto e = environment.get();
 
     asset total_votes = (bal.yes_count + bal.no_count + bal.abstain_count); //total votes cast on proposal

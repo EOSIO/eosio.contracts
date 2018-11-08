@@ -9,8 +9,8 @@
  * @copyright defined in telos/LICENSE.txt
  */
 
-//#include <trail.voting.hpp>
-//#include <trail.system.hpp>
+#include <trail.voting.hpp>
+#include <trail.system.hpp>
 
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/permission.hpp>
