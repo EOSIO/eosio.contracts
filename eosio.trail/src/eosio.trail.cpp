@@ -116,8 +116,6 @@ void trail::regballot(name publisher, symbol voting_symbol, uint32_t begin_time,
 
     //TODO: check for voting_token existence?
 
-    //ODO: change voting_token to voting_symbol?
-
     ballots_table ballots(_self, _self.value);
 
     ballots.emplace(publisher, [&]( auto& a ){
@@ -147,7 +145,7 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
 
     auto bal = *b;
 
-    eosio_assert(bal.status > 0, "ballot voting in progress, cannot unregister");
+    eosio_assert(now() < bal.begin_time, "ballot voting in progress, cannot unregister");
 
     ballots.erase(b);
 
