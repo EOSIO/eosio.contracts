@@ -15,7 +15,7 @@ namespace eosiosystem {
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { owner, active_permission },
                                                     { owner, rex_account, amount, "deposit to REX fund" } );
       auto itr = _rexfunds.find( owner.value );
-      if( itr == _rexfunds.end()  ) {
+      if ( itr == _rexfunds.end()  ) {
          _rexfunds.emplace( owner, [&]( auto& fund ) {
             fund.owner   = owner;
             fund.balance = amount;
@@ -63,7 +63,7 @@ namespace eosiosystem {
       asset rex_received( 0, rex_symbol );
 
       auto itr = _rexpool.begin();
-      if( !rex_system_initialized() ) {
+      if ( !rex_system_initialized() ) {
          /// initialize REX pool
          _rexpool.emplace( _self, [&]( auto& rp ) {
             rex_received.amount = amount.amount * rex_ratio;
@@ -75,7 +75,7 @@ namespace eosiosystem {
             rp.total_rex        = rex_received;
             rp.namebid_proceeds = asset( 0, core_symbol() );
          });
-      } else if( !rex_available() ) { /// should be a rare corner case
+      } else if ( !rex_available() ) { /// should be a rare corner case
          _rexpool.modify( itr, same_payer, [&]( auto& rp ) {
             rex_received.amount = amount.amount * rex_ratio;
             
@@ -104,7 +104,7 @@ namespace eosiosystem {
       auto bitr = _rexbalance.find( from.value );
       asset init_rex_stake( 0, core_symbol() );
       asset current_rex_stake( 0, core_symbol() );
-      if( bitr == _rexbalance.end() ) {
+      if ( bitr == _rexbalance.end() ) {
          _rexbalance.emplace( from, [&]( auto& rb ) {
             rb.owner       = from;
             rb.vote_stake  = amount;
@@ -139,13 +139,13 @@ namespace eosiosystem {
 
       auto current_order = close_rex_order( bitr, rex );
       update_rex_account( from, current_order.proceeds, current_order.stake_change );
-      if( !current_order.success ) {
+      if ( !current_order.success ) {
          /**
           * REX order couldn't be filled and is added to queue.
           * If account already has an open order, requested rex is added to existing order.
           */
          auto oitr = _rexorders.find( from.value );
-         if( oitr == _rexorders.end() ) {
+         if ( oitr == _rexorders.end() ) {
             _rexorders.emplace( from, [&]( auto& order ) {
                order.owner         = from;
                order.rex_requested = rex;
@@ -187,7 +187,7 @@ namespace eosiosystem {
 
       auto out = int64_t((I*T0) / (I+F0));
 
-      if( out < 0 ) out = 0;
+      if ( out < 0 ) out = 0;
 
       conin  += in;
       conout -= out;
@@ -302,7 +302,7 @@ namespace eosiosystem {
 
       require_auth( owner );
       
-      if( rex_system_initialized() )
+      if ( rex_system_initialized() )
          runrex(2);
       
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
@@ -324,7 +324,7 @@ namespace eosiosystem {
       /// check for remaining rex balance
       {
          auto rex_itr = _rexbalance.find( owner.value );
-         if( rex_itr != _rexbalance.end() ) {
+         if ( rex_itr != _rexbalance.end() ) {
             eosio_assert( rex_itr->rex_balance.amount == 0, "account has remaining REX, must sell first");
             _rexbalance.erase( rex_itr );
          }
@@ -333,7 +333,7 @@ namespace eosiosystem {
       /// check for remaining rex fund balance
       {
          auto fund_itr =_rexfunds.find( owner.value );
-         if( fund_itr != _rexfunds.end() ) {
+         if ( fund_itr != _rexfunds.end() ) {
             eosio_assert( fund_itr->balance.amount == 0, "account has remaining funds, must withdraw first");
             _rexfunds.erase( fund_itr );
          }
@@ -378,7 +378,7 @@ namespace eosiosystem {
             delete_loan = true;
             delta_stake = -( itr->total_staked.amount );
             /// refund "from" account if the closed loan balance is positive
-            if( itr->balance.amount > 0 ) {
+            if ( itr->balance.amount > 0 ) {
                transfer_to_fund( itr->from, itr->balance );
             }
          }
@@ -400,13 +400,13 @@ namespace eosiosystem {
          auto cpu_idx = cpu_loans.get_index<"byexpr"_n>();
          for( uint16_t i = 0; i < max; ++i ) {
             auto itr = cpu_idx.begin();                                                                                                                                                                                                                                        
-            if( itr == cpu_idx.end() || itr->expiration > current_time_point() ) break;
+            if ( itr == cpu_idx.end() || itr->expiration > current_time_point() ) break;
       
             auto result = process_expired_loan( cpu_idx, itr );
-            if( result.second != 0 )
+            if ( result.second != 0 )
                update_resource_limits( itr->receiver, result.second, 0 );
 
-            if( result.first )
+            if ( result.first )
                cpu_idx.erase( itr );
          }
       }
@@ -415,15 +415,15 @@ namespace eosiosystem {
       {
          rex_net_loan_table net_loans( _self, _self.value );
          auto net_idx = net_loans.get_index<"byexpr"_n>();
-         for( uint16_t i = 0; i < max; ++i ) {
+         for ( uint16_t i = 0; i < max; ++i ) {
             auto itr = net_idx.begin();
             if( itr == net_idx.end() || itr->expiration > current_time_point() ) break;
 
             auto result = process_expired_loan( net_idx, itr );
-            if( result.second != 0 )
+            if ( result.second != 0 )
                update_resource_limits( itr->receiver, 0, result.second );
 
-            if( result.first )
+            if ( result.first )
                net_idx.erase( itr );
          }
       }
@@ -432,13 +432,13 @@ namespace eosiosystem {
       {
          auto idx = _rexorders.get_index<"bytime"_n>();
          auto oitr = idx.begin();
-         for( uint16_t i = 0; i < max; ++i ) {
+         for ( uint16_t i = 0; i < max; ++i ) {
             if( oitr == idx.end() || !oitr->is_open ) break;
             auto bitr   = _rexbalance.find( oitr->owner.value ); // bitr != _rexbalance.end()
             auto result = close_rex_order( bitr, oitr->rex_requested );
             auto next   = oitr;
             ++next;
-            if( result.success ) {
+            if ( result.success ) {
                idx.modify( oitr, same_payer, [&]( auto& order ) {
                   order.proceeds.amount     = result.proceeds.amount;
                   order.stake_change.amount = result.stake_change.amount;
@@ -504,7 +504,7 @@ namespace eosiosystem {
       asset stake_change( 0, core_symbol() );      
       bool success = false;
       
-      if( proceeds.amount <= rexitr->total_unlent.amount ) {
+      if ( proceeds.amount <= rexitr->total_unlent.amount ) {
          const int64_t init_vote_stake_amount = bitr->vote_stake.amount;
          const int64_t current_stake_value = ( uint128_t(bitr->rex_balance.amount) * S0 ) / R0;
          _rexpool.modify( rexitr, same_payer, [&]( auto& rt ) {
@@ -575,19 +575,19 @@ namespace eosiosystem {
       asset to_fund( proceeds );
       asset to_stake( delta_stake );
       auto itr = _rexorders.find( owner.value );
-      if( itr != _rexorders.end() && !itr->is_open ) {
+      if ( itr != _rexorders.end() && !itr->is_open ) {
          to_fund.amount  += itr->proceeds.amount;
          to_stake.amount += itr->stake_change.amount;
          _rexorders.erase( itr );
       }
-      if( to_fund.amount > 0 )
+      if ( to_fund.amount > 0 )
          transfer_to_fund( owner, to_fund );
-      if( to_stake.amount != 0 )
+      if ( to_stake.amount != 0 )
          update_voting_power( owner, to_stake );
    }
 
    void system_contract::channel_to_rex( const name& from, const asset& amount ) {
-      if( rex_available() ) {
+      if ( rex_available() ) {
          _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
             rp.total_unlent.amount   += amount.amount;
             rp.total_lendable.amount += amount.amount;
@@ -599,11 +599,36 @@ namespace eosiosystem {
    }
 
    void system_contract::channel_namebid_to_rex( const int64_t highest_bid ) {
-      if( rex_available() ) {
+      if ( rex_available() ) {
          _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
             rp.namebid_proceeds.amount += highest_bid;
          });
       }
+   }
+
+   uint32_t system_contract::get_rex_maturity()const {
+      const uint32_t num_of_slots = 5;
+      uint32_t now = current_time_point().elapsed.count() / 1000000;
+      uint32_t r = (now + 1) % seconds_per_day;
+      return now - r + (num_of_slots + 1) * seconds_per_day;
+   }
+
+   void system_contract::process_rex_maturities( rex_balance& rb ) {
+      uint32_t now = current_time_point().elapsed.count() / 1000000;
+      while ( !rb.rex_maturities.empty() && rb.rex_maturities.front().first <= now ) {
+         rb.matured_rex += rb.rex_maturities.front().second;
+         rb.rex_maturities.pop();
+      }
+   }
+
+   void system_contract::consolidate_rex_balance( rex_balance& rb ) {
+      int64_t total = rb.matured_rex;
+      rb.matured_rex = 0;
+      while ( !rb.rex_maturities.empty() ) {
+         total += rb.rex_maturities.front().second;
+         rb.rex_maturities.pop();
+      }
+      rb.rex_maturities.push( { get_rex_maturity(), total } );
    }
 
 }; /// namespace eosiosystem

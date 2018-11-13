@@ -12,6 +12,7 @@
 #include <eosio.system/exchange_state.hpp>
 
 #include <string>
+#include <queue>
 
 namespace eosiosystem {
 
@@ -202,6 +203,8 @@ namespace eosiosystem {
       name    owner;
       asset   vote_stake; /// the amount of CORE_SYMBOL currently included in owner's vote
       asset   rex_balance; /// the amount of REX owned by owner
+      int64_t matured_rex = 0;
+      std::queue<std::pair<uint32_t, int64_t>> rex_maturities;
 
       uint64_t primary_key()const { return owner.value; }
    };
@@ -524,6 +527,9 @@ namespace eosiosystem {
          bool rex_loans_available()const { return _rexorders.begin() == _rexorders.end() && rex_available(); }
          bool rex_system_initialized()const { return _rexpool.begin() != _rexpool.end(); }
          bool rex_available()const { return rex_system_initialized() && _rexpool.begin()->total_rex.amount > 0; }
+         uint32_t get_rex_maturity()const;
+         void process_rex_maturities( rex_balance& rb );
+         void consolidate_rex_balance( rex_balance& rb );
 
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,
