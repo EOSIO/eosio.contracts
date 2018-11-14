@@ -66,6 +66,28 @@ struct [[eosio::table]] ballot {
         (begin_time)(end_time)(status))
 };
 
+// struct candidate {
+//     name member;
+//     asset votes;
+//     uint8_t status;
+// };
+
+// struct [[eosio::table]] election {
+//     uint64_t election_id;
+//     name publisher;
+
+//     vector<candidate> candidates;
+//     uint32_t unique_voters;
+    
+//     uint32_t begin_time;
+//     uint32_t end_time;
+
+//     uint64_t primary_key() const { return election_id; }
+//     EOSLIB_SERIALIZE(election, (election_id)(pubisher)
+//         (candidates)(unique_voters)
+//         (begin_time)(end_time))
+// };
+
 struct [[eosio::table]] env {
     name publisher;
     

@@ -304,7 +304,7 @@ void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_tim
 
     auto sym = bal.no_count.symbol;
 
-    ballots.emplace(publisher, [&]( auto& a ){
+    ballots.modify(b, same_payer, [&]( auto& a ) {
         a.no_count = asset(0, sym);
         a.yes_count = asset(0, sym);
         a.abstain_count = asset(0, sym);

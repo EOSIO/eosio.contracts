@@ -55,6 +55,8 @@ class [[eosio::contract]] trail : public contract {
 
         [[eosio::action]] void unregballot(name publisher, uint64_t ballot_id);
 
+        //[[eosio::action]] void regelection(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
+
         [[eosio::action]] void mirrorstake(name voter, uint32_t lock_period);
 
         [[eosio::action]] void castvote(name voter, uint64_t ballot_id, uint16_t direction);
