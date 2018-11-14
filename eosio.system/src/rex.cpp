@@ -101,28 +101,9 @@ namespace eosiosystem {
          });
       }
 
-      auto bitr = _rexbalance.find( from.value );
-      asset init_rex_stake( 0, core_symbol() );
-      asset current_rex_stake( 0, core_symbol() );
-      if ( bitr == _rexbalance.end() ) {
-         _rexbalance.emplace( from, [&]( auto& rb ) {
-            rb.owner       = from;
-            rb.vote_stake  = amount;
-            rb.rex_balance = rex_received;
-         });
-         current_rex_stake.amount = amount.amount;
-      } else {
-         init_rex_stake.amount = bitr->vote_stake.amount;
-         _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
-            rb.rex_balance.amount += rex_received.amount;
-            rb.vote_stake.amount   = ( uint128_t(rb.rex_balance.amount) * itr->total_lendable.amount ) / itr->total_rex.amount;
-         });
-         current_rex_stake.amount = bitr->vote_stake.amount;
-      }
-
+      asset delta_rex_stake = add_to_rex_balance( from, amount, rex_received );
       runrex(2);
-
-      update_rex_account( from, asset( 0, core_symbol() ), current_rex_stake - init_rex_stake );
+      update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
    }
 
    void system_contract::sellrex( const name& from, const asset& rex ) {
@@ -134,8 +115,9 @@ namespace eosiosystem {
       eosio_assert( rex_system_initialized(), "rex system not initialized yet" );
 
       auto bitr = _rexbalance.require_find( from.value, "user must first buyrex" );
-      eosio_assert( bitr->rex_balance.symbol == rex.symbol, "asset symbol must be (4, REX)" );
-      eosio_assert( bitr->rex_balance >= rex, "insufficient funds" );
+      eosio_assert( rex.symbol == bitr->rex_balance.symbol , "asset symbol must be (4, REX)" );
+      process_rex_maturities( bitr );
+      eosio_assert( rex.amount <= bitr->matured_rex, "insufficient funds" );
 
       auto current_order = close_rex_order( bitr, rex );
       update_rex_account( from, current_order.proceeds, current_order.stake_change );
@@ -157,7 +139,8 @@ namespace eosiosystem {
          } else {
             _rexorders.modify( oitr, same_payer, [&]( auto& order ) {
                order.rex_requested.amount += rex.amount;
-               eosio_assert( bitr->rex_balance >= order.rex_requested, "insufficient funds for current and scheduled orders");
+               eosio_assert( order.rex_requested.amount <= bitr->matured_rex,
+                             "insufficient funds for current and scheduled orders");
             });
          }
       }
@@ -296,6 +279,17 @@ namespace eosiosystem {
       require_auth( user );
       
       runrex( max );
+   }
+
+   void system_contract::consolidate( const name& owner ) {
+      
+      require_auth( owner );
+      
+      runrex(2);
+      
+      auto bitr = _rexbalance.require_find( owner.value, "account has no REX balance" );
+      asset rex_in_sell_order = update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
+      consolidate_rex_balance( bitr, rex_in_sell_order );
    }
 
    void system_contract::closerex( const name& owner ) {
@@ -515,12 +509,14 @@ namespace eosiosystem {
          _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
             rb.vote_stake.amount   = current_stake_value - proceeds.amount;
             rb.rex_balance.amount -= rex.amount;
+            rb.matured_rex        -= rex.amount;
          });
          stake_change.amount = bitr->vote_stake.amount - init_vote_stake_amount;
          success = true;
       } else {
          proceeds.amount = 0;
       }
+
       return { success, proceeds, stake_change };
    }
 
@@ -571,19 +567,25 @@ namespace eosiosystem {
     * Additional proceeds and stake change can be passed.
     * This function is called only by actions pushed by owner, unlike close_rex_order.
     */
-   void system_contract::update_rex_account( const name& owner, const asset& proceeds, const asset& delta_stake ) {
+   asset system_contract::update_rex_account( const name& owner, const asset& proceeds, const asset& delta_stake ) {
       asset to_fund( proceeds );
       asset to_stake( delta_stake );
+      asset rex_in_sell_order( 0, core_symbol() );
       auto itr = _rexorders.find( owner.value );
       if ( itr != _rexorders.end() && !itr->is_open ) {
          to_fund.amount  += itr->proceeds.amount;
          to_stake.amount += itr->stake_change.amount;
          _rexorders.erase( itr );
+      } else if ( itr != _rexorders.end() ) {
+         rex_in_sell_order.amount = itr->rex_requested.amount;
       }
+
       if ( to_fund.amount > 0 )
          transfer_to_fund( owner, to_fund );
       if ( to_stake.amount != 0 )
          update_voting_power( owner, to_stake );
+
+      return rex_in_sell_order;
    }
 
    void system_contract::channel_to_rex( const name& from, const asset& amount ) {
@@ -607,28 +609,68 @@ namespace eosiosystem {
    }
 
    uint32_t system_contract::get_rex_maturity()const {
-      const uint32_t num_of_slots = 5;
+      const uint32_t num_of_maturity_buckets = 4;
       uint32_t now = current_time_point().elapsed.count() / 1000000;
       uint32_t r = (now + 1) % seconds_per_day;
-      return now - r + (num_of_slots + 1) * seconds_per_day;
+      return now - r + (num_of_maturity_buckets + 1) * seconds_per_day;
    }
 
-   void system_contract::process_rex_maturities( rex_balance& rb ) {
+   void system_contract::process_rex_maturities( const rex_balance_table::const_iterator& bitr ) {
       uint32_t now = current_time_point().elapsed.count() / 1000000;
-      while ( !rb.rex_maturities.empty() && rb.rex_maturities.front().first <= now ) {
-         rb.matured_rex += rb.rex_maturities.front().second;
-         rb.rex_maturities.pop();
-      }
+      _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+         while ( !rb.rex_maturities.empty() && rb.rex_maturities.front().first <= now ) {
+            rb.matured_rex += rb.rex_maturities.front().second;
+            rb.rex_maturities.pop();
+         }
+      });
    }
 
-   void system_contract::consolidate_rex_balance( rex_balance& rb ) {
-      int64_t total = rb.matured_rex;
-      rb.matured_rex = 0;
-      while ( !rb.rex_maturities.empty() ) {
-         total += rb.rex_maturities.front().second;
-         rb.rex_maturities.pop();
+   void system_contract::consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
+                                                  const asset& rex_in_sell_order ) 
+   {
+      _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+         int64_t total  = rb.matured_rex - rex_in_sell_order.amount;
+         rb.matured_rex = rex_in_sell_order.amount;
+         while ( !rb.rex_maturities.empty() ) {
+            total += rb.rex_maturities.front().second;
+            rb.rex_maturities.pop();
+         }
+         rb.rex_maturities.push( { get_rex_maturity(), total } );
+      });
+   }
+
+   asset system_contract::add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received ) {
+      auto bitr = _rexbalance.find( owner.value );
+      asset init_rex_stake( 0, core_symbol() );
+      asset current_rex_stake( 0, core_symbol() );
+      if ( bitr == _rexbalance.end() ) {
+         bitr = _rexbalance.emplace( owner, [&]( auto& rb ) {
+            rb.owner       = owner;
+            rb.vote_stake  = payment;
+            rb.rex_balance = rex_received;
+         });
+         current_rex_stake.amount = payment.amount;
+      } else {
+         init_rex_stake.amount = bitr->vote_stake.amount;
+         _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+            rb.rex_balance.amount += rex_received.amount;
+            rb.vote_stake.amount   = ( uint128_t(rb.rex_balance.amount) * _rexpool.begin()->total_lendable.amount ) 
+                                     / _rexpool.begin()->total_rex.amount;
+         });
+         current_rex_stake.amount = bitr->vote_stake.amount;
       }
-      rb.rex_maturities.push( { get_rex_maturity(), total } );
+
+      process_rex_maturities( bitr );
+      const auto maturity = get_rex_maturity();
+      _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+         if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == maturity ) {
+            rb.rex_maturities.back().second += rex_received.amount;
+         } else {
+            rb.rex_maturities.push( { maturity, rex_received.amount } );
+         }
+      });
+
+      return current_rex_stake - init_rex_stake;
    }
 
 }; /// namespace eosiosystem

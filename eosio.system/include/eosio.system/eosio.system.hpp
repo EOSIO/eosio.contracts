@@ -398,6 +398,12 @@ namespace eosiosystem {
          void rexexec( const name& user, uint16_t max );
 
          /**
+          * 
+          */
+         [[eosio::action]]
+         void consolidate( const name& owner );
+
+         /**
           * Deletes owner records from REX tables and frees used RAM. Owner must have no outstanding loans,
           * REX balance, or remaining REX fund balance.
           */
@@ -513,7 +519,7 @@ namespace eosiosystem {
          void runrex( uint16_t max );
          void update_resource_limits( const name& receiver, int64_t delta_cpu, int64_t delta_net );
          rex_order_outcome close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
-         void update_rex_account( const name& owner, const asset& proceeds, const asset& unstake_quant );
+         asset update_rex_account( const name& owner, const asset& proceeds, const asset& unstake_quant );
          void channel_to_rex( const name& from, const asset& amount );
          void channel_namebid_to_rex( const int64_t highest_bid );
          template <typename T>
@@ -528,8 +534,10 @@ namespace eosiosystem {
          bool rex_system_initialized()const { return _rexpool.begin() != _rexpool.end(); }
          bool rex_available()const { return rex_system_initialized() && _rexpool.begin()->total_rex.amount > 0; }
          uint32_t get_rex_maturity()const;
-         void process_rex_maturities( rex_balance& rb );
-         void consolidate_rex_balance( rex_balance& rb );
+         asset add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received );
+         void process_rex_maturities( const rex_balance_table::const_iterator& bitr );
+         void consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
+                                       const asset& rex_in_sell_order );
 
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,
