@@ -14,9 +14,9 @@ Building a ballot on Trail is very simple and gives great flexibility to the dev
 
 Trail was designed to allow maximum flexibility for smart contract developers, while at the same time consolidating many of the boilerplate functions of voting contracts into a single service. 
 
-This paradigm means contract writers can leave the "counting parts" up to Trail and instead focus on what they want their ballot results to mean. Through cross-contract table lookup, any contract can view the results of a ballot or election and then have their contracts make decisions based on those results.
+This paradigm essentially means contract writers can leave the "vote counting" up to Trail and instead focus on what they want their ballot results to mean. Through cross-contract table lookup, any contract can view the results of a ballot or election and then have their contracts make decisions based on those results.
 
-Trail ballots and elections are also stored indefinitely, allowing lookup throughout the entire history of the service. 
+Trail ballots and elections are also stored indefinitely, allowing lookup throughout the entire history of the service. The only exception to this rule are ballots that operate on cycles. Ballots that operate this way will instead show the most recent cycle of the ballot.
 
 ### 1. Setting Up Your Contract (Optional)
 
@@ -54,7 +54,7 @@ Ballot regisration allows any user or developer to create a public ballot that c
 
     `begin_time` and `end_time` are the beginning and end time of the ballot  measured in seconds. Any vote for the ballot can be cast between these two times (inclusive). The current time in seconds can be retrieved from Trail's `environment` singleton, however this value only updates when Trail receives an action so this value may be off depending on when it was last modified. Simply querying for this value will not update it.
 
-    `info_url` is critical to ensuring voters are able to know exactly waht they are voting on when they cast their votes. This parameter can simply be a url to a webpage (or even better, an IPFS hash) that explains what the ballot is for, and should provide sufficient information for voters to make an informed decision. Since some ballots will host this information on their own smart contract, this can simply be a pointer to that information as well. However, in order to ensure knowledgable voting, this field should never be left blank. Without providing a link to this information, any malicious actor could launch a misinformation campaign to confuse potential voters. Don't let malicious users hijack your ballot!
+    `info_url` is critical to ensuring voters are able to know exactly what they are voting on when they cast their votes. This parameter can simply be a url to a webpage (or even better, an IPFS hash) that explains what the ballot is for, and should provide sufficient information for voters to make an informed decision. Since some ballots will host this information on their own smart contract, this can simply be a pointer to that information as well. However, in order to ensure knowledgable voting, this field should never be left blank. Without providing a link to this information, any malicious actor could launch a misinformation campaign to confuse potential voters. Don't let malicious users hijack your ballot!
 
 * `unregballot(name publisher, uint64_t ballot_id)`
 
@@ -92,29 +92,51 @@ After a ballot has reached it's end time, it will automatically stop accepting v
 
     `pass` is the resultant ballot status after reaching a verdict on the votes. This number can represent any end state desired, but `0`, `1`, and `2` are reserved for `OPEN`, `PASS`, and `FAIL` respectively.
 
-## Voter 
+## Voter Registration and Participation
 
-* `mirrorstake()` 
+All users on the Telos Blockchain Network can register their accounts and receive a VoterID card that's valid for any Ballot or Election running on Trail.
 
-    `mirrorstake` is the fundamental 
+### Registration
 
-* `castvote`
+* `regvoter(name voter)`
 
+    The regvoter action simply registers a new voter into Trail. This action also increments the number of total voters tracked by Trail, which can be referenced as a  target for meeting quorum requirements.
 
-* `deloldvotes`
+    `voter` is the name of the account to register with Trail.
 
+* `unregvoter(name voter)`
 
+    The unregvoter action unregisters an existing voter from Trail. This action also decrements the number of total voters tracked by Trail.
 
-### Voter Registration
-
-All users on the Telos Blockchain Network can register their accounts and receive a VoterID card that's valid for any Ballot or Election running on Trail. 
-
-* `regvoter()`
-
-    Calling the regvoter action will assign a Voter ID to the given `member` account and save it to the voters table. 
-
-* `unregvoter()`
-
-    The unregvoter() action will remove the `voter` from the voters table. 
+    `voter` is the name of the account to unregister from Trail.
 
 ### Getting and Casting Votes
+
+* `mirrorstake(name voter, uint32_t lock_period)` 
+
+    The mirrorstake function is the fundamental action that operates the Trail voting system. Registered voters may call mirrorstake to receive a 1:1 issuance of VOTE tokens for every TLOS they own in their account (both liquid and staked) for a period of time equal to the given lock period. Users cannot call mirrorstake again until the lock period has ended.
+
+    `voter` is the name of the account attempting to mirror their TLOS for VOTES.
+
+    `lock_period` is the length of time in seconds that the voter's account will be locked up.
+
+* `castvote(name voter, uint64_t ballot_id, uint16_t direction)`
+
+    The castvote action will cast all a user's VOTE tokens on the given ballot. Note that this does not **spend** the user's VOTE tokens, it only applies their weight to the ballot. Calling castvote again on the same ballot with a different direction will recast your votes, with the only exception being ballots that have been moved to another cycle. Casting votes on the same ballot, but on a different cycle will cast the votes normally (as if it were a new ballot).
+
+    `voter` is the account that is casting votes.
+
+    `ballot_id` is the id of the ballot for which to cast the votes.
+
+    `direction` is the direction in which to cast the votes. The default mappings are `0 = NO, 1 = YES, 2 = ABSTAIN`, however the ballot owner can interpret these in whichever way they desire.
+
+### Clearing Out Old Vote Receipts
+
+* `deloldvotes(name voter, uint16_t num_to_delete)`
+
+    The deloldvotes action is a way to clear out old votes and allows voters to reclaim RAM that has been allocated for storing vote receipts.
+
+    `voter` is the account for which old receipts will be deleted.
+
+    `num_to_delete` is the number of receipts the voter wished to delete. Passing in a hard number allows voters to carefully manage their NET and CPU expenditure.
+
