@@ -12,7 +12,7 @@
 #include <eosio.system/exchange_state.hpp>
 
 #include <string>
-#include <queue>
+#include <deque>
 
 namespace eosiosystem {
 
@@ -24,6 +24,7 @@ namespace eosiosystem {
    using eosio::const_mem_fun;
    using eosio::block_timestamp;
    using eosio::time_point;
+   using eosio::time_point_sec;
    using eosio::microseconds;
    using eosio::datastream;
 
@@ -203,8 +204,8 @@ namespace eosiosystem {
       name    owner;
       asset   vote_stake; /// the amount of CORE_SYMBOL currently included in owner's vote
       asset   rex_balance; /// the amount of REX owned by owner
-      int64_t matured_rex = 0;
-      std::queue<std::pair<uint32_t, int64_t>> rex_maturities;
+      int64_t matured_rex = 0; /// matured REX available for selling
+      std::deque<std::pair<time_point_sec, int64_t>> rex_maturities; /// REX daily maturity buckets
 
       uint64_t primary_key()const { return owner.value; }
    };
@@ -509,6 +510,7 @@ namespace eosiosystem {
          //defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
          static time_point current_time_point();
+         static time_point_sec current_time_point_sec();
          static block_timestamp current_block_time();
 
          symbol core_symbol()const;
@@ -533,7 +535,7 @@ namespace eosiosystem {
          bool rex_loans_available()const { return _rexorders.begin() == _rexorders.end() && rex_available(); }
          bool rex_system_initialized()const { return _rexpool.begin() != _rexpool.end(); }
          bool rex_available()const { return rex_system_initialized() && _rexpool.begin()->total_rex.amount > 0; }
-         uint32_t get_rex_maturity()const;
+         static time_point_sec get_rex_maturity();
          asset add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received );
          void process_rex_maturities( const rex_balance_table::const_iterator& bitr );
          void consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,

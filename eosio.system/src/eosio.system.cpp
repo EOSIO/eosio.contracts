@@ -41,6 +41,11 @@ namespace eosiosystem {
       return ct;
    }
 
+   time_point_sec system_contract::current_time_point_sec() {
+      const static time_point_sec cts{ current_time_point() };
+      return cts;
+   }
+
    block_timestamp system_contract::current_block_time() {
       const static block_timestamp cbt{ current_time_point() };
       return cbt;

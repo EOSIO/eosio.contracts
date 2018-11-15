@@ -608,19 +608,20 @@ namespace eosiosystem {
       }
    }
 
-   uint32_t system_contract::get_rex_maturity()const {
+   time_point_sec system_contract::get_rex_maturity() {
       const uint32_t num_of_maturity_buckets = 4;
-      uint32_t now = current_time_point().elapsed.count() / 1000000;
-      uint32_t r = (now + 1) % seconds_per_day;
-      return now - r + (num_of_maturity_buckets + 1) * seconds_per_day;
+      static const uint32_t now = current_time_point_sec().utc_seconds;
+      static const uint32_t r = (current_time_point_sec().utc_seconds + 1) % seconds_per_day;
+      static const time_point_sec rms{ now - r + (num_of_maturity_buckets + 1) * seconds_per_day };
+      return rms;
    }
 
    void system_contract::process_rex_maturities( const rex_balance_table::const_iterator& bitr ) {
-      uint32_t now = current_time_point().elapsed.count() / 1000000;
+      time_point_sec now = current_time_point_sec();
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          while ( !rb.rex_maturities.empty() && rb.rex_maturities.front().first <= now ) {
             rb.matured_rex += rb.rex_maturities.front().second;
-            rb.rex_maturities.pop();
+            rb.rex_maturities.pop_front();
          }
       });
    }
@@ -633,9 +634,9 @@ namespace eosiosystem {
          rb.matured_rex = rex_in_sell_order.amount;
          while ( !rb.rex_maturities.empty() ) {
             total += rb.rex_maturities.front().second;
-            rb.rex_maturities.pop();
+            rb.rex_maturities.pop_front();
          }
-         rb.rex_maturities.push( { get_rex_maturity(), total } );
+         rb.rex_maturities.emplace_back( get_rex_maturity(), total );
       });
    }
 
@@ -661,12 +662,12 @@ namespace eosiosystem {
       }
 
       process_rex_maturities( bitr );
-      const auto maturity = get_rex_maturity();
+      const time_point_sec maturity = get_rex_maturity();
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == maturity ) {
             rb.rex_maturities.back().second += rex_received.amount;
          } else {
-            rb.rex_maturities.push( { maturity, rex_received.amount } );
+            rb.rex_maturities.emplace_back( maturity, rex_received.amount );
          }
       });
 
