@@ -27,7 +27,7 @@ namespace eosiosystem {
    using eosio::microseconds;
    using eosio::datastream;
 
-   const uint32_t block_num_network_activation = 10800; 
+   const uint32_t block_num_network_activation = 40; 
 
    struct[[ eosio::table, eosio::contract("eosio.system") ]] payment_info {
      name bp;
@@ -220,11 +220,10 @@ namespace eosiosystem {
       uint32_t            reserved1 = 0;
       uint32_t            reserved2 = 0;
       eosio::asset        reserved3;
-
       uint64_t primary_key()const { return owner.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(proxied_vote_weight)(is_proxy)(reserved1)(reserved2)(reserved3) )
+      EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_stake)(last_vote_weight)(proxied_vote_weight)(is_proxy)(reserved1)(reserved2)(reserved3) )
    };
 
    typedef eosio::multi_index< "voters"_n, voter_info >  voters_table;
