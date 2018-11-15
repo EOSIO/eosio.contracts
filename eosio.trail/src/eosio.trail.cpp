@@ -1,4 +1,4 @@
-#include <../include/eosio.trail.hpp>
+#include "../include/eosio.trail.hpp"
 
 trail::trail(name self, name code, datastream<const char*> ds) : contract(self, code, ds), environment(self, self.value) {
     if (!environment.exists()) {
@@ -325,7 +325,7 @@ uint64_t trail::makeproposal(name publisher, symbol voting_symbol, uint32_t begi
     uint64_t new_prop_id = proposals.available_primary_key();
 
     proposals.emplace(publisher, [&]( auto& a ) {
-        a.prop_id = new_prop_id
+        a.prop_id = new_prop_id;
         a.publisher = publisher;
         a.info_url = info_url;
         a.no_count = asset(0, voting_symbol);
@@ -377,7 +377,7 @@ bool trail::voteforproposal(name voter, uint64_t ballot_id, uint64_t prop_id, ui
             a.ballot_id = ballot_id;
             a.direction = direction;
             a.weight = vote_weight;
-            a.expiration = bal.end_time;
+            a.expiration = prop.end_time;
         });
     } else { //NOTE: vote for ballot_id already exists
         auto vr = *vr_itr;
