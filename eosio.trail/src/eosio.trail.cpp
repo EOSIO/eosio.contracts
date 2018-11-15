@@ -1,4 +1,4 @@
-#include <../include/eosio.trail.hpp>
+#include <eosio.trail.hpp>
 
 trail::trail(name self, name code, datastream<const char*> ds) : contract(self, code, ds), environment(self, self.value) {
     if (!environment.exists()) {
