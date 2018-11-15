@@ -140,7 +140,7 @@ void trail::regballot(name publisher, uint8_t ballot_type, symbol voting_symbol,
 }
 
 void trail::unregballot(name publisher, uint64_t ballot_id) {
-    require_auth(name("eosio.trail")); //TODO: allow publisher to delete before voting begins?
+    require_auth(publisher);
 
     ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);

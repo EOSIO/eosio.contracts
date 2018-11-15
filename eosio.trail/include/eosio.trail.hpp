@@ -25,7 +25,6 @@ public:
     ~trail();
 
 
-
     #pragma region Constants
 
     uint64_t const VOTE_ISSUE_RATIO = 1; //indicates a 1:1 TLOS/VOTE issuance
@@ -40,7 +39,6 @@ public:
     #pragma endregion Constants
 
 
-
     #pragma region Token_Actions
     
     [[eosio::action]] void regtoken(asset native, name publisher);
@@ -48,7 +46,6 @@ public:
     [[eosio::action]] void unregtoken(asset native, name publisher);
 
     #pragma endregion Token_Actions
-
 
 
     #pragma region Registration
@@ -61,10 +58,7 @@ public:
 
     [[eosio::action]] void unregballot(name publisher, uint64_t ballot_id);
 
-
     //[[eosio::action]] void addcandidate(name publisher, uint64_t election_id, name new_candidate, string info_link);
-
-    //[[eosio::action]] void readyelec(name publisher, uint64_t election_id); //automatically ready at begin_time?
 
     [[eosio::action]] void nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time); //only for ballots?
 
@@ -73,19 +67,15 @@ public:
     #pragma endregion Registration
 
 
-
     #pragma region Voting_Actions
 
     [[eosio::action]] void mirrorstake(name voter, uint32_t lock_period);
 
-    [[eosio::action]] void castvote(name voter, uint64_t ballot_id, uint16_t direction); //rename voteballot?
-
-    //[[eosio::action]] void voteelec(name voter, uint64_t election_id, uint16_t direction);
+    [[eosio::action]] void castvote(name voter, uint64_t ballot_id, uint16_t direction);
 
     [[eosio::action]] void deloldvotes(name voter, uint16_t num_to_delete);
 
     #pragma endregion Voting_Actions
-
 
 
     #pragma region Helper_Functions
@@ -102,11 +92,11 @@ public:
     uint64_t makeelection(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
 
     bool deleteelection(uint64_t elec_id);
+    
 
     asset get_vote_weight(name voter, symbol voting_token);
 
     #pragma endregion Helper_Functions
-
 
 
     #pragma region Reactions
