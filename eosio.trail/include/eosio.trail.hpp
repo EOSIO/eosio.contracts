@@ -4,9 +4,9 @@
  * @author Craig Branscom
  */
 
-#include <trail.voting.hpp>
-#include <trail.system.hpp>
-#include <trail.tokens.hpp>
+#include "trail.voting.hpp"
+#include "trail.system.hpp"
+#include "trail.tokens.hpp"
 
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
