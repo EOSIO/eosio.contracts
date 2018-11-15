@@ -10,7 +10,6 @@
 #include <eosiolib/permission.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/action.hpp>
-//#include <eosiolib/types.hpp>
 #include <eosiolib/singleton.hpp>
 
 using namespace std;
@@ -48,6 +47,15 @@ struct [[eosio::table]] voter_id {
 
 struct [[eosio::table]] ballot {
     uint64_t ballot_id;
+    uint8_t table_id;
+    uint64_t reference_id;
+
+    uint64_t primary_key() const { return ballot_id; }
+    EOSLIB_SERIALIZE(ballot, (ballot_id)(table_id)(reference_id))
+};
+
+struct [[eosio::table]] proposal {
+    uint64_t prop_id;
     name publisher;
     string info_url;
     
@@ -60,40 +68,44 @@ struct [[eosio::table]] ballot {
     uint32_t end_time;
     uint8_t status; // 0 = OPEN, 1 = PASS, 2 = FAIL
 
-    uint64_t primary_key() const { return ballot_id; }
-    EOSLIB_SERIALIZE(ballot, (ballot_id)(publisher)(info_url)
+    uint64_t primary_key() const { return prop_id; }
+    EOSLIB_SERIALIZE(proposal, (prop_id)(publisher)(info_url)
         (no_count)(yes_count)(abstain_count)(unique_voters)
         (begin_time)(end_time)(status))
 };
 
-// struct candidate {
-//     name member;
-//     asset votes;
-//     uint8_t status;
-// };
+struct candidate {
+    name member;
+    string info_link;
+    asset votes;
+    uint8_t status;
+};
 
-// struct [[eosio::table]] election {
-//     uint64_t election_id;
-//     name publisher;
+struct [[eosio::table]] election {
+    uint64_t election_id;
+    name publisher;
+    string election_info;
 
-//     vector<candidate> candidates;
-//     uint32_t unique_voters;
+    vector<candidate> candidates;
+    uint32_t unique_voters;
+    symbol voting_symbol;
     
-//     uint32_t begin_time;
-//     uint32_t end_time;
+    uint32_t begin_time;
+    uint32_t end_time;
 
-//     uint64_t primary_key() const { return election_id; }
-//     EOSLIB_SERIALIZE(election, (election_id)(pubisher)
-//         (candidates)(unique_voters)
-//         (begin_time)(end_time))
-// };
+    uint64_t primary_key() const { return election_id; }
+    EOSLIB_SERIALIZE(election, (election_id)(publisher)
+        (candidates)(unique_voters)(voting_symbol)
+        (begin_time)(end_time))
+};
 
 struct [[eosio::table]] env {
     name publisher;
     
     uint64_t total_tokens;
     uint64_t total_voters;
-    uint64_t total_ballots;
+    uint64_t total_proposals;
+    uint64_t total_elections;
 
     asset vote_supply;
 
@@ -101,7 +113,7 @@ struct [[eosio::table]] env {
 
     uint64_t primary_key() const { return publisher.value; }
     EOSLIB_SERIALIZE(env, (publisher)
-        (total_tokens)(total_voters)(total_ballots)
+        (total_tokens)(total_voters)(total_proposals)(total_elections)
         (vote_supply)
         (time_now))
 };
@@ -113,6 +125,10 @@ struct [[eosio::table]] env {
 typedef multi_index<name("voters"), voter_id> voters_table;
 
 typedef multi_index<name("ballots"), ballot> ballots_table;
+
+    typedef multi_index<name("proposals"), proposal> proposals_table;
+
+    typedef multi_index<name("elections"), election> elections_table;
 
 typedef multi_index<name("votereceipts"), vote_receipt> votereceipts_table;
 
@@ -146,19 +162,19 @@ bool is_ballot(uint64_t ballot_id) {
     return false;
 }
 
-bool is_ballot_publisher(name publisher, uint64_t ballot_id) {
-    ballots_table ballots(name("eosio.trail"), name("eosio.trail").value);
-    auto b = ballots.find(ballot_id);
+// bool is_ballot_publisher(name publisher, uint64_t ballot_id) {
+//     ballots_table ballots(name("eosio.trail"), name("eosio.trail").value);
+//     auto b = ballots.find(ballot_id);
 
-    if (b != ballots.end()) {
-        auto bal = *b;
+//     if (b != ballots.end()) {
+//         auto bal = *b;
 
-        if (bal.publisher == publisher) {
-            return true;
-        }
-    }
+//         if (bal.publisher == publisher) {
+//             return true;
+//         }
+//     }
 
-    return false;
-}
+//     return false;
+// }
 
 #pragma endregion Helper_Functions

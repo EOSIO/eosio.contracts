@@ -7,8 +7,9 @@ trail::trail(name self, name code, datastream<const char*> ds) : contract(self, 
             self, //publisher
             0, //total_tokens
             0, //total_voters
-            0, //total_ballots
-            asset(0, symbol("VOTE", 4)), //vote_supply
+            0, //total_proposals
+            0, //total_elections
+            asset(0, symbol("VOTE", 4)), //vote_supply //TODO: remove?
             now() //time_now
         };
 
@@ -41,8 +42,6 @@ void trail::regtoken(asset native, name publisher) {
     eosio_assert(r == registries.end(), "Token Registry with that symbol already exists in Trail");
 
     //TODO: assert only 1 token per publisher
-
-    //TODO: require_auth publisher instead?
 
     registries.emplace(publisher, [&]( auto& a ){
         a.native = native;
@@ -111,47 +110,60 @@ void trail::unregvoter(name voter) {
     print("\nVoterID Unregistration: SUCCESS");
 }
 
-void trail::regballot(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
+void trail::regballot(name publisher, uint8_t ballot_type, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
     require_auth(publisher);
+    eosio_assert(ballot_type >= 0 && ballot_type <= 1, "invalid ballot type"); //NOTE: update valid range as new ballot types are added
 
     //TODO: check for voting_token existence?
 
+    uint64_t new_ref_id;
+
+    switch (ballot_type) {
+        case 0 : 
+            new_ref_id = makeproposal(publisher, voting_symbol, begin_time, end_time, info_url);
+            env_struct.total_proposals++; 
+            break;
+        case 1 : 
+            new_ref_id = makeelection(publisher, voting_symbol, begin_time, end_time, info_url);
+            env_struct.total_elections++;
+            break;
+    }
+
     ballots_table ballots(_self, _self.value);
 
-    ballots.emplace(publisher, [&]( auto& a ){
+    ballots.emplace(publisher, [&]( auto& a ) {
         a.ballot_id = ballots.available_primary_key();
-        a.publisher = publisher;
-        a.info_url = info_url;
-        a.no_count = asset(0, voting_symbol);
-        a.yes_count = asset(0, voting_symbol);
-        a.abstain_count = asset(0, voting_symbol);
-        a.unique_voters = uint32_t(0);
-        a.begin_time = begin_time;
-        a.end_time = end_time;
+        a.table_id = ballot_type;
+        a.reference_id = new_ref_id;
     });
 
-    env_struct.total_ballots++;
-
-    print("\nBallot Registration: SUCCESS");
 }
 
 void trail::unregballot(name publisher, uint64_t ballot_id) {
-    require_auth(name("eosio.trail"));
+    require_auth(name("eosio.trail")); //TODO: allow publisher to delete before voting begins?
 
     ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
-
     eosio_assert(b != ballots.end(), "Ballot Doesn't Exist");
-
     auto bal = *b;
 
-    eosio_assert(now() < bal.begin_time, "ballot voting in progress, cannot unregister");
+    bool del_success = false;
 
-    ballots.erase(b);
+    switch (bal.table_id) {
+        case 0 : 
+            del_success = deleteproposal(bal.reference_id);
+            env_struct.total_proposals--;
+            break;
+        case 1 : 
+            del_success = deleteelection(bal.reference_id);
+            env_struct.total_elections--;
+            break;
+    }
 
-    env_struct.total_ballots--;
+    if (del_success) {
+        ballots.erase(b);
+    }
 
-    print("\nBallot Deletion: SUCCESS");
 }
 
 void trail::mirrorstake(name voter, uint32_t lock_period) {
@@ -216,81 +228,41 @@ void trail::castvote(name voter, uint64_t ballot_id, uint16_t direction) {
     ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
     eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
-
     auto bal = *b;
-    eosio_assert(env_struct.time_now >= bal.begin_time && env_struct.time_now <= bal.end_time, "ballot voting window not open");
-    //eosio_assert(vid.release_time >= bal.end_time, "can only vote for ballots that end before your lock period is over...prevents double voting!");
 
-    votereceipts_table votereceipts(_self, voter.value);
-    auto vr_itr = votereceipts.find(ballot_id);
-    //eosio_assert(vr_itr == votereceipts.end(), "voter has already cast vote for this ballot");
-    
-    uint32_t new_voter = 1;
+    bool vote_success = false;
 
-    if (vr_itr == votereceipts.end()) { //NOTE: voter hasn't voted on ballot before
-        votereceipts.emplace(voter, [&]( auto& a ){
-            a.ballot_id = ballot_id;
-            a.direction = direction;
-            a.weight = vid.votes;
-            a.expiration = bal.end_time;
-        });
-    } else { //NOTE: vote for ballot_id already exists
-        auto vr = *vr_itr;
-
-        if (vr.expiration == bal.end_time && vr.direction != direction) { //NOTE: vote different and for same cycle
-
-            switch (vr.direction) {
-                case 0 : bal.no_count -= vid.votes; break;
-                case 1 : bal.yes_count -= vid.votes; break;
-                case 2 : bal.abstain_count -= vid.votes; break;
-            }
-
-            votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
-                a.direction = direction;
-                a.weight = vid.votes;
-            });
-
-            new_voter = 0;
-
-            print("\nVote Recast: SUCCESS");
-        } else if (vr.expiration < bal.end_time) { //NOTE: vote for new cycle
-            votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
-                a.direction = direction;
-                a.weight = vid.votes;
-                a.expiration = bal.end_time;
-            });
-        }
+    switch (bal.table_id) {
+        case 0 : 
+            vote_success = voteforproposal(voter, ballot_id, bal.reference_id, direction);
+            break;
+        case 1 : 
+            //vote_success = voteforelection(voter, ballot_id, bal.reference_id, direction);
+            break;
     }
 
-    switch (direction) {
-        case 0 : bal.no_count += vid.votes; break;
-        case 1 : bal.yes_count += vid.votes; break;
-        case 2 : bal.abstain_count += vid.votes; break;
-    }
-
-    ballots.modify(b, same_payer, [&]( auto& a ) {
-        a.no_count = bal.no_count;
-        a.yes_count = bal.yes_count;
-        a.abstain_count = bal.abstain_count;
-        a.unique_voters += new_voter;
-    });
-
-    print("\nVote: SUCCESS");
 }
 
-void trail::closevote(name publisher, uint64_t ballot_id, uint8_t pass) {
+void trail::closeballot(name publisher, uint64_t ballot_id, uint8_t pass) {
     require_auth(publisher);
 
     ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
     eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
-
     auto bal = *b;
-    eosio_assert(now() >= bal.end_time, "ballot voting window still open");
 
-    ballots.modify(b, same_payer, [&]( auto& a ) {
-        a.status = pass;
-    });
+    bool close_success = false;
+
+    switch (bal.table_id) {
+        case 0 : 
+            close_success = closeproposal(bal.reference_id, pass);
+            break;
+        case 1 : 
+            //close_success = voteforelection(voter, ballot_id, bal.reference_id, direction);
+            break;
+    }
+
+    
 
 }
 
@@ -302,9 +274,16 @@ void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_tim
     eosio_assert(b != ballots.end(), "Ballot Doesn't Exist");
     auto bal = *b;
 
-    auto sym = bal.no_count.symbol;
+    eosio_assert(bal.table_id == 0, "ballot type doesn't support cycles");
 
-    ballots.modify(b, same_payer, [&]( auto& a ) {
+    proposals_table proposals(_self, _self.value);
+    auto p = proposals.find(bal.reference_id);
+    eosio_assert(p != proposals.end(), "proposal doesn't exist");
+    auto prop = *p;
+
+    auto sym = prop.no_count.symbol; //NOTE: uses same voting symbol as before
+
+    proposals.modify(p, same_payer, [&]( auto& a ) {
         a.no_count = asset(0, sym);
         a.yes_count = asset(0, sym);
         a.abstain_count = asset(0, sym);
@@ -334,6 +313,197 @@ void trail::deloldvotes(name voter, uint16_t num_to_delete) {
 }
 
 #pragma endregion Voting_Actions
+
+
+
+#pragma region Helper_Functions
+
+uint64_t trail::makeproposal(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
+
+    proposals_table proposals(_self, _self.value);
+
+    uint64_t new_prop_id = proposals.available_primary_key();
+
+    proposals.emplace(publisher, [&]( auto& a ) {
+        a.prop_id = new_prop_id
+        a.publisher = publisher;
+        a.info_url = info_url;
+        a.no_count = asset(0, voting_symbol);
+        a.yes_count = asset(0, voting_symbol);
+        a.abstain_count = asset(0, voting_symbol);
+        a.unique_voters = uint32_t(0);
+        a.begin_time = begin_time;
+        a.end_time = end_time;
+    });
+
+    print("\nProposal Creation: SUCCESS");
+
+    return new_prop_id;
+}
+
+bool trail::deleteproposal(uint64_t prop_id) {
+    proposals_table proposals(_self, _self.value);
+    auto p = proposals.find(prop_id);
+    eosio_assert(p != proposals.end(), "proposal doesn't exist");
+    auto prop = *p;
+    eosio_assert(now() < prop.begin_time, "cannot delete proposal once voting has begun");
+
+    proposals.erase(p);
+
+    print("\nProposal Deletion: SUCCESS");
+
+    return true;
+}
+
+bool trail::voteforproposal(name voter, uint64_t ballot_id, uint64_t prop_id, uint16_t direction) {
+    
+    proposals_table proposals(_self, _self.value);
+    auto p = proposals.find(prop_id);
+    eosio_assert(p != proposals.end(), "proposal doesn't exist");
+    auto prop = *p;
+
+    eosio_assert(env_struct.time_now >= prop.begin_time && env_struct.time_now <= prop.end_time, "ballot voting window not open");
+    //eosio_assert(vid.release_time >= bal.end_time, "can only vote for ballots that end before your lock period is over...prevents double voting!");
+
+    votereceipts_table votereceipts(_self, voter.value);
+    auto vr_itr = votereceipts.find(ballot_id);
+    //eosio_assert(vr_itr == votereceipts.end(), "voter has already cast vote for this ballot");
+    
+    uint32_t new_voter = 1;
+    asset vote_weight = get_vote_weight(voter, prop.no_count.symbol);
+
+    if (vr_itr == votereceipts.end()) { //NOTE: voter hasn't voted on ballot before
+        votereceipts.emplace(voter, [&]( auto& a ){
+            a.ballot_id = ballot_id;
+            a.direction = direction;
+            a.weight = vote_weight;
+            a.expiration = bal.end_time;
+        });
+    } else { //NOTE: vote for ballot_id already exists
+        auto vr = *vr_itr;
+
+        if (vr.expiration == prop.end_time && vr.direction != direction) { //NOTE: vote different and for same cycle
+
+            switch (vr.direction) { //NOTE: remove old vote weight
+                case 0 : prop.no_count -= vr.weight; break;
+                case 1 : prop.yes_count -= vr.weight; break;
+                case 2 : prop.abstain_count -= vr.weight; break;
+            }
+
+            votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
+                a.direction = direction;
+                a.weight = vote_weight;
+            });
+
+            new_voter = 0;
+
+            print("\nVote Recast: SUCCESS");
+        }// else if (vr.expiration < prop.end_time) { //NOTE: vote for new cycle
+        //     votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
+        //         a.direction = direction;
+        //         a.weight = vote_weight;
+        //         a.expiration = bal.end_time;
+        //     });
+        // }
+    }
+
+    switch (direction) {
+        case 0 : prop.no_count += vote_weight; break;
+        case 1 : prop.yes_count += vote_weight; break;
+        case 2 : prop.abstain_count += vote_weight; break;
+    }
+
+    proposals.modify(p, same_payer, [&]( auto& a ) {
+        a.no_count = prop.no_count;
+        a.yes_count = prop.yes_count;
+        a.abstain_count = prop.abstain_count;
+        a.unique_voters += new_voter;
+    });
+}
+
+bool trail::closeproposal(uint64_t prop_id, uint8_t pass) {
+    proposals_table proposals(_self, _self.value);
+    auto p = proposals.find(prop_id);
+    eosio_assert(p != proposals.end(), "proposal doesn't exist");
+    auto prop = *p;
+
+    eosio_assert(now() > prop.end_time, "can't close proposal while voting is still open");
+
+    proposals.modify(p, same_payer, [&]( auto& a ) {
+        a.status = pass;
+    });
+
+    return true;
+}
+
+
+
+uint64_t trail::makeelection(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
+    elections_table elections(_self, _self.value);
+
+    uint64_t new_elec_id = elections.available_primary_key();
+    vector<candidate> empty_candidate_list;
+
+    elections.emplace(publisher, [&]( auto& a ) {
+        a.election_id = new_elec_id;
+        a.publisher = publisher;
+        a.election_info = info_url;
+        a.candidates = empty_candidate_list;
+        a.unique_voters = 0;
+        a.voting_symbol = voting_symbol;
+        a.begin_time = begin_time;
+        a.end_time = end_time;
+    });
+
+    print("\nElection Creation: SUCCESS");
+
+    return new_elec_id;
+}
+
+bool trail::deleteelection(uint64_t elec_id) {
+    elections_table elections(_self, _self.value);
+    auto e = elections.find(elec_id);
+    eosio_assert(e != elections.end(), "proposal doesn't exist");
+    auto elec = *e;
+    eosio_assert(now() < elec.begin_time, "cannot delete election once voting has begun");
+
+    elections.erase(e);
+
+    print("\nElection Deletion: SUCCESS");
+
+    return true;
+}
+
+
+
+asset trail::get_vote_weight(name voter, symbol voting_token) {
+
+    // switch (voting_token.raw()) {
+    //     case symbol("VOTE", 0).raw() :
+    //         voters_table voters(_self, _self.value);
+    //         auto v = voters.find(voter.value);
+    //         eosio_assert(v != voters.end(), "voter is not registered");
+    //         break;
+    //     case symbol("TFVT", 0).raw() :
+    //         break;
+    // }
+
+    if (voting_token == symbol("VOTE", 0)) {
+        voters_table voters(_self, _self.value);
+        auto v = voters.find(voter.value);
+        eosio_assert(v != voters.end(), "voter is not registered");
+        auto vid = *v;
+
+        return vid.votes;
+    } else if (voting_token == symbol("TFVT", 0)) {
+        //TODO: implement TFVT
+    }
+
+}
+
+#pragma endregion Helper_Functions
+
+
 
 #pragma region Reactions
 
@@ -432,8 +602,8 @@ extern "C" {
             execute_action(name(self), name(code), &trail::mirrorstake);
         } else if (code == self && action == name("castvote").value) {
             execute_action(name(self), name(code), &trail::castvote);
-        } else if (code == self && action == name("closevote").value) {
-            execute_action(name(self), name(code), &trail::closevote);
+        } else if (code == self && action == name("closeballot").value) {
+            execute_action(name(self), name(code), &trail::closeballot);
         } else if (code == self && action == name("nextcycle").value) {
             execute_action(name(self), name(code), &trail::nextcycle);
         } else if (code == self && action == name("deloldvotes").value) {
