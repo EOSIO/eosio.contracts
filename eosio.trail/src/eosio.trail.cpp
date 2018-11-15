@@ -419,6 +419,8 @@ bool trail::voteforproposal(name voter, uint64_t ballot_id, uint64_t prop_id, ui
         a.abstain_count = prop.abstain_count;
         a.unique_voters += new_voter;
     });
+
+    return true;
 }
 
 bool trail::closeproposal(uint64_t prop_id, uint8_t pass) {
@@ -488,17 +490,22 @@ asset trail::get_vote_weight(name voter, symbol voting_token) {
     //         break;
     // }
 
+    asset votes;
+
     if (voting_token == symbol("VOTE", 0)) {
         voters_table voters(_self, _self.value);
         auto v = voters.find(voter.value);
         eosio_assert(v != voters.end(), "voter is not registered");
         auto vid = *v;
 
-        return vid.votes;
+        votes = vid.votes;
     } else if (voting_token == symbol("TFVT", 0)) {
         //TODO: implement TFVT
+
+        votes = asset(0, symbol("TFVT", 0)); //TODO: update amount
     }
 
+    return votes;
 }
 
 #pragma endregion Helper_Functions
