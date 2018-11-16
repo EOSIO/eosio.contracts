@@ -17,7 +17,7 @@ using namespace eosio;
 
 #pragma region Structs
 
-struct [[eosio::table]] vote_receipt {
+struct [[eosio::table, eosio::contract("trail")]] vote_receipt {
     uint64_t ballot_id;
     uint16_t direction;
     asset weight;
@@ -27,7 +27,7 @@ struct [[eosio::table]] vote_receipt {
     EOSLIB_SERIALIZE(vote_receipt, (ballot_id)(direction)(weight)(expiration))
 };
 
-struct [[eosio::table]] vote_levy {
+struct [[eosio::table, eosio::contract("trail")]] vote_levy {
     name voter;
     asset levy_amount;
     uint32_t last_decay;
@@ -36,7 +36,7 @@ struct [[eosio::table]] vote_levy {
     EOSLIB_SERIALIZE(vote_levy, (voter)(levy_amount)(last_decay))
 };
 
-struct [[eosio::table]] voter_id {
+struct [[eosio::table, eosio::contract("trail")]] voter_id {
     name voter;
     asset votes;
     uint32_t release_time;
@@ -45,7 +45,7 @@ struct [[eosio::table]] voter_id {
     EOSLIB_SERIALIZE(voter_id, (voter)(votes)(release_time))
 };
 
-struct [[eosio::table]] ballot {
+struct [[eosio::table, eosio::contract("trail")]] ballot {
     uint64_t ballot_id;
     uint8_t table_id;
     uint64_t reference_id;
@@ -54,7 +54,7 @@ struct [[eosio::table]] ballot {
     EOSLIB_SERIALIZE(ballot, (ballot_id)(table_id)(reference_id))
 };
 
-struct [[eosio::table]] proposal {
+struct [[eosio::table, eosio::contract("trail")]] proposal {
     uint64_t prop_id;
     name publisher;
     string info_url;
@@ -81,7 +81,7 @@ struct candidate {
     uint8_t status;
 };
 
-struct [[eosio::table]] election {
+struct [[eosio::table, eosio::contract("trail")]] election {
     uint64_t election_id;
     name publisher;
     string election_info;
@@ -99,7 +99,7 @@ struct [[eosio::table]] election {
         (begin_time)(end_time))
 };
 
-struct [[eosio::table]] env {
+struct [[eosio::table, eosio::contract("trail")]] env {
     name publisher;
     
     uint64_t total_tokens;
