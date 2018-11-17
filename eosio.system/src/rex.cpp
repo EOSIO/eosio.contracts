@@ -270,8 +270,8 @@ namespace eosiosystem {
          rb.vote_stake = current_stake;
       });
 
-      asset delta_stake = current_stake - init_stake;
-      update_rex_account( owner, asset( 0, core_symbol() ), delta_stake );
+      update_rex_account( owner, asset( 0, core_symbol() ), current_stake - init_stake );
+      process_rex_maturities( itr );
    }
 
    void system_contract::rexexec( const name& user, uint16_t max ) {

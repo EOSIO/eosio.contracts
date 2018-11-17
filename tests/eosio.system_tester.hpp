@@ -403,6 +403,10 @@ public:
       return push_action( name(user), N(rexexec), mvo()("user", user)("max", max) );
    }
 
+   action_result consolidate( const account_name& owner ) {
+      return push_action( name(owner), N(consolidate), mvo()("owner", owner) );
+   }
+
    action_result closerex( const account_name& owner ) {
       return push_action( name(owner), N(closerex), mvo()("owner", owner) );
    }
