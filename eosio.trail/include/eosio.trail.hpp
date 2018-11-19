@@ -54,7 +54,7 @@ public:
 
     [[eosio::action]] void unregvoter(name voter);
 
-    [[eosio::action]] void regballot(name publisher, uint8_t ballot_class, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
+    [[eosio::action]] void regballot(name publisher, uint8_t ballot_type, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
 
     [[eosio::action]] void unregballot(name publisher, uint64_t ballot_id);
 
