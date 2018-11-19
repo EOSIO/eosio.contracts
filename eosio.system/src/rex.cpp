@@ -49,59 +49,57 @@ namespace eosiosystem {
       require_auth( from );
 
       eosio_assert( amount.symbol == core_symbol(), "asset must be core token" );
+      eosio_assert( amount.amount > 0, "must use positive amount" );
 
-      const int64_t rex_ratio       = 10000;
-      const int64_t init_total_rent = 100'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() are made available
+      const asset rex_received    = add_to_rex_pool( amount );
+      const asset delta_rex_stake = add_to_rex_balance( from, amount, rex_received );
+      runrex(2);
+      update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
+   }
+
+   void system_contract::unstaketorex( const name& from, const asset& from_cpu, const asset& from_net )
+   {
+      require_auth( from );
+
+      eosio_assert( from_cpu.symbol == core_symbol() && from_net.symbol == core_symbol(), "asset must be core token" );
+      eosio_assert( 0 <= from_cpu.amount, "must unstake a positive amount to buy rex" );
+      eosio_assert( 0 <= from_net.amount, "must unstake a positive amount to buy rex" );
+      eosio_assert( 0 < from_cpu.amount || 0 < from_net.amount, "must unstake a positive amount to buy rex" );
+      
       {
          auto vitr = _voters.find( from.value );
-         eosio_assert( vitr != _voters.end() && ( vitr->proxy || vitr->producers.size() >= 21 ), 
+         eosio_assert( vitr != _voters.end() && ( vitr->proxy || vitr->producers.size() >= 21 ),
                        "must vote for proxy or at least 21 producers before buying REX" );
       }
 
-      transfer_from_fund( from, amount );
-
-      asset rex_received( 0, rex_symbol );
-
-      auto itr = _rexpool.begin();
-      if ( !rex_system_initialized() ) {
-         /// initialize REX pool
-         _rexpool.emplace( _self, [&]( auto& rp ) {
-            rex_received.amount = amount.amount * rex_ratio;
-
-            rp.total_lendable   = amount;
-            rp.total_lent       = asset( 0, core_symbol() );
-            rp.total_unlent     = rp.total_lendable - rp.total_lent;
-            rp.total_rent       = asset( init_total_rent, core_symbol() );
-            rp.total_rex        = rex_received;
-            rp.namebid_proceeds = asset( 0, core_symbol() );
+      {
+         user_resources_table resources_table( _self, from.value );
+         auto res_itr = resources_table.require_find( from.value, "!!!!!!!!" );
+         eosio_assert( from_cpu.amount <= res_itr->cpu_weight.amount, "amount exceeds tokens staked for cpu");
+         eosio_assert( from_net.amount <= res_itr->net_weight.amount, "amount exceeds tokens staked for net");
+         resources_table.modify( res_itr, same_payer, [&]( user_resources& res ) {
+            res.cpu_weight.amount -= from_cpu.amount;
+            res.net_weight.amount -= from_net.amount;
          });
-      } else if ( !rex_available() ) { /// should be a rare corner case
-         _rexpool.modify( itr, same_payer, [&]( auto& rp ) {
-            rex_received.amount = amount.amount * rex_ratio;
-            
-            rp.total_lendable.amount = amount.amount;
-            rp.total_lent.amount     = 0;
-            rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
-            rp.total_rent.amount     = init_total_rent;
-            rp.total_rex.amount      = rex_received.amount;
-         });
-      } else {
-         const auto S0 = itr->total_lendable.amount;
-         const auto S1 = S0 + amount.amount;
-         const auto R0 = itr->total_rex.amount;
-         const auto R1 = (uint128_t(S1) * R0) / S0;
 
-         rex_received.amount = R1 - R0;
-
-         _rexpool.modify( itr, same_payer, [&]( auto& rp ) {
-            rp.total_lendable.amount = S1;
-            rp.total_rex.amount      = R1;
-            rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
-            eosio_assert( rp.total_unlent.amount >= 0, "programmer error, this should never go negative" );
-         });
+         if ( res_itr->cpu_weight.amount == 0 && res_itr->net_weight.amount == 0 && res_itr->ram_bytes == 0 ) {
+            resources_table.erase( res_itr );
+         }
+      }
+      
+      {
+         del_bandwidth_table dbw_table( _self, from.value );
+         // TODO: update dbw_table
       }
 
-      asset delta_rex_stake = add_to_rex_balance( from, amount, rex_received );
+      update_resource_limits( from, -from_cpu.amount, -from_net.amount );
+
+      const asset payment = from_cpu + from_net;
+      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { stake_account, active_permission },
+                                                    { stake_account, rex_account, payment, "buy REX with staked tokens" } );
+
+      asset rex_received = add_to_rex_pool( payment );
+      asset delta_rex_stake = add_to_rex_balance( from, payment, rex_received );
       runrex(2);
       update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
    }
@@ -545,7 +543,8 @@ namespace eosiosystem {
       transfer_to_fund( from, amount );
    }
 
-   void system_contract::transfer_from_fund( const name& owner, const asset& amount ) {
+   void system_contract::transfer_from_fund( const name& owner, const asset& amount )
+   {
       auto itr = _rexfunds.require_find( owner.value, "must deposit to REX fund first" );
       eosio_assert( amount <= itr->balance, "insufficient funds");
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
@@ -553,7 +552,8 @@ namespace eosiosystem {
       });
    }
 
-   void system_contract::transfer_to_fund( const name& owner, const asset& amount ) {
+   void system_contract::transfer_to_fund( const name& owner, const asset& amount )
+   {
       auto itr = _rexfunds.require_find( owner.value, "programmer error" );
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
          fund.balance.amount += amount.amount;
@@ -567,7 +567,8 @@ namespace eosiosystem {
     * Additional proceeds and stake change can be passed.
     * This function is called only by actions pushed by owner, unlike close_rex_order.
     */
-   asset system_contract::update_rex_account( const name& owner, const asset& proceeds, const asset& delta_stake ) {
+   asset system_contract::update_rex_account( const name& owner, const asset& proceeds, const asset& delta_stake )
+   {
       asset to_fund( proceeds );
       asset to_stake( delta_stake );
       asset rex_in_sell_order( 0, core_symbol() );
@@ -588,7 +589,8 @@ namespace eosiosystem {
       return rex_in_sell_order;
    }
 
-   void system_contract::channel_to_rex( const name& from, const asset& amount ) {
+   void system_contract::channel_to_rex( const name& from, const asset& amount )
+   {
       if ( rex_available() ) {
          _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
             rp.total_unlent.amount   += amount.amount;
@@ -600,7 +602,8 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::channel_namebid_to_rex( const int64_t highest_bid ) {
+   void system_contract::channel_namebid_to_rex( const int64_t highest_bid )
+   {
       if ( rex_available() ) {
          _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
             rp.namebid_proceeds.amount += highest_bid;
@@ -608,7 +611,8 @@ namespace eosiosystem {
       }
    }
 
-   time_point_sec system_contract::get_rex_maturity() {
+   time_point_sec system_contract::get_rex_maturity()
+   {
       const uint32_t num_of_maturity_buckets = 4;
       static const uint32_t now = current_time_point_sec().utc_seconds;
       static const uint32_t r = (current_time_point_sec().utc_seconds + 1) % seconds_per_day;
@@ -638,6 +642,53 @@ namespace eosiosystem {
          }
          rb.rex_maturities.emplace_back( get_rex_maturity(), total );
       });
+   }
+
+   asset system_contract::add_to_rex_pool( const asset& payment )
+   {
+      const int64_t rex_ratio       = 10000;
+      const int64_t init_total_rent = 100'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() are made available
+      asset rex_received( 0, rex_symbol );
+      auto itr = _rexpool.begin();
+      if ( !rex_system_initialized() ) {
+         /// initialize REX pool
+         _rexpool.emplace( _self, [&]( auto& rp ) {
+            rex_received.amount = payment.amount * rex_ratio;
+
+            rp.total_lendable   = payment;
+            rp.total_lent       = asset( 0, core_symbol() );
+            rp.total_unlent     = rp.total_lendable - rp.total_lent;
+            rp.total_rent       = asset( init_total_rent, core_symbol() );
+            rp.total_rex        = rex_received;
+            rp.namebid_proceeds = asset( 0, core_symbol() );
+         });
+      } else if ( !rex_available() ) { /// should be a rare corner case
+         _rexpool.modify( itr, same_payer, [&]( auto& rp ) {
+            rex_received.amount = payment.amount * rex_ratio;
+
+            rp.total_lendable.amount = payment.amount;
+            rp.total_lent.amount     = 0;
+            rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
+            rp.total_rent.amount     = init_total_rent;
+            rp.total_rex.amount      = rex_received.amount;
+         });
+      } else {
+         const auto S0 = itr->total_lendable.amount;
+         const auto S1 = S0 + payment.amount;
+         const auto R0 = itr->total_rex.amount;
+         const auto R1 = (uint128_t(S1) * R0) / S0;
+
+         rex_received.amount = R1 - R0;
+
+         _rexpool.modify( itr, same_payer, [&]( auto& rp ) {
+            rp.total_lendable.amount = S1;
+            rp.total_rex.amount      = R1;
+            rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
+            eosio_assert( rp.total_unlent.amount >= 0, "programmer error, this should never go negative" );
+         });
+      }
+      
+      return rex_received;
    }
 
    asset system_contract::add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received ) {

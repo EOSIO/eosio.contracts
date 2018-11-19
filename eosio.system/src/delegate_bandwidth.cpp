@@ -385,7 +385,7 @@ namespace eosiosystem {
       update_voting_power( from, stake_net_delta + stake_cpu_delta );
    }
 
-   void system_contract::update_voting_power( const name& voter, const asset& total_update, bool update_votes_flag )
+   void system_contract::update_voting_power( const name& voter, const asset& total_update )
    {
       auto voter_itr = _voters.find( voter.value );
       if( voter_itr == _voters.end() ) {
@@ -405,7 +405,7 @@ namespace eosiosystem {
          validate_b1_vesting( voter_itr->staked );
       }
 
-      if( update_votes_flag && ( voter_itr->producers.size() || voter_itr->proxy ) ) {
+      if( voter_itr->producers.size() || voter_itr->proxy ) {
          update_votes( voter, voter_itr->proxy, voter_itr->producers, false );
       }
    }

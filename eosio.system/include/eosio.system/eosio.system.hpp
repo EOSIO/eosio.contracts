@@ -339,6 +339,9 @@ namespace eosiosystem {
          [[eosio::action]]
          void buyrex( const name& from, const asset& amount );
 
+         [[eosio::action]]
+         void unstaketorex( const name& from, const asset& from_cpu, const asset& from_net );
+
          /**
           * Converts REX stake back into core tokens at current exchange rate. If order cannot be 
           * processed, it gets queued until there is enough in REX pool to fill order.
@@ -537,6 +540,7 @@ namespace eosiosystem {
          bool rex_available()const { return rex_system_initialized() && _rexpool.begin()->total_rex.amount > 0; }
          static time_point_sec get_rex_maturity();
          asset add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received );
+         asset add_to_rex_pool( const asset& payment );
          void process_rex_maturities( const rex_balance_table::const_iterator& bitr );
          void consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
                                        const asset& rex_in_sell_order );
@@ -544,7 +548,7 @@ namespace eosiosystem {
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
-         void update_voting_power( const name& voter, const asset& total_update, bool update_votes_flag = true );
+         void update_voting_power( const name& voter, const asset& total_update );
 
          // defined in voting.hpp
          void update_elected_producers( block_timestamp timestamp );
