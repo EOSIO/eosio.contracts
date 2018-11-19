@@ -57,7 +57,7 @@ public:
 
     [[eosio::action]] void unregballot(name publisher, uint64_t ballot_id);
 
-    //[[eosio::action]] void addcandidate(name publisher, uint64_t election_id, name new_candidate, string info_link);
+    //[[eosio::action]] void addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link);
 
     [[eosio::action]] void nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time); //only for ballots?
 

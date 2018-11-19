@@ -36,13 +36,13 @@ For our contract example, we will be making a simple document updater where upda
 
     The linkballot action will link a proposal to an existing ballot in Trail. The proposal object has a field `ballot_id` which this action updates with the associated ballot id. This step isn't strictly necessary, but is a nice way to have a quick reference of which ballots your proposals are targeting.
 
-* `closeballot(uint64_t prop_id)`
+* `closeprop(uint64_t prop_id)`
 
-    The closeballot action is important for performing custom logic on ballot results, and simply sends an inline action to Trail's `closevote()` action upon completion. The `status` field of the ballot allows ballot closers the ability to assign any meaning to status codes they desire. For example, a voting contract could interpret a status code of `7` to mean `REFUNDED`. However, status codes `0`, `1`, and `2` are reserved for meaning `OPEN`, `PASS`, and `FAIL`, respectively.
+    The closeprop action is important for performing custom logic on ballot results, and simply sends an inline action to Trail's `closeballot()` action upon completion. The `status` field of the ballot allows ballot closers the ability to assign any meaning to status codes they desire. For example, a voting contract could interpret a status code of `7` to mean `REFUNDED`. However, status codes `0`, `1`, and `2` are reserved for meaning `OPEN`, `PASS`, and `FAIL`, respectively.
 
 ### 2. Ballot Registration
 
-Ballot regisration allows any user or developer to create a public ballot that can be voted on by any registered voter.
+Ballot regisration allows any user or developer to create a public ballot that can be voted on by any registered voter that has a balance of the respecitve voting token.
 
 * `regballot(name publisher, uint8_t ballot_type, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url)`
 
@@ -52,13 +52,15 @@ Ballot regisration allows any user or developer to create a public ballot that c
 
     `ballot_type` is the type of ballot to create. The following is a list of supported Ballot Types:
 
-    * `0 = Proposal` : Users vote on a proposal by casting VOTEs in either the YES, NO, or ABSTAIN direction.
+    * `0 = Proposal` : Users vote on a proposal by casting votes in either the YES, NO, or ABSTAIN direction.
 
-    * `1 = Election` : Users cast VOTEs on a single candidate from a set of candidates.
+    * `1 = Election` : Users vote on a single candidate from a set of candidates.
 
-    * `2 = In Development...`
+    * `2 = Leaderboard` : Users vote to rank candidates in descending order based on total votes. IN DEVELOPMENT...
 
-    `voting_symbol` is the symbol to be used for counting votes. This is typically TLOS.
+    * `3 = IN DEVELOPMENT ` : IN DEVELOPMENT...
+
+    `voting_symbol` is the symbol to be used for counting votes. This is typically `VOTE`, represented contractually as: `symbol("VOTE", 0)`.
 
     `begin_time` and `end_time` are the beginning and end time of the ballot  measured in seconds. Any vote for the ballot can be cast between these two times (inclusive). The current time in seconds can be retrieved from Trail's `environment` singleton, however this value only updates when Trail receives an action so this value may be off depending on when it was last modified. Simply querying for this value will not update it.
 
@@ -122,7 +124,7 @@ All users on the Telos Blockchain Network can register their accounts and receiv
 
 * `mirrorstake(name voter, uint32_t lock_period)`
 
-    The mirrorstake function is the fundamental action that operates the Trail voting system. Registered voters may call mirrorstake to receive a 1:1 issuance of VOTE tokens for every TLOS they own in their account (both liquid and staked) for a period of time equal to the given lock period. Users cannot call mirrorstake again until the lock period has ended.
+    The mirrorstake function is the fundamental action that operates the Trail voting system. Registered voters may call mirrorstake to receive a 1:10000 issuance of VOTE tokens for every TLOS they own in their account (both liquid and staked) for a period of time equal to the given lock period. Users cannot call mirrorstake again until the lock period has ended.
 
     `voter` is the name of the account attempting to mirror their TLOS for VOTES.
 
