@@ -19,6 +19,10 @@ struct contracts {
    static std::vector<uint8_t> bios_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.bios/eosio.bios.wasm"); }
    static std::string          bios_wast() { return read_wast("${CMAKE_BINARY_DIR}/../eosio.bios/eosio.bios.wast"); }
    static std::vector<char>    bios_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.bios/eosio.bios.abi"); }
+   static std::vector<char>    trail_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.trail/eosio.trail.abi"); }
+   static std::vector<uint8_t> trail_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.trail/eosio.trail.wasm"); }
+   static std::vector<char>    amend_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.trail/eosio.trail.abi"); }
+   static std::vector<uint8_t> amend_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.trail/eosio.trail.wasm"); }
 
    struct util {
       static std::vector<uint8_t> test_api_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/test_api.wasm"); }
