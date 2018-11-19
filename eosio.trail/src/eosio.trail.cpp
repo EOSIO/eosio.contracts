@@ -569,7 +569,7 @@ asset trail::calc_decay(name voter, asset amount) {
     if (vl_itr != votelevies.end()) {
         auto vl = *vl_itr;
         time_delta = env_struct.time_now - vl.last_decay;
-        return asset(int64_t(time_delta / 120), symbol("VOTE", 4));
+        return asset(int64_t(time_delta / DECAY_RATE), symbol("VOTE", 4));
     }
 
     return asset(0, symbol("VOTE", 4));

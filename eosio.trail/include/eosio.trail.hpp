@@ -33,8 +33,7 @@ public:
 
     uint32_t const MAX_LOCK_PERIOD = 7776000; //7,776,000 seconds is ~3 months
 
-    //vector<double> const DECAY_STRUCTURE{-0.1, -0.3, -0.5};
-    //double const DECAY_RATE = 0.5;
+    uint32_t const DECAY_RATE = 120; //number of seconds to decay by 1 VOTE
 
     #pragma endregion Constants
 
