@@ -61,7 +61,7 @@ public:
 
     [[eosio::action]] void nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time); //only for ballots?
 
-    [[eosio::action]] void closeballot(name publisher, uint64_t ballot_id, uint8_t pass); //new actions for elections?
+    [[eosio::action]] void closeballot(name publisher, uint64_t ballot_id, uint8_t pass);
 
     #pragma endregion Registration
 

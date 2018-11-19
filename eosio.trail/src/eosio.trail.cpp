@@ -577,7 +577,9 @@ asset trail::calc_decay(name voter, asset amount) {
 
 #pragma endregion Reactions
 
-//EOSIO_DISPATCH(trail, )
+//EOSIO_DISPATCH(trail, (regtoken)(unregtoken)
+    //(regvoter)(unregvoter)(regballot)(unregballot)(addcandidate)(nextcycle)(closeballot)
+    //(mirrorstake)(castvote)(deloldvotes))
 
 extern "C" {
     void apply(uint64_t self, uint64_t code, uint64_t action) {
