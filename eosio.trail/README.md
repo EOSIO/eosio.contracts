@@ -42,13 +42,21 @@ For our contract example, we will be making a simple document updater where upda
 
 ### 2. Ballot Registration
 
-Ballot regisration allows any user or developer to create a public ballot that can be voted on by any registered voter. 
+Ballot regisration allows any user or developer to create a public ballot that can be voted on by any registered voter.
 
-* `regballot(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url)`
+* `regballot(name publisher, uint8_t ballot_type, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url)`
 
     The regballot action will register a new ballot with attributes reflecting the given parameters.
 
     `publisher` is the account publishing the ballot. Only this account will be able to modify and close the ballot.
+
+    `ballot_type` is the type of ballot to create. The following is a list of supported Ballot Types:
+
+    * `0 = Proposal` : Users vote on a proposal by casting VOTEs in either the YES, NO, or ABSTAIN direction.
+
+    * `1 = Election` : Users cast VOTEs on a single candidate from a set of candidates.
+
+    * `2 = In Development...`
 
     `voting_symbol` is the symbol to be used for counting votes. This is typically TLOS.
 
@@ -112,7 +120,7 @@ All users on the Telos Blockchain Network can register their accounts and receiv
 
 ### Getting and Casting Votes
 
-* `mirrorstake(name voter, uint32_t lock_period)` 
+* `mirrorstake(name voter, uint32_t lock_period)`
 
     The mirrorstake function is the fundamental action that operates the Trail voting system. Registered voters may call mirrorstake to receive a 1:1 issuance of VOTE tokens for every TLOS they own in their account (both liquid and staked) for a period of time equal to the given lock period. Users cannot call mirrorstake again until the lock period has ended.
 
