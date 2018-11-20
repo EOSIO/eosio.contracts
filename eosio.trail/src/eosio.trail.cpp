@@ -71,6 +71,7 @@ void trail::unregtoken(asset native, name publisher) {
 
 #pragma endregion Token_Actions
 
+
 #pragma region Voting_Actions
 
 void trail::regvoter(name voter) {
@@ -217,7 +218,7 @@ void trail::mirrorstake(name voter, uint32_t lock_period) {
 
 void trail::castvote(name voter, uint64_t ballot_id, uint16_t direction) {
     require_auth(voter);
-    eosio_assert(direction >= uint16_t(0) && direction <= uint16_t(2), "Invalid Vote. [0 = NO, 1 = YES, 2 = ABSTAIN]");
+    eosio_assert(direction >= uint16_t(0) && direction <= uint16_t(2), "Invalid Vote. [0 = NO, 1 = YES, 2 = ABSTAIN]"); //TODO: enforce only for props
 
     voters_table voters(_self, _self.value);
     auto v = voters.find(voter.value);
@@ -315,13 +316,11 @@ void trail::deloldvotes(name voter, uint16_t num_to_delete) {
 #pragma endregion Voting_Actions
 
 
-
 #pragma region Helper_Functions
 
 uint64_t trail::makeproposal(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
 
     proposals_table proposals(_self, _self.value);
-
     uint64_t new_prop_id = proposals.available_primary_key();
 
     proposals.emplace(publisher, [&]( auto& a ) {
@@ -439,7 +438,6 @@ bool trail::closeproposal(uint64_t prop_id, uint8_t pass) {
 }
 
 
-
 uint64_t trail::makeelection(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
     elections_table elections(_self, _self.value);
 
@@ -465,7 +463,7 @@ uint64_t trail::makeelection(name publisher, symbol voting_symbol, uint32_t begi
 bool trail::deleteelection(uint64_t elec_id) {
     elections_table elections(_self, _self.value);
     auto e = elections.find(elec_id);
-    eosio_assert(e != elections.end(), "proposal doesn't exist");
+    eosio_assert(e != elections.end(), "election doesn't exist");
     auto elec = *e;
     eosio_assert(now() < elec.begin_time, "cannot delete election once voting has begun");
 
@@ -475,7 +473,6 @@ bool trail::deleteelection(uint64_t elec_id) {
 
     return true;
 }
-
 
 
 asset trail::get_vote_weight(name voter, symbol voting_token) {
@@ -500,6 +497,7 @@ asset trail::get_vote_weight(name voter, symbol voting_token) {
 
         votes = vid.votes;
     } else if (voting_token == symbol("TFVT", 0)) {
+        
         //TODO: implement TFVT
 
         votes = asset(0, symbol("TFVT", 0)); //TODO: update amount
@@ -509,7 +507,6 @@ asset trail::get_vote_weight(name voter, symbol voting_token) {
 }
 
 #pragma endregion Helper_Functions
-
 
 
 #pragma region Reactions
@@ -577,7 +574,9 @@ asset trail::calc_decay(name voter, asset amount) {
 
 #pragma endregion Reactions
 
-//EOSIO_DISPATCH(trail, )
+//EOSIO_DISPATCH(trail, (regtoken)(unregtoken)
+    //(regvoter)(unregvoter)(regballot)(unregballot)(addcandidate)(nextcycle)(closeballot)
+    //(mirrorstake)(castvote)(deloldvotes))
 
 extern "C" {
     void apply(uint64_t self, uint64_t code, uint64_t action) {
