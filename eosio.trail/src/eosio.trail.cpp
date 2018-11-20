@@ -174,7 +174,7 @@ void trail::mirrorstake(name voter, uint32_t lock_period) {
     asset max_votes = get_liquid_tlos(voter) + get_staked_tlos(voter);
     eosio_assert(max_votes.symbol == symbol("TLOS", 4), "only TLOS can be used to get VOTEs"); //NOTE: redundant?
     eosio_assert(max_votes > asset(0, symbol("TLOS", 4)), "must get a positive amount of VOTEs"); //NOTE: redundant?
-    
+
     voters_table voters(_self, _self.value);
     auto v = voters.find(voter.value);
     eosio_assert(v != voters.end(), "voter is not registered");
@@ -492,7 +492,7 @@ asset trail::get_vote_weight(name voter, symbol voting_token) {
 
     asset votes;
 
-    if (voting_token == symbol("VOTE", 0)) {
+    if (voting_token == symbol("VOTE", 4)) {
         voters_table voters(_self, _self.value);
         auto v = voters.find(voter.value);
         eosio_assert(v != voters.end(), "voter is not registered");

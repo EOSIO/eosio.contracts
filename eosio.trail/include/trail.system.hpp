@@ -100,13 +100,14 @@ asset get_eosio_token_balance(symbol sym, name owner) {
 
 asset get_liquid_tlos(name owner) {
     accounts accountstable(name("eosio.token"), owner.value);
-    auto a = accountstable.find(symbol("TLOS", 4).raw());
-
+    auto a = accountstable.find(symbol_code("TLOS").raw());
+	
     int64_t amount = 0;
-
+	print("\nfinding account...");
     if (a != accountstable.end()) {
         auto acct = *a;
         amount = acct.balance.amount;
+		print("\naccount found");
     }
     
     return asset(amount, symbol("TLOS", 4));
