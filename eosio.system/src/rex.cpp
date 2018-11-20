@@ -11,6 +11,7 @@ namespace eosiosystem {
       require_auth( owner );
 
       eosio_assert( amount.symbol == core_symbol(), "must deposit core token" );
+      eosio_assert( 0 < amount.amount, "must deposit a positive amount" );
 
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { owner, active_permission },
                                                     { owner, rex_account, amount, "deposit to REX fund" } );
@@ -34,6 +35,7 @@ namespace eosiosystem {
       require_auth( owner );
 
       eosio_assert( amount.symbol == core_symbol(), "must withdraw core token" );
+      eosio_assert( 0 < amount.amount, "must withdraw a positive amount" );
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( owner, amount );
 
@@ -50,14 +52,15 @@ namespace eosiosystem {
 
       eosio_assert( amount.symbol == core_symbol(), "asset must be core token" );
       eosio_assert( amount.amount > 0, "must use positive amount" );
-
+      
+      transfer_from_fund( from, amount );
       const asset rex_received    = add_to_rex_pool( amount );
       const asset delta_rex_stake = add_to_rex_balance( from, amount, rex_received );
       runrex(2);
       update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
    }
 
-   void system_contract::unstaketorex( const name& owner, const name& receiver, const asset& from_cpu, const asset& from_net )
+   void system_contract::unstaketorex( const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu )
    {
       require_auth( owner );
 
@@ -106,10 +109,10 @@ namespace eosiosystem {
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { stake_account, active_permission },
                                                     { stake_account, rex_account, payment, "buy REX with staked tokens" } );
 
-      const asset rex_received    = add_to_rex_pool( payment );
-      const asset delta_rex_stake = add_to_rex_balance( owner, payment, rex_received );
+      const asset rex_received = add_to_rex_pool( payment );
+      add_to_rex_balance( owner, payment, rex_received );
       runrex(2);
-      update_rex_account( owner, asset( 0, core_symbol() ), delta_rex_stake );
+      update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ), true );
    }
 
    void system_contract::sellrex( const name& from, const asset& rex )
@@ -458,7 +461,7 @@ namespace eosiosystem {
    {
       runrex(2);
 
-      eosio_assert(  rex_loans_available(), "rex loans are not currently available" );
+      eosio_assert( rex_loans_available(), "rex loans are not currently available" );
       eosio_assert( payment.symbol == core_symbol() && fund.symbol == core_symbol(), "must use core token" );
       
       update_rex_account( from, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
@@ -577,10 +580,10 @@ namespace eosiosystem {
     * update_rex_account checks if user has a scheduled sellrex order that has been closed, completes its processing,
     * and deletes it.
     * Processing entails transfering proceeds to user REX fund and updating user vote weight.
-    * Additional proceeds and stake change can be passed.
+    * Additional proceeds and stake change can be passed as arguments.
     * This function is called only by actions pushed by owner, unlike close_rex_order.
     */
-   asset system_contract::update_rex_account( const name& owner, const asset& proceeds, const asset& delta_stake )
+   asset system_contract::update_rex_account( const name& owner, const asset& proceeds, const asset& delta_stake, bool force_vote_update )
    {
       asset to_fund( proceeds );
       asset to_stake( delta_stake );
@@ -590,13 +593,13 @@ namespace eosiosystem {
          to_fund.amount  += itr->proceeds.amount;
          to_stake.amount += itr->stake_change.amount;
          _rexorders.erase( itr );
-      } else if ( itr != _rexorders.end() ) {
+      } else if ( itr != _rexorders.end() ) { // itr->is_open is satisfied
          rex_in_sell_order.amount = itr->rex_requested.amount;
       }
 
       if ( to_fund.amount > 0 )
          transfer_to_fund( owner, to_fund );
-      if ( to_stake.amount != 0 )
+      if ( force_vote_update || to_stake.amount != 0 )
          update_voting_power( owner, to_stake );
 
       return rex_in_sell_order;

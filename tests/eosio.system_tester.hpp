@@ -333,6 +333,15 @@ public:
       );
    }
 
+   action_result unstaketorex( const account_name& owner, const account_name& receiver, const asset& from_net, const asset& from_cpu ) {
+      return push_action( name(owner), N(unstaketorex), mvo()
+                          ("owner",    owner)
+                          ("receiver", receiver)
+                          ("from_net", from_net)
+                          ("from_cpu", from_cpu)
+      );
+   }
+
    action_result sellrex( const account_name& from, const asset& rex ) {
       return push_action( name(from), N(sellrex), mvo()
                           ("from", from)

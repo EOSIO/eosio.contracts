@@ -340,7 +340,7 @@ namespace eosiosystem {
          void buyrex( const name& from, const asset& amount );
 
          [[eosio::action]]
-         void unstaketorex( const name& owner, const name& receiver, const asset& from_cpu, const asset& from_net );
+         void unstaketorex( const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu );
 
          /**
           * Converts REX stake back into core tokens at current exchange rate. If order cannot be 
@@ -524,7 +524,7 @@ namespace eosiosystem {
          void runrex( uint16_t max );
          void update_resource_limits( const name& receiver, int64_t delta_cpu, int64_t delta_net );
          rex_order_outcome close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
-         asset update_rex_account( const name& owner, const asset& proceeds, const asset& unstake_quant );
+         asset update_rex_account( const name& owner, const asset& proceeds, const asset& unstake_quant, bool force_vote_update = false );
          void channel_to_rex( const name& from, const asset& amount );
          void channel_namebid_to_rex( const int64_t highest_bid );
          template <typename T>
