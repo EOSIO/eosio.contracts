@@ -6,8 +6,8 @@
 
 namespace eosiosystem {
 
-   void system_contract::deposit( const name& owner, const asset& amount ) {
-      
+   void system_contract::deposit( const name& owner, const asset& amount )
+   {   
       require_auth( owner );
 
       eosio_assert( amount.symbol == core_symbol(), "must deposit core token" );
@@ -29,8 +29,8 @@ namespace eosiosystem {
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
 
-   void system_contract::withdraw( const name& owner, const asset& amount ) {
-
+   void system_contract::withdraw( const name& owner, const asset& amount )
+   {
       require_auth( owner );
 
       eosio_assert( amount.symbol == core_symbol(), "must withdraw core token" );
@@ -44,8 +44,8 @@ namespace eosiosystem {
    /**
     * Transfers SYS tokens from user balance and credits converts them to REX stake.
     */
-   void system_contract::buyrex( const name& from, const asset& amount ) {
-      
+   void system_contract::buyrex( const name& from, const asset& amount )
+   {   
       require_auth( from );
 
       eosio_assert( amount.symbol == core_symbol(), "asset must be core token" );
@@ -57,9 +57,9 @@ namespace eosiosystem {
       update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
    }
 
-   void system_contract::unstaketorex( const name& from, const asset& from_cpu, const asset& from_net )
+   void system_contract::unstaketorex( const name& owner, const name& receiver, const asset& from_cpu, const asset& from_net )
    {
-      require_auth( from );
+      require_auth( owner );
 
       eosio_assert( from_cpu.symbol == core_symbol() && from_net.symbol == core_symbol(), "asset must be core token" );
       eosio_assert( 0 <= from_cpu.amount, "must unstake a positive amount to buy rex" );
@@ -67,45 +67,53 @@ namespace eosiosystem {
       eosio_assert( 0 < from_cpu.amount || 0 < from_net.amount, "must unstake a positive amount to buy rex" );
       
       {
-         auto vitr = _voters.find( from.value );
+         auto vitr = _voters.find( owner.value );
          eosio_assert( vitr != _voters.end() && ( vitr->proxy || vitr->producers.size() >= 21 ),
                        "must vote for proxy or at least 21 producers before buying REX" );
       }
 
       {
-         user_resources_table resources_table( _self, from.value );
-         auto res_itr = resources_table.require_find( from.value, "!!!!!!!!" );
+         user_resources_table resources_table( _self, receiver.value );
+         auto res_itr = resources_table.require_find( receiver.value, "account does not exist in resources table" );
          eosio_assert( from_cpu.amount <= res_itr->cpu_weight.amount, "amount exceeds tokens staked for cpu");
          eosio_assert( from_net.amount <= res_itr->net_weight.amount, "amount exceeds tokens staked for net");
          resources_table.modify( res_itr, same_payer, [&]( user_resources& res ) {
             res.cpu_weight.amount -= from_cpu.amount;
             res.net_weight.amount -= from_net.amount;
          });
-
          if ( res_itr->cpu_weight.amount == 0 && res_itr->net_weight.amount == 0 && res_itr->ram_bytes == 0 ) {
             resources_table.erase( res_itr );
          }
       }
       
       {
-         del_bandwidth_table dbw_table( _self, from.value );
-         // TODO: update dbw_table
+         del_bandwidth_table dbw_table( _self, owner.value );
+         auto del_itr = dbw_table.require_find( receiver.value, "account does not exist in delegated bandwidth table" );
+         eosio_assert( from_cpu.amount <= del_itr->cpu_weight.amount, "amount exceeds tokens staked for cpu");
+         eosio_assert( from_net.amount <= del_itr->net_weight.amount, "amount exceeds tokens staked for net");
+         dbw_table.modify( del_itr, same_payer, [&]( delegated_bandwidth& dbw ) {
+            dbw.cpu_weight.amount -= from_cpu.amount;
+            dbw.net_weight.amount -= from_net.amount;
+         });
+         if ( del_itr->cpu_weight.amount == 0 && del_itr->net_weight.amount == 0 ) {
+            dbw_table.erase( del_itr );
+         }
       }
 
-      update_resource_limits( from, -from_cpu.amount, -from_net.amount );
+      update_resource_limits( receiver, -from_cpu.amount, -from_net.amount );
 
       const asset payment = from_cpu + from_net;
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { stake_account, active_permission },
                                                     { stake_account, rex_account, payment, "buy REX with staked tokens" } );
 
-      asset rex_received = add_to_rex_pool( payment );
-      asset delta_rex_stake = add_to_rex_balance( from, payment, rex_received );
+      const asset rex_received    = add_to_rex_pool( payment );
+      const asset delta_rex_stake = add_to_rex_balance( owner, payment, rex_received );
       runrex(2);
-      update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
+      update_rex_account( owner, asset( 0, core_symbol() ), delta_rex_stake );
    }
 
-   void system_contract::sellrex( const name& from, const asset& rex ) {
-
+   void system_contract::sellrex( const name& from, const asset& rex )
+   {
       runrex(2);
 
       require_auth( from );
@@ -144,8 +152,8 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::cnclrexorder( const name& owner ) {
-
+   void system_contract::cnclrexorder( const name& owner )
+   {
       require_auth( owner );
 
       auto itr = _rexorders.require_find( owner.value, "no sellrex order is scheduled" );
@@ -161,7 +169,8 @@ namespace eosiosystem {
     * @param conin - the input connector balance
     * @param conout - the output connector balance
     */
-   int64_t bancor_convert( int64_t& conin, int64_t& conout, int64_t in ) {
+   int64_t bancor_convert( int64_t& conin, int64_t& conout, int64_t in )
+   {
       const double F0 = double(conin);
       const double T0 = double(conout);
       const double I  = double(in);
@@ -176,7 +185,8 @@ namespace eosiosystem {
       return out;
    }
 
-   void system_contract::update_resource_limits( const name& receiver, int64_t delta_cpu, int64_t delta_net ) {
+   void system_contract::update_resource_limits( const name& receiver, int64_t delta_cpu, int64_t delta_net )
+   {
       user_resources_table   totals_tbl( _self, receiver.value );
       auto tot_itr = totals_tbl.find( receiver.value );
       eosio_assert( tot_itr !=  totals_tbl.end(), "expected to find resource table" );
@@ -196,8 +206,8 @@ namespace eosiosystem {
     * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
     * after 30 days the rented SYS delegation of CPU or NET will expire.
     */
-   void system_contract::rentcpu( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund ) {
-
+   void system_contract::rentcpu( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund )
+   {
       require_auth( from );
 
       rex_cpu_loan_table cpu_loans( _self, _self.value );
@@ -205,8 +215,8 @@ namespace eosiosystem {
       update_resource_limits( receiver, rented_tokens, 0 );
    }
    
-   void system_contract::rentnet( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund ) {
-
+   void system_contract::rentnet( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund )
+   {
       require_auth( from );
 
       rex_net_loan_table net_loans( _self, _self.value );
@@ -214,40 +224,40 @@ namespace eosiosystem {
       update_resource_limits( receiver, 0, rented_tokens );
    }
 
-   void system_contract::fundcpuloan( const name& from, uint64_t loan_num, const asset& payment ) {
-
+   void system_contract::fundcpuloan( const name& from, uint64_t loan_num, const asset& payment )
+   {
       require_auth( from );
 
       rex_cpu_loan_table cpu_loans( _self, _self.value );
       fund_rex_loan( cpu_loans, from, loan_num, payment  );
    }
 
-   void system_contract::fundnetloan( const name& from, uint64_t loan_num, const asset& payment ) {
-
+   void system_contract::fundnetloan( const name& from, uint64_t loan_num, const asset& payment )
+   {
       require_auth( from );
 
       rex_net_loan_table net_loans( _self, _self.value );
       fund_rex_loan( net_loans, from, loan_num, payment );
    }
 
-   void system_contract::defcpuloan( const name& from, uint64_t loan_num, const asset& amount ) {
-      
+   void system_contract::defcpuloan( const name& from, uint64_t loan_num, const asset& amount )
+   {     
       require_auth( from );
       
       rex_cpu_loan_table cpu_loans( _self, _self.value );
       defund_rex_loan( cpu_loans, from, loan_num, amount );
    }
 
-   void system_contract::defnetloan( const name& from, uint64_t loan_num, const asset& amount ) {
-
+   void system_contract::defnetloan( const name& from, uint64_t loan_num, const asset& amount )
+   {
       require_auth( from );
 
       rex_net_loan_table net_loans( _self, _self.value );
       defund_rex_loan( net_loans, from, loan_num, amount );
    }
 
-   void system_contract::updaterex( const name& owner ) {
-      
+   void system_contract::updaterex( const name& owner )
+   {   
       require_auth( owner );
 
       runrex(2);
@@ -272,15 +282,15 @@ namespace eosiosystem {
       process_rex_maturities( itr );
    }
 
-   void system_contract::rexexec( const name& user, uint16_t max ) {
-
+   void system_contract::rexexec( const name& user, uint16_t max )
+   {
       require_auth( user );
       
       runrex( max );
    }
 
-   void system_contract::consolidate( const name& owner ) {
-      
+   void system_contract::consolidate( const name& owner )
+   {   
       require_auth( owner );
       
       runrex(2);
@@ -290,8 +300,8 @@ namespace eosiosystem {
       consolidate_rex_balance( bitr, rex_in_sell_order );
    }
 
-   void system_contract::closerex( const name& owner ) {
-
+   void system_contract::closerex( const name& owner )
+   {
       require_auth( owner );
       
       if ( rex_system_initialized() )
@@ -335,8 +345,8 @@ namespace eosiosystem {
    /**
     * Perform maintenance operations on expired rex
     */
-   void system_contract::runrex( uint16_t max ) {
-
+   void system_contract::runrex( uint16_t max )
+   {
       eosio_assert( rex_system_initialized(), "rex system not initialized yet" );
 
       auto rexi = _rexpool.begin();
@@ -444,8 +454,8 @@ namespace eosiosystem {
    }
 
    template <typename T>
-   int64_t system_contract::rent_rex( T& table, const name& from, const name& receiver, const asset& payment, const asset& fund ) {
-
+   int64_t system_contract::rent_rex( T& table, const name& from, const name& receiver, const asset& payment, const asset& fund )
+   {
       runrex(2);
 
       eosio_assert(  rex_loans_available(), "rex loans are not currently available" );
@@ -486,7 +496,8 @@ namespace eosiosystem {
     * function returns success flag, order proceeds, and vote stake change. These are used later to finish
     * order processing, which includes transfering proceeds and updating user vote weight.
     */
-   rex_order_outcome system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex ) {
+   rex_order_outcome system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex )
+   {
       auto rexitr = _rexpool.begin();
       const auto S0 = rexitr->total_lendable.amount;
       const auto R0 = rexitr->total_rex.amount;
@@ -519,7 +530,8 @@ namespace eosiosystem {
    }
 
    template <typename T>
-   void system_contract::fund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& payment  ) {
+   void system_contract::fund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& payment  )
+   {
       eosio_assert( payment.symbol == core_symbol(), "must use core token" );
       transfer_from_fund( from, payment );
       auto itr = table.require_find( loan_num, "loan not found" );
@@ -531,7 +543,8 @@ namespace eosiosystem {
    }
 
    template <typename T>
-   void system_contract::defund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& amount  ) {
+   void system_contract::defund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& amount  )
+   {
       eosio_assert( amount.symbol == core_symbol(), "must use core token" );
       auto itr = table.require_find( loan_num, "loan not found" );
       eosio_assert( itr->from == from, "actor has to be loan creator" );
@@ -620,7 +633,8 @@ namespace eosiosystem {
       return rms;
    }
 
-   void system_contract::process_rex_maturities( const rex_balance_table::const_iterator& bitr ) {
+   void system_contract::process_rex_maturities( const rex_balance_table::const_iterator& bitr )
+   {
       time_point_sec now = current_time_point_sec();
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          while ( !rb.rex_maturities.empty() && rb.rex_maturities.front().first <= now ) {
@@ -691,7 +705,8 @@ namespace eosiosystem {
       return rex_received;
    }
 
-   asset system_contract::add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received ) {
+   asset system_contract::add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received )
+   {
       auto bitr = _rexbalance.find( owner.value );
       asset init_rex_stake( 0, core_symbol() );
       asset current_rex_stake( 0, core_symbol() );

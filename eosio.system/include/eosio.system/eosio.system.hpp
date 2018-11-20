@@ -340,7 +340,7 @@ namespace eosiosystem {
          void buyrex( const name& from, const asset& amount );
 
          [[eosio::action]]
-         void unstaketorex( const name& from, const asset& from_cpu, const asset& from_net );
+         void unstaketorex( const name& owner, const name& receiver, const asset& from_cpu, const asset& from_net );
 
          /**
           * Converts REX stake back into core tokens at current exchange rate. If order cannot be 
