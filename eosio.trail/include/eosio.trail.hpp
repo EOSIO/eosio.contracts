@@ -81,11 +81,11 @@ public:
 
     uint64_t makeproposal(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
 
-    bool deleteproposal(uint64_t prop_id);
+    bool deleteproposal(uint64_t prop_id, name publisher);
 
     bool voteforproposal(name voter, uint64_t ballot_id, uint64_t prop_id, uint16_t direction);
 
-    bool closeproposal(uint64_t prop_id, uint8_t pass);
+    bool closeproposal(uint64_t prop_id, uint8_t pass, name publisher);
 
 
     uint64_t makeelection(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
