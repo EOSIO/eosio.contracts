@@ -16,7 +16,7 @@
 
 using namespace eosio;
 
-class [[eosio::contract]] trail : public contract {
+class [[eosio::contract("eosio.trail")]] trail : public contract {
     
     public:
 

@@ -125,7 +125,7 @@ namespace eosiosystem {
         auto to_workers = new_tokens - to_producers; //60% to WP's
 
         INLINE_ACTION_SENDER(eosio::token, issue)
-        ("eosio.token"_n, {{"_neosio"_n, "active"_n}}, {"_neosio"_n, asset(new_tokens, core_symbol()), "Issue new TLOS tokens"});
+        ("eosio.token"_n, {{"eosio"_n, "active"_n}}, {"eosio"_n, asset(new_tokens, core_symbol()), "Issue new TLOS tokens"});
 
         INLINE_ACTION_SENDER(eosio::token, transfer)
         ("eosio.token"_n, {"eosio"_n, "active"_n}, {"eosio"_n, "eosio.saving"_n, asset(to_workers, core_symbol()), "Transfer worker proposal share to eosio.saving account"});

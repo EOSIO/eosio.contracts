@@ -120,6 +120,7 @@ void trail::regballot(name publisher, symbol voting_symbol, uint32_t begin_time,
 
     ballots.emplace(publisher, [&]( auto& a ){
         a.ballot_id = ballots.available_primary_key();
+        print('\n',a.ballot_id);
         a.publisher = publisher;
         a.info_url = info_url;
         a.no_count = asset(0, voting_symbol);
@@ -305,10 +306,11 @@ void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_tim
     auto sym = bal.no_count.symbol;
 
     ballots.modify(b, same_payer, [&]( auto& a ) {
-        a.no_count = asset(0, sym);
-        a.yes_count = asset(0, sym);
-        a.abstain_count = asset(0, sym);
-        a.unique_voters = uint32_t(0);
+        // #warning Question / Problem / TODO : ??? users needs to vote again on next cycle ???
+        // a.no_count = asset(0, sym);
+        // a.yes_count = asset(0, sym);
+        // a.abstain_count = asset(0, sym);
+        // a.unique_voters = uint32_t(0);
         a.begin_time = new_begin_time;
         a.end_time = new_end_time;
         a.status = false;
