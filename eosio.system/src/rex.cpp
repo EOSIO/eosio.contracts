@@ -76,20 +76,6 @@ namespace eosiosystem {
       }
 
       {
-         user_resources_table resources_table( _self, receiver.value );
-         auto res_itr = resources_table.require_find( receiver.value, "account does not exist in resources table" );
-         eosio_assert( from_cpu.amount <= res_itr->cpu_weight.amount, "amount exceeds tokens staked for cpu");
-         eosio_assert( from_net.amount <= res_itr->net_weight.amount, "amount exceeds tokens staked for net");
-         resources_table.modify( res_itr, same_payer, [&]( user_resources& res ) {
-            res.cpu_weight.amount -= from_cpu.amount;
-            res.net_weight.amount -= from_net.amount;
-         });
-         if ( res_itr->cpu_weight.amount == 0 && res_itr->net_weight.amount == 0 && res_itr->ram_bytes == 0 ) {
-            resources_table.erase( res_itr );
-         }
-      }
-      
-      {
          del_bandwidth_table dbw_table( _self, owner.value );
          auto del_itr = dbw_table.require_find( receiver.value, "account does not exist in delegated bandwidth table" );
          eosio_assert( from_cpu.amount <= del_itr->cpu_weight.amount, "amount exceeds tokens staked for cpu");

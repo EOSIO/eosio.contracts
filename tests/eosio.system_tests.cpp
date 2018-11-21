@@ -3460,24 +3460,30 @@ BOOST_FIXTURE_TEST_CASE( unstake_buy_rex, eosio_system_tester ) try {
    const asset   init_balance = core_sym::from_string("10000.0000");
    const asset   init_net     = core_sym::from_string("70.0000");
    const asset   init_cpu     = core_sym::from_string("90.0000");
-   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount), N(frankaccount) };
-   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3], frank = accounts[4];
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount) };
+   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3];
    setup_rex_accounts( accounts, init_balance, init_net, init_cpu, false );
 
    const int64_t init_cpu_limit = get_cpu_limit( alice );
    const int64_t init_net_limit = get_net_limit( alice );
 
-   const asset net_stake = core_sym::from_string("25.5000");
-   const asset cpu_stake = core_sym::from_string("12.4000");
-   const asset tot_stake = net_stake + cpu_stake;
-   BOOST_REQUIRE_EQUAL( init_balance,                   get_balance( alice ) );
-   BOOST_REQUIRE_EQUAL( success(),                      stake( alice, alice, net_stake, cpu_stake ) );
-   BOOST_REQUIRE_EQUAL( get_cpu_limit( alice ),         init_cpu_limit + cpu_stake.get_amount() );
-   BOOST_REQUIRE_EQUAL( get_net_limit( alice ),         init_net_limit + net_stake.get_amount() );
-   BOOST_REQUIRE_EQUAL( success(),                      unstaketorex( alice, alice, net_stake, cpu_stake ) );
-   BOOST_REQUIRE_EQUAL( get_cpu_limit( alice ),         init_cpu_limit );
-   BOOST_REQUIRE_EQUAL( get_net_limit( alice ),         init_net_limit );
-   BOOST_REQUIRE_EQUAL( ratio * tot_stake.get_amount(), get_rex_balance( alice ).get_amount() );
+   {
+      const asset net_stake = core_sym::from_string("25.5000");
+      const asset cpu_stake = core_sym::from_string("12.4000");
+      const asset tot_stake = net_stake + cpu_stake;
+      BOOST_REQUIRE_EQUAL( init_balance,                   get_balance( alice ) );
+      BOOST_REQUIRE_EQUAL( success(),                      stake( alice, alice, net_stake, cpu_stake ) );
+      BOOST_REQUIRE_EQUAL( get_cpu_limit( alice ),         init_cpu_limit + cpu_stake.get_amount() );
+      BOOST_REQUIRE_EQUAL( get_net_limit( alice ),         init_net_limit + net_stake.get_amount() );
+      const asset init_eosio_stake_balance = get_balance( N(eosio.stake) );
+      BOOST_REQUIRE_EQUAL( success(),                      unstaketorex( alice, alice, net_stake, cpu_stake ) );
+      BOOST_REQUIRE_EQUAL( get_cpu_limit( alice ),         init_cpu_limit );
+      BOOST_REQUIRE_EQUAL( get_net_limit( alice ),         init_net_limit );
+      BOOST_REQUIRE_EQUAL( ratio * tot_stake.get_amount(), get_rex_balance( alice ).get_amount() );
+      BOOST_REQUIRE_EQUAL( tot_stake,                      get_rex_balance_obj( alice )["vote_stake"].as<asset>() );
+      BOOST_REQUIRE_EQUAL( tot_stake,                      get_balance( N(eosio.rex) ) );
+      BOOST_REQUIRE_EQUAL( tot_stake,                      init_eosio_stake_balance - get_balance( N(eosio.stake) ) );
+ }
 
 } FC_LOG_AND_RETHROW()
 
