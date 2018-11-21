@@ -89,7 +89,7 @@ namespace eosiosystem {
          }
       }
 
-      update_resource_limits( receiver, -from_cpu.amount, -from_net.amount );
+      update_resource_limits( name(0), receiver, -from_cpu.amount, -from_net.amount );
 
       const asset payment = from_cpu + from_net;
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { stake_account, active_permission },
@@ -151,47 +151,6 @@ namespace eosiosystem {
    }
 
    /**
-    * Given two connector balances (conin, and conout), and an incoming amount of
-    * in, this function will modify conin and conout and return the delta out.
-    *
-    * @param in - same units as conin
-    * @param conin - the input connector balance
-    * @param conout - the output connector balance
-    */
-   int64_t bancor_convert( int64_t& conin, int64_t& conout, int64_t in )
-   {
-      const double F0 = double(conin);
-      const double T0 = double(conout);
-      const double I  = double(in);
-
-      auto out = int64_t((I*T0) / (I+F0));
-
-      if ( out < 0 ) out = 0;
-
-      conin  += in;
-      conout -= out;
-
-      return out;
-   }
-
-   void system_contract::update_resource_limits( const name& receiver, int64_t delta_cpu, int64_t delta_net )
-   {
-      user_resources_table   totals_tbl( _self, receiver.value );
-      auto tot_itr = totals_tbl.find( receiver.value );
-      eosio_assert( tot_itr !=  totals_tbl.end(), "expected to find resource table" );
-      totals_tbl.modify( tot_itr, same_payer, [&]( auto& tot ) {
-         tot.cpu_weight.amount += delta_cpu;
-         tot.net_weight.amount += delta_net;
-      });
-      eosio_assert( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
-      eosio_assert( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
-
-      int64_t ram_bytes, net, cpu;
-      get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
-      set_resource_limits( receiver.value, ram_bytes, tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
-   }
-
-   /**
     * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
     * after 30 days the rented SYS delegation of CPU or NET will expire.
     */
@@ -201,7 +160,7 @@ namespace eosiosystem {
 
       rex_cpu_loan_table cpu_loans( _self, _self.value );
       int64_t rented_tokens = rent_rex( cpu_loans, from, receiver, loan_payment, loan_fund );
-      update_resource_limits( receiver, rented_tokens, 0 );
+      update_resource_limits( from, receiver, rented_tokens, 0 );
    }
    
    void system_contract::rentnet( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund )
@@ -210,7 +169,7 @@ namespace eosiosystem {
 
       rex_net_loan_table net_loans( _self, _self.value );
       int64_t rented_tokens = rent_rex( net_loans, from, receiver, loan_payment, loan_fund );
-      update_resource_limits( receiver, 0, rented_tokens );
+      update_resource_limits( from, receiver, 0, rented_tokens );
    }
 
    void system_contract::fundcpuloan( const name& from, uint64_t loan_num, const asset& payment )
@@ -332,6 +291,66 @@ namespace eosiosystem {
    }
 
    /**
+    * Given two connector balances (conin, and conout), and an incoming amount of
+    * in, this function will modify conin and conout and return the delta out.
+    *
+    * @param in - same units as conin
+    * @param conin - the input connector balance
+    * @param conout - the output connector balance
+    */
+   int64_t bancor_convert( int64_t& conin, int64_t& conout, int64_t in )
+   {
+      const double F0 = double(conin);
+      const double T0 = double(conout);
+      const double I  = double(in);
+
+      auto out = int64_t((I*T0) / (I+F0));
+
+      if ( out < 0 ) out = 0;
+
+      conin  += in;
+      conout -= out;
+
+      return out;
+   }
+
+   void system_contract::update_resource_limits( const name& from, const name& receiver, int64_t delta_cpu, int64_t delta_net )
+   {
+      if ( delta_cpu == 0 && delta_net == 0 ) { // nothing to update
+         return;
+      }
+
+      {
+         user_resources_table totals_tbl( _self, receiver.value );
+         auto tot_itr = totals_tbl.find( receiver.value );
+         if ( tot_itr == totals_tbl.end() ) {
+            eosio_assert( 0 <= delta_cpu && 0 <= delta_net, "logic error, should not occur");
+            eosio_assert( 0 < delta_cpu || 0 < delta_net, "");
+            tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
+               tot.owner = receiver;
+               tot.cpu_weight = asset( delta_cpu, core_symbol() );
+               tot.net_weight = asset( delta_net, core_symbol() );
+            });
+         } else {
+            totals_tbl.modify( tot_itr, same_payer, [&]( auto& tot ) {
+               tot.cpu_weight.amount += delta_cpu;
+               tot.net_weight.amount += delta_net;
+            });
+         }
+         eosio_assert( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
+         eosio_assert( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
+         
+         if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0 && tot_itr->ram_bytes == 0 ) {
+            totals_tbl.erase( tot_itr );
+         }
+      }
+
+      int64_t ram_bytes, net, cpu;
+      get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+      set_resource_limits( receiver.value, ram_bytes, net + delta_net, cpu + delta_cpu );
+   }
+
+   /**
     * Perform maintenance operations on expired rex
     */
    void system_contract::runrex( uint16_t max )
@@ -395,7 +414,7 @@ namespace eosiosystem {
       
             auto result = process_expired_loan( cpu_idx, itr );
             if ( result.second != 0 )
-               update_resource_limits( itr->receiver, result.second, 0 );
+               update_resource_limits( itr->from, itr->receiver, result.second, 0 );
 
             if ( result.first )
                cpu_idx.erase( itr );
@@ -412,7 +431,7 @@ namespace eosiosystem {
 
             auto result = process_expired_loan( net_idx, itr );
             if ( result.second != 0 )
-               update_resource_limits( itr->receiver, 0, result.second );
+               update_resource_limits( itr->from, itr->receiver, 0, result.second );
 
             if ( result.first )
                net_idx.erase( itr );
