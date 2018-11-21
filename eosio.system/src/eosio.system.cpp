@@ -302,6 +302,19 @@ namespace eosiosystem {
          });
       }
    }
+
+   void system_contract::votebpout(name bp, uint32_t penalty_hours) {
+     require_auth(_self);
+     eosio_assert(penalty_hours != 0, "The penalty should be greater than zero.");
+
+     auto pitr = _producers.find(bp.value);
+     eosio_assert(pitr != _producers.end(), "Producer account was not found");
+
+     _producers.modify(pitr, same_payer, [&](auto &p) {
+       p.kick(kick_type::BPS_VOTING, penalty_hours);
+     });
+   }
+
 } /// eosio.system
 
 
@@ -309,7 +322,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
-     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
+     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)(votebpout)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

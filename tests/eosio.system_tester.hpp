@@ -31,12 +31,16 @@ namespace eosio_system {
 
 class eosio_system_tester : public TESTER {
 public:
+   abi_serializer abi_ser;
+   abi_serializer token_abi_ser;
+   abi_serializer wp_abi_ser;
+   abi_serializer trail_abi_ser;
 
    void basic_setup() {
       produce_blocks( 2 );
 
       create_accounts({ N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake),
-               N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names) });
+               N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(eosio.trail) });
 
 
       produce_blocks( 100 );
@@ -74,9 +78,32 @@ public:
          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
          abi_ser.set_abi(abi, abi_serializer_max_time);
       }
+      
+      set_code( N(eosio.trail), contracts::trail_service_wasm() );
+      set_abi( N(eosio.trail),  contracts::trail_service_abi().data() );
+
+      {
+         const auto& accnt = control->db().get<account_object,by_name>( N(eosio.trail) );
+         abi_def abi;
+         BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
+         trail_abi_ser.set_abi(abi, abi_serializer_max_time);
+      }
+
+
+      set_code( N(eosio.saving), contracts::worker_proposals_wasm() );
+      set_abi( N(eosio.saving),  contracts::worker_proposals_abi().data() );
+
+      {
+         const auto& accnt = control->db().get<account_object,by_name>( N(eosio.saving) );
+         abi_def abi;
+         BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
+         wp_abi_ser.set_abi(abi, abi_serializer_max_time);
+      }
+      
    }
 
    void remaining_setup() {
+      set_kick(false);
       produce_blocks();
 
       // Assumes previous setup steps were done with core token symbol set to CORE_SYM
@@ -86,7 +113,7 @@ public:
 
       BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance("eosio")  + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
    }
-
+   
    enum class setup_level {
       none,
       minimal,
@@ -94,7 +121,7 @@ public:
       deploy_contract,
       full
    };
-
+   
    eosio_system_tester( setup_level l = setup_level::full ) {
       if( l == setup_level::none ) return;
 
@@ -120,6 +147,20 @@ public:
       remaining_setup();
    }
 
+   transaction_trace_ptr set_kick(bool state) {
+        signed_transaction trx;
+        set_transaction_headers(trx);
+        trx.actions.emplace_back( vector<permission_level>{{N(eosio),config::active_name}},
+                                setkick{
+                                   .state  = state
+                                });
+
+      set_transaction_headers(trx);
+      trx.sign( get_private_key( N(eosio), "active" ), control->get_chain_id()  );
+      return push_transaction( trx );
+   }
+
+   //transaction_trace_ptr set_rotate(bool state) {}
 
    void create_accounts_with_resources( vector<account_name> accounts, account_name creator = config::system_account_name ) {
       for( auto a : accounts ) {
@@ -205,7 +246,7 @@ public:
       trx.sign( get_private_key( creator, "active" ), control->get_chain_id()  );
       return push_transaction( trx );
    }
-
+   
    transaction_trace_ptr setup_producer_accounts( const std::vector<account_name>& accounts,
                                                   asset ram = core_sym::from_string("1.0000"),
                                                   asset cpu = core_sym::from_string("80.0000"),
@@ -354,6 +395,49 @@ public:
       return r;
    }
 
+   
+   void printMetrics(vector<account_name> producer_names){
+      auto metrics = get_gmetrics_state();
+      auto x = metrics["producers_metric"];
+      int64_t counter = metrics["block_counter_correction"].as_int64();
+      std::cout<<(counter/100)<<((counter%100)/10)<<(counter%10)<<" | ";
+      std::cout<<metrics["last_onblock_caller"]<<" | ";
+      std::cout<<'[';
+      int count11 = 0; bool allOthersHave12 = true;
+      for(int i = 0; i < x.size(); i++){
+         if ( x[i]["missed_blocks_per_cycle"].as_int64() == 11 ) {
+            count11++;
+         }else
+         if ( x[i]["missed_blocks_per_cycle"].as_int64() != 12 ) {
+            allOthersHave12 = 0;
+         }
+         std::cout<<std::setfill('0')<<std::setw(2)<<x[i]["missed_blocks_per_cycle"];
+         std::cout<<", ";
+      }
+      std::cout<<']';
+      if(allOthersHave12 && count11 <= 1){
+         int space = 0;
+         std::cout<<" !! end of cylce / reset / wait !!";
+         if(count11 > 0){
+            std::cout<<" !! producers !! : ["<<std::endl;
+            for (const auto& p: producer_names) {
+               auto q = get_producer_info(p);
+               std::cout<<q["owner"]<<" = ";
+               std::cout<<std::setfill('0')<<std::setw(4)<<q["missed_blocks_per_rotation"];
+               std::cout<<' ';
+               std::cout<<std::setfill('0')<<std::setw(4)<<q["lifetime_missed_blocks"];
+               std::cout<<" | ";
+               if(++space % 5 == 0){
+                  std::cout<<std::endl;
+               }
+            }
+            std::cout<<']'<<std::endl;
+         }
+
+      }
+      std::cout<<std::endl;
+   }
+
    action_result vote( const account_name& voter, const std::vector<account_name>& producers, const account_name& proxy = name(0) ) {
       return push_action(voter, N(voteproducer), mvo()
                          ("voter",     voter)
@@ -414,13 +498,22 @@ public:
                                 );
    }
 
-   double stake2votes( asset stake ) {
-      auto now = control->pending_block_time().time_since_epoch().count() / 1000000;
-      return stake.get_amount() * pow(2, int64_t((now - (config::block_timestamp_epoch / 1000)) / (86400 * 7))/ double(52) ); // 52 week periods (i.e. ~years)
+   double stake2votes( const string& s, double voted_producers_count, double total_producers_count ) {
+      return stake2votes( core_sym::from_string(s), voted_producers_count, total_producers_count );
    }
 
-   double stake2votes( const string& s ) {
-      return stake2votes( core_sym::from_string(s) );
+   double stake2votes( asset stake, double voted_producers_count, double total_producers_count ){
+      if (voted_producers_count == 0.0) {
+         return 0;
+      }
+ 
+      total_producers_count = 30;
+
+      double percentVoted = voted_producers_count / total_producers_count;
+      double voteWeight = (sin(M_PI * percentVoted - M_PI_2) + 1.0) / 2.0;
+      double staked = stake.get_amount();
+
+      return (voteWeight * staked);
    }
 
    fc::variant get_stats( const string& symbolname ) {
@@ -444,14 +537,16 @@ public:
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state", data, abi_serializer_max_time );
    }
 
-   fc::variant get_global_state2() {
-      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global2), N(global2) );
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state2", data, abi_serializer_max_time );
+   fc::variant get_gmetrics_state() {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(schedulemetr), N(schedulemetr) );
+      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "schedule_metrics_state", data, abi_serializer_max_time );
    }
 
-   fc::variant get_global_state3() {
-      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(global3), N(global3) );
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "eosio_global_state3", data, abi_serializer_max_time );
+   fc::variant get_rotation_state() {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rotations), N(rotations) );
+      if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "rotation_state", data, abi_serializer_max_time );
    }
 
    fc::variant get_refund_request( name account ) {
@@ -485,6 +580,7 @@ public:
    }
 
    vector<name> active_and_vote_producers() {
+      activate_network();
       //stake more than 15% of total EOS supply to activate chain
       transfer( "eosio", "alice1111111", core_sym::from_string("650000000.0000"), "eosio" );
       BOOST_REQUIRE_EQUAL( success(), stake( "alice1111111", "alice1111111", core_sym::from_string("300000000.0000"), core_sym::from_string("300000000.0000") ) );
@@ -538,6 +634,10 @@ public:
       return producer_names;
    }
 
+   void activate_network(){
+      produce_blocks(1000);
+   }
+
    void cross_15_percent_threshold() {
       setup_producer_accounts({N(producer1111)});
       regproducer(N(producer1111));
@@ -581,9 +681,83 @@ public:
       }
    }
 
-   abi_serializer abi_ser;
-   abi_serializer token_abi_ser;
+   void submit_worker_proposal( account_name proposer, std::string title, uint16_t cycles, std::string ipfs_location, asset amount, account_name receiver) {
+      base_tester::push_action(N(eosio.saving), N(submit), proposer, mvo()
+                              ("proposer",      proposer)
+                              ("title",         title)
+                              ("cycles",        cycles)
+                              ("ipfs_location", ipfs_location)
+                              ("amount",        amount)
+                              ("receiver",      receiver));
+   }
+
+   void regvoter(account_name voter) {
+      base_tester::push_action(N(eosio.trail), N(regvoter), voter, mvo()("voter", voter));
+   }
+
+   void regballot(account_name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
+      base_tester::push_action(N(eosio.trail), N(regballot), publisher, mvo()
+                              ("publisher",     publisher)
+                              ("voting_symbol", voting_symbol)
+                              ("begin_time",    begin_time)
+                              ("end_time",      end_time)
+                              ("info_url",      info_url));
+   }
+
+   action_result linkballot(uint64_t prop_id, uint64_t ballot_id, account_name proposer) {
+      return push_wps_action(proposer, N(linkballot), mvo()("prop_id", prop_id)("ballot_id", ballot_id)("proposer", proposer));
+   }
+
+   action_result trail_castvote(account_name voter, uint64_t ballot_id, uint16_t direction) {
+      return push_trail_action(voter, N(castvote), mvo()("voter", voter)("ballot_id", ballot_id)("direction", direction));
+   }
+
+   action_result trail_mirrorstake(account_name voter, uint32_t lock_period) {
+      return push_trail_action(voter, N(mirrorstake), mvo()("voter", voter)("lock_period", lock_period));
+   }
+
+
+   action_result trail_nextcycle(account_name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
+      return push_trail_action(publisher, N(nextcycle), mvo()("publisher", publisher)("ballot_id", ballot_id)("new_begin_time", new_begin_time)("new_end_time", new_end_time));
+   }
+
+   action_result claim_proposal_funds(uint64_t proposal_id, account_name proposer) {
+      return push_wps_action(proposer, N(claim), mvo()("prop_id", proposal_id)("proposer", proposer));
+   }
+
+   fc::variant get_wp_info( const uint64_t id ) {
+      vector<char> data = get_row_by_account( N(eosio.saving), N(eosio.saving), N(proposals), id );
+      return wp_abi_ser.binary_to_variant( "proposal", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_ballot( const uint64_t id ) {
+      vector<char> data = get_row_by_account( N(eosio.trail), N(eosio.trail), N(ballots), id );
+      return trail_abi_ser.binary_to_variant( "ballot", data, abi_serializer_max_time );
+   }
+
+   action_result push_wps_action( const account_name& signer, const action_name &name, const variant_object &data ) {
+      string action_type_name = wp_abi_ser.get_action_type(name);
+
+      action act;
+      act.account = N(eosio.saving);
+      act.name = name;
+      act.data = wp_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+
+      return base_tester::push_action( std::move(act), uint64_t(signer));
+   }
+
+   action_result push_trail_action( const account_name& signer, const action_name &name, const variant_object &data ) {
+      string action_type_name = trail_abi_ser.get_action_type(name);
+
+      action act;
+      act.account = N(eosio.trail);
+      act.name = name;
+      act.data = trail_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+
+      return base_tester::push_action( std::move(act), uint64_t(signer));
+   }
 };
+
 
 inline fc::mutable_variant_object voter( account_name acct ) {
    return mutable_variant_object()
