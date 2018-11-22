@@ -3557,6 +3557,9 @@ BOOST_FIXTURE_TEST_CASE( unstake_buy_rex, eosio_system_tester, * boost::unit_tes
       BOOST_REQUIRE_EQUAL( wasm_assert_msg("delegated bandwidth record does not exist"),
                            unstaketorex( emily, frank, net_stake, cpu_stake ) );
       BOOST_REQUIRE_EQUAL( success(),                               unstaketorex( frank, frank, net_stake, cpu_stake ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient funds"),   sellrex( frank, asset::from_string("1.0000 REX") ) );
+      produce_block( fc::days(5) );
+      BOOST_REQUIRE_EQUAL( success(),                               sellrex( frank, asset::from_string("1.0000 REX") ) );
    }
 
 } FC_LOG_AND_RETHROW()

@@ -566,6 +566,7 @@ namespace eosiosystem {
 
    void system_contract::transfer_from_fund( const name& owner, const asset& amount )
    {
+      eosio_assert( 0 < amount.amount, "must transfer positive amount from REX fund" );
       auto itr = _rexfunds.require_find( owner.value, "must deposit to REX fund first" );
       eosio_assert( amount <= itr->balance, "insufficient funds");
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
@@ -575,10 +576,18 @@ namespace eosiosystem {
 
    void system_contract::transfer_to_fund( const name& owner, const asset& amount )
    {
-      auto itr = _rexfunds.require_find( owner.value, "programmer error" );
-      _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
-         fund.balance.amount += amount.amount;
-      });
+      eosio_assert( 0 < amount.amount, "must transfer positive amount to REX fund" );
+      auto itr = _rexfunds.find( owner.value );
+      if ( itr == _rexfunds.end() ) {
+         _rexfunds.emplace( owner, [&]( auto& fund ) {
+            fund.owner   = owner;
+            fund.balance = amount;
+         }); 
+      } else {
+         _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
+            fund.balance.amount += amount.amount;
+         });
+      }
    }
 
    /**
@@ -684,7 +693,7 @@ namespace eosiosystem {
             rp.total_rex        = rex_received;
             rp.namebid_proceeds = asset( 0, core_symbol() );
          });
-      } else if ( !rex_available() ) { /// should be a rare corner case
+      } else if ( !rex_available() ) { /// should be a rare corner case, REX pool initialized but empty
          _rexpool.modify( itr, same_payer, [&]( auto& rp ) {
             rex_received.amount = payment.amount * rex_ratio;
 
