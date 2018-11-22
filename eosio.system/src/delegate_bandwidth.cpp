@@ -37,6 +37,7 @@ namespace eosiosystem {
       asset         cpu_weight;
       int64_t       ram_bytes = 0;
 
+      bool is_empty()const { return net_weight.amount == 0 && cpu_weight.amount == 0 && ram_bytes == 0; }
       uint64_t primary_key()const { return owner.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
@@ -53,6 +54,7 @@ namespace eosiosystem {
       asset         net_weight;
       asset         cpu_weight;
 
+      bool is_empty()const { return net_weight.amount == 0 && cpu_weight.amount == 0; }
       uint64_t  primary_key()const { return to.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
@@ -66,6 +68,7 @@ namespace eosiosystem {
       eosio::asset    net_amount;
       eosio::asset    cpu_amount;
 
+      bool is_empty()const { return net_amount.amount == 0 && cpu_amount.amount == 0; }
       uint64_t  primary_key()const { return owner.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
@@ -258,7 +261,7 @@ namespace eosiosystem {
          }
          eosio_assert( 0 <= itr->net_weight.amount, "insufficient staked net bandwidth" );
          eosio_assert( 0 <= itr->cpu_weight.amount, "insufficient staked cpu bandwidth" );
-         if ( itr->net_weight.amount == 0 && itr->cpu_weight.amount == 0 ) {
+         if ( itr->is_empty() ) {
             del_tbl.erase( itr );
          }
       } // itr can be invalid, should go out of scope
@@ -287,7 +290,7 @@ namespace eosiosystem {
 
          set_resource_limits( receiver.value, std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ), tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
 
-         if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0  && tot_itr->ram_bytes == 0 ) {
+         if ( tot_itr->is_empty() ) {
             totals_tbl.erase( tot_itr );
          }
       } // tot_itr can be invalid, should go out of scope
@@ -333,7 +336,7 @@ namespace eosiosystem {
                eosio_assert( 0 <= req->net_amount.amount, "negative net refund amount" ); //should never happen
                eosio_assert( 0 <= req->cpu_amount.amount, "negative cpu refund amount" ); //should never happen
 
-               if ( req->net_amount.amount == 0 && req->cpu_amount.amount == 0 ) {
+               if ( req->is_empty() ) {
                   refunds_tbl.erase( req );
                   need_deferred_trx = false;
                } else {

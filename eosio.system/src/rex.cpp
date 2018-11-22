@@ -84,7 +84,7 @@ namespace eosiosystem {
             dbw.cpu_weight.amount -= from_cpu.amount;
             dbw.net_weight.amount -= from_net.amount;
          });
-         if ( del_itr->cpu_weight.amount == 0 && del_itr->net_weight.amount == 0 ) {
+         if ( del_itr->is_empty() ) {
             dbw_table.erase( del_itr );
          }
       }
@@ -340,7 +340,7 @@ namespace eosiosystem {
          eosio_assert( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
          eosio_assert( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
          
-         if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0 && tot_itr->ram_bytes == 0 ) {
+         if ( tot_itr->is_empty() ) {
             totals_tbl.erase( tot_itr );
          }
       }
