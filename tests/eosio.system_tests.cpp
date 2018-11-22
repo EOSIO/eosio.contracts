@@ -3443,7 +3443,7 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_rex, eosio_system_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 
-BOOST_FIXTURE_TEST_CASE( unstake_buy_rex, eosio_system_tester ) try {
+BOOST_FIXTURE_TEST_CASE( unstake_buy_rex, eosio_system_tester, * boost::unit_test::tolerance(1e-10) ) try {
 
    auto get_net_limit = [&](account_name a) -> int64_t {
       int64_t ram_bytes = 0, net = 0, cpu = 0;
@@ -3457,12 +3457,31 @@ BOOST_FIXTURE_TEST_CASE( unstake_buy_rex, eosio_system_tester ) try {
    };
 
    const int64_t ratio        = 10000;
+   const asset   zero_asset   = core_sym::from_string("0.0000");
+   const asset   neg_asset    = core_sym::from_string("-0.0001");
+   const asset   one_token    = core_sym::from_string("1.0000");
    const asset   init_balance = core_sym::from_string("10000.0000");
    const asset   init_net     = core_sym::from_string("70.0000");
    const asset   init_cpu     = core_sym::from_string("90.0000");
-   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount) };
-   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3];
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount), N(frankaccount) };
+   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3], frank = accounts[4];
    setup_rex_accounts( accounts, init_balance, init_net, init_cpu, false );
+
+   // create accounts {defproducera, defproducerb, ..., defproducerz} and register as producers
+   std::vector<account_name> producer_names;
+   {
+      producer_names.reserve('z' - 'a' + 1);
+      const std::string root("defproducer");
+      for ( char c = 'a'; c <= 'z'; ++c ) {
+         producer_names.emplace_back(root + std::string(1, c));
+      }
+
+      setup_producer_accounts(producer_names);
+      for ( const auto& p: producer_names ) {
+         BOOST_REQUIRE_EQUAL( success(), regproducer(p) );
+         BOOST_TEST_REQUIRE( 0 == get_producer_info(p)["total_votes"].as<double>() );
+      }
+   }
 
    const int64_t init_cpu_limit = get_cpu_limit( alice );
    const int64_t init_net_limit = get_net_limit( alice );
@@ -3471,19 +3490,74 @@ BOOST_FIXTURE_TEST_CASE( unstake_buy_rex, eosio_system_tester ) try {
       const asset net_stake = core_sym::from_string("25.5000");
       const asset cpu_stake = core_sym::from_string("12.4000");
       const asset tot_stake = net_stake + cpu_stake;
-      BOOST_REQUIRE_EQUAL( init_balance,                   get_balance( alice ) );
-      BOOST_REQUIRE_EQUAL( success(),                      stake( alice, alice, net_stake, cpu_stake ) );
-      BOOST_REQUIRE_EQUAL( get_cpu_limit( alice ),         init_cpu_limit + cpu_stake.get_amount() );
-      BOOST_REQUIRE_EQUAL( get_net_limit( alice ),         init_net_limit + net_stake.get_amount() );
+      BOOST_REQUIRE_EQUAL( init_balance,                            get_balance( alice ) );
+      BOOST_REQUIRE_EQUAL( success(),                               stake( alice, alice, net_stake, cpu_stake ) );
+      BOOST_REQUIRE_EQUAL( get_cpu_limit( alice ),                  init_cpu_limit + cpu_stake.get_amount() );
+      BOOST_REQUIRE_EQUAL( get_net_limit( alice ),                  init_net_limit + net_stake.get_amount() );
+      BOOST_REQUIRE_EQUAL( success(),
+                           vote( alice, std::vector<account_name>(producer_names.begin(), producer_names.begin() + 20) ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("must vote for proxy or at least 21 producers before buying REX"),
+                           unstaketorex( alice, alice, net_stake, cpu_stake ) );
+      BOOST_REQUIRE_EQUAL( success(),
+                           vote( alice, std::vector<account_name>(producer_names.begin(), producer_names.begin() + 21) ) );
       const asset init_eosio_stake_balance = get_balance( N(eosio.stake) );
-      BOOST_REQUIRE_EQUAL( success(),                      unstaketorex( alice, alice, net_stake, cpu_stake ) );
-      BOOST_REQUIRE_EQUAL( get_cpu_limit( alice ),         init_cpu_limit );
-      BOOST_REQUIRE_EQUAL( get_net_limit( alice ),         init_net_limit );
-      BOOST_REQUIRE_EQUAL( ratio * tot_stake.get_amount(), get_rex_balance( alice ).get_amount() );
-      BOOST_REQUIRE_EQUAL( tot_stake,                      get_rex_balance_obj( alice )["vote_stake"].as<asset>() );
-      BOOST_REQUIRE_EQUAL( tot_stake,                      get_balance( N(eosio.rex) ) );
-      BOOST_REQUIRE_EQUAL( tot_stake,                      init_eosio_stake_balance - get_balance( N(eosio.stake) ) );
- }
+      const auto init_voter_info = get_voter_info( alice );
+      const auto init_prod_info  = get_producer_info( producer_names[0] );
+      BOOST_TEST_REQUIRE( init_prod_info["total_votes"].as_double() ==
+                          stake2votes( asset( init_voter_info["staked"].as<int64_t>(), symbol{CORE_SYM} ) ) );
+      produce_block( fc::days(4) );
+      BOOST_REQUIRE_EQUAL( success(),                               unstaketorex( alice, alice, net_stake, cpu_stake ) );
+      BOOST_REQUIRE_EQUAL( get_cpu_limit( alice ),                  init_cpu_limit );
+      BOOST_REQUIRE_EQUAL( get_net_limit( alice ),                  init_net_limit );
+      BOOST_REQUIRE_EQUAL( ratio * tot_stake.get_amount(),          get_rex_balance( alice ).get_amount() );
+      BOOST_REQUIRE_EQUAL( tot_stake,                               get_rex_balance_obj( alice )["vote_stake"].as<asset>() );
+      BOOST_REQUIRE_EQUAL( tot_stake,                               get_balance( N(eosio.rex) ) );
+      BOOST_REQUIRE_EQUAL( tot_stake,                               init_eosio_stake_balance - get_balance( N(eosio.stake) ) );
+      auto current_voter_info = get_voter_info( alice );
+      auto current_prod_info  = get_producer_info( producer_names[0] );
+      BOOST_REQUIRE_EQUAL( init_voter_info["staked"].as<int64_t>(), current_voter_info["staked"].as<int64_t>() );
+      BOOST_TEST_REQUIRE( current_prod_info["total_votes"].as_double() ==
+                          stake2votes( asset( current_voter_info["staked"].as<int64_t>(), symbol{CORE_SYM} ) ) );
+      BOOST_TEST_REQUIRE( init_prod_info["total_votes"].as_double() < current_prod_info["total_votes"].as_double() );
+   }
+   
+   {
+      const asset net_stake = core_sym::from_string("200.5000");
+      const asset cpu_stake = core_sym::from_string("120.0000");
+      const asset tot_stake = net_stake + cpu_stake;
+      BOOST_REQUIRE_EQUAL( success(),                               stake( bob, carol, net_stake, cpu_stake ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("amount exceeds tokens staked for net"),
+                           unstaketorex( bob, carol, net_stake + one_token, zero_asset ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("amount exceeds tokens staked for cpu"),
+                           unstaketorex( bob, carol, zero_asset, cpu_stake + one_token ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("delegated bandwidth record does not exist"),
+                           unstaketorex( bob, emily, zero_asset, one_token ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("must unstake a positive amount to buy rex"),
+                           unstaketorex( bob, carol, zero_asset, zero_asset ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("must unstake a positive amount to buy rex"),
+                           unstaketorex( bob, carol, neg_asset, one_token ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("must unstake a positive amount to buy rex"),
+                           unstaketorex( bob, carol, one_token, neg_asset ) );
+      BOOST_REQUIRE_EQUAL( init_net_limit + net_stake.get_amount(), get_net_limit( carol ) );
+      BOOST_REQUIRE_EQUAL( init_cpu_limit + cpu_stake.get_amount(), get_cpu_limit( carol ) );
+      BOOST_REQUIRE_EQUAL( success(),                               unstaketorex( bob, carol, net_stake, cpu_stake ) );
+      BOOST_REQUIRE_EQUAL( 0,                                       get_rex_balance( carol ).get_amount() );
+      BOOST_REQUIRE_EQUAL( ratio * tot_stake.get_amount(),          get_rex_balance( bob ).get_amount() );
+      BOOST_REQUIRE_EQUAL( init_cpu_limit,                          get_cpu_limit( bob ) );
+      BOOST_REQUIRE_EQUAL( init_net_limit,                          get_net_limit( bob ) );
+      BOOST_REQUIRE_EQUAL( init_cpu_limit,                          get_cpu_limit( carol ) );
+      BOOST_REQUIRE_EQUAL( init_net_limit,                          get_net_limit( carol ) );
+   }
+
+   {
+      const asset net_stake = core_sym::from_string("130.5000");
+      const asset cpu_stake = core_sym::from_string("220.0800");
+      const asset tot_stake = net_stake + cpu_stake;
+      BOOST_REQUIRE_EQUAL( success(),                               stake_with_transfer( emily, frank, net_stake, cpu_stake ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("delegated bandwidth record does not exist"),
+                           unstaketorex( emily, frank, net_stake, cpu_stake ) );
+      BOOST_REQUIRE_EQUAL( success(),                               unstaketorex( frank, frank, net_stake, cpu_stake ) );
+   }
 
 } FC_LOG_AND_RETHROW()
 

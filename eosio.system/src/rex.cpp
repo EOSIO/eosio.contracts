@@ -77,7 +77,7 @@ namespace eosiosystem {
 
       {
          del_bandwidth_table dbw_table( _self, owner.value );
-         auto del_itr = dbw_table.require_find( receiver.value, "account does not exist in delegated bandwidth table" );
+         auto del_itr = dbw_table.require_find( receiver.value, "delegated bandwidth record does not exist" );
          eosio_assert( from_cpu.amount <= del_itr->cpu_weight.amount, "amount exceeds tokens staked for cpu");
          eosio_assert( from_net.amount <= del_itr->net_weight.amount, "amount exceeds tokens staked for net");
          dbw_table.modify( del_itr, same_payer, [&]( delegated_bandwidth& dbw ) {
@@ -238,7 +238,7 @@ namespace eosiosystem {
    }
 
    void system_contract::consolidate( const name& owner )
-   {   
+   {
       require_auth( owner );
       
       runrex(2);
@@ -598,7 +598,7 @@ namespace eosiosystem {
          to_fund.amount  += itr->proceeds.amount;
          to_stake.amount += itr->stake_change.amount;
          _rexorders.erase( itr );
-      } else if ( itr != _rexorders.end() ) { // itr->is_open is satisfied
+      } else if ( itr != _rexorders.end() ) { // itr->is_open is true
          rex_in_sell_order.amount = itr->rex_requested.amount;
       }
 
@@ -619,7 +619,7 @@ namespace eosiosystem {
          });
 
          INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { from, active_permission },
-            { from, rex_account, amount, std::string("transfer from ") + name{from}.to_string() + " REX"} );
+            { from, rex_account, amount, std::string("transfer from ") + name{from}.to_string() + " to eosio.rex"} );
       }
    }
 
