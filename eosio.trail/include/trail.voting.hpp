@@ -19,12 +19,12 @@ using namespace eosio;
 
 struct [[eosio::table, eosio::contract("eosio.trail")]] vote_receipt {
     uint64_t ballot_id;
-    uint16_t direction;
+    vector<uint16_t> directions;
     asset weight;
     uint32_t expiration;
 
     uint64_t primary_key() const { return ballot_id; }
-    EOSLIB_SERIALIZE(vote_receipt, (ballot_id)(direction)(weight)(expiration))
+    EOSLIB_SERIALIZE(vote_receipt, (ballot_id)(directions)(weight)(expiration))
 };
 
 struct [[eosio::table, eosio::contract("eosio.trail")]] vote_levy {
@@ -99,23 +99,26 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] election {
         (begin_time)(end_time))
 };
 
+
+/**
+ * NOTE: totals vector mappings:
+ *     totals[0] => total tokens
+ *     totals[1] => total voters
+ *     totals[2] => total proposals
+ *     totals[3] => total elections
+ *     totals[4] => total leaderboards
+ */
 struct [[eosio::table, eosio::contract("eosio.trail")]] env {
     name publisher;
-    
-    uint64_t total_tokens;
-    uint64_t total_voters;
-    uint64_t total_proposals;
-    uint64_t total_elections;
-
-    asset vote_supply;
-
+    vector<uint64_t> totals;
     uint32_t time_now;
+    uint64_t last_ballot_id;
+
+    //TODO: update properly or remove/refactor entirely
+    //asset core_vote_supply;
 
     uint64_t primary_key() const { return publisher.value; }
-    EOSLIB_SERIALIZE(env, (publisher)
-        (total_tokens)(total_voters)(total_proposals)(total_elections)
-        (vote_supply)
-        (time_now))
+    EOSLIB_SERIALIZE(env, (publisher)(totals)(time_now)(last_ballot_id))
 };
 
 #pragma endregion Structs

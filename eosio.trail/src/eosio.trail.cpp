@@ -3,14 +3,13 @@
 trail::trail(name self, name code, datastream<const char*> ds) : contract(self, code, ds), environment(self, self.value) {
     if (!environment.exists()) {
 
+        vector<uint64_t> new_totals;
+
         env_struct = env{
             self, //publisher
-            0, //total_tokens
-            0, //total_voters
-            0, //total_proposals
-            0, //total_elections
-            asset(0, symbol("VOTE", 4)), //vote_supply //TODO: remove?
-            now() //time_now
+            new_totals, //totals
+            now(), //time_now
+            0 //last_ballot_id
         };
 
         environment.set(env_struct, self);
@@ -48,7 +47,7 @@ void trail::regtoken(asset native, name publisher) {
         a.publisher = publisher;
     });
 
-    env_struct.total_tokens++;
+    env_struct.totals[0]++;
 
     print("\nToken Registration: SUCCESS");
 }
@@ -64,7 +63,7 @@ void trail::unregtoken(asset native, name publisher) {
 
     registries.erase(r);
 
-    env_struct.total_tokens--;
+    env_struct.totals[0]--;
 
     print("\nToken Unregistration: SUCCESS");
 }
@@ -87,7 +86,7 @@ void trail::regvoter(name voter) {
         a.votes = asset(0, symbol("VOTE", 4));
     });
 
-    env_struct.total_voters++;
+    env_struct.totals[1]++;
 
     print("\nVoterID Registration: SUCCESS");
 }
@@ -102,18 +101,20 @@ void trail::unregvoter(name voter) {
 
     auto vid = *v;
 
-    env_struct.vote_supply -= vid.votes;
+    //TODO: remove VOTE's from supply?
+    //env_struct.vote_supply -= vid.votes;
 
     voters.erase(v);
 
-    env_struct.total_voters--;
+    env_struct.totals[1]--;
 
     print("\nVoterID Unregistration: SUCCESS");
 }
 
+//TODO: change symbol param to symbol_code?
 void trail::regballot(name publisher, uint8_t ballot_type, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
     require_auth(publisher);
-    eosio_assert(ballot_type >= 0 && ballot_type <= 1, "invalid ballot type"); //NOTE: update valid range as new ballot types are added
+    eosio_assert(ballot_type >= 0 && ballot_type <= 2, "invalid ballot type"); //NOTE: update valid range as new ballot types are developed
 
     //TODO: check for voting_token existence?
 
@@ -121,19 +122,27 @@ void trail::regballot(name publisher, uint8_t ballot_type, symbol voting_symbol,
 
     switch (ballot_type) {
         case 0 : 
-            new_ref_id = makeproposal(publisher, voting_symbol, begin_time, end_time, info_url);
-            env_struct.total_proposals++; 
+            new_ref_id = make_proposal(publisher, voting_symbol, begin_time, end_time, info_url);
+            env_struct.totals[2]++;
             break;
         case 1 : 
-            new_ref_id = makeelection(publisher, voting_symbol, begin_time, end_time, info_url);
-            env_struct.total_elections++;
+            new_ref_id = make_election(publisher, voting_symbol, begin_time, end_time, info_url);
+            env_struct.totals[3]++;
+            break;
+        case 2 : 
+            //new_ref_id = make_leaderboard();
+            env_struct.totals[4]++;
             break;
     }
 
     ballots_table ballots(_self, _self.value);
 
+    uint64_t new_ballot_id = ballots.available_primary_key();
+
+    env_struct.last_ballot_id = new_ballot_id;
+
     ballots.emplace(publisher, [&]( auto& a ) {
-        a.ballot_id = ballots.available_primary_key();
+        a.ballot_id = new_ballot_id;
         a.table_id = ballot_type;
         a.reference_id = new_ref_id;
     });
@@ -152,12 +161,15 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
 
     switch (bal.table_id) {
         case 0 : 
-            del_success = deleteproposal(bal.reference_id);
-            env_struct.total_proposals--;
+            del_success = delete_proposal(bal.reference_id);
+            env_struct.totals[2]--;
             break;
         case 1 : 
-            del_success = deleteelection(bal.reference_id);
-            env_struct.total_elections--;
+            del_success = delete_election(bal.reference_id);
+            env_struct.totals[3]--;
+            break;
+        case 2 : 
+            //del_success = delete_leaderboard(bal.reference_id);
             break;
     }
 
@@ -169,8 +181,8 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
 
 void trail::mirrorstake(name voter, uint32_t lock_period) {
     require_auth(voter);
-    eosio_assert(lock_period >= MIN_LOCK_PERIOD, "lock period must be greater than 1 day (86400 secs)");
-    eosio_assert(lock_period <= MAX_LOCK_PERIOD, "lock period must be less than 3 months (7,776,000 secs)");
+    eosio_assert(lock_period >= MIN_LOCK_PERIOD, "lock period must be greater than or equal to 1 day (86400 secs)");
+    eosio_assert(lock_period <= MAX_LOCK_PERIOD, "lock period must be less than or equal to 3 months (7,776,000 secs)");
 
     asset max_votes = get_liquid_tlos(voter) + get_staked_tlos(voter);
     eosio_assert(max_votes.symbol == symbol("TLOS", 4), "only TLOS can be used to get VOTEs"); //NOTE: redundant?
@@ -185,6 +197,8 @@ void trail::mirrorstake(name voter, uint32_t lock_period) {
 
     votelevies_table votelevies(_self, _self.value);
     auto vl = votelevies.find(voter.value);
+
+    //TODO: ability to mirror any asset registered through regtoken?
 
     auto new_votes = asset(max_votes.amount, symbol("VOTE", 4)); //mirroring TLOS amount, not spending/locking it up
     asset decay_amount = calc_decay(voter, new_votes);
@@ -218,7 +232,6 @@ void trail::mirrorstake(name voter, uint32_t lock_period) {
 
 void trail::castvote(name voter, uint64_t ballot_id, uint16_t direction) {
     require_auth(voter);
-    eosio_assert(direction >= uint16_t(0) && direction <= uint16_t(2), "Invalid Vote. [0 = NO, 1 = YES, 2 = ABSTAIN]"); //TODO: enforce only for props
 
     voters_table voters(_self, _self.value);
     auto v = voters.find(voter.value);
@@ -235,10 +248,14 @@ void trail::castvote(name voter, uint64_t ballot_id, uint16_t direction) {
 
     switch (bal.table_id) {
         case 0 : 
-            vote_success = voteforproposal(voter, ballot_id, bal.reference_id, direction);
+            eosio_assert(direction >= uint16_t(0) && direction <= uint16_t(2), "Invalid Vote. [0 = NO, 1 = YES, 2 = ABSTAIN]");
+            vote_success = vote_for_proposal(voter, ballot_id, bal.reference_id, direction);
             break;
         case 1 : 
-            //vote_success = voteforelection(voter, ballot_id, bal.reference_id, direction);
+            //vote_success = vote_for_election(voter, ballot_id, bal.reference_id, direction);
+            break;
+        case 2 : 
+            //vote_success = vote_for_leaderboard(voter, ballot_id, bal.reference_id, direction);
             break;
     }
 
@@ -256,19 +273,23 @@ void trail::closeballot(name publisher, uint64_t ballot_id, uint8_t pass) {
 
     switch (bal.table_id) {
         case 0 : 
-            close_success = closeproposal(bal.reference_id, pass);
+            close_success = close_proposal(bal.reference_id, pass);
             break;
         case 1 : 
-            //close_success = voteforelection(voter, ballot_id, bal.reference_id, direction);
+            //close_success = close_election(bal.reference_id, pass);
+            break;
+        case 2: 
+            //close_success = close_leaderboard();
             break;
     }
 
-    
-
+    print("\nBallot Close: SUCCESS");
 }
 
 void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
     require_auth(publisher);
+
+    //TODO: support cycles for other ballot types?
 
     ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
@@ -318,7 +339,7 @@ void trail::deloldvotes(name voter, uint16_t num_to_delete) {
 
 #pragma region Helper_Functions
 
-uint64_t trail::makeproposal(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
+uint64_t trail::make_proposal(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
 
     proposals_table proposals(_self, _self.value);
     uint64_t new_prop_id = proposals.available_primary_key();
@@ -340,12 +361,14 @@ uint64_t trail::makeproposal(name publisher, symbol voting_symbol, uint32_t begi
     return new_prop_id;
 }
 
-bool trail::deleteproposal(uint64_t prop_id) {
+bool trail::delete_proposal(uint64_t prop_id) {
     proposals_table proposals(_self, _self.value);
     auto p = proposals.find(prop_id);
     eosio_assert(p != proposals.end(), "proposal doesn't exist");
     auto prop = *p;
     eosio_assert(now() < prop.begin_time, "cannot delete proposal once voting has begun");
+
+    //TODO: assert cycle_count == 0?
 
     proposals.erase(p);
 
@@ -354,7 +377,7 @@ bool trail::deleteproposal(uint64_t prop_id) {
     return true;
 }
 
-bool trail::voteforproposal(name voter, uint64_t ballot_id, uint64_t prop_id, uint16_t direction) {
+bool trail::vote_for_proposal(name voter, uint64_t ballot_id, uint64_t prop_id, uint16_t direction) {
     
     proposals_table proposals(_self, _self.value);
     auto p = proposals.find(prop_id);
@@ -372,41 +395,55 @@ bool trail::voteforproposal(name voter, uint64_t ballot_id, uint64_t prop_id, ui
     asset vote_weight = get_vote_weight(voter, prop.no_count.symbol);
 
     if (vr_itr == votereceipts.end()) { //NOTE: voter hasn't voted on ballot before
+
+        vector<uint16_t> new_directions;
+        new_directions.emplace_back(direction);
+
         votereceipts.emplace(voter, [&]( auto& a ){
             a.ballot_id = ballot_id;
-            a.direction = direction;
+            a.directions = new_directions;
             a.weight = vote_weight;
             a.expiration = prop.end_time;
         });
+
+        print("\nVote Cast: SUCCESS");
+        
     } else { //NOTE: vote for ballot_id already exists
         auto vr = *vr_itr;
 
-        if (vr.expiration == prop.end_time && vr.direction != direction) { //NOTE: vote different and for same cycle
+        if (vr.expiration == prop.end_time && vr.directions[0] != direction) { //NOTE: vote different and for same cycle
 
-            switch (vr.direction) { //NOTE: remove old vote weight
+            switch (vr.directions[0]) { //NOTE: remove old vote weight from proposal
                 case 0 : prop.no_count -= vr.weight; break;
                 case 1 : prop.yes_count -= vr.weight; break;
                 case 2 : prop.abstain_count -= vr.weight; break;
             }
 
+            vr.directions[0] = direction;
+
             votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
-                a.direction = direction;
+                a.directions = vr.directions;
                 a.weight = vote_weight;
             });
 
             new_voter = 0;
 
             print("\nVote Recast: SUCCESS");
-        }// else if (vr.expiration < prop.end_time) { //NOTE: vote for new cycle
-        //     votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
-        //         a.direction = direction;
-        //         a.weight = vote_weight;
-        //         a.expiration = bal.end_time;
-        //     });
-        // }
+        } else if (vr.expiration < prop.end_time) { //NOTE: vote for new cycle on same proposal
+            
+            vr.directions[0] = direction;
+
+            votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
+                a.directions = vr.directions;
+                a.weight = vote_weight;
+                a.expiration = prop.end_time;
+            });
+
+            print("\nVote Cast For New Cycle: SUCCESS");
+        }
     }
 
-    switch (direction) {
+    switch (direction) { //NOTE: update proposal with new weight
         case 0 : prop.no_count += vote_weight; break;
         case 1 : prop.yes_count += vote_weight; break;
         case 2 : prop.abstain_count += vote_weight; break;
@@ -422,7 +459,7 @@ bool trail::voteforproposal(name voter, uint64_t ballot_id, uint64_t prop_id, ui
     return true;
 }
 
-bool trail::closeproposal(uint64_t prop_id, uint8_t pass) {
+bool trail::close_proposal(uint64_t prop_id, uint8_t pass) {
     proposals_table proposals(_self, _self.value);
     auto p = proposals.find(prop_id);
     eosio_assert(p != proposals.end(), "proposal doesn't exist");
@@ -438,7 +475,7 @@ bool trail::closeproposal(uint64_t prop_id, uint8_t pass) {
 }
 
 
-uint64_t trail::makeelection(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
+uint64_t trail::make_election(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
     elections_table elections(_self, _self.value);
 
     uint64_t new_elec_id = elections.available_primary_key();
@@ -460,7 +497,7 @@ uint64_t trail::makeelection(name publisher, symbol voting_symbol, uint32_t begi
     return new_elec_id;
 }
 
-bool trail::deleteelection(uint64_t elec_id) {
+bool trail::delete_election(uint64_t elec_id) {
     elections_table elections(_self, _self.value);
     auto e = elections.find(elec_id);
     eosio_assert(e != elections.end(), "election doesn't exist");
@@ -477,16 +514,6 @@ bool trail::deleteelection(uint64_t elec_id) {
 
 asset trail::get_vote_weight(name voter, symbol voting_token) {
 
-    // switch (voting_token.raw()) {
-    //     case symbol("VOTE", 0).raw() :
-    //         voters_table voters(_self, _self.value);
-    //         auto v = voters.find(voter.value);
-    //         eosio_assert(v != voters.end(), "voter is not registered");
-    //         break;
-    //     case symbol("TFVT", 0).raw() :
-    //         break;
-    // }
-
     asset votes;
 
     if (voting_token == symbol("VOTE", 4)) {
@@ -501,7 +528,11 @@ asset trail::get_vote_weight(name voter, symbol voting_token) {
         //TODO: implement TFVT
 
         votes = asset(0, symbol("TFVT", 0)); //TODO: update amount
-    }
+    }// else  if () {
+
+        //TODO: implement cross contract lookup, or expand regtoken
+
+    // }
 
     return votes;
 }
@@ -516,7 +547,7 @@ void trail::update_from_levy(name from, asset amount) {
     auto vl_from_itr = fromlevies.find(from.value);
     
     if (vl_from_itr == fromlevies.end()) {
-        fromlevies.emplace(_self, [&]( auto& a ){
+        fromlevies.emplace(_self, [&]( auto& a ){ //TODO: change ram payer to user?
             a.voter = from;
             a.levy_amount = asset(0, symbol("VOTE", 4));
             a.last_decay = env_struct.time_now;
@@ -541,7 +572,7 @@ void trail::update_to_levy(name to, asset amount) {
     auto vl_to_itr = tolevies.find(to.value);
 
     if (vl_to_itr == tolevies.end()) {
-        tolevies.emplace(_self, [&]( auto& a ){
+        tolevies.emplace(_self, [&]( auto& a ){ //TODO: change ram payer to user?
             a.voter = to;
             a.levy_amount = asset(0, symbol("VOTE", 4));
             a.last_decay = env_struct.time_now;

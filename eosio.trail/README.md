@@ -138,7 +138,7 @@ All users on the Telos Blockchain Network can register their accounts and receiv
 
     `ballot_id` is the id of the ballot for which to cast the votes.
 
-    `direction` is the direction in which to cast the votes. The default mappings are `0 = NO, 1 = YES, 2 = ABSTAIN`, however the ballot owner can interpret these in whichever way they desire.
+    `direction` is the direction in which to cast the votes. The default mappings are `0 = NO, 1 = YES, 2 = ABSTAIN`.
 
 ### Clearing Out Old Vote Receipts
 

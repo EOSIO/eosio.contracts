@@ -24,6 +24,8 @@ public:
 
     ~trail();
 
+    environment_singleton environment;
+    env env_struct;
 
     #pragma region Constants
 
@@ -79,19 +81,32 @@ public:
 
     #pragma region Helper_Functions
 
-    uint64_t makeproposal(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
+    uint64_t make_proposal(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
 
-    bool deleteproposal(uint64_t prop_id);
+    bool delete_proposal(uint64_t prop_id);
 
-    bool voteforproposal(name voter, uint64_t ballot_id, uint64_t prop_id, uint16_t direction);
+    bool vote_for_proposal(name voter, uint64_t ballot_id, uint64_t prop_id, uint16_t direction);
 
-    bool closeproposal(uint64_t prop_id, uint8_t pass);
+    bool close_proposal(uint64_t prop_id, uint8_t pass);
 
 
-    uint64_t makeelection(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
+    uint64_t make_election(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
 
-    bool deleteelection(uint64_t elec_id);
+    //TODO: delete_election();
+
+    //TODO: vote_for_election();
+
+    bool delete_election(uint64_t elec_id);
+
+
+    uint64_t make_leaderboard(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
     
+    bool delete_leaderboard(uint64_t board_id);
+
+    bool vote_for_leaderboard(name voter, uint64_t ballot_id, uint64_t board_id, uint16_t direction);
+
+    bool close_leaderboard(uint64_t board_id, uint8_t pass);
+
 
     asset get_vote_weight(name voter, symbol voting_token);
 
@@ -109,7 +124,4 @@ public:
     asset calc_decay(name voter, asset amount);
 
     #pragma endregion Reactions
-    
-    environment_singleton environment;
-    env env_struct;
 };
