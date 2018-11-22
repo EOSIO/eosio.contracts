@@ -21,7 +21,7 @@ using namespace eosio::testing;
 using namespace fc;
 using namespace std;
 
-#define NUM_VOTERS 64
+#define NUM_VOTERS 128
 
 using mvo = fc::mutable_variant_object;
 
@@ -33,6 +33,7 @@ class eosio_trail_tester : public tester
 
 	eosio_trail_tester()
 	{
+		std::cout << "max_size(): " << test_voters.max_size() << std::endl;
 		produce_blocks( 2 );
 		create_accounts({N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake),
 						 N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(eosio.trail)});
@@ -52,18 +53,20 @@ class eosio_trail_tester : public tester
 
 		vector<name> voters;
 		string temp_name = "";
-
+		name curr = name("");
+		asset balance = asset::from_string("0.0000 TLOS");
 		for (int i = 0; i < NUM_VOTERS; i++) {
 			produce_blocks(1);
 			temp_name = "voter" + toBase31(i);
-			name curr = eosio::chain::name(temp_name);
+			curr = eosio::chain::name(temp_name);
 			voters.emplace_back(curr);
 			std::cout << "creating account_name: " << temp_name << std::endl;
 			create_accounts({curr.value});
 			produce_blocks(1);
 			transfer(N(eosio), curr.value, asset::from_string("200.0000 TLOS"), "Monopoly Money");
-			asset balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), curr.value);
+			balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), curr.value);
 			BOOST_REQUIRE_EQUAL(asset::from_string("200.0000 TLOS").get_amount(), balance.get_amount());
+			produce_blocks( 2 );
 		}
 		test_voters = voters;
 		produce_blocks( 2 );
@@ -180,6 +183,21 @@ class eosio_trail_tester : public tester
 	fc::variant get_voter(account_name voter) {
 		vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(voters), voter);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("voter_id", data, abi_serializer_max_time);
+	}
+
+	fc::variant get_vote_receipt(account_name voter, uint64_t ballot_id) {
+		vector<char> data = get_row_by_account(N(eosio.trail), voter, N(votereceipts), ballot_id);
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("vote_receipt", data, abi_serializer_max_time);
+	}
+
+	fc::variant get_ballot(uint64_t ballot_id) {
+		vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(ballots), ballot_id);
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("ballot", data, abi_serializer_max_time);
+	}
+
+	fc::variant get_proposal(uint64_t proposal_id) {
+		vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(proposals), proposal_id);
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("proposal", data, abi_serializer_max_time);
 	}
 
 	fc::variant get_vote_levy(account_name acc)

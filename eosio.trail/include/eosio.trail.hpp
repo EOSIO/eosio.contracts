@@ -85,7 +85,7 @@ public:
 
     uint64_t make_proposal(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
 
-    bool delete_proposal(uint64_t prop_id);
+    bool delete_proposal(uint64_t prop_id, name publisher);
 
     bool vote_for_proposal(name voter, uint64_t ballot_id, uint64_t prop_id, uint16_t direction);
 
@@ -94,9 +94,9 @@ public:
 
     uint64_t make_election(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
 
-    //TODO: delete_election();
-
     //TODO: vote_for_election();
+    
+    bool closeproposal(uint64_t prop_id, uint8_t pass, name publisher);
 
     bool delete_election(uint64_t elec_id);
 

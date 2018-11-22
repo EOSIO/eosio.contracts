@@ -162,7 +162,7 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
 
     switch (bal.table_id) {
         case 0 : 
-            del_success = delete_proposal(bal.reference_id);
+            del_success = delete_proposal(bal.reference_id, publisher);
             env_struct.totals[2]--;
             break;
         case 1 : 
@@ -276,7 +276,7 @@ void trail::closeballot(name publisher, uint64_t ballot_id, uint8_t pass) {
 
     switch (bal.table_id) {
         case 0 : 
-            close_success = close_proposal(bal.reference_id, pass);
+            close_success = close_proposal(bal.reference_id, pass, publisher);
             break;
         case 1 : 
             //close_success = close_election(bal.reference_id, pass);
@@ -364,12 +364,14 @@ uint64_t trail::make_proposal(name publisher, symbol voting_symbol, uint32_t beg
     return new_prop_id;
 }
 
-bool trail::delete_proposal(uint64_t prop_id) {
+bool trail::delete_proposal(uint64_t prop_id, name publisher) {
     proposals_table proposals(_self, _self.value);
     auto p = proposals.find(prop_id);
     eosio_assert(p != proposals.end(), "proposal doesn't exist");
     auto prop = *p;
     eosio_assert(now() < prop.begin_time, "cannot delete proposal once voting has begun");
+	//TODO: eosio_assert that proposal isn't already closed.
+	eosio_assert(prop.publisher == publisher, "cannot delete another account's proposal");
 
     //TODO: assert cycle_count == 0?
 
@@ -462,13 +464,14 @@ bool trail::vote_for_proposal(name voter, uint64_t ballot_id, uint64_t prop_id, 
     return true;
 }
 
-bool trail::close_proposal(uint64_t prop_id, uint8_t pass) {
+bool trail::close_proposal(uint64_t prop_id, uint8_t pass, name publisher) {
     proposals_table proposals(_self, _self.value);
     auto p = proposals.find(prop_id);
     eosio_assert(p != proposals.end(), "proposal doesn't exist");
     auto prop = *p;
 
     eosio_assert(now() > prop.end_time, "can't close proposal while voting is still open");
+	eosio_assert(prop.publisher == publisher, "cannot close another account's proposal");
 
     proposals.modify(p, same_payer, [&]( auto& a ) {
         a.status = pass;
@@ -500,6 +503,7 @@ uint64_t trail::make_election(name publisher, symbol voting_symbol, uint32_t beg
     return new_elec_id;
 }
 
+//TODO: update signature, like delete_proposal()
 bool trail::delete_election(uint64_t elec_id) {
     elections_table elections(_self, _self.value);
     auto e = elections.find(elec_id);
@@ -635,7 +639,7 @@ void trail::update_to_levy(name to, asset amount) {
     if (vl_to_itr == tolevies.end()) {
         tolevies.emplace(_self, [&]( auto& a ){ //TODO: change ram payer to user?
             a.voter = to;
-            a.levy_amount = asset(0, symbol("VOTE", 4));
+            a.levy_amount = asset(amount.amount, symbol("VOTE", 4));
             a.last_decay = env_struct.time_now;
         });
     } else {
@@ -658,7 +662,7 @@ asset trail::calc_decay(name voter, asset amount) {
     if (vl_itr != votelevies.end()) {
         auto vl = *vl_itr;
         time_delta = env_struct.time_now - vl.last_decay;
-        return asset(int64_t(time_delta / DECAY_RATE), symbol("VOTE", 4));
+        return asset(int64_t(time_delta / DECAY_RATE) * 10000, symbol("VOTE", 4));
     }
 
     return asset(0, symbol("VOTE", 4));
