@@ -84,7 +84,7 @@ struct candidate {
 struct [[eosio::table, eosio::contract("eosio.trail")]] election {
     uint64_t election_id;
     name publisher;
-    string election_info;
+    string info_url;
 
     vector<candidate> candidates;
     uint32_t unique_voters;
@@ -94,8 +94,27 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] election {
     uint32_t end_time;
 
     uint64_t primary_key() const { return election_id; }
-    EOSLIB_SERIALIZE(election, (election_id)(publisher)
+    EOSLIB_SERIALIZE(election, (election_id)(publisher)(info_url)
         (candidates)(unique_voters)(voting_symbol)
+        (begin_time)(end_time))
+};
+
+struct [[eosio::table, eosio::contract("eosio.trail")]] leaderboard {
+    uint64_t board_id;
+    name publisher;
+    string info_url;
+
+    vector<candidate> candidates;
+    uint32_t unique_voters;
+    symbol voting_symbol;
+    uint8_t available_seats;
+
+    uint32_t begin_time;
+    uint32_t end_time;
+
+    uint64_t primary_key() const { return board_id; }
+    EOSLIB_SERIALIZE(leaderboard, (board_id)(publisher)(info_url)
+        (candidates)(unique_voters)(voting_symbol)(available_seats)
         (begin_time)(end_time))
 };
 
@@ -129,9 +148,11 @@ typedef multi_index<name("voters"), voter_id> voters_table;
 
 typedef multi_index<name("ballots"), ballot> ballots_table;
 
-typedef multi_index<name("proposals"), proposal> proposals_table;
+    typedef multi_index<name("proposals"), proposal> proposals_table;
 
-typedef multi_index<name("elections"), election> elections_table;
+    typedef multi_index<name("elections"), election> elections_table;
+
+    typedef multi_index<name("leaderboards"), leaderboard> leaderboards_table;
 
 typedef multi_index<name("votereceipts"), vote_receipt> votereceipts_table;
 
@@ -164,20 +185,5 @@ bool is_ballot(uint64_t ballot_id) {
 
     return false;
 }
-
-// bool is_ballot_publisher(name publisher, uint64_t ballot_id) {
-//     ballots_table ballots(name("eosio.trail"), name("eosio.trail").value);
-//     auto b = ballots.find(ballot_id);
-
-//     if (b != ballots.end()) {
-//         auto bal = *b;
-
-//         if (bal.publisher == publisher) {
-//             return true;
-//         }
-//     }
-
-//     return false;
-// }
 
 #pragma endregion Helper_Functions

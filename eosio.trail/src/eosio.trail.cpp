@@ -130,7 +130,7 @@ void trail::regballot(name publisher, uint8_t ballot_type, symbol voting_symbol,
             env_struct.totals[3]++;
             break;
         case 2 : 
-            //new_ref_id = make_leaderboard();
+            new_ref_id = make_leaderboard(publisher, voting_symbol, begin_time, end_time, info_url);
             env_struct.totals[4]++;
             break;
     }
@@ -147,6 +147,7 @@ void trail::regballot(name publisher, uint8_t ballot_type, symbol voting_symbol,
         a.reference_id = new_ref_id;
     });
 
+    print("\nBallot ID: ", new_ballot_id);
 }
 
 void trail::unregballot(name publisher, uint64_t ballot_id) {
@@ -165,11 +166,12 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
             env_struct.totals[2]--;
             break;
         case 1 : 
-            del_success = delete_election(bal.reference_id);
+            //del_success = delete_election(bal.reference_id);
             env_struct.totals[3]--;
             break;
         case 2 : 
-            //del_success = delete_leaderboard(bal.reference_id);
+            del_success = delete_leaderboard(bal.reference_id);
+            env_struct.totals[4]--;
             break;
     }
 
@@ -177,6 +179,7 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
         ballots.erase(b);
     }
 
+    print("\nBallot ID Deleted: ", bal.ballot_id);
 }
 
 void trail::mirrorstake(name voter, uint32_t lock_period) {
@@ -279,11 +282,11 @@ void trail::closeballot(name publisher, uint64_t ballot_id, uint8_t pass) {
             //close_success = close_election(bal.reference_id, pass);
             break;
         case 2: 
-            //close_success = close_leaderboard();
+            close_success = close_leaderboard(bal.reference_id, pass);
             break;
     }
 
-    print("\nBallot Close: SUCCESS");
+    print("\nBallot ID Closed: ", bal.ballot_id);
 }
 
 void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
@@ -510,6 +513,64 @@ bool trail::delete_election(uint64_t elec_id) {
 
     return true;
 }
+
+
+uint64_t trail::make_leaderboard(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
+    require_auth(publisher);
+
+    leaderboards_table leaderboards(_self, _self.value);
+    uint64_t new_board_id = leaderboards.available_primary_key();
+
+    vector<candidate> candidates; //TODO: check that this properly initalizes
+
+    leaderboards.emplace(publisher, [&]( auto& a ) {
+        a.board_id = new_board_id;
+        a.publisher = publisher;
+        a.info_url = info_url;
+        a.candidates = candidates;
+        a.unique_voters = uint32_t(0);
+        a.voting_symbol = voting_symbol;
+        a.available_seats = 0;
+        a.begin_time = begin_time;
+        a.end_time = end_time;
+    });
+
+    print("\nLeaderboard Creation: SUCCESS");
+
+    return new_board_id;
+}
+
+bool trail::delete_leaderboard(uint64_t board_id) {
+    leaderboards_table leaderboards(_self, _self.value);
+    auto b = leaderboards.find(board_id);
+    eosio_assert(b != leaderboards.end(), "leaderboard doesn't exist");
+    auto board = *b;
+    eosio_assert(now() < board.begin_time, "cannot delete leaderboard once voting has begun");
+
+    //TODO: assert cycle_count == 0?
+
+    leaderboards.erase(b);
+
+    print("\nleaderboard Deletion: SUCCESS");
+
+    return true;
+}
+
+bool trail::close_leaderboard(uint64_t board_id, uint8_t pass) {
+    leaderboards_table leaderboards(_self, _self.value);
+    auto b = leaderboards.find(board_id);
+    eosio_assert(b != leaderboards.end(), "leaderboard doesn't exist");
+    auto board = *b;
+
+    eosio_assert(now() > board.end_time, "can't close leaderboard while voting is still open");
+
+    leaderboards.modify(b, same_payer, [&]( auto& a ) {
+        a.status = pass;
+    });
+
+    return true;
+}
+
 
 
 asset trail::get_vote_weight(name voter, symbol voting_token) {
