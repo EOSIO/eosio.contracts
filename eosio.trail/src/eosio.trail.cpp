@@ -40,8 +40,6 @@ void trail::regtoken(asset native, name publisher) {
     auto r = registries.find(sym);
     eosio_assert(r == registries.end(), "Token Registry with that symbol already exists in Trail");
 
-    //TODO: assert only 1 token per publisher
-
     registries.emplace(publisher, [&]( auto& a ){
         a.native = native;
         a.publisher = publisher;
@@ -126,8 +124,9 @@ void trail::regballot(name publisher, uint8_t ballot_type, symbol voting_symbol,
             env_struct.totals[2]++;
             break;
         case 1 : 
-            new_ref_id = make_election(publisher, voting_symbol, begin_time, end_time, info_url);
-            env_struct.totals[3]++;
+            eosio_assert(true == false, "feature still in development...");
+            //new_ref_id = make_election(publisher, voting_symbol, begin_time, end_time, info_url);
+            //env_struct.totals[3]++;
             break;
         case 2 : 
             new_ref_id = make_leaderboard(publisher, voting_symbol, begin_time, end_time, info_url);
@@ -166,11 +165,12 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
             env_struct.totals[2]--;
             break;
         case 1 : 
-            //del_success = delete_election(bal.reference_id);
-            env_struct.totals[3]--;
+            eosio_assert(true == false, "feature still in development...");
+            //del_success = delete_election(bal.reference_id, publisher);
+            //env_struct.totals[3]--;
             break;
         case 2 : 
-            del_success = delete_leaderboard(bal.reference_id);
+            del_success = delete_leaderboard(bal.reference_id, publisher);
             env_struct.totals[4]--;
             break;
     }
@@ -255,10 +255,11 @@ void trail::castvote(name voter, uint64_t ballot_id, uint16_t direction) {
             vote_success = vote_for_proposal(voter, ballot_id, bal.reference_id, direction);
             break;
         case 1 : 
+            eosio_assert(true == false, "feature still in development...");
             //vote_success = vote_for_election(voter, ballot_id, bal.reference_id, direction);
             break;
         case 2 : 
-            //vote_success = vote_for_leaderboard(voter, ballot_id, bal.reference_id, direction);
+            vote_success = vote_for_leaderboard(voter, ballot_id, bal.reference_id, direction);
             break;
     }
 
@@ -279,10 +280,11 @@ void trail::closeballot(name publisher, uint64_t ballot_id, uint8_t pass) {
             close_success = close_proposal(bal.reference_id, pass, publisher);
             break;
         case 1 : 
+            eosio_assert(true == false, "feature still in development...");
             //close_success = close_election(bal.reference_id, pass);
             break;
         case 2: 
-            close_success = close_leaderboard(bal.reference_id, pass);
+            close_success = close_leaderboard(bal.reference_id, pass, publisher);
             break;
     }
 
@@ -292,13 +294,12 @@ void trail::closeballot(name publisher, uint64_t ballot_id, uint8_t pass) {
 void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
     require_auth(publisher);
 
-    //TODO: support cycles for other ballot types?
-
     ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
     eosio_assert(b != ballots.end(), "Ballot Doesn't Exist");
     auto bal = *b;
 
+    //TODO: support cycles for other ballot types?
     eosio_assert(bal.table_id == 0, "ballot type doesn't support cycles");
 
     proposals_table proposals(_self, _self.value);
@@ -315,7 +316,8 @@ void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_tim
         a.unique_voters = uint32_t(0);
         a.begin_time = new_begin_time;
         a.end_time = new_end_time;
-        a.status = false;
+        a.cycle_count += 1;
+        a.status = 0;
     });
 
 }
@@ -357,6 +359,8 @@ uint64_t trail::make_proposal(name publisher, symbol voting_symbol, uint32_t beg
         a.unique_voters = uint32_t(0);
         a.begin_time = begin_time;
         a.end_time = end_time;
+        a.cycle_count = 0;
+        a.status = 0;
     });
 
     print("\nProposal Creation: SUCCESS");
@@ -369,11 +373,11 @@ bool trail::delete_proposal(uint64_t prop_id, name publisher) {
     auto p = proposals.find(prop_id);
     eosio_assert(p != proposals.end(), "proposal doesn't exist");
     auto prop = *p;
-    eosio_assert(now() < prop.begin_time, "cannot delete proposal once voting has begun");
-	//TODO: eosio_assert that proposal isn't already closed.
-	eosio_assert(prop.publisher == publisher, "cannot delete another account's proposal");
 
-    //TODO: assert cycle_count == 0?
+    eosio_assert(now() < prop.begin_time, "cannot delete proposal once voting has begun");
+	eosio_assert(prop.publisher == publisher, "cannot delete another account's proposal");
+    eosio_assert(prop.cycle_count == 0, "proposal must be on initial cycle to delete");
+    //TODO: eosio_assert that status > 0?
 
     proposals.erase(p);
 
@@ -490,7 +494,7 @@ uint64_t trail::make_election(name publisher, symbol voting_symbol, uint32_t beg
     elections.emplace(publisher, [&]( auto& a ) {
         a.election_id = new_elec_id;
         a.publisher = publisher;
-        a.election_info = info_url;
+        a.info_url = info_url;
         a.candidates = empty_candidate_list;
         a.unique_voters = 0;
         a.voting_symbol = voting_symbol;
@@ -503,18 +507,29 @@ uint64_t trail::make_election(name publisher, symbol voting_symbol, uint32_t beg
     return new_elec_id;
 }
 
-//TODO: update signature, like delete_proposal()
-bool trail::delete_election(uint64_t elec_id) {
+bool trail::delete_election(uint64_t elec_id, name publisher) {
     elections_table elections(_self, _self.value);
     auto e = elections.find(elec_id);
     eosio_assert(e != elections.end(), "election doesn't exist");
     auto elec = *e;
+
     eosio_assert(now() < elec.begin_time, "cannot delete election once voting has begun");
+    eosio_assert(elec.publisher == publisher, "cannot delete another account's election");
 
     elections.erase(e);
 
     print("\nElection Deletion: SUCCESS");
 
+    return true;
+}
+
+bool close_election(uint64_t elec_id, uint8_t pass, name publisher) {
+    //TODO: implement
+    return true;
+}
+
+bool delete_election(uint64_t elec_id, name publisher) {
+    //TODO: implement
     return true;
 }
 
@@ -525,7 +540,7 @@ uint64_t trail::make_leaderboard(name publisher, symbol voting_symbol, uint32_t 
     leaderboards_table leaderboards(_self, _self.value);
     uint64_t new_board_id = leaderboards.available_primary_key();
 
-    vector<candidate> candidates; //TODO: check that this properly initalizes
+    vector<candidate> candidates;
 
     leaderboards.emplace(publisher, [&]( auto& a ) {
         a.board_id = new_board_id;
@@ -537,6 +552,7 @@ uint64_t trail::make_leaderboard(name publisher, symbol voting_symbol, uint32_t 
         a.available_seats = 0;
         a.begin_time = begin_time;
         a.end_time = end_time;
+        a.status = 0;
     });
 
     print("\nLeaderboard Creation: SUCCESS");
@@ -544,14 +560,14 @@ uint64_t trail::make_leaderboard(name publisher, symbol voting_symbol, uint32_t 
     return new_board_id;
 }
 
-bool trail::delete_leaderboard(uint64_t board_id) {
+bool trail::delete_leaderboard(uint64_t board_id, name publisher) {
     leaderboards_table leaderboards(_self, _self.value);
     auto b = leaderboards.find(board_id);
     eosio_assert(b != leaderboards.end(), "leaderboard doesn't exist");
     auto board = *b;
-    eosio_assert(now() < board.begin_time, "cannot delete leaderboard once voting has begun");
 
-    //TODO: assert cycle_count == 0?
+    eosio_assert(now() < board.begin_time, "cannot delete leaderboard once voting has begun");
+    eosio_assert(board.publisher == publisher, "cannot delete another account's leaderboard");
 
     leaderboards.erase(b);
 
@@ -560,13 +576,73 @@ bool trail::delete_leaderboard(uint64_t board_id) {
     return true;
 }
 
-bool trail::close_leaderboard(uint64_t board_id, uint8_t pass) {
+bool trail::vote_for_leaderboard(name voter, uint64_t ballot_id, uint64_t board_id, uint16_t direction) {
     leaderboards_table leaderboards(_self, _self.value);
     auto b = leaderboards.find(board_id);
     eosio_assert(b != leaderboards.end(), "leaderboard doesn't exist");
     auto board = *b;
 
-    eosio_assert(now() > board.end_time, "can't close leaderboard while voting is still open");
+    eosio_assert(env_struct.time_now >= board.begin_time && env_struct.time_now <= board.end_time, "ballot voting window not open");
+    //eosio_assert(vid.release_time >= bal.end_time, "can only vote for ballots that end before your lock period is over...prevents double voting!");
+
+    votereceipts_table votereceipts(_self, voter.value);
+    auto vr_itr = votereceipts.find(ballot_id);
+    //eosio_assert(vr_itr == votereceipts.end(), "voter has already cast vote for this ballot");
+    
+    uint32_t new_voter = 1;
+    asset vote_weight = get_vote_weight(voter, board.voting_symbol);
+
+    if (vr_itr == votereceipts.end()) { //NOTE: voter hasn't voted on ballot before
+
+        vector<uint16_t> new_directions;
+        new_directions.emplace_back(direction);
+
+        votereceipts.emplace(voter, [&]( auto& a ){
+            a.ballot_id = ballot_id;
+            a.directions = new_directions;
+            a.weight = vote_weight;
+            a.expiration = board.end_time;
+        });
+
+        print("\nVote Cast: SUCCESS");
+        
+    } else { //NOTE: vote for ballot_id already exists
+        auto vr = *vr_itr;
+
+        if (vr.expiration == board.end_time && !has_direction(direction, vr.directions)) { //NOTE: hasn't voted for candidate before
+
+            new_voter = 0;
+            vr.directions.emplace_back(direction);
+
+            votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
+                a.directions = vr.directions;
+            });
+
+            print("\nVote Recast: SUCCESS");
+
+        }//TODO: implement recasting vote for same candidate
+        
+    }
+
+    //NOTE: update leaderboard with new weight
+    board.candidates[direction].votes += vote_weight;
+
+    leaderboards.modify(b, same_payer, [&]( auto& a ) {
+        a.candidates = board.candidates;
+        a.unique_voters += new_voter;
+    });
+
+    return true;
+}
+
+bool trail::close_leaderboard(uint64_t board_id, uint8_t pass, name publisher) {
+    leaderboards_table leaderboards(_self, _self.value);
+    auto b = leaderboards.find(board_id);
+    eosio_assert(b != leaderboards.end(), "leaderboard doesn't exist");
+    auto board = *b;
+
+    eosio_assert(now() > board.end_time, "cannot close leaderboard while voting is still open");
+    eosio_assert(board.publisher == publisher, "cannot close another account's leaderboard");
 
     leaderboards.modify(b, same_payer, [&]( auto& a ) {
         a.status = pass;
@@ -600,6 +676,17 @@ asset trail::get_vote_weight(name voter, symbol voting_token) {
     // }
 
     return votes;
+}
+
+bool trail::has_direction(uint16_t direction, vector<uint16_t> direction_list) {
+
+    for (uint16_t item : direction_list) {
+        if (item == direction) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 #pragma endregion Helper_Functions

@@ -1,0 +1,556 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT Fri Nov 23 12:43:41 2018",
+    "version": "eosio::abi/1.0",
+    "structs": [
+        {
+            "name": "ballot",
+            "base": "",
+            "fields": [
+                {
+                    "name": "ballot_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "table_id",
+                    "type": "uint8"
+                },
+                {
+                    "name": "reference_id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "candidate",
+            "base": "",
+            "fields": [
+                {
+                    "name": "member",
+                    "type": "name"
+                },
+                {
+                    "name": "info_link",
+                    "type": "string"
+                },
+                {
+                    "name": "votes",
+                    "type": "asset"
+                },
+                {
+                    "name": "status",
+                    "type": "uint8"
+                }
+            ]
+        },
+        {
+            "name": "castvote",
+            "base": "",
+            "fields": [
+                {
+                    "name": "voter",
+                    "type": "name"
+                },
+                {
+                    "name": "ballot_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "direction",
+                    "type": "uint16"
+                }
+            ]
+        },
+        {
+            "name": "closeballot",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "ballot_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "pass",
+                    "type": "uint8"
+                }
+            ]
+        },
+        {
+            "name": "deloldvotes",
+            "base": "",
+            "fields": [
+                {
+                    "name": "voter",
+                    "type": "name"
+                },
+                {
+                    "name": "num_to_delete",
+                    "type": "uint16"
+                }
+            ]
+        },
+        {
+            "name": "election",
+            "base": "",
+            "fields": [
+                {
+                    "name": "election_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "info_url",
+                    "type": "string"
+                },
+                {
+                    "name": "candidates",
+                    "type": "candidate[]"
+                },
+                {
+                    "name": "unique_voters",
+                    "type": "uint32"
+                },
+                {
+                    "name": "voting_symbol",
+                    "type": "symbol"
+                },
+                {
+                    "name": "begin_time",
+                    "type": "uint32"
+                },
+                {
+                    "name": "end_time",
+                    "type": "uint32"
+                }
+            ]
+        },
+        {
+            "name": "env",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "totals",
+                    "type": "uint64[]"
+                },
+                {
+                    "name": "time_now",
+                    "type": "uint32"
+                },
+                {
+                    "name": "last_ballot_id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "leaderboard",
+            "base": "",
+            "fields": [
+                {
+                    "name": "board_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "info_url",
+                    "type": "string"
+                },
+                {
+                    "name": "candidates",
+                    "type": "candidate[]"
+                },
+                {
+                    "name": "unique_voters",
+                    "type": "uint32"
+                },
+                {
+                    "name": "voting_symbol",
+                    "type": "symbol"
+                },
+                {
+                    "name": "available_seats",
+                    "type": "uint8"
+                },
+                {
+                    "name": "begin_time",
+                    "type": "uint32"
+                },
+                {
+                    "name": "end_time",
+                    "type": "uint32"
+                },
+                {
+                    "name": "status",
+                    "type": "uint8"
+                }
+            ]
+        },
+        {
+            "name": "mirrorstake",
+            "base": "",
+            "fields": [
+                {
+                    "name": "voter",
+                    "type": "name"
+                },
+                {
+                    "name": "lock_period",
+                    "type": "uint32"
+                }
+            ]
+        },
+        {
+            "name": "nextcycle",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "ballot_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "new_begin_time",
+                    "type": "uint32"
+                },
+                {
+                    "name": "new_end_time",
+                    "type": "uint32"
+                }
+            ]
+        },
+        {
+            "name": "proposal",
+            "base": "",
+            "fields": [
+                {
+                    "name": "prop_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "info_url",
+                    "type": "string"
+                },
+                {
+                    "name": "no_count",
+                    "type": "asset"
+                },
+                {
+                    "name": "yes_count",
+                    "type": "asset"
+                },
+                {
+                    "name": "abstain_count",
+                    "type": "asset"
+                },
+                {
+                    "name": "unique_voters",
+                    "type": "uint32"
+                },
+                {
+                    "name": "begin_time",
+                    "type": "uint32"
+                },
+                {
+                    "name": "end_time",
+                    "type": "uint32"
+                },
+                {
+                    "name": "cycle_count",
+                    "type": "uint16"
+                },
+                {
+                    "name": "status",
+                    "type": "uint8"
+                }
+            ]
+        },
+        {
+            "name": "regballot",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "ballot_type",
+                    "type": "uint8"
+                },
+                {
+                    "name": "voting_symbol",
+                    "type": "symbol"
+                },
+                {
+                    "name": "begin_time",
+                    "type": "uint32"
+                },
+                {
+                    "name": "end_time",
+                    "type": "uint32"
+                },
+                {
+                    "name": "info_url",
+                    "type": "string"
+                }
+            ]
+        },
+        {
+            "name": "regtoken",
+            "base": "",
+            "fields": [
+                {
+                    "name": "native",
+                    "type": "asset"
+                },
+                {
+                    "name": "publisher",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "regvoter",
+            "base": "",
+            "fields": [
+                {
+                    "name": "voter",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "unregballot",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "ballot_id",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "unregtoken",
+            "base": "",
+            "fields": [
+                {
+                    "name": "native",
+                    "type": "asset"
+                },
+                {
+                    "name": "publisher",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "unregvoter",
+            "base": "",
+            "fields": [
+                {
+                    "name": "voter",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "vote_levy",
+            "base": "",
+            "fields": [
+                {
+                    "name": "voter",
+                    "type": "name"
+                },
+                {
+                    "name": "levy_amount",
+                    "type": "asset"
+                },
+                {
+                    "name": "last_decay",
+                    "type": "uint32"
+                }
+            ]
+        },
+        {
+            "name": "vote_receipt",
+            "base": "",
+            "fields": [
+                {
+                    "name": "ballot_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "directions",
+                    "type": "uint16[]"
+                },
+                {
+                    "name": "weight",
+                    "type": "asset"
+                },
+                {
+                    "name": "expiration",
+                    "type": "uint32"
+                }
+            ]
+        },
+        {
+            "name": "voter_id",
+            "base": "",
+            "fields": [
+                {
+                    "name": "voter",
+                    "type": "name"
+                },
+                {
+                    "name": "votes",
+                    "type": "asset"
+                },
+                {
+                    "name": "release_time",
+                    "type": "uint32"
+                }
+            ]
+        }
+    ],
+    "types": [],
+    "actions": [
+        {
+            "name": "castvote",
+            "type": "castvote",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "closeballot",
+            "type": "closeballot",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "deloldvotes",
+            "type": "deloldvotes",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "mirrorstake",
+            "type": "mirrorstake",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "nextcycle",
+            "type": "nextcycle",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "regballot",
+            "type": "regballot",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "regtoken",
+            "type": "regtoken",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "regvoter",
+            "type": "regvoter",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "unregballot",
+            "type": "unregballot",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "unregtoken",
+            "type": "unregtoken",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "unregvoter",
+            "type": "unregvoter",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "ballots",
+            "type": "ballot",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "elections",
+            "type": "election",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "env",
+            "type": "env",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "leaderboards",
+            "type": "leaderboard",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "proposals",
+            "type": "proposal",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "votelevies",
+            "type": "vote_levy",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "votereceipts",
+            "type": "vote_receipt",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "voters",
+            "type": "voter_id",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        }
+    ],
+    "ricardian_clauses": [],
+    "abi_extensions": []
+}

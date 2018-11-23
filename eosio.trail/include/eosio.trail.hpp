@@ -49,7 +49,7 @@ public:
     #pragma endregion Token_Actions
 
 
-    #pragma region Registration
+    #pragma region Ballot_Registration
 
     [[eosio::action]] void regvoter(name voter);
 
@@ -59,6 +59,11 @@ public:
 
     [[eosio::action]] void unregballot(name publisher, uint64_t ballot_id);
 
+    #pragma endregion Ballot_Registration
+
+
+    #pragma region Ballot_Actions
+
     //[[eosio::action]] void addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link);
 
     //[[eosio::action]] void setseats(name publisher, uint8_t num_seats);
@@ -67,7 +72,8 @@ public:
 
     [[eosio::action]] void closeballot(name publisher, uint64_t ballot_id, uint8_t pass);
 
-    #pragma endregion Registration
+    #pragma endregion Ballot_Actions
+
 
 
     #pragma region Voting_Actions
@@ -89,28 +95,30 @@ public:
 
     bool vote_for_proposal(name voter, uint64_t ballot_id, uint64_t prop_id, uint16_t direction);
 
-    bool close_proposal(uint64_t prop_id, uint8_t pass);
+    bool close_proposal(uint64_t prop_id, uint8_t pass, name publisher);
 
 
     uint64_t make_election(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
 
-    //TODO: vote_for_election();
+    bool vote_for_election(name voter, uint64_t ballot_id, uint64_t elec_id, uint16_t direction);
     
-    bool closeproposal(uint64_t prop_id, uint8_t pass, name publisher);
+    bool close_election(uint64_t elec_id, uint8_t pass, name publisher);
 
-    bool delete_election(uint64_t elec_id);
+    bool delete_election(uint64_t elec_id, name publisher);
 
 
     uint64_t make_leaderboard(name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
     
-    bool delete_leaderboard(uint64_t board_id);
+    bool delete_leaderboard(uint64_t board_id, name publisher);
 
     bool vote_for_leaderboard(name voter, uint64_t ballot_id, uint64_t board_id, uint16_t direction);
 
-    bool close_leaderboard(uint64_t board_id, uint8_t pass);
+    bool close_leaderboard(uint64_t board_id, uint8_t pass, name publisher);
 
 
     asset get_vote_weight(name voter, symbol voting_token);
+
+    bool has_direction(uint16_t direction, vector<uint16_t> direction_list);
 
     #pragma endregion Helper_Functions
 

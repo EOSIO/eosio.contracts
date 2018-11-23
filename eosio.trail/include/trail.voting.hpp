@@ -66,12 +66,13 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] proposal {
 
     uint32_t begin_time;
     uint32_t end_time;
+    uint16_t cycle_count;
     uint8_t status; // 0 = OPEN, 1 = PASS, 2 = FAIL
 
     uint64_t primary_key() const { return prop_id; }
     EOSLIB_SERIALIZE(proposal, (prop_id)(publisher)(info_url)
         (no_count)(yes_count)(abstain_count)(unique_voters)
-        (begin_time)(end_time)(status))
+        (begin_time)(end_time)(cycle_count)(status))
 };
 
 struct candidate {
@@ -111,11 +112,12 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] leaderboard {
 
     uint32_t begin_time;
     uint32_t end_time;
+    uint8_t status;
 
     uint64_t primary_key() const { return board_id; }
     EOSLIB_SERIALIZE(leaderboard, (board_id)(publisher)(info_url)
         (candidates)(unique_voters)(voting_symbol)(available_seats)
-        (begin_time)(end_time))
+        (begin_time)(end_time)(status))
 };
 
 
