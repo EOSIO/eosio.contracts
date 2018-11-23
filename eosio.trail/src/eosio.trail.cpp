@@ -25,7 +25,7 @@ trail::~trail() {
     }
 }
 
-#pragma region Token_Actions
+#pragma region Token_Registration
 
 void trail::regtoken(asset native, name publisher) {
     require_auth(publisher);
@@ -66,10 +66,10 @@ void trail::unregtoken(asset native, name publisher) {
     print("\nToken Unregistration: SUCCESS");
 }
 
-#pragma endregion Token_Actions
+#pragma endregion Token_Registration
 
 
-#pragma region Voting_Actions
+#pragma region Ballot_Registration
 
 void trail::regvoter(name voter) {
     require_auth(voter);
@@ -182,6 +182,100 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
     print("\nBallot ID Deleted: ", bal.ballot_id);
 }
 
+#pragma endregion Ballot_Registration
+
+
+#pragma region Ballot_Actions
+
+void addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link) {
+    
+}
+
+void trail::setseats(name publisher, uint64_t ballot_id, uint8_t num_seats) {
+    require_auth(publisher);
+
+    ballots_table ballots(_self, _self.value);
+    auto b = ballots.find(ballot_id);
+    eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
+    auto bal = *b;
+
+    leaderboards_table leaderboards(_self, _self.value);
+    auto l = leaderboards.find(bal.reference_id);
+    eosio_assert(l != leaderboards.end(), "leaderboard doesn't exist");
+    auto board = *l;
+
+    eosio_assert(now() < board.begin_time, "cannot set seats after voting has begun");
+    eosio_assert(board.publisher == publisher, "cannot set seats for another account's leaderboard");
+
+    leaderboards.modify(l, same_payer, [&]( auto& a ) {
+        a.available_seats = num_seats;
+    });
+
+    print("\nSet Available Seats: SUCCESS");
+}
+
+void trail::closeballot(name publisher, uint64_t ballot_id, uint8_t pass) {
+    require_auth(publisher);
+
+    ballots_table ballots(_self, _self.value);
+    auto b = ballots.find(ballot_id);
+    eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
+    auto bal = *b;
+
+    bool close_success = false;
+
+    switch (bal.table_id) {
+        case 0 : 
+            close_success = close_proposal(bal.reference_id, pass, publisher);
+            break;
+        case 1 : 
+            eosio_assert(true == false, "feature still in development...");
+            //close_success = close_election(bal.reference_id, pass);
+            break;
+        case 2: 
+            close_success = close_leaderboard(bal.reference_id, pass, publisher);
+            break;
+    }
+
+    print("\nBallot ID Closed: ", bal.ballot_id);
+}
+
+void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
+    require_auth(publisher);
+
+    ballots_table ballots(_self, _self.value);
+    auto b = ballots.find(ballot_id);
+    eosio_assert(b != ballots.end(), "Ballot Doesn't Exist");
+    auto bal = *b;
+
+    //TODO: support cycles for other ballot types?
+    eosio_assert(bal.table_id == 0, "ballot type doesn't support cycles");
+
+    proposals_table proposals(_self, _self.value);
+    auto p = proposals.find(bal.reference_id);
+    eosio_assert(p != proposals.end(), "proposal doesn't exist");
+    auto prop = *p;
+
+    auto sym = prop.no_count.symbol; //NOTE: uses same voting symbol as before
+
+    proposals.modify(p, same_payer, [&]( auto& a ) {
+        a.no_count = asset(0, sym);
+        a.yes_count = asset(0, sym);
+        a.abstain_count = asset(0, sym);
+        a.unique_voters = uint32_t(0);
+        a.begin_time = new_begin_time;
+        a.end_time = new_end_time;
+        a.cycle_count += 1;
+        a.status = 0;
+    });
+
+}
+
+#pragma endregion Ballot_Actions
+
+
+#pragma region Voting_Actions
+
 void trail::mirrorstake(name voter, uint32_t lock_period) {
     require_auth(voter);
     eosio_assert(lock_period >= MIN_LOCK_PERIOD, "lock period must be greater than or equal to 1 day (86400 secs)");
@@ -262,63 +356,6 @@ void trail::castvote(name voter, uint64_t ballot_id, uint16_t direction) {
             vote_success = vote_for_leaderboard(voter, ballot_id, bal.reference_id, direction);
             break;
     }
-
-}
-
-void trail::closeballot(name publisher, uint64_t ballot_id, uint8_t pass) {
-    require_auth(publisher);
-
-    ballots_table ballots(_self, _self.value);
-    auto b = ballots.find(ballot_id);
-    eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
-    auto bal = *b;
-
-    bool close_success = false;
-
-    switch (bal.table_id) {
-        case 0 : 
-            close_success = close_proposal(bal.reference_id, pass, publisher);
-            break;
-        case 1 : 
-            eosio_assert(true == false, "feature still in development...");
-            //close_success = close_election(bal.reference_id, pass);
-            break;
-        case 2: 
-            close_success = close_leaderboard(bal.reference_id, pass, publisher);
-            break;
-    }
-
-    print("\nBallot ID Closed: ", bal.ballot_id);
-}
-
-void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
-    require_auth(publisher);
-
-    ballots_table ballots(_self, _self.value);
-    auto b = ballots.find(ballot_id);
-    eosio_assert(b != ballots.end(), "Ballot Doesn't Exist");
-    auto bal = *b;
-
-    //TODO: support cycles for other ballot types?
-    eosio_assert(bal.table_id == 0, "ballot type doesn't support cycles");
-
-    proposals_table proposals(_self, _self.value);
-    auto p = proposals.find(bal.reference_id);
-    eosio_assert(p != proposals.end(), "proposal doesn't exist");
-    auto prop = *p;
-
-    auto sym = prop.no_count.symbol; //NOTE: uses same voting symbol as before
-
-    proposals.modify(p, same_payer, [&]( auto& a ) {
-        a.no_count = asset(0, sym);
-        a.yes_count = asset(0, sym);
-        a.abstain_count = asset(0, sym);
-        a.unique_voters = uint32_t(0);
-        a.begin_time = new_begin_time;
-        a.end_time = new_end_time;
-        a.cycle_count += 1;
-        a.status = 0;
-    });
 
 }
 

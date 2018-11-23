@@ -1,7 +1,29 @@
 {
-    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT Fri Nov 23 12:43:41 2018",
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT Fri Nov 23 13:05:37 2018",
     "version": "eosio::abi/1.0",
     "structs": [
+        {
+            "name": "addcandidate",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "ballot_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "new_candidate",
+                    "type": "name"
+                },
+                {
+                    "name": "info_link",
+                    "type": "string"
+                }
+            ]
+        },
         {
             "name": "ballot",
             "base": "",
@@ -339,6 +361,24 @@
             ]
         },
         {
+            "name": "setseats",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "ballot_id",
+                    "type": "uint64"
+                },
+                {
+                    "name": "num_seats",
+                    "type": "uint8"
+                }
+            ]
+        },
+        {
             "name": "unregballot",
             "base": "",
             "fields": [
@@ -438,6 +478,11 @@
     "types": [],
     "actions": [
         {
+            "name": "addcandidate",
+            "type": "addcandidate",
+            "ricardian_contract": ""
+        },
+        {
             "name": "castvote",
             "type": "castvote",
             "ricardian_contract": ""
@@ -475,6 +520,11 @@
         {
             "name": "regvoter",
             "type": "regvoter",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "setseats",
+            "type": "setseats",
             "ricardian_contract": ""
         },
         {

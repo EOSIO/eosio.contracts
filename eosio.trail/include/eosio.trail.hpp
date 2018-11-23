@@ -40,13 +40,13 @@ public:
     #pragma endregion Constants
 
 
-    #pragma region Token_Actions
+    #pragma region Token_Registration
     
     [[eosio::action]] void regtoken(asset native, name publisher);
 
     [[eosio::action]] void unregtoken(asset native, name publisher);
 
-    #pragma endregion Token_Actions
+    #pragma endregion Token_Registration
 
 
     #pragma region Ballot_Registration
@@ -64,9 +64,9 @@ public:
 
     #pragma region Ballot_Actions
 
-    //[[eosio::action]] void addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link);
+    [[eosio::action]] void addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link);
 
-    //[[eosio::action]] void setseats(name publisher, uint8_t num_seats);
+    [[eosio::action]] void setseats(name publisher, uint64_t ballot_id, uint8_t num_seats);
 
     [[eosio::action]] void nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time); //only for ballots?
 
