@@ -187,8 +187,37 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
 
 #pragma region Ballot_Actions
 
-void addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link) {
-    
+void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link) {
+    require_auth(publisher);
+
+    ballots_table ballots(_self, _self.value);
+    auto b = ballots.find(ballot_id);
+    eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
+    auto bal = *b;
+
+    eosio_assert(bal.table_id == 2, "ballot type doesn't support candidates");
+
+    leaderboards_table leaderboards(_self, _self.value);
+    auto l = leaderboards.find(bal.reference_id);
+    eosio_assert(l != leaderboards.end(), "leaderboard doesn't exist");
+    auto board = *l;
+
+    eosio_assert(board.publisher == publisher, "cannot add candidate to another account's leaderboard");
+
+    candidate new_candidate_struct = candidate{
+        new_candidate,
+        info_link,
+        asset(0, board.voting_symbol),
+        0
+    };
+
+    board.candidates.emplace_back(new_candidate_struct);
+
+    leaderboards.modify(l, same_payer, [&]( auto& a ) {
+        a.candidates = board.candidates;
+    });
+
+    print("\nAdd Candidate: SUCCESS");
 }
 
 void trail::setseats(name publisher, uint64_t ballot_id, uint8_t num_seats) {
@@ -240,6 +269,7 @@ void trail::closeballot(name publisher, uint64_t ballot_id, uint8_t pass) {
     print("\nBallot ID Closed: ", bal.ballot_id);
 }
 
+//NOTE: currently only supports proposals
 void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
     require_auth(publisher);
 
