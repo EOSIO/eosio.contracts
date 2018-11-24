@@ -46,7 +46,7 @@ public:
     
     [[eosio::action]] void regtoken(asset max_supply, name publisher, string info_url);
 
-    //[[eosio::actoion]] void settokenurl(name publisher, string info_url);
+    //[[eosio::action]] void settokenurl(name publisher, string info_url);
 
     [[eosio::action]] void setsettings(name publisher, symbol token_symbol, token_settings new_settings);
 
@@ -59,13 +59,15 @@ public:
 
     [[eosio::action]] void issuetoken(name publisher, name recipient, asset tokens, bool airgrab);
 
-    [[eosio::action]] void recalltoken(name publisher, name recipient, asset amount);
+    [[eosio::action]] void claimtoken(name claimant, name publisher, symbol token_symbol);
 
-    [[eosio::action]] void claimtoken(name claimant, symbol token_symbol);
+    [[eosio::action]] void burntoken(name publisher, name recipient, asset amount);
 
-    [[eosio::action]] void reclaimtoken(name publisher, name recipient);
+    [[eosio::action]] void burnairgrab(name publisher, name recipient, asset amount);
 
-    //[[eosio::action]] void createwallet(name member, symbol token_symbol);
+    [[eosio::action]] void raisemax(name publisher, asset amount);
+
+    [[eosio::action]] void lowermax(name publisher, asset amount);
 
     [[eosio::action]] void deletewallet(name member, symbol token_symbol);
 

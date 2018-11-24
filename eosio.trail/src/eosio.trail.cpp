@@ -61,7 +61,11 @@ void trail::setsettings(name publisher, symbol token_symbol, token_settings new_
 
     eosio_assert(reg.publisher == publisher, "cannot change settings of another account's registry");
 
-    new_settings.is_initialized = true;
+    if (reg.settings.is_initialized) {
+        eosio_assert(reg.settings.is_mutable_after_initialize, "cannot change settings after initialization");
+    } else {
+        new_settings.is_initialized = true;
+    }
 
     registries.modify(r, same_payer, [&]( auto& a ) {
         a.settings = new_settings;
@@ -74,7 +78,7 @@ void trail::unregtoken(symbol token_symbol, name publisher) {
     require_auth(publisher);
     
     registries_table registries(_self, _self.value);
-    auto r = registries.find(token_symbol.raw);
+    auto r = registries.find(token_symbol.raw());
     eosio_assert(r != registries.end(), "No Token Registry found matching given symbol");
     auto reg = *r;
 
@@ -124,7 +128,7 @@ void trail::issuetoken(name publisher, name recipient, asset tokens, bool airgra
         }
 
         print("\nToken Airgrab: SUCCESS");
-    } else { //NOTE: publisher pays RAM cost (airdrop)
+    } else { //NOTE: publisher pays RAM cost if recipient has no balance entry (airdrop)
         balances_table balances(_self, tokens.symbol.raw());
         auto b = balances.find(recipient.value);
 
@@ -146,11 +150,36 @@ void trail::issuetoken(name publisher, name recipient, asset tokens, bool airgra
     print("\nRecipient: ", recipient);
 }
 
-void trail::claimtoken(name claimant, symbol token_symbol) {
-    
+//TODO: search for publisher instead of require as param?
+void trail::claimtoken(name claimant, name publisher, symbol token_symbol) {
+    require_auth(claimant);
+
+    airgrabs_table airgrabs(_self, publisher.value);
+    auto g = airgrabs.find(claimant.value);
+    eosio_assert(g != airgrabs.end(), "no airgrab to claim");
+    auto grab = *g;
+    eosio_assert(grab.recipient == claimant, "cannot claim another account's airdrop");
+
+    balances_table balances(_self, token_symbol.raw());
+    auto b = balances.find(claimant.value);
+
+    if (b == balances.end()) { //NOTE: create a wallet, RAM paid by claimant
+        balances.emplace(claimant, [&]( auto& a ){
+            a.owner = claimant;
+            a.tokens = grab.tokens;
+        });
+    } else { //NOTE: add to existing balance
+        balances.modify(b, same_payer, [&]( auto& a ) {
+            a.tokens += grab.tokens;
+        });
+    }
+
+    airgrabs.erase(g); //NOTE: erase airgrab
+
+    print("\nAirgrab Claim: SUCCESS");
 }
 
-void trail::recalltoken(name publisher, name recipient, asset amount) {
+void trail::burntoken(name publisher, name balance_owner, asset amount) {
     require_auth(publisher);
 
     registries_table registries(_self, _self.value);
@@ -159,28 +188,106 @@ void trail::recalltoken(name publisher, name recipient, asset amount) {
     auto reg = *r;
 
     eosio_assert(reg.publisher == publisher, "only publisher can recall tokens");
+    eosio_assert(reg.settings.is_burnable == true, "Token settings don't allow burning");
 
+    balances_table balances(_self, amount.symbol.raw());
+    auto b = balances.find(balance_owner.value);
+    eosio_assert(b != balances.end(), "balance owner has no balance to recall");
+    auto bal = *b;
 
+    asset new_supply = (reg.supply - amount);
+
+    registries.modify(r, same_payer, [&]( auto& a ) {
+        a.supply = new_supply;
+    });
+
+    if (bal.tokens - amount <= asset(0, bal.tokens.symbol)) { //NOTE: if balance is less than or equal to zero, erase wallet
+        balances.erase(b);
+    } else {
+        balances.modify(b, same_payer, [&]( auto& a ) { //NOTE: subtract amount from balance
+            a.tokens -= amount;
+        });
+    }
+    
+    print("\nToken Burn: SUCCESS");
 }
 
-// void trail::createwallet(name member, symbol token_symbol) {
-//     require_auth(member);
-//     balances_table balances(_self, token_symbol.raw());
-//     auto b = balances.find(member.value);
-//     eosio_assert(b == balances.end(), "account already has a wallet for this token");
-//     balances.emplace(member, [&]( auto& a ){
-//         a.owner = member;
-//         a.tokens = asset(0, token_symbol);
-//     });
-//     print("\nWallet Creation: SUCCESS");
-// }
+void trail::raisemax(name publisher, asset amount) {
+    require_auth(publisher);
+
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(amount.symbol.raw());
+    eosio_assert(r != registries.end(), "registry doesn't exist for that token");
+    auto reg = *r;
+
+    eosio_assert(reg.publisher == publisher, "cannot raise another account's max supply");
+    eosio_assert(reg.settings.is_max_raisable == true, "token settings don't allow raising max supply");
+
+    registries.modify(r, same_payer, [&]( auto& a ) {
+        a.max_supply += amount;
+    });
+
+    print("\nRaise Max Supply: SUCCESS");
+}
+
+void trail::lowermax(name publisher, asset amount) {
+    require_auth(publisher);
+
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(amount.symbol.raw());
+    eosio_assert(r != registries.end(), "registry doesn't exist for that token");
+    auto reg = *r;
+
+    eosio_assert(reg.publisher == publisher, "cannot lower another account's max supply");
+    eosio_assert(reg.settings.is_max_lowerable == true, "token settings don't allow lowering max supply");
+    eosio_assert(reg.supply <= reg.max_supply - amount, "cannot lower max supply below circulating supply");
+    eosio_assert(reg.max_supply - amount >= asset(0, amount.symbol), "cannot lower max supply below 0");
+
+    registries.modify(r, same_payer, [&]( auto& a ) {
+        a.max_supply -= amount;
+    });
+
+    print("\nLower Max Supply: SUCCESS");
+}
+
+void trail::burnairgrab(name publisher, name recipient, asset amount) {
+    require_auth(publisher);
+
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(amount.symbol.raw());
+    eosio_assert(r != registries.end(), "registry doesn't exist for that token");
+    auto reg = *r;
+    eosio_assert(reg.publisher == publisher, "only publisher can burn airgrabs");
+    eosio_assert(reg.settings.is_burnable == true, "token settings don't allow airgrab burning");
+
+    airgrabs_table airgrabs(_self, publisher.value);
+    auto g = airgrabs.find(recipient.value);
+    eosio_assert(g != airgrabs.end(), "recipient has no airgrab");
+    auto grab = *g;
+
+    eosio_assert(reg.supply - amount >= asset(0, reg.supply.symbol), "cannot burn supply below zero"); //NOTE: should never happen
+    
+    registries.modify(r, same_payer, [&]( auto& a ) {
+        a.supply -= amount;
+    });
+
+    if (amount - grab.tokens <= asset(0, grab.tokens.symbol)) { //NOTE: new airgrab balance equal to or less than zero
+        airgrabs.erase(g);
+    } else { //NOTE: airgrab still has balance after reclaim
+        airgrabs.modify(g, same_payer, [&]( auto& a ) {
+            a.tokens -= amount;
+        });
+    }
+
+    print("\nAirgrab Burn: SUCCESS");
+}
 
 void trail::deletewallet(name member, symbol token_symbol) {
     require_auth(member);
 
     balances_table balances(_self, token_symbol.raw());
     auto b = balances.find(member.value);
-    eosio_assert(b != balances.end(), "account doesn't have a wallet for this token to delete");
+    eosio_assert(b != balances.end(), "account doesn't have a wallet of this token to delete");
 
     registries_table registries(_self, _self.value);
     auto r = registries.find(token_symbol.raw());
@@ -188,6 +295,8 @@ void trail::deletewallet(name member, symbol token_symbol) {
     if (r != registries.end()) { //NOTE: registry exists
         auto reg = *r;
         auto bal = *b;
+
+        eosio_assert(reg.settings.is_burnable == true, "Token settings don't allow tokens to be burned");
         
         //NOTE: remove wallet balance from circulating supply
         registries.modify(r, same_payer, [&]( auto& a ) {
@@ -195,13 +304,13 @@ void trail::deletewallet(name member, symbol token_symbol) {
         });
 
         print("\nBalance Safely Removed From Circulation: SUCCESS");
-    } else {
+    } else { //NOTE: registry no longer exists
+        balances.erase(b);
+
         print("\nToken Registry Doesn't Exist. Wallet Balance Burned.");
     }
 
-    balances.erase(b);
-
-    print("\nWallet Deletion: SUCCESS");
+    print("\nWallet Burn: SUCCESS");
 }
 
 #pragma endregion Token_Actions

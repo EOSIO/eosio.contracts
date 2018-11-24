@@ -1,5 +1,5 @@
 {
-    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT Fri Nov 23 13:05:37 2018",
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT Fri Nov 23 19:45:11 2018",
     "version": "eosio::abi/1.0",
     "structs": [
         {
@@ -39,6 +39,42 @@
                 {
                     "name": "reference_id",
                     "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "burnairgrab",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "recipient",
+                    "type": "name"
+                },
+                {
+                    "name": "amount",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "burntoken",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "recipient",
+                    "type": "name"
+                },
+                {
+                    "name": "amount",
+                    "type": "asset"
                 }
             ]
         },
@@ -83,6 +119,24 @@
             ]
         },
         {
+            "name": "claimtoken",
+            "base": "",
+            "fields": [
+                {
+                    "name": "claimant",
+                    "type": "name"
+                },
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "token_symbol",
+                    "type": "symbol"
+                }
+            ]
+        },
+        {
             "name": "closeballot",
             "base": "",
             "fields": [
@@ -97,6 +151,20 @@
                 {
                     "name": "pass",
                     "type": "uint8"
+                }
+            ]
+        },
+        {
+            "name": "deletewallet",
+            "base": "",
+            "fields": [
+                {
+                    "name": "member",
+                    "type": "name"
+                },
+                {
+                    "name": "token_symbol",
+                    "type": "symbol"
                 }
             ]
         },
@@ -175,6 +243,28 @@
             ]
         },
         {
+            "name": "issuetoken",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "recipient",
+                    "type": "name"
+                },
+                {
+                    "name": "tokens",
+                    "type": "asset"
+                },
+                {
+                    "name": "airgrab",
+                    "type": "bool"
+                }
+            ]
+        },
+        {
             "name": "leaderboard",
             "base": "",
             "fields": [
@@ -217,6 +307,20 @@
                 {
                     "name": "status",
                     "type": "uint8"
+                }
+            ]
+        },
+        {
+            "name": "lowermax",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "amount",
+                    "type": "asset"
                 }
             ]
         },
@@ -307,6 +411,20 @@
             ]
         },
         {
+            "name": "raisemax",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "amount",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
             "name": "regballot",
             "base": "",
             "fields": [
@@ -341,12 +459,16 @@
             "base": "",
             "fields": [
                 {
-                    "name": "native",
+                    "name": "max_supply",
                     "type": "asset"
                 },
                 {
                     "name": "publisher",
                     "type": "name"
+                },
+                {
+                    "name": "info_url",
+                    "type": "string"
                 }
             ]
         },
@@ -379,6 +501,54 @@
             ]
         },
         {
+            "name": "setsettings",
+            "base": "",
+            "fields": [
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "token_symbol",
+                    "type": "symbol"
+                },
+                {
+                    "name": "new_settings",
+                    "type": "token_settings"
+                }
+            ]
+        },
+        {
+            "name": "token_settings",
+            "base": "",
+            "fields": [
+                {
+                    "name": "is_burnable",
+                    "type": "bool"
+                },
+                {
+                    "name": "is_max_raisable",
+                    "type": "bool"
+                },
+                {
+                    "name": "is_max_lowerable",
+                    "type": "bool"
+                },
+                {
+                    "name": "is_destructible",
+                    "type": "bool"
+                },
+                {
+                    "name": "is_initialized",
+                    "type": "bool"
+                },
+                {
+                    "name": "is_mutable_after_initialize",
+                    "type": "bool"
+                }
+            ]
+        },
+        {
             "name": "unregballot",
             "base": "",
             "fields": [
@@ -397,8 +567,8 @@
             "base": "",
             "fields": [
                 {
-                    "name": "native",
-                    "type": "asset"
+                    "name": "token_symbol",
+                    "type": "symbol"
                 },
                 {
                     "name": "publisher",
@@ -483,8 +653,23 @@
             "ricardian_contract": ""
         },
         {
+            "name": "burnairgrab",
+            "type": "burnairgrab",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "burntoken",
+            "type": "burntoken",
+            "ricardian_contract": ""
+        },
+        {
             "name": "castvote",
             "type": "castvote",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "claimtoken",
+            "type": "claimtoken",
             "ricardian_contract": ""
         },
         {
@@ -493,8 +678,23 @@
             "ricardian_contract": ""
         },
         {
+            "name": "deletewallet",
+            "type": "deletewallet",
+            "ricardian_contract": ""
+        },
+        {
             "name": "deloldvotes",
             "type": "deloldvotes",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "issuetoken",
+            "type": "issuetoken",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "lowermax",
+            "type": "lowermax",
             "ricardian_contract": ""
         },
         {
@@ -505,6 +705,11 @@
         {
             "name": "nextcycle",
             "type": "nextcycle",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "raisemax",
+            "type": "raisemax",
             "ricardian_contract": ""
         },
         {
@@ -525,6 +730,11 @@
         {
             "name": "setseats",
             "type": "setseats",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "setsettings",
+            "type": "setsettings",
             "ricardian_contract": ""
         },
         {

@@ -19,7 +19,8 @@ using namespace eosio;
 
 struct token_settings {
     bool is_burnable = false;
-    bool is_recallable = false;
+    bool is_max_raisable = false;
+    bool is_max_lowerable = false;
     bool is_destructible = true;
     bool is_initialized = false;
     bool is_mutable_after_initialize = true;
