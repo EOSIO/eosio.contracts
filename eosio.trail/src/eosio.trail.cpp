@@ -27,37 +27,58 @@ trail::~trail() {
 
 #pragma region Token_Registration
 
-void trail::regtoken(asset native, name publisher) {
+void trail::regtoken(asset max_supply, name publisher, string info_url) {
     require_auth(publisher);
 
-    auto sym = native.symbol.raw();
-
-    stats statstable(name("eosio.token"), sym);
-    auto eosio_existing = statstable.find(sym);
-    eosio_assert(eosio_existing == statstable.end(), "Token with symbol already exists in eosio.token" );
+    auto sym = max_supply.symbol;
 
     registries_table registries(_self, _self.value);
-    auto r = registries.find(sym);
+    auto r = registries.find(sym.raw());
     eosio_assert(r == registries.end(), "Token Registry with that symbol already exists in Trail");
 
+    token_settings default_settings;
+
     registries.emplace(publisher, [&]( auto& a ){
-        a.native = native;
+        a.max_supply = max_supply;
+        a.supply = asset(0, sym);
         a.publisher = publisher;
+        a.info_url = info_url;
+        a.settings = default_settings;
     });
 
-    env_struct.totals[0]++;
+    env_struct.totals[0]++; //NOTE: increment total tokens
 
     print("\nToken Registration: SUCCESS");
 }
 
-void trail::unregtoken(asset native, name publisher) {
+void trail::setsettings(name publisher, symbol token_symbol, token_settings new_settings) {
+    require_auth(publisher);
+
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(token_symbol.raw());
+    eosio_assert(r != registries.end(), "Token Registry with that symbol doesn't exist");
+    auto reg = *r;
+
+    eosio_assert(reg.publisher == publisher, "cannot change settings of another account's registry");
+
+    new_settings.is_initialized = true;
+
+    registries.modify(r, same_payer, [&]( auto& a ) {
+        a.settings = new_settings;
+    });
+
+    print("\nToken Settings Update: SUCCESS");
+}
+
+void trail::unregtoken(symbol token_symbol, name publisher) {
     require_auth(publisher);
     
-    auto sym = native.symbol.raw();
     registries_table registries(_self, _self.value);
-    auto r = registries.find(sym);
+    auto r = registries.find(token_symbol.raw);
+    eosio_assert(r != registries.end(), "No Token Registry found matching given symbol");
+    auto reg = *r;
 
-    eosio_assert(r != registries.end(), "Token Registry does not exist.");
+    eosio_assert(reg.settings.is_destructible == true, "Token Registry has been set as indestructible");
 
     registries.erase(r);
 
@@ -67,6 +88,123 @@ void trail::unregtoken(asset native, name publisher) {
 }
 
 #pragma endregion Token_Registration
+
+
+#pragma region Token_Actions
+
+void trail::issuetoken(name publisher, name recipient, asset tokens, bool airgrab) {
+    require_auth(publisher);
+
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(tokens.symbol.raw());
+    eosio_assert(r != registries.end(), "registry doesn't exist for that token");
+    auto reg = *r;
+    eosio_assert(reg.publisher == publisher, "only publisher can issue tokens");
+
+    asset new_supply = (reg.supply + tokens);
+    eosio_assert(new_supply <= reg.max_supply, "Issuing tokens would breach max supply");
+
+    registries.modify(r, same_payer, [&]( auto& a ) { //NOTE: update supply
+        a.supply = new_supply;
+    });
+
+    if (airgrab) { //NOTE: place in airgrabs table to be claimed by recipient
+        airgrabs_table airgrabs(_self, publisher.value);
+        auto g = airgrabs.find(recipient.value);
+
+        if (g == airgrabs.end()) { //NOTE: new airgrab
+            airgrabs.emplace(publisher, [&]( auto& a ){
+                a.recipient = recipient;
+                a.tokens = tokens;
+            });
+        } else { //NOTE: add to existing airgrab
+            airgrabs.modify(g, same_payer, [&]( auto& a ) {
+                a.tokens += tokens;
+            });
+        }
+
+        print("\nToken Airgrab: SUCCESS");
+    } else { //NOTE: publisher pays RAM cost (airdrop)
+        balances_table balances(_self, tokens.symbol.raw());
+        auto b = balances.find(recipient.value);
+
+        if (b == balances.end()) { //NOTE: new balance
+            balances.emplace(publisher, [&]( auto& a ){
+                a.owner = recipient;
+                a.tokens = tokens;
+            });
+        } else { //NOTE: add to existing balance
+            balances.modify(b, same_payer, [&]( auto& a ) {
+                a.tokens += tokens;
+            });
+        }
+
+        print("\nToken Airdrop: SUCCESS");
+    }
+
+    print("\nAmount: ", tokens);
+    print("\nRecipient: ", recipient);
+}
+
+void trail::claimtoken(name claimant, symbol token_symbol) {
+    
+}
+
+void trail::recalltoken(name publisher, name recipient, asset amount) {
+    require_auth(publisher);
+
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(amount.symbol.raw());
+    eosio_assert(r != registries.end(), "registry doesn't exist for that token");
+    auto reg = *r;
+
+    eosio_assert(reg.publisher == publisher, "only publisher can recall tokens");
+
+
+}
+
+// void trail::createwallet(name member, symbol token_symbol) {
+//     require_auth(member);
+//     balances_table balances(_self, token_symbol.raw());
+//     auto b = balances.find(member.value);
+//     eosio_assert(b == balances.end(), "account already has a wallet for this token");
+//     balances.emplace(member, [&]( auto& a ){
+//         a.owner = member;
+//         a.tokens = asset(0, token_symbol);
+//     });
+//     print("\nWallet Creation: SUCCESS");
+// }
+
+void trail::deletewallet(name member, symbol token_symbol) {
+    require_auth(member);
+
+    balances_table balances(_self, token_symbol.raw());
+    auto b = balances.find(member.value);
+    eosio_assert(b != balances.end(), "account doesn't have a wallet for this token to delete");
+
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(token_symbol.raw());
+
+    if (r != registries.end()) { //NOTE: registry exists
+        auto reg = *r;
+        auto bal = *b;
+        
+        //NOTE: remove wallet balance from circulating supply
+        registries.modify(r, same_payer, [&]( auto& a ) {
+            a.supply -= bal.tokens;
+        });
+
+        print("\nBalance Safely Removed From Circulation: SUCCESS");
+    } else {
+        print("\nToken Registry Doesn't Exist. Wallet Balance Burned.");
+    }
+
+    balances.erase(b);
+
+    print("\nWallet Deletion: SUCCESS");
+}
+
+#pragma endregion Token_Actions
 
 
 #pragma region Ballot_Registration
@@ -722,27 +860,35 @@ bool trail::close_leaderboard(uint64_t board_id, uint8_t pass, name publisher) {
 
 asset trail::get_vote_weight(name voter, symbol voting_token) {
 
-    asset votes;
-
     if (voting_token == symbol("VOTE", 4)) {
         voters_table voters(_self, _self.value);
         auto v = voters.find(voter.value);
-        eosio_assert(v != voters.end(), "voter is not registered");
+        
+        if (v != voters.end()) {
+            auto vid = *v;
+            return vid.votes;
+        } else {
+            return asset(0, symbol("VOTE", 4));
+        }
+
         auto vid = *v;
 
-        votes = vid.votes;
-    } else if (voting_token == symbol("TFVT", 0)) {
+        return vid.votes;
+    } else if (is_registered_token(voting_token)) {
+
+        balances_table balances(_self, voting_token.raw());
+        auto b = balances.find(voter.value);
+
+        if (b != balances.end()) {
+            auto bal = *b;
+            return bal.tokens;
+        } else {
+            return asset(0, voting_token);
+        }
         
-        //TODO: implement TFVT
+    }
 
-        votes = asset(0, symbol("TFVT", 0)); //TODO: update amount
-    }// else  if () {
-
-        //TODO: implement cross contract lookup, or expand regtoken
-
-    // }
-
-    return votes;
+    return asset(0, symbol("VOTE", 4));
 }
 
 bool trail::has_direction(uint16_t direction, vector<uint16_t> direction_list) {

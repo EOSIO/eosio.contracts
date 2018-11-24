@@ -23,6 +23,8 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] vote_receipt {
     asset weight;
     uint32_t expiration;
 
+    //TODO: make vector of weights? would map to direction by i
+
     uint64_t primary_key() const { return ballot_id; }
     EOSLIB_SERIALIZE(vote_receipt, (ballot_id)(directions)(weight)(expiration))
 };

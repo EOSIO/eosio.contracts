@@ -37,16 +37,39 @@ public:
 
     uint32_t const DECAY_RATE = 120; //number of seconds to decay by 1 VOTE
 
+    //TODO: add constants for totals vector mappings?
+
     #pragma endregion Constants
 
 
     #pragma region Token_Registration
     
-    [[eosio::action]] void regtoken(asset native, name publisher);
+    [[eosio::action]] void regtoken(asset max_supply, name publisher, string info_url);
 
-    [[eosio::action]] void unregtoken(asset native, name publisher);
+    //[[eosio::actoion]] void settokenurl(name publisher, string info_url);
+
+    [[eosio::action]] void setsettings(name publisher, symbol token_symbol, token_settings new_settings);
+
+    [[eosio::action]] void unregtoken(symbol token_symbol, name publisher);
 
     #pragma endregion Token_Registration
+
+
+    #pragma region Token_Actions
+
+    [[eosio::action]] void issuetoken(name publisher, name recipient, asset tokens, bool airgrab);
+
+    [[eosio::action]] void recalltoken(name publisher, name recipient, asset amount);
+
+    [[eosio::action]] void claimtoken(name claimant, symbol token_symbol);
+
+    [[eosio::action]] void reclaimtoken(name publisher, name recipient);
+
+    //[[eosio::action]] void createwallet(name member, symbol token_symbol);
+
+    [[eosio::action]] void deletewallet(name member, symbol token_symbol);
+
+    #pragma endregion Token_Actions
 
 
     #pragma region Ballot_Registration

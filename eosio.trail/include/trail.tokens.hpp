@@ -10,7 +10,6 @@
 #include <eosiolib/permission.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/action.hpp>
-//#include <eosiolib/types.hpp>
 #include <eosiolib/singleton.hpp>
 
 using namespace std;
@@ -18,15 +17,26 @@ using namespace eosio;
 
 #pragma region Structs
 
-struct [[eosio::table]] registry {
-    asset native;
-    name publisher;
-
-    uint64_t primary_key() const { return native.symbol.raw(); }
-    uint64_t by_publisher() const { return publisher.value; }
-    EOSLIB_SERIALIZE(registry, (native)(publisher))
+struct token_settings {
+    bool is_burnable = false;
+    bool is_recallable = false;
+    bool is_destructible = true;
+    bool is_initialized = false;
+    bool is_mutable_after_initialize = true;
 };
 
+struct [[eosio::table]] registry {
+    asset max_supply;
+    asset supply;
+    name publisher;
+    string info_url;
+    token_settings settings;
+
+    uint64_t primary_key() const { return max_supply.symbol.raw(); }
+    EOSLIB_SERIALIZE(registry, (max_supply)(supply)(publisher)(info_url)(settings))
+};
+
+//NOTE: balances are scoped by symbol
 struct [[eosio::table]] balance {
     name owner;
     asset tokens;
@@ -35,79 +45,57 @@ struct [[eosio::table]] balance {
     EOSLIB_SERIALIZE(balance, (owner)(tokens))
 };
 
-// struct trail_transfer_args {
-//     name sender;
-//     name recipient;
-//     asset tokens;
-// };
+//NOTE airgrabs are scoped by publisher
+struct [[eosio::table]] airgrab {
+    name recipient;
+    asset tokens;
+
+    uint64_t primary_key() const { return recipient.value; }
+    EOSLIB_SERIALIZE(airgrab, (recipient)(tokens))
+};
 
 #pragma endregion Structs
+
 
 #pragma region Tables
 
 typedef multi_index<name("balances"), balance> balances_table;
 
-typedef multi_index<name("registries"), registry,
-    indexed_by<name("bypub"), const_mem_fun<registry, uint64_t, &registry::by_publisher>>> registries_table;
+typedef multi_index<name("airgrabs"), airgrab> airgrabs_table;
+
+typedef multi_index<name("registries"), registry> registries_table;
 
 #pragma endregion Tables
 
+
 #pragma region Helper_Functions
 
-bool is_trail_token(symbol sym) {
+bool is_registered_token(symbol token_symbol) {
     registries_table registries(name("eosio.trail"), name("eosio.trail").value);
-    auto r = registries.find(sym.raw());
-
-    if (r != registries.end()) {
-        return true;
-    }
-
-    return false;
-}
-
-bool is_registry(name publisher) {
-    registries_table registries(name("eosio.trail"), name("eosio.trail").value);
-    auto by_pub = registries.get_index<name("bypub")>();
-    auto itr = by_pub.lower_bound(publisher.value);
-
-    if (itr != by_pub.end()) {
-        return true;
-    }
-
-    return false;
-}
-
-registries_table::const_iterator find_registry(symbol sym) {
-    registries_table registries(name("eosio.trail"), name("eosio.trail").value);
-    auto itr = registries.find(sym.raw());
+    auto itr = registries.find(token_symbol.raw());
 
     if (itr != registries.end()) {
-        return itr;
+        return true;
     }
 
-    return registries.end();
+    return false;
 }
 
-registry get_registry(symbol sym) {
-    registries_table registries(name("eosio.trail"), name("eosio.trail").value);
-    return registries.get(sym.raw());
-}
-
-// symbol get_sym(name publisher) {
+// bool is_publisher(name publisher, symbol token_symbol) {
 //     registries_table registries(name("eosio.trail"), name("eosio.trail").value);
-//     auto by_pub = registries.get_index<name("bypub")>();
-//     auto itr = by_pub.lower_bound(publisher.value);
-
-//     return itr->native.symbol.raw();
+//     auto itr = registries.find(token_symbol.raw());
 // }
 
-asset get_token_balance(symbol sym, name voter) {
-    auto reg = get_registry(sym).publisher;
+asset get_token_balance(name owner, symbol token_symbol) {
+    balances_table balances(name("eosio.trail"), token_symbol.raw());
+    auto itr = balances.find(owner.value);
 
-    balances_table balances(reg, voter.value);
-    auto b = balances.get(voter.value);
+    if (itr != balances.end()) {
+        auto bal = *itr;
+        return bal.tokens;
+    }
 
-    return b.tokens;
+    return asset(0, token_symbol);
 }
 
 #pragma endregion Helper_Functions
