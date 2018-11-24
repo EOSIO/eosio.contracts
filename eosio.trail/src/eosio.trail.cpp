@@ -62,7 +62,7 @@ void trail::setsettings(name publisher, symbol token_symbol, token_settings new_
     eosio_assert(reg.publisher == publisher, "cannot change settings of another account's registry");
 
     if (reg.settings.is_initialized) {
-        eosio_assert(reg.settings.is_mutable_after_initialize, "cannot change settings after initialization");
+        eosio_assert(reg.settings.is_mutable_after_initialized, "cannot change settings after initialization");
     } else {
         new_settings.is_initialized = true;
     }

@@ -103,7 +103,7 @@ asset get_liquid_tlos(name owner) {
     auto a = accountstable.find(symbol_code("TLOS").raw());
 	
     int64_t amount = 0;
-	print("\nfinding account...");
+	//print("\nfinding account...");
     if (a != accountstable.end()) {
         auto acct = *a;
         amount = acct.balance.amount;
