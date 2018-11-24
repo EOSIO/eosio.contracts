@@ -23,10 +23,10 @@ struct token_settings {
     bool is_max_lowerable = false;
     bool is_destructible = true;
     bool is_initialized = false;
-    bool is_mutable_after_initialize = true;
+    bool is_mutable_after_initialized = true;
 };
 
-struct [[eosio::table]] registry {
+struct [[eosio::table, eosio::contract("eosio.trail")]] registry {
     asset max_supply;
     asset supply;
     name publisher;
@@ -38,7 +38,7 @@ struct [[eosio::table]] registry {
 };
 
 //NOTE: balances are scoped by symbol
-struct [[eosio::table]] balance {
+struct [[eosio::table, eosio::contract("eosio.trail")]] balance {
     name owner;
     asset tokens;
 
@@ -47,7 +47,7 @@ struct [[eosio::table]] balance {
 };
 
 //NOTE airgrabs are scoped by publisher
-struct [[eosio::table]] airgrab {
+struct [[eosio::table, eosio::contract("eosio.trail")]] airgrab {
     name recipient;
     asset tokens;
 
