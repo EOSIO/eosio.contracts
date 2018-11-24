@@ -972,32 +972,20 @@ asset trail::get_vote_weight(name voter, symbol voting_token) {
     if (voting_token == symbol("VOTE", 4)) {
         voters_table voters(_self, _self.value);
         auto v = voters.find(voter.value);
-        
-        if (v != voters.end()) {
-            auto vid = *v;
-            return vid.votes;
-        } else {
-            return asset(0, symbol("VOTE", 4));
-        }
-
+        eosio_assert(v != voters.end(), "voter isn't registered");
         auto vid = *v;
 
         return vid.votes;
-    } else if (is_registered_token(voting_token)) {
+    } else {
+        eosio_assert(is_registered_token(voting_token), "token is not registered");
 
         balances_table balances(_self, voting_token.raw());
         auto b = balances.find(voter.value);
-
-        if (b != balances.end()) {
-            auto bal = *b;
-            return bal.tokens;
-        } else {
-            return asset(0, voting_token);
-        }
+        eosio_assert(b != balances.end(), "voter doesn't have a balance of the voting token");
+        auto bal = *b;
         
+        return bal.tokens;   
     }
-
-    return asset(0, symbol("VOTE", 4));
 }
 
 bool trail::has_direction(uint16_t direction, vector<uint16_t> direction_list) {

@@ -1,5 +1,5 @@
 {
-    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT Fri Nov 23 19:45:11 2018",
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT Fri Nov 23 20:13:58 2018",
     "version": "eosio::abi/1.0",
     "structs": [
         {
@@ -21,6 +21,34 @@
                 {
                     "name": "info_link",
                     "type": "string"
+                }
+            ]
+        },
+        {
+            "name": "airgrab",
+            "base": "",
+            "fields": [
+                {
+                    "name": "recipient",
+                    "type": "name"
+                },
+                {
+                    "name": "tokens",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "balance",
+            "base": "",
+            "fields": [
+                {
+                    "name": "owner",
+                    "type": "name"
+                },
+                {
+                    "name": "tokens",
+                    "type": "asset"
                 }
             ]
         },
@@ -455,6 +483,32 @@
             ]
         },
         {
+            "name": "registry",
+            "base": "",
+            "fields": [
+                {
+                    "name": "max_supply",
+                    "type": "asset"
+                },
+                {
+                    "name": "supply",
+                    "type": "asset"
+                },
+                {
+                    "name": "publisher",
+                    "type": "name"
+                },
+                {
+                    "name": "info_url",
+                    "type": "string"
+                },
+                {
+                    "name": "settings",
+                    "type": "token_settings"
+                }
+            ]
+        },
+        {
             "name": "regtoken",
             "base": "",
             "fields": [
@@ -543,7 +597,7 @@
                     "type": "bool"
                 },
                 {
-                    "name": "is_mutable_after_initialize",
+                    "name": "is_mutable_after_initialized",
                     "type": "bool"
                 }
             ]
@@ -755,6 +809,20 @@
     ],
     "tables": [
         {
+            "name": "airgrabs",
+            "type": "airgrab",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "balances",
+            "type": "balance",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
             "name": "ballots",
             "type": "ballot",
             "index_type": "i64",
@@ -785,6 +853,13 @@
         {
             "name": "proposals",
             "type": "proposal",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "registries",
+            "type": "registry",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
