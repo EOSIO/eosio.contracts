@@ -442,5 +442,6 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 	);
 } FC_LOG_AND_RETHROW()
 
+//TODO: Leaderboard test.
 
 BOOST_AUTO_TEST_SUITE_END()
