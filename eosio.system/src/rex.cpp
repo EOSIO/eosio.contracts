@@ -64,10 +64,10 @@ namespace eosiosystem {
    {
       require_auth( owner );
 
-      eosio_assert( from_cpu.symbol == core_symbol() && from_net.symbol == core_symbol(), "asset must be core token" );
-      eosio_assert( 0 <= from_cpu.amount, "must unstake a positive amount to buy rex" );
+      eosio_assert( from_net.symbol == core_symbol() && from_cpu.symbol == core_symbol(), "asset must be core token" );
       eosio_assert( 0 <= from_net.amount, "must unstake a positive amount to buy rex" );
-      eosio_assert( 0 < from_cpu.amount || 0 < from_net.amount, "must unstake a positive amount to buy rex" );
+      eosio_assert( 0 <= from_cpu.amount, "must unstake a positive amount to buy rex" );
+      eosio_assert( 0 < from_net.amount || 0 < from_cpu.amount, "must unstake a positive amount to buy rex" );
       
       {
          auto vitr = _voters.find( owner.value );
@@ -78,20 +78,20 @@ namespace eosiosystem {
       {
          del_bandwidth_table dbw_table( _self, owner.value );
          auto del_itr = dbw_table.require_find( receiver.value, "delegated bandwidth record does not exist" );
-         eosio_assert( from_cpu.amount <= del_itr->cpu_weight.amount, "amount exceeds tokens staked for cpu");
          eosio_assert( from_net.amount <= del_itr->net_weight.amount, "amount exceeds tokens staked for net");
+         eosio_assert( from_cpu.amount <= del_itr->cpu_weight.amount, "amount exceeds tokens staked for cpu");
          dbw_table.modify( del_itr, same_payer, [&]( delegated_bandwidth& dbw ) {
-            dbw.cpu_weight.amount -= from_cpu.amount;
             dbw.net_weight.amount -= from_net.amount;
+            dbw.cpu_weight.amount -= from_cpu.amount;
          });
          if ( del_itr->is_empty() ) {
             dbw_table.erase( del_itr );
          }
       }
 
-      update_resource_limits( name(0), receiver, -from_cpu.amount, -from_net.amount );
+      update_resource_limits( name(0), receiver, -from_net.amount, -from_cpu.amount );
 
-      const asset payment = from_cpu + from_net;
+      const asset payment = from_net + from_cpu;
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { stake_account, active_permission },
                                                     { stake_account, rex_account, payment, "buy REX with staked tokens" } );
 
@@ -114,7 +114,7 @@ namespace eosiosystem {
       process_rex_maturities( bitr );
       eosio_assert( rex.amount <= bitr->matured_rex, "insufficient funds" );
 
-      auto current_order = close_rex_order( bitr, rex );
+      auto current_order = fill_rex_order( bitr, rex );
       update_rex_account( from, current_order.proceeds, current_order.stake_change );
       if ( !current_order.success ) {
          /**
@@ -146,7 +146,7 @@ namespace eosiosystem {
       require_auth( owner );
 
       auto itr = _rexorders.require_find( owner.value, "no sellrex order is scheduled" );
-      eosio_assert( itr->is_open, "sellrex order has been closed and cannot be canceled" );
+      eosio_assert( itr->is_open, "sellrex order has been filled and cannot be canceled" );
       _rexorders.erase( itr );
    }
 
@@ -160,7 +160,7 @@ namespace eosiosystem {
 
       rex_cpu_loan_table cpu_loans( _self, _self.value );
       int64_t rented_tokens = rent_rex( cpu_loans, from, receiver, loan_payment, loan_fund );
-      update_resource_limits( from, receiver, rented_tokens, 0 );
+      update_resource_limits( from, receiver, 0, rented_tokens );
    }
    
    void system_contract::rentnet( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund )
@@ -169,7 +169,7 @@ namespace eosiosystem {
 
       rex_net_loan_table net_loans( _self, _self.value );
       int64_t rented_tokens = rent_rex( net_loans, from, receiver, loan_payment, loan_fund );
-      update_resource_limits( from, receiver, 0, rented_tokens );
+      update_resource_limits( from, receiver, rented_tokens, 0 );
    }
 
    void system_contract::fundcpuloan( const name& from, uint64_t loan_num, const asset& payment )
@@ -314,7 +314,7 @@ namespace eosiosystem {
       return out;
    }
 
-   void system_contract::update_resource_limits( const name& from, const name& receiver, int64_t delta_cpu, int64_t delta_net )
+   void system_contract::update_resource_limits( const name& from, const name& receiver, int64_t delta_net, int64_t delta_cpu )
    {
       if ( delta_cpu == 0 && delta_net == 0 ) { // nothing to update
          return;
@@ -324,17 +324,16 @@ namespace eosiosystem {
          user_resources_table totals_tbl( _self, receiver.value );
          auto tot_itr = totals_tbl.find( receiver.value );
          if ( tot_itr == totals_tbl.end() ) {
-            eosio_assert( 0 <= delta_cpu && 0 <= delta_net, "logic error, should not occur");
-            eosio_assert( 0 < delta_cpu || 0 < delta_net, "");
+            eosio_assert( 0 <= delta_net && 0 <= delta_cpu, "logic error, should not occur");
             tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
-               tot.owner = receiver;
-               tot.cpu_weight = asset( delta_cpu, core_symbol() );
+               tot.owner      = receiver;
                tot.net_weight = asset( delta_net, core_symbol() );
+               tot.cpu_weight = asset( delta_cpu, core_symbol() );
             });
          } else {
             totals_tbl.modify( tot_itr, same_payer, [&]( auto& tot ) {
-               tot.cpu_weight.amount += delta_cpu;
                tot.net_weight.amount += delta_net;
+               tot.cpu_weight.amount += delta_cpu;
             });
          }
          eosio_assert( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
@@ -345,7 +344,7 @@ namespace eosiosystem {
          }
       }
 
-      int64_t ram_bytes, net, cpu;
+      int64_t ram_bytes = 0, net = 0, cpu = 0;
       get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
       set_resource_limits( receiver.value, ram_bytes, net + delta_net, cpu + delta_cpu );
    }
@@ -393,7 +392,7 @@ namespace eosiosystem {
             }
          }
          
-         return std::make_pair( delete_loan, delta_stake );
+         return { delete_loan, delta_stake };
       };
 
       /// transfer from eosio.names to eosio.rex
@@ -414,7 +413,7 @@ namespace eosiosystem {
       
             auto result = process_expired_loan( cpu_idx, itr );
             if ( result.second != 0 )
-               update_resource_limits( itr->from, itr->receiver, result.second, 0 );
+               update_resource_limits( itr->from, itr->receiver, 0, result.second );
 
             if ( result.first )
                cpu_idx.erase( itr );
@@ -431,7 +430,7 @@ namespace eosiosystem {
 
             auto result = process_expired_loan( net_idx, itr );
             if ( result.second != 0 )
-               update_resource_limits( itr->from, itr->receiver, 0, result.second );
+               update_resource_limits( itr->from, itr->receiver, result.second, 0 );
 
             if ( result.first )
                net_idx.erase( itr );
@@ -444,16 +443,18 @@ namespace eosiosystem {
          auto oitr = idx.begin();
          for ( uint16_t i = 0; i < max; ++i ) {
             if( oitr == idx.end() || !oitr->is_open ) break;
-            auto bitr   = _rexbalance.find( oitr->owner.value ); // bitr != _rexbalance.end()
-            auto result = close_rex_order( bitr, oitr->rex_requested );
+            auto bitr   = _rexbalance.find( oitr->owner.value );
             auto next   = oitr;
             ++next;
-            if ( result.success ) {
-               idx.modify( oitr, same_payer, [&]( auto& order ) {
-                  order.proceeds.amount     = result.proceeds.amount;
-                  order.stake_change.amount = result.stake_change.amount;
-                  order.close();
-               });
+            if ( bitr != _rexbalance.end() ) { // should always be true
+               auto result = fill_rex_order( bitr, oitr->rex_requested );
+               if ( result.success ) {
+                  idx.modify( oitr, same_payer, [&]( auto& order ) {
+                     order.proceeds.amount     = result.proceeds.amount;
+                     order.stake_change.amount = result.stake_change.amount;
+                     order.close();
+                  });
+               }
             }
             oitr = next;
          }
@@ -472,8 +473,7 @@ namespace eosiosystem {
       update_rex_account( from, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( from, payment + fund );
 
-      auto itr = _rexpool.begin();
-      eosio_assert( itr != _rexpool.end(), "rex system not initialized yet" );
+      auto itr = _rexpool.begin(); /// already checked that _rexpool.begin() != _rexpool.end() in rex_loans_available()
 
       int64_t rented_tokens = 0;
       _rexpool.modify( itr, same_payer, [&]( auto& rt ) {
@@ -498,13 +498,13 @@ namespace eosiosystem {
    }
 
    /**
-    * close_rex_order processes an incoming of already scheduled sellrex order. If REX pool has enough core
+    * fill_rex_order processes an incoming of already scheduled sellrex order. If REX pool has enough core
     * tokens (not frozen in loans), order can be filled. In this case, REX pool totals, user rex_balance
     * and user vote_stake are updated. However, user voting power is not updated inside this function. The
     * function returns success flag, order proceeds, and vote stake change. These are used later to finish
     * order processing, which includes transfering proceeds and updating user vote weight.
     */
-   rex_order_outcome system_contract::close_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex )
+   rex_order_outcome system_contract::fill_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex )
    {
       auto rexitr = _rexpool.begin();
       const auto S0 = rexitr->total_lendable.amount;
@@ -591,11 +591,11 @@ namespace eosiosystem {
    }
 
    /**
-    * update_rex_account checks if user has a scheduled sellrex order that has been closed, completes its processing,
+    * update_rex_account checks if user has a scheduled sellrex order that has been filled, completes its processing,
     * and deletes it.
     * Processing entails transfering proceeds to user REX fund and updating user vote weight.
     * Additional proceeds and stake change can be passed as arguments.
-    * This function is called only by actions pushed by owner, unlike close_rex_order.
+    * This function is called only by actions pushed by owner, unlike fill_rex_order.
     */
    asset system_contract::update_rex_account( const name& owner, const asset& proceeds, const asset& delta_stake, bool force_vote_update )
    {
