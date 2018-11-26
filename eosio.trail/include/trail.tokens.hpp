@@ -81,7 +81,7 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] counter_balance {
     uint32_t last_decay;
 
     uint64_t primary_key() const { return owner.value; }
-    EOSLIB_SERIALIZE(counter_balance, (owner)(persistent_cb)(decayable_cb)(last_decay))
+    EOSLIB_SERIALIZE(counter_balance, (owner)(decayable_cb)(persistent_cb)(last_decay))
 };
 
 #pragma endregion Structs

@@ -29,6 +29,8 @@ class eosio_trail_tester : public tester
 {
   public:
 	abi_serializer abi_ser;
+	abi_serializer token_ser;
+
 	vector<name> test_voters;
 
 	eosio_trail_tester()
@@ -45,7 +47,7 @@ class eosio_trail_tester : public tester
 			const auto &accnt = control->db().get<account_object, by_name>(N(eosio.token));
 			abi_def abi;
 			BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
-			abi_ser.set_abi(abi, abi_serializer_max_time);
+			token_ser.set_abi(abi, abi_serializer_max_time);
 		}
 		create(N(eosio), asset::from_string("10000000000.0000 TLOS"));
 		issue(N(eosio), N(eosio), asset::from_string("1000000000.0000 TLOS"), "Initial amount!");
@@ -122,14 +124,6 @@ class eosio_trail_tester : public tester
 		return push_action(issuer, N(issue), mvo()("to", to)("quantity", quantity)("memo", memo));
 	}
 
-	// action_result transfer(account_name from,
-	// 					   account_name to,
-	// 					   asset quantity,
-	// 					   string memo)
-	// {
-	// 	return push_action(from, N(transfer), mvo()("from", from)("to", to)("quantity", quantity)("memo", memo));
-	// }
-
 	transaction_trace_ptr transfer(account_name from, account_name to, asset amount, string memo) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(eosio.token), N(transfer), vector<permission_level>{{from, config::active_name}},
@@ -147,10 +141,22 @@ class eosio_trail_tester : public tester
 
 	action_result push_action(const account_name &signer, const action_name &name, const variant_object &data)
 	{
-		string action_type_name = abi_ser.get_action_type(name);
+		string action_type_name = token_ser.get_action_type(name);
 
 		action act;
 		act.account = N(eosio.token);
+		act.name = name;
+		act.data = token_ser.variant_to_binary(action_type_name, data, abi_serializer_max_time);
+
+		return base_tester::push_action(std::move(act), uint64_t(signer));
+	}
+
+	action_result trail_push_action(const account_name &signer, const action_name &name, const variant_object &data)
+	{
+		string action_type_name = abi_ser.get_action_type(name);
+
+		action act;
+		act.account = N(eosio.trail);
 		act.name = name;
 		act.data = abi_ser.variant_to_binary(action_type_name, data, abi_serializer_max_time);
 
@@ -180,14 +186,23 @@ class eosio_trail_tester : public tester
 		return push_transaction( trx );
 	}
 
-	fc::variant get_voter(account_name voter) {
-		vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(voters), voter);
-		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("voter_id", data, abi_serializer_max_time);
+	action_result push_regvoter(account_name voter) {
+		return trail_push_action(N(eosio.trail), N(regvoter), mvo()("voter", voter));
 	}
 
-	fc::variant get_vote_receipt(account_name voter, uint64_t ballot_id) {
-		vector<char> data = get_row_by_account(N(eosio.trail), voter, N(votereceipts), ballot_id);
+	fc::variant get_voter(account_name voter, symbol_code scope) {
+		vector<char> data = get_row_by_account(N(eosio.trail), scope.value, N(balances), voter);
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("balance", data, abi_serializer_max_time);
+	}
+
+	fc::variant get_vote_receipt(account_name voter, uint64_t receipt_id) {
+		vector<char> data = get_row_by_account(N(eosio.trail), voter, N(votereceipts), receipt_id);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("vote_receipt", data, abi_serializer_max_time);
+	}
+
+	fc::variant get_leaderboard(account_name voter, uint64_t board_id) {
+		vector<char> data = get_row_by_account(N(eosio.trail), voter, N(leaderboards), board_id);
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("leaderboard", data, abi_serializer_max_time);
 	}
 
 	fc::variant get_ballot(uint64_t ballot_id) {
@@ -200,10 +215,10 @@ class eosio_trail_tester : public tester
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("proposal", data, abi_serializer_max_time);
 	}
 
-	fc::variant get_vote_levy(account_name acc)
+	fc::variant get_vote_counter_bal(account_name acc, symbol_code scope)
 	{
-		vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(votelevies), acc);
-		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("vote_levy", data, abi_serializer_max_time);
+		vector<char> data = get_row_by_account(N(eosio.trail), scope.value, N(counterbals), acc);
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("counter_balance", data, abi_serializer_max_time);
 	}
 
 	transaction_trace_ptr unregvoter(account_name voter) {
@@ -218,17 +233,21 @@ class eosio_trail_tester : public tester
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr mirrorstake(account_name voter, uint32_t lock_period) {
+	transaction_trace_ptr mirrorcast(account_name voter, symbol sym) {
 		signed_transaction trx;
-		trx.actions.emplace_back( get_action(N(eosio.trail), N(mirrorstake), vector<permission_level>{{voter, config::active_name}},
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(mirrorcast), vector<permission_level>{{voter, config::active_name}},
 			mvo()
 			("voter", voter)
-			("lock_period", lock_period)
+			("token_symbol", sym)
 			)
 		);
 		set_transaction_headers(trx);
 		trx.sign(get_private_key(voter, "active"), control->get_chain_id());
 		return push_transaction( trx );
+	}
+
+	action_result push_mirrorcast(account_name voter, symbol sym) {
+		return trail_push_action(N(eosio.trail), N(mirrorcast), mvo()("voter", voter)("token_symbol", sym));
 	}
 
 	transaction_trace_ptr castvote(account_name voter, uint32_t ballot_id, uint16_t direction) {

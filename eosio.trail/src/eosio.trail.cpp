@@ -366,32 +366,32 @@ void trail::unregvoter(name voter) {
 
 void trail::mirrorcast(name voter, symbol token_symbol) {
     require_auth(voter);
-    //eosio_assert(lock_period >= MIN_LOCK_PERIOD, "lock period must be greater than or equal to 1 day (86400 secs)");
-    //eosio_assert(lock_period <= MAX_LOCK_PERIOD, "lock period must be less than or equal to 3 months (7,776,000 secs)");
 
     asset max_votes = get_liquid_tlos(voter) + get_staked_tlos(voter);
+	auto new_votes = asset(max_votes.amount, symbol("VOTE", 4));
     eosio_assert(max_votes.symbol == symbol("TLOS", 4), "only TLOS can be used to get VOTEs"); //NOTE: redundant?
     eosio_assert(max_votes > asset(0, symbol("TLOS", 4)), "must get a positive amount of VOTEs"); //NOTE: redundant?
 
-    balances_table balances(_self, max_votes.symbol.code().raw());
+    balances_table balances(_self, new_votes.symbol.code().raw());
     auto b = balances.find(voter.value);
     eosio_assert(b != balances.end(), "voter is not registered"); //TODO: remove? or create wallet if doesn't exist
 
-    counterbalances_table counterbals(_self, max_votes.symbol.code().raw());
+    counterbalances_table counterbals(_self, new_votes.symbol.code().raw());
     auto cb = counterbals.find(voter.value);
-    
-    asset cb_weight = asset(0, max_votes.symbol);
+    //eosio_assert(cb != counterbals.end(), "this shouldnt happen"); //TODO: remove this line
+    //asset cb_weight = asset(0, max_votes.symbol);
     counter_balance counter_bal;
 
     auto bal = *b;
 
-    auto new_votes = asset(max_votes.amount, symbol("VOTE", 4));
-    asset decay_amount = apply_decay(voter, new_votes, DECAY_RATE);
+    asset decay_amount = get_decay_amount(voter, new_votes.symbol, DECAY_RATE);
     
     if (cb != counterbals.end()) { //NOTE: if no cb found, give cb of 0
         auto counter_bal = *cb;
         eosio_assert(now() - counter_bal.last_decay >= MIN_LOCK_PERIOD, "cannot get more votes until min lock period is over");
         asset new_cb = (counter_bal.decayable_cb - decay_amount); //subtracting total cb
+
+		//TODO: add new_votes to cb?
 
         if (new_cb < asset(0, symbol("VOTE", 4))) {
             new_cb = asset(0, symbol("VOTE", 4));
@@ -409,7 +409,7 @@ void trail::mirrorcast(name voter, symbol token_symbol) {
     }
 
     balances.modify(b, same_payer, [&]( auto& a ) { //NOTE: allows decayed counterbalances into circulation
-        a.tokens += new_votes;
+        a.tokens = new_votes;
     });
 
     print("\nMirrorCast: SUCCESS");
@@ -1045,6 +1045,7 @@ void trail::update_from_cb(name from, asset amount) {
         fromcbs.emplace(_self, [&]( auto& a ){ //TODO: change ram payer to user? may prevent TLOS transfers
             a.owner = from;
             a.decayable_cb = asset(0, symbol("VOTE", 4));
+			a.persistent_cb = asset(0, symbol("VOTE", 4));
             a.last_decay = env_struct.time_now;
         });
     } else {
@@ -1057,7 +1058,7 @@ void trail::update_from_cb(name from, asset amount) {
 
         fromcbs.modify(cb_itr, same_payer, [&]( auto& a ) {
             a.decayable_cb = new_cb;
-            a.last_decay = env_struct.time_now;
+            //a.last_decay = env_struct.time_now;
         });
     }
 }
@@ -1070,6 +1071,7 @@ void trail::update_to_cb(name to, asset amount) {
         tocbs.emplace(_self, [&]( auto& a ){ //TODO: change ram payer to user? may prevent TLOS transfers
             a.owner = to;
             a.decayable_cb = asset(amount.amount, symbol("VOTE", 4));
+			a.persistent_cb = asset(0, symbol("VOTE", 4));
             a.last_decay = env_struct.time_now;
         });
     } else {
@@ -1078,13 +1080,13 @@ void trail::update_to_cb(name to, asset amount) {
 
         tocbs.modify(cb_itr, same_payer, [&]( auto& a ) {
             a.decayable_cb = new_cb;
-            a.last_decay = env_struct.time_now;
+            //a.last_decay = env_struct.time_now;
         });
     }
 }
 
-asset trail::apply_decay(name voter, asset amount, uint32_t decay_rate) {
-    counterbalances_table counterbals(_self, amount.symbol.code().raw());
+asset trail::get_decay_amount(name voter, symbol token_symbol, uint32_t decay_rate) {
+    counterbalances_table counterbals(_self, token_symbol.code().raw());
     auto cb_itr = counterbals.find(voter.value);
 
     uint32_t time_delta;

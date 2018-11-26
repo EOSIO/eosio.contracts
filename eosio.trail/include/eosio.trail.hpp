@@ -178,7 +178,7 @@ public:
 
     void update_to_cb(name to, asset amount);
 
-    asset apply_decay(name voter, asset amount, uint32_t decay_rate);
+    asset get_decay_amount(name voter, symbol token_symbol, uint32_t decay_rate);
 
     #pragma endregion Reactions
 };

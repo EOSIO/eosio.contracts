@@ -27,18 +27,17 @@ BOOST_FIXTURE_TEST_CASE( reg_voters, eosio_trail_tester ) try {
 		std::cout << "regvoter for: " << test_voters[i].to_string() << std::endl;
 		regvoter(test_voters[i].value);
 		produce_blocks();
-		auto voter_info = get_voter(test_voters[i]);
+		auto voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
 		
 		REQUIRE_MATCHING_OBJECT(voter_info, mvo()
-			("voter", test_voters[i].to_string())
-			("votes", "0.0000 VOTE")
-			("release_time", "0")
+			("owner", test_voters[i].to_string())
+			("tokens", "0.0000 VOTE")
 		);
 
 		std::cout << "unregvoter for: " << test_voters[i].to_string() << std::endl;
 		unregvoter(test_voters[i].value);
 		produce_blocks();
-		voter_info = get_voter(test_voters[i]);
+		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
 		BOOST_REQUIRE_EQUAL(true, voter_info.is_null());
 	}
 } FC_LOG_AND_RETHROW()
@@ -49,40 +48,46 @@ BOOST_FIXTURE_TEST_CASE( vote_levies, eosio_trail_tester ) try {
 	produce_blocks( 2 );
 	//transfer 1
 	transfer(N(eosio), N(levytest1), asset::from_string("1000.0000 TLOS"), "Monopoly Money");
-
+	uint32_t initial_transfer_time = now();
 	//from levy 1
-	auto levy_info = get_vote_levy(N(eosio));
+	auto levy_info = get_vote_counter_bal(N(eosio), symbol(4, "VOTE").to_symbol_code());
 	REQUIRE_MATCHING_OBJECT(levy_info, mvo()
-			("voter", "eosio")
-			("levy_amount", "0.0000 VOTE")
-			("last_decay", now())
+			("owner", "eosio")
+			("decayable_cb", "0.0000 VOTE")
+			("persistent_cb", "0.0000 VOTE")
+			("last_decay", initial_transfer_time)
 		);
 
 	//to levy 1
-	levy_info = get_vote_levy(N(levytest1));
+	levy_info = get_vote_counter_bal(N(levytest1), symbol(4, "VOTE").to_symbol_code());
+	std::cout << "decayable_cb: " << levy_info["decayable_cb"].as_string() << std::endl;
+	std::cout << "persistent_cb: " << levy_info["persistent_cb"].as_string() << std::endl;
 	REQUIRE_MATCHING_OBJECT(levy_info, mvo()
-			("voter", "levytest1")
-			("levy_amount", "1000.0000 VOTE")
-			("last_decay", now())
+			("owner", "levytest1")
+			("decayable_cb", "1000.0000 VOTE")
+			("persistent_cb", "0.0000 VOTE")
+			("last_decay", initial_transfer_time)
 		);
 
 	//transfer 2
 	transfer(N(levytest1), N(levytest2), asset::from_string("200.0000 TLOS"), "Monopoly Money");
 
 	//from 2 
-	levy_info = get_vote_levy(N(levytest1));
+	levy_info = get_vote_counter_bal(N(levytest1), symbol(4, "VOTE").to_symbol_code());
 	REQUIRE_MATCHING_OBJECT(levy_info, mvo()
-			("voter", "levytest1")
-			("levy_amount", "800.0000 VOTE")
-			("last_decay", now())
+			("owner", "levytest1")
+			("decayable_cb", "800.0000 VOTE")
+			("persistent_cb", "0.0000 VOTE")
+			("last_decay", initial_transfer_time)
 		);
 
 	//to 2
-	levy_info = get_vote_levy(N(levytest2));
+	levy_info = get_vote_counter_bal(N(levytest2), symbol(4, "VOTE").to_symbol_code());
 	REQUIRE_MATCHING_OBJECT(levy_info, mvo()
-			("voter", "levytest2")
-			("levy_amount", "200.0000 VOTE")
-			("last_decay", now())
+			("owner", "levytest2")
+			("decayable_cb", "200.0000 VOTE")
+			("persistent_cb", "0.0000 VOTE")
+			("last_decay", initial_transfer_time)
 		);
 
 	produce_blocks( 2 );
@@ -90,18 +95,39 @@ BOOST_FIXTURE_TEST_CASE( vote_levies, eosio_trail_tester ) try {
 	transfer(N(levytest2), N(levytest1), asset::from_string("100.0000 TLOS"), "Monopoly Money");
 
 	//from 3 
-	levy_info = get_vote_levy(N(levytest2));
+	levy_info = get_vote_counter_bal(N(levytest2), symbol(4, "VOTE").to_symbol_code());
 	REQUIRE_MATCHING_OBJECT(levy_info, mvo()
-			("voter", "levytest2")
-			("levy_amount", "100.0000 VOTE")
-			("last_decay", now())
+			("owner", "levytest2")
+			("decayable_cb", "100.0000 VOTE")
+			("persistent_cb", "0.0000 VOTE")
+			("last_decay", initial_transfer_time)
 		);
 
 	//to 2
-	levy_info = get_vote_levy(N(levytest1));
+	levy_info = get_vote_counter_bal(N(levytest1), symbol(4, "VOTE").to_symbol_code());
 	REQUIRE_MATCHING_OBJECT(levy_info, mvo()
-			("voter", "levytest1")
-			("levy_amount", "900.0000 VOTE")
+			("owner", "levytest1")
+			("decayable_cb", "900.0000 VOTE")
+			("persistent_cb", "0.0000 VOTE")
+			("last_decay", initial_transfer_time)
+		);
+
+	create_accounts({N(levytest3)});
+	//transfer 3
+	transfer(N(levytest1), N(levytest3), asset::from_string("100.0000 TLOS"), "Monopoly Money");
+	levy_info = get_vote_counter_bal(N(levytest1), symbol(4, "VOTE").to_symbol_code());
+	REQUIRE_MATCHING_OBJECT(levy_info, mvo()
+			("owner", "levytest1")
+			("decayable_cb", "800.0000 VOTE")
+			("persistent_cb", "0.0000 VOTE")
+			("last_decay", initial_transfer_time)
+		);
+
+	levy_info = get_vote_counter_bal(N(levytest3), symbol(4, "VOTE").to_symbol_code());
+	REQUIRE_MATCHING_OBJECT(levy_info, mvo()
+			("owner", "levytest3")
+			("decayable_cb", "100.0000 VOTE")
+			("persistent_cb", "0.0000 VOTE")
 			("last_decay", now())
 		);
 } FC_LOG_AND_RETHROW()
@@ -110,7 +136,7 @@ BOOST_FIXTURE_TEST_CASE( vote_levies, eosio_trail_tester ) try {
 //TODO: check maximum lock period assertion msg
 //TODO: check for positive VOTE quantity assertion msg
 //TODO: check for non-registered voter assertion msg
-BOOST_FIXTURE_TEST_CASE( mirror_stake, eosio_trail_tester ) try {
+BOOST_FIXTURE_TEST_CASE( mirror_cast, eosio_trail_tester ) try {
 	fc::variant voter_info = mvo();
 	uint32_t future = 0;
 	for (int i = 0; i < test_voters.size(); i++) {
@@ -119,38 +145,45 @@ BOOST_FIXTURE_TEST_CASE( mirror_stake, eosio_trail_tester ) try {
 
 		// asset balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
 		// std::cout << "test_voter " << test_voters[i].to_string() << ": " << balance.get_amount() << std::endl;
-		mirrorstake(test_voters[i].value, 86401);
-		voter_info = get_voter(test_voters[i]);
-		future = now() + 86401;
+		mirrorcast(test_voters[i].value, symbol(4, "VOTE"));
+		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
 		REQUIRE_MATCHING_OBJECT(voter_info, mvo()
-			("voter", test_voters[i].to_string())
-			("votes", "200.0000 VOTE")
-			("release_time", future)
+			("owner", test_voters[i].to_string())
+			("tokens", "200.0000 VOTE")
 		);
 		produce_blocks( 2 );
 	}
 	//Transfer to a new account
+	std::cout << "creating votedecay..." << std::endl;
 	create_accounts({N(votedecay)});
-	transfer(N(voteraaaaaaa), N(votedecay), asset::from_string("100.0000 TLOS"), "Vote decay test");
-	auto levy_info = get_vote_levy(N(votedecay));
+	std::cout << "transfering to votedecay account" << std::endl;
+	transfer(N(eosio), N(votedecay), asset::from_string("1000.0000 TLOS"), "Vote decay test");
+	auto levy_info = get_vote_counter_bal(N(votedecay), symbol(4, "VOTE").to_symbol_code());
 	REQUIRE_MATCHING_OBJECT(levy_info, mvo()
-			("voter", "votedecay")
-			("levy_amount", "100.0000 VOTE")
+			("owner", "votedecay")
+			("decayable_cb", "1000.0000 VOTE")
+			("persistent_cb", "0.0000 VOTE")
 			("last_decay", now())
 		);
-	produce_blocks( 1200 );
+	std::cout << "counter balance object exists after initial transfer" << std::endl;
+	produce_blocks( 172800 );
 	// regvoter and mirrorstake new account
+	std::cout << "regvoter for votedecay" << std::endl;
 	regvoter(N(votedecay));
-	mirrorstake(N(votedecay), 86401);
+	std::cout << "mirrorcast for voter" << std::endl;
+	mirrorcast(N(votedecay), symbol(4, "VOTE"));
 
 	//1200 blocks = 5.0000 VOTE or 240 blocks / 1.0000 VOTE
-	string levy_amount_after_decay = "95.0000 VOTE";
+	string levy_amount_after_decay = "280.0000 VOTE";
 
-	levy_info = get_vote_levy(N(votedecay));
+	levy_info = get_vote_counter_bal(N(votedecay), symbol(4, "VOTE").to_symbol_code());
+	std::cout << "now(): " << now() << std::endl;
+	std::cout << "counter_balance.last_decay: " << levy_info["last_decay"].as_uint64() << std::endl;
 	REQUIRE_MATCHING_OBJECT(levy_info, mvo()
-			("voter", "votedecay")
-			("levy_amount", levy_amount_after_decay)
-			("last_decay", now() - 600) //600 is the NUMBER OF BLOCKS PRODUCED in seconds AFTER TRANFER
+			("owner", "votedecay")
+			("decayable_cb", levy_amount_after_decay)
+			("persistent_cb", "0.0000 VOTE")
+			("last_decay", now() - 86400) //600 is the NUMBER OF BLOCKS PRODUCED in seconds AFTER TRANFER
 		);
 } FC_LOG_AND_RETHROW()
 
@@ -187,6 +220,7 @@ BOOST_FIXTURE_TEST_CASE( reg_proposal_ballot, eosio_trail_tester ) try {
 		("unique_voters", uint32_t(0))
 		("begin_time", begin_time)
 		("end_time", end_time)
+		("cycle_count", 0)
 		("status", uint8_t(0))
 	);
 	produce_blocks( 2 );
@@ -228,6 +262,7 @@ BOOST_FIXTURE_TEST_CASE( reg_proposal_ballot, eosio_trail_tester ) try {
 		("unique_voters", uint32_t(0))
 		("begin_time", begin_time)
 		("end_time", end_time)
+		("cycle_count", 0)
 		("status", uint8_t(0))
 	);
 
@@ -250,6 +285,7 @@ BOOST_FIXTURE_TEST_CASE( reg_proposal_ballot, eosio_trail_tester ) try {
 		("unique_voters", uint32_t(0))
 		("begin_time", begin_time)
 		("end_time", end_time)
+		("cycle_count", 0)
 		("status", uint8_t(1))
 	);
 
@@ -260,12 +296,6 @@ BOOST_FIXTURE_TEST_CASE( reg_proposal_ballot, eosio_trail_tester ) try {
    	);
 
 } FC_LOG_AND_RETHROW()
-
-
-//TODO: case for reg and unreg token
-// BOOST_FIXTURE_TEST_CASE( reg_token, eosio_trail_tester ) try {
-	
-// } FC_LOG_AND_RETHROW()
 
 //TODO: full flow test
 BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
@@ -298,6 +328,7 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 		("unique_voters", uint32_t(0))
 		("begin_time", begin_time)
 		("end_time", end_time)
+		("cycle_count", 0)
 		("status", uint8_t(0))
 	);
 	
@@ -313,18 +344,17 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 	asset voter_total = asset::from_string("0.0000 VOTE");
 	for (int i = 0; i < test_voters.size(); i++) {
 		regvoter(test_voters[i].value);
-		voter_info = get_voter(test_voters[i]);
+		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
 		REQUIRE_MATCHING_OBJECT(voter_info, mvo()
-			("voter", test_voters[i].to_string())
-			("votes", "0.0000 VOTE")
-			("release_time", "0")
+			("owner", test_voters[i].to_string())
+			("tokens", "0.0000 VOTE")
 		);
 		
 		//TODO: mirror stake and check
-		mirrorstake(test_voters[i].value, 86401);
-		voter_info = get_voter(test_voters[i]);
+		mirrorcast(test_voters[i].value, symbol(4, "VOTE"));
+		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
 		currency_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
-		voter_total = asset::from_string(voter_info["votes"].as_string());
+		voter_total = asset::from_string(voter_info["tokens"].as_string());
 		BOOST_REQUIRE_EQUAL(currency_balance.get_amount(), voter_total.get_amount());
 
 		uint16_t direction = std::rand() % 3;
@@ -345,10 +375,10 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 		produce_blocks();
 
 		vote_receipt_info = get_vote_receipt(test_voters[i].value, current_ballot_id);
- 		
+ 		std::cout << "direction: " << vote_receipt_info["directions"].get_array()[0] << std::endl;
 		REQUIRE_MATCHING_OBJECT(vote_receipt_info, mvo()
 			("ballot_id", current_ballot_id)
-			("direction", direction)
+			("directions", vector<uint16_t> {direction})
 			("weight", voter_total.to_string())
 			("expiration", end_time)
 		);
@@ -371,6 +401,7 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 		("unique_voters", unique_voters)
 		("begin_time", begin_time)
 		("end_time", end_time)
+		("cycle_count", 0)
 		("status", uint8_t(0))
 	);
 	
@@ -397,8 +428,8 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 		uint16_t direction = std::rand() % 3;
 		std::cout << "random direction for vote: " << direction << std::endl;
 		castvote(test_voters[i].value, current_ballot_id, direction);
-		voter_info = get_voter(test_voters[i]);
-		voter_total = asset::from_string(voter_info["votes"].as_string());
+		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
+		voter_total = asset::from_string(voter_info["tokens"].as_string());
 		switch(direction) {
 			case 0:
 				no_count = no_count + voter_total;
@@ -414,7 +445,7 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 		vote_receipt_info = get_vote_receipt(test_voters[i].value, current_ballot_id);
 		REQUIRE_MATCHING_OBJECT(vote_receipt_info, mvo()
 			("ballot_id", current_ballot_id)
-			("direction", direction)
+			("directions", vector<uint16_t> { direction })
 			("weight", voter_total.to_string())
 			("expiration", end_time)
 		);
@@ -438,6 +469,7 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 		("unique_voters", unique_voters)
 		("begin_time", begin_time)
 		("end_time", end_time)
+		("cycle_count", 1)
 		("status", 1)
 	);
 } FC_LOG_AND_RETHROW()
