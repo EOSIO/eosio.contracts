@@ -17,27 +17,41 @@ using namespace eosio;
 
 #pragma region Structs
 
+//NOTE: vote receipts MUST be scoped by voter
 struct [[eosio::table, eosio::contract("eosio.trail")]] vote_receipt {
     uint64_t ballot_id;
     vector<uint16_t> directions;
     asset weight;
     uint32_t expiration;
 
-    //TODO: make vector of weights? would map to direction by i
+    //TODO: make vector of weights? directions[i] => weights[i]
 
     uint64_t primary_key() const { return ballot_id; }
     EOSLIB_SERIALIZE(vote_receipt, (ballot_id)(directions)(weight)(expiration))
 };
 
+//NOTE: proxy receipts are scoped by voter (proxy)
+// struct [[eosio::table, eosio::contract("eosio.trail")]] proxy_receipt {
+//     uint64_t ballot_id;
+//     vector<uint16_t> directions;
+//     asset weight;
+//     uint64_t primary_key() const { return ballot_id; }
+//     EOSLIB_SERIALIZE(proxy_receipt, (ballot_id)(directions)(weight))
+// };
+
+//NOTE: vote levies are scoped by trail
+//TODO: scope levies by symbol.code().raw() for transfer system
 struct [[eosio::table, eosio::contract("eosio.trail")]] vote_levy {
     name voter;
-    asset levy_amount;
+    asset persistent_levy;
+    asset decayable_levy;
     uint32_t last_decay;
 
     uint64_t primary_key() const { return voter.value; }
-    EOSLIB_SERIALIZE(vote_levy, (voter)(levy_amount)(last_decay))
+    EOSLIB_SERIALIZE(vote_levy, (voter)(persistent_levy)(decayable_levy)(last_decay))
 };
 
+//NOTE: voter ids are scoped by name("eosio.trail").value
 struct [[eosio::table, eosio::contract("eosio.trail")]] voter_id {
     name voter;
     asset votes;
@@ -47,6 +61,18 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] voter_id {
     EOSLIB_SERIALIZE(voter_id, (voter)(votes)(release_time))
 };
 
+//TODO: should proxies also be registered voters? does it matter?
+//TODO: scope by proxied token symbol? or proxy name?
+// struct [[eosio::table, eosio::contract("eosio.trail")]] proxy_id {
+//     name proxy;
+//     asset proxied_votes;
+//     string info_url;
+//     uint32_t num_constituants;
+//     uint64_t primary_key() const { return proxy.value; }
+//     EOSLIB_SERIALIZE(proxy_id, (proxy)(proxied_votes)(info_url)(num_constituants))
+// };
+
+//NOTE: ballots MUST be scoped by name("eosio.trail").value
 struct [[eosio::table, eosio::contract("eosio.trail")]] ballot {
     uint64_t ballot_id;
     uint8_t table_id;
@@ -56,6 +82,7 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] ballot {
     EOSLIB_SERIALIZE(ballot, (ballot_id)(table_id)(reference_id))
 };
 
+//NOTE: proposals MUST be scoped by name("eosio.trail").value
 struct [[eosio::table, eosio::contract("eosio.trail")]] proposal {
     uint64_t prop_id;
     name publisher;
@@ -84,6 +111,7 @@ struct candidate {
     uint8_t status;
 };
 
+//NOTE: elections MUST be scoped by name("eosio.trail").value
 struct [[eosio::table, eosio::contract("eosio.trail")]] election {
     uint64_t election_id;
     name publisher;
@@ -102,6 +130,7 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] election {
         (begin_time)(end_time))
 };
 
+//NOTE: elections MUST be scoped by name("eosio.trail").value
 struct [[eosio::table, eosio::contract("eosio.trail")]] leaderboard {
     uint64_t board_id;
     name publisher;
@@ -122,7 +151,6 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] leaderboard {
         (begin_time)(end_time)(status))
 };
 
-
 /**
  * NOTE: totals vector mappings:
  *     totals[0] => total tokens
@@ -130,6 +158,7 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] leaderboard {
  *     totals[2] => total proposals
  *     totals[3] => total elections
  *     totals[4] => total leaderboards
+ *     totals[5] => total proxies
  */
 struct [[eosio::table, eosio::contract("eosio.trail")]] env {
     name publisher;
@@ -146,9 +175,12 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] env {
 
 #pragma endregion Structs
 
+
 #pragma region Tables
 
 typedef multi_index<name("voters"), voter_id> voters_table;
+
+//typedef multi_index<name("proxies"), proxy_id> proxies_table;
 
 typedef multi_index<name("ballots"), ballot> ballots_table;
 
@@ -160,11 +192,14 @@ typedef multi_index<name("ballots"), ballot> ballots_table;
 
 typedef multi_index<name("votereceipts"), vote_receipt> votereceipts_table;
 
+//typedef multi_index<name("proxreceipts"), proxy_receipt> proxyreceipts_table;
+
 typedef multi_index<name("votelevies"), vote_levy> votelevies_table;
 
 typedef singleton<name("environment"), env> environment_singleton;
 
 #pragma endregion Tables
+
 
 #pragma region Helper_Functions
 

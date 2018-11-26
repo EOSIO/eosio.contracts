@@ -1,5 +1,8 @@
 /**
- * 
+ * Trail is an EOSIO-based voting service that allows users to create ballots that
+ * are voted on by the network of registered voters. It also offers custom token
+ * features that let any user to create their own token and configure token settings 
+ * to match a wide variety of intended use cases. 
  * 
  * @author Craig Branscom
  */
@@ -74,11 +77,41 @@ public:
     #pragma endregion Token_Actions
 
 
-    #pragma region Ballot_Registration
+    #pragma region Voter_Registration
 
     [[eosio::action]] void regvoter(name voter);
 
     [[eosio::action]] void unregvoter(name voter);
+
+    #pragma endregion Voter_Registration
+
+
+    #pragma region Voting_Actions
+
+    [[eosio::action]] void mirrorstake(name voter, uint32_t lock_period);
+
+    [[eosio::action]] void castvote(name voter, uint64_t ballot_id, uint16_t direction);
+
+    [[eosio::action]] void deloldvotes(name voter, uint16_t num_to_delete);
+
+    #pragma endregion Voting_Actions
+
+
+    #pragma region Proxy_Registration
+
+    //[[eosio::action]] void regproxy(name proxy, symbol voting_token);
+
+    #pragma endregion Proxy_Registration
+
+
+    #pragma region Proxy_Actions
+
+
+
+    #pragma endregion Proxy_Actions
+
+
+    #pragma region Ballot_Registration
 
     [[eosio::action]] void regballot(name publisher, uint8_t ballot_type, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
 
@@ -98,18 +131,6 @@ public:
     [[eosio::action]] void closeballot(name publisher, uint64_t ballot_id, uint8_t pass);
 
     #pragma endregion Ballot_Actions
-
-
-
-    #pragma region Voting_Actions
-
-    [[eosio::action]] void mirrorstake(name voter, uint32_t lock_period);
-
-    [[eosio::action]] void castvote(name voter, uint64_t ballot_id, uint16_t direction);
-
-    [[eosio::action]] void deloldvotes(name voter, uint16_t num_to_delete);
-
-    #pragma endregion Voting_Actions
 
 
     #pragma region Helper_Functions
