@@ -2,13 +2,62 @@
 #include <eosiolib/crypto.h>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/privileged.hpp>
+#include <eosiolib/action.hpp>
 #include <eosio.system/native.hpp>
 
 namespace eosio {
 
-   class [[eosio::contract("eosio.bios")]] bios : public eosiosystem::native {
+   class [[eosio::contract("eosio.bios")]] bios : public contract {
       public:
-         using native::native;
+         using contract::contract;
+         /**
+          *  Called after a new account is created. This code enforces resource-limits rules
+          *  for new accounts as well as new account naming conventions.
+          *
+          *  1. accounts cannot contain '.' symbols which forces all acccounts to be 12
+          *  characters long without '.' until a future account auction process is implemented
+          *  which prevents name squatting.
+          *
+          *  2. new accounts must stake a minimal number of tokens (as set in system parameters)
+          *     therefore, this method will execute an inline buyram from receiver for newacnt in
+          *     an amount equal to the current new account creation fee.
+          */
+         [[eosio::action]]
+         void newaccount( name             creator,
+                          name             name,
+                          ignore<eosiosystem::authority> owner,
+                          ignore<eosiosystem::authority> active){}
+
+
+         [[eosio::action]]
+         void updateauth(  ignore<name>  account,
+                           ignore<name>  permission,
+                           ignore<name>  parent,
+                           ignore<eosiosystem::authority> auth ) {}
+
+         [[eosio::action]]
+         void deleteauth( ignore<name>  account,
+                          ignore<name>  permission ) {}
+
+         [[eosio::action]]
+         void linkauth(  ignore<name>    account,
+                         ignore<name>    code,
+                         ignore<name>    type,
+                         ignore<name>    requirement  ) {}
+
+         [[eosio::action]]
+         void unlinkauth( ignore<name>  account,
+                          ignore<name>  code,
+                          ignore<name>  type ) {}
+
+         [[eosio::action]]
+         void canceldelay( ignore<permission_level> canceling_auth, ignore<capi_checksum256> trx_id ) {}
+
+         [[eosio::action]]
+         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {}
+
+         [[eosio::action]]
+         void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
 
          [[eosio::action]]
          void setpriv( name account, uint8_t is_priv ) {
