@@ -2,12 +2,13 @@
 #include <eosiolib/crypto.h>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/privileged.hpp>
+#include <eosio.system/native.hpp>
 
 namespace eosio {
 
-   class [[eosio::contract("eosio.bios")]] bios : public contract {
+   class [[eosio::contract("eosio.bios")]] bios : public eosiosystem::native {
       public:
-         using contract::contract;
+         using native::native;
 
          [[eosio::action]]
          void setpriv( name account, uint8_t is_priv ) {
