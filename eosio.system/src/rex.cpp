@@ -257,35 +257,30 @@ namespace eosiosystem {
       
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       
-      /// check for any outstanding cpu loans
+      /// check for any outstanding loans or rex fund
       {
          rex_cpu_loan_table cpu_loans( _self, _self.value );
          auto cpu_idx = cpu_loans.get_index<"byowner"_n>();
-         eosio_assert( cpu_idx.find( owner.value ) == cpu_idx.end(), "account has outstanding CPU loan" );
-      }
-      
-      /// check for any outstanding net loans
-      {
+         bool no_outstanding_cpu_loans = ( cpu_idx.find( owner.value ) == cpu_idx.end() );
+
          rex_net_loan_table net_loans( _self, _self.value );
          auto net_idx = net_loans.get_index<"byowner"_n>();
-         eosio_assert( net_idx.find( owner.value ) == net_idx.end(), "account has outstanding NET loan" );
+         bool no_outstanding_net_loans = ( net_idx.find( owner.value ) == net_idx.end() );
+
+         auto fund_itr = _rexfunds.find( owner.value );
+         bool no_outstanding_rex_fund = ( fund_itr != _rexfunds.end() ) && ( fund_itr->balance.amount == 0 );
+         
+         if ( no_outstanding_cpu_loans && no_outstanding_net_loans && no_outstanding_rex_fund ) {
+            _rexfunds.erase( fund_itr );
+         }
       }
 
       /// check for remaining rex balance
       {
          auto rex_itr = _rexbalance.find( owner.value );
          if ( rex_itr != _rexbalance.end() ) {
-            eosio_assert( rex_itr->rex_balance.amount == 0, "account has remaining REX, must sell first");
+            eosio_assert( rex_itr->rex_balance.amount == 0, "account has remaining REX balance, must sell first");
             _rexbalance.erase( rex_itr );
-         }
-      }
-
-      /// check for remaining rex fund balance
-      {
-         auto fund_itr =_rexfunds.find( owner.value );
-         if ( fund_itr != _rexfunds.end() ) {
-            eosio_assert( fund_itr->balance.amount == 0, "account has remaining funds, must withdraw first");
-            _rexfunds.erase( fund_itr );
          }
       }
    }
