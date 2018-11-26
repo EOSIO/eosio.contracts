@@ -39,27 +39,15 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] vote_receipt {
 //     EOSLIB_SERIALIZE(proxy_receipt, (ballot_id)(directions)(weight))
 // };
 
-//NOTE: vote levies are scoped by trail
-//TODO: scope levies by symbol.code().raw() for transfer system
-struct [[eosio::table, eosio::contract("eosio.trail")]] vote_levy {
-    name voter;
-    asset persistent_levy;
-    asset decayable_levy;
-    uint32_t last_decay;
-
-    uint64_t primary_key() const { return voter.value; }
-    EOSLIB_SERIALIZE(vote_levy, (voter)(persistent_levy)(decayable_levy)(last_decay))
-};
-
+//TODO: roll into balance
 //NOTE: voter ids are scoped by name("eosio.trail").value
-struct [[eosio::table, eosio::contract("eosio.trail")]] voter_id {
-    name voter;
-    asset votes;
-    uint32_t release_time;
-
-    uint64_t primary_key() const { return voter.value; }
-    EOSLIB_SERIALIZE(voter_id, (voter)(votes)(release_time))
-};
+// struct [[eosio::table, eosio::contract("eosio.trail")]] voter_id {
+//     name voter;
+//     asset votes;
+//     uint32_t release_time;
+//     uint64_t primary_key() const { return voter.value; }
+//     EOSLIB_SERIALIZE(voter_id, (voter)(votes)(release_time))
+// };
 
 //TODO: should proxies also be registered voters? does it matter?
 //TODO: scope by proxied token symbol? or proxy name?
@@ -71,6 +59,13 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] voter_id {
 //     uint64_t primary_key() const { return proxy.value; }
 //     EOSLIB_SERIALIZE(proxy_id, (proxy)(proxied_votes)(info_url)(num_constituants))
 // };
+
+struct candidate {
+    name member;
+    string info_link;
+    asset votes;
+    uint8_t status;
+};
 
 //NOTE: ballots MUST be scoped by name("eosio.trail").value
 struct [[eosio::table, eosio::contract("eosio.trail")]] ballot {
@@ -102,13 +97,6 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] proposal {
     EOSLIB_SERIALIZE(proposal, (prop_id)(publisher)(info_url)
         (no_count)(yes_count)(abstain_count)(unique_voters)
         (begin_time)(end_time)(cycle_count)(status))
-};
-
-struct candidate {
-    name member;
-    string info_link;
-    asset votes;
-    uint8_t status;
 };
 
 //NOTE: elections MUST be scoped by name("eosio.trail").value
@@ -166,9 +154,6 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] env {
     uint32_t time_now;
     uint64_t last_ballot_id;
 
-    //TODO: update properly or remove/refactor entirely
-    //asset core_vote_supply;
-
     uint64_t primary_key() const { return publisher.value; }
     EOSLIB_SERIALIZE(env, (publisher)(totals)(time_now)(last_ballot_id))
 };
@@ -178,7 +163,7 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] env {
 
 #pragma region Tables
 
-typedef multi_index<name("voters"), voter_id> voters_table;
+//typedef multi_index<name("voters"), voter_id> voters_table;
 
 //typedef multi_index<name("proxies"), proxy_id> proxies_table;
 
@@ -194,7 +179,7 @@ typedef multi_index<name("votereceipts"), vote_receipt> votereceipts_table;
 
 //typedef multi_index<name("proxreceipts"), proxy_receipt> proxyreceipts_table;
 
-typedef multi_index<name("votelevies"), vote_levy> votelevies_table;
+//typedef multi_index<name("votelevies"), vote_levy> votelevies_table;
 
 typedef singleton<name("environment"), env> environment_singleton;
 
@@ -202,17 +187,6 @@ typedef singleton<name("environment"), env> environment_singleton;
 
 
 #pragma region Helper_Functions
-
-bool is_voter(name voter) {
-    voters_table voters(name("eosio.trail"), name("eosio.trail").value);
-    auto v = voters.find(voter.value);
-
-    if (v != voters.end()) {
-        return true;
-    }
-
-    return false;
-}
 
 bool is_ballot(uint64_t ballot_id) {
     ballots_table ballots(name("eosio.trail"), name("eosio.trail").value);

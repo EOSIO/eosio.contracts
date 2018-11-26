@@ -36,7 +36,7 @@ public:
 
     uint32_t const MIN_LOCK_PERIOD = 86400; //86,400 seconds is ~1 day
 
-    uint32_t const MAX_LOCK_PERIOD = 7776000; //7,776,000 seconds is ~3 months
+    //uint32_t const MAX_LOCK_PERIOD = 7776000; //7,776,000 seconds is ~3 months
 
     uint32_t const DECAY_RATE = 120; //number of seconds to decay by 1 VOTE
 
@@ -88,7 +88,8 @@ public:
 
     #pragma region Voting_Actions
 
-    [[eosio::action]] void mirrorstake(name voter, uint32_t lock_period);
+    //NOTE: casts TLOS into VOTE tokens and subtract counterbalance
+    [[eosio::action]] void mirrorcast(name voter, symbol token_symbol);
 
     [[eosio::action]] void castvote(name voter, uint64_t ballot_id, uint16_t direction);
 
@@ -173,11 +174,11 @@ public:
 
     //Reactions are regular functions called only as a trigger from the dispatcher.
 
-    void update_from_levy(name from, asset amount);
+    void update_from_cb(name from, asset amount);
 
-    void update_to_levy(name to, asset amount);
+    void update_to_cb(name to, asset amount);
 
-    asset calc_decay(name voter, asset amount);
+    asset apply_decay(name voter, asset amount, uint32_t decay_rate);
 
     #pragma endregion Reactions
 };

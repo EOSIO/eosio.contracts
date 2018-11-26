@@ -2,9 +2,9 @@
 
 Trail offers a comprehensive suite of blockchain-based voting services available to any prospective voter or contract developer.
 
-Developers can easily interface with Trail by including the `trail.voting.hpp` plugin in their contracts. The following sections outline how users and developers can leverage Trail's voting systems to run nearly any type of election or ballot, while being confident in the accuracy and transparency of every vote cast. 
+Developers can easily interface with Trail by including the `trail.voting.hpp` plugin in their contracts. The following sections outline how users and developers can leverage Trail's voting systems to run various types of ballots while still being confident in the accuracy and transparency of every vote cast. Trail users can also create and issue their own tokens and integrate them directly into the voting system, allowing for ballots to be voted on by a contractually managed token economy.
 
-Additionally, Trail was developed to withstand every known method of fraudulent voting (and even some new ones that only happen on the blockchain). Trail has a 3-tiered approach to combating voter fraud, which is explained in further detail farther down this document.
+Additionally, Trail was developed to resistance fraudulent voting in mind and offers a suite of features that can be used to ensure the integrity of every ballot. Trail has a 3-tiered approach to combating voter fraud, which is explained in detail later in this guide.
 
 ## Ballot Lifecycle
 
@@ -20,7 +20,7 @@ Trail ballots and elections are also stored indefinitely, allowing lookup throug
 
 ### 1. Setting Up Your Contract (Optional)
 
-While setting up an external contract is not required to utilize Trail's services, it is required if developers want to **contractually** act on ballot results. If you aren't interested in having a separate contract and just want to run a ballot, then proceed to number 2.
+While setting up an external contract is not required to utilize Trail's services, it is required if developers want to **contractually** act on ballot results. If you aren't interested in having a separate contract and just want to run a ballot, then proceed to step 2.
 
 For our contract example, we will be making a simple document updater where updates are voted on by the community. The basic interface looks like this:
 
@@ -54,9 +54,9 @@ Ballot regisration allows any user or developer to create a public ballot that c
 
     * `0 = Proposal` : Users vote on a proposal by casting votes in either the YES, NO, or ABSTAIN direction.
 
-    * `1 = Election` : Users vote on a single candidate from a set of candidates.
+    * `1 = Election` : Users vote on a single candidate from a set of candidates. IN DEVELOPMENT...
 
-    * `2 = Leaderboard` : Users vote to rank candidates in descending order based on total votes. IN DEVELOPMENT...
+    * `2 = Leaderboard` : Users vote to rank candidates in descending order based on total votes.
 
     * `3 = IN DEVELOPMENT ` : IN DEVELOPMENT...
 
@@ -68,7 +68,7 @@ Ballot regisration allows any user or developer to create a public ballot that c
 
 * `unregballot(name publisher, uint64_t ballot_id)`
 
-    The unregballot action removes a ballot from the blockchain. This action can only be performed before a ballot opens for voting. Ballots cannot be unregistered after voting has begun.
+    The unregballot action deletes a ballot from the blockchain. This action can only be performed before a ballot opens for voting. Ballots cannot be unregistered after voting has begun.
 
     `publisher` is the account that published the ballot. Only this account can unregister the ballot.
 
@@ -88,13 +88,35 @@ After ballot setup is complete, the only thing left to do is wait for the ballot
 
     `new_begin_time` and `new_end_time` are the new beginning and end times of the new cycle. The time format is the same as registering the ballot initially.
 
+* `addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link)`
+
+    The addcandidate action creates a new candidate for an election or leaderboard with the supplied information. Candidates can only be added before voting begins.
+
+    `publisher` is the publisher of the ballot. Currently, only the ballot publisher can add new candidates to a ballot.
+
+    `ballot_id` is the ballot ID of the election or leaderboard receiving the candidate.
+
+    `new_candidate` is the account of the new candidate.
+
+    `info_link` is a url to the candidate's information or campaign page.
+
+* `setseats(name publisher, uint64_t ballot_id, uint8_t num_seats)`
+
+    The setseats action sets the number of available seats open on a leaderboard.
+
+    `publisher` is the publisher of the ballot.
+
+    `ballot_id` is the ID of the ballot to set the new seats.
+
+    `num_seats` is the number of seats to set.
+
 ### 4. Closing A Ballot
 
 After a ballot has reached it's end time, it will automatically stop accepting votes. The final tally can be seen by querying the `ballots` table with the relevent ballot ID.
 
-* `closevote(name publisher, uint64_t ballot_id, uint8_t pass)`
+* `closeballot(name publisher, uint64_t ballot_id, uint8_t pass)`
 
-    The closevote action is how ballot publishers close out a ballot and render a decision based on the results.
+    The closeballot action is how publishers close out a ballot and render a decision based on the results.
 
     `publisher` is the publisher of the ballot. Only this account can close the ballot.
 
@@ -104,7 +126,7 @@ After a ballot has reached it's end time, it will automatically stop accepting v
 
 ## Voter Registration and Participation
 
-All users on the Telos Blockchain Network can register their accounts and receive a VoterID card that's valid for any Ballot or Election running on Trail.
+All users on the Telos Blockchain Network can register their accounts and receive a VoterID card that's valid for any ballot that counts its votes by Trail's core VOTE token.
 
 ### Registration
 

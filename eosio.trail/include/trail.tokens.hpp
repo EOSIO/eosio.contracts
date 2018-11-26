@@ -19,18 +19,17 @@ using namespace eosio;
 
 //TODO: fold into a vector?
 struct token_settings {
+    bool is_destructible = false;
+    bool is_proxyable = false; //NOTE: allows proxy system //TODO: implement
     bool is_burnable = false; //NOTE: can only burn from own balance
-    bool is_max_raisable = false;
-    bool is_max_lowerable = false;
-    bool is_destructible = true;
-    bool is_proxyable = false; //NOTE: adds proxy system //TODO: implement
-    bool is_transferable = false; //NOTE: adds levy system and levy decay //TODO: implement
     bool is_seizable = false; //TODO: implement
-    bool is_recastable = false; //TODO: implement
+    bool is_max_mutable = false;
+    bool is_transferable = false; //NOTE: allows counerbalances and cb decay //TODO: implement
+    bool is_recastable = false;
     bool is_initialized = false;
-    bool is_mutable_after_initialized = true;
 
-    uint32_t levy_decay_rate = 600; //seconds to decay by 1 whole token
+    uint32_t counterbal_decay_rate = 300; //seconds to decay by 1 whole token
+    bool lock_after_initialize = true;
 };
 
 //NOTE: registries MUST be scoped by name("eosio.trail").value
@@ -60,7 +59,6 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] balance {
 // struct [[eosio::table, eosio::contract("eosio.trail")]] proxy_balance {
 //     asset proxied_tokens;
 //     name proxy;
-
 //     uint64_t primary_key() const { return proxied_tokens.symbol.code().raw(); }
 //     EOSLIB_SERIALIZE(proxy_balance, (proxied_tokens)(proxy))
 // };
@@ -74,12 +72,26 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] airgrab {
     EOSLIB_SERIALIZE(airgrab, (recipient)(tokens))
 };
 
+//NOTE: counterbalances are scoped by trail
+//TODO: scope cbs by symbol.code().raw() for transfer system
+struct [[eosio::table, eosio::contract("eosio.trail")]] counter_balance {
+    name owner;
+    asset decayable_cb;
+    asset persistent_cb;
+    uint32_t last_decay;
+
+    uint64_t primary_key() const { return owner.value; }
+    EOSLIB_SERIALIZE(counter_balance, (owner)(persistent_cb)(decayable_cb)(last_decay))
+};
+
 #pragma endregion Structs
 
 
 #pragma region Tables
 
 typedef multi_index<name("balances"), balance> balances_table;
+
+typedef multi_index<name("counterbals"), counter_balance> counterbalances_table;
 
 //typedef multi_index<name("proxybals"), proxy_balance> proxy_balances_table;
 
@@ -92,27 +104,26 @@ typedef multi_index<name("registries"), registry> registries_table;
 
 #pragma region Helper_Functions
 
-bool is_registered_token(symbol token_symbol) {
-    registries_table registries(name("eosio.trail"), name("eosio.trail").value);
-    auto itr = registries.find(token_symbol.raw());
+// bool is_registered_token(symbol token_symbol) {
+//     registries_table registries(name("eosio.trail"), name("eosio.trail").value);
+//     auto itr = registries.find(token_symbol.raw());
+//     if (itr != registries.end()) {
+//         return true;
+//     }
+//     return false;
+// }
 
-    if (itr != registries.end()) {
-        return true;
-    }
+// symbol get_voting_symbol(uint64_t reference_id, uint8_t table_id) {
+// }
 
-    return false;
-}
-
-asset get_token_balance(name owner, symbol token_symbol) {
-    balances_table balances(name("eosio.trail"), token_symbol.raw());
-    auto itr = balances.find(owner.value);
-
-    if (itr != balances.end()) {
-        auto bal = *itr;
-        return bal.tokens;
-    }
-
-    return asset(0, token_symbol);
-}
+// asset get_token_balance(name owner, symbol token_symbol) {
+//     balances_table balances(name("eosio.trail"), token_symbol.raw());
+//     auto itr = balances.find(owner.value);
+//     if (itr != balances.end()) {
+//         auto bal = *itr;
+//         return bal.tokens;
+//     }
+//     return asset(0, token_symbol);
+// }
 
 #pragma endregion Helper_Functions
