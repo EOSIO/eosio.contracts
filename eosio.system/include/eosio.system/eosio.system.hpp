@@ -327,18 +327,25 @@ namespace eosiosystem {
          void deposit( const name& owner, const asset& amount );
          
          /**
-          * Withdraws core tokens from user REX fund. Inline token transfer to user balance is executed.
+          * Withdraws core tokens from user REX fund. Inline token transfer to user balance is
+          * executed.
           */
          [[eosio::action]]
          void withdraw( const name& owner, const asset& amount );
 
          /**
           * Transfers core tokens from user REX fund and converts them to REX stake.
+          * A voting requirement must be satisfied before action can be executed.
           * User votes are updated following this action.
           */
          [[eosio::action]]
          void buyrex( const name& from, const asset& amount );
 
+         /**
+          * Use staked core tokens to buy REX.
+          * A voting requirement must be satisfied before action can be executed.
+          * User votes are updated following this action.
+          */
          [[eosio::action]]
          void unstaketorex( const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu );
 
@@ -402,14 +409,15 @@ namespace eosiosystem {
          void rexexec( const name& user, uint16_t max );
 
          /**
-          * 
+          * Consolidate REX maturity buckets into one that can be sold only 4 days
+          * from the end of today.
           */
          [[eosio::action]]
          void consolidate( const name& owner );
 
          /**
-          * Deletes owner records from REX tables and frees used RAM. Owner must have no outstanding loans,
-          * REX balance, or remaining REX fund balance.
+          * Deletes owner records from REX tables and frees used RAM.
+          * Owner must not have an outstanding REX balance.
           */
          [[eosio::action]]
          void closerex( const name& owner );
