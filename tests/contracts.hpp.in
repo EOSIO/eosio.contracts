@@ -26,9 +26,9 @@ struct contracts {
    static std::vector<uint8_t> trail_service_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.trail/eosio.trail.wasm"); }
    static std::string          trail_service_wast() { return read_wast("${CMAKE_BINARY_DIR}/../eosio.trail/eosio.trail.wast"); }
    static std::vector<char>    trail_service_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.trail/eosio.trail.abi"); }
-   static std::vector<uint8_t> worker_proposals_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.wps/eosio.wps.wasm"); }
-   static std::string          worker_proposals_wast() { return read_wast("${CMAKE_BINARY_DIR}/../eosio.wps/eosio.wps.wast"); }
-   static std::vector<char>    worker_proposals_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.wps/eosio.wps.abi"); }
+   static std::vector<uint8_t> eosio_saving_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.saving/eosio.saving.wasm"); }
+   static std::string          eosio_saving_wast() { return read_wast("${CMAKE_BINARY_DIR}/../eosio.saving/eosio.saving.wast"); }
+   static std::vector<char>    eosio_saving_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.saving/eosio.saving.abi"); }
 
    struct util {
       static std::vector<uint8_t> test_api_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/test_api.wasm"); }
