@@ -2,8 +2,8 @@
 
 trail::trail(name self, name code, datastream<const char*> ds) : contract(self, code, ds), environment(self, self.value) {
     if (!environment.exists()) {
-
-        vector<uint64_t> new_totals;
+        print("\n new env !");
+        vector<uint64_t> new_totals = {0,0,0,0,0,0};
 
         env_struct = env{
             self, //publisher
@@ -16,11 +16,24 @@ trail::trail(name self, name code, datastream<const char*> ds) : contract(self, 
     } else {
         env_struct = environment.get();
         env_struct.time_now = now();
+        print("\n existing env ! ",env_struct.totals[1]);
     }
 }
 
 trail::~trail() {
-    if (environment.exists()) {
+    /*
+        weird behaviour ? number = totals[1]
+        existing env ! 0
+        existing env ! 0
+        Voter Registration: SUCCESS 1
+        destructor existing env ! 1
+        destructor existing env ! 0
+        => found out : 
+            calling actions from same contract overwrites the env on destructor being called twice 
+        => cause : apply function calls constr / destr once, then another time from action
+    */
+    if (environment.exists() && env_struct.time_now > 0) {
+        print("\n destructor existing env ! ",env_struct.totals[1]);
         environment.set(env_struct, env_struct.publisher);
     }
 }
@@ -335,7 +348,7 @@ void trail::regvoter(name voter) {
 
     env_struct.totals[1]++;
 
-    print("\nVoter Registration: SUCCESS");
+    print("\nVoter Registration: SUCCESS ");
 }
 
 void trail::unregvoter(name voter) {
@@ -1125,6 +1138,8 @@ extern "C" {
         datastream<const char*> ds((char*)buffer, size);
 
         trail trailservice(name(self), name(code), ds);
+        // don't update env_struct from here
+        trailservice.env_struct.time_now = 0;
 
         if(code == self && action == name("regtoken").value) {
             execute_action(name(self), name(code), &trail::regtoken);

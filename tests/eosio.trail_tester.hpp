@@ -170,6 +170,12 @@ class eosio_trail_tester : public tester
 		vector<char> data = get_row_by_account(N(eosio.token), acc, N(accounts), symbol_code);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("account", data, abi_serializer_max_time);
 	}
+	
+	fc::variant get_trail_env() {
+		vector<char> data = get_row_by_account( N(eosio.trail), N(eosio.trail), N(environment), N(environment) );
+		if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "env", data, abi_serializer_max_time );
+	}
 	#pragma endregion Setup_Actions
 
 	#pragma region Voting_Actions

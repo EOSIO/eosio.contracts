@@ -28,14 +28,19 @@ class [[eosio::contract("eosio.saving")]] workerproposal : public contract {
       };
 
       struct [[eosio::table("wpenv"), eosio::contract("eosio.saving")]] wp_env {
-        name     publisher;
-        uint32_t cycle_duration;
-        uint16_t fee_percentage;
-        uint64_t fee_min;
-		uint64_t start_delay;
+        name      publisher;
+        uint32_t  cycle_duration;
+        uint16_t  fee_percentage;
+        uint64_t  fee_min;
+		    uint64_t  start_delay;
+        double    threshold_pass_voters;
+        double    threshold_pass_votes;
+        double    threshold_fee_voters;
+        double    threshold_fee_votes;
 
         uint64_t primary_key() const { return publisher.value; }
-        EOSLIB_SERIALIZE(wp_env, (publisher)(cycle_duration)(fee_percentage)(fee_min)(start_delay))
+        EOSLIB_SERIALIZE(wp_env,  (publisher)(cycle_duration)(fee_percentage)(fee_min)(start_delay)
+                                  (threshold_pass_voters)(threshold_pass_votes)(threshold_fee_voters)(threshold_fee_votes))
       };
       wp_env wp_env_struct;
 
