@@ -50,7 +50,7 @@ namespace eosiosystem {
          _gstate.total_unpaid_blocks++;
          _producers.modify( prod, same_payer, [&](auto& p ) {
                p.unpaid_blocks++;
-               p.lifetime_unpaid_blocks++;
+               p.lifetime_produced_blocks++;
          });
       }
 
