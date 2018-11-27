@@ -120,19 +120,6 @@ void workerproposal::claim(uint64_t sub_id) {
 	proposals_table props_table("eosio.trail"_n, "eosio.trail"_n.value);
 	auto& prop = props_table.get(bal.reference_id, "Proposal Not Found");
 
-    // print( "\n",
-    //     "prop_id:", prop.prop_id,
-    //     ", publisher:", prop.publisher,
-    //     ", info_url:", string(prop.info_url),
-    //     ", no_count:", prop.no_count,
-    //     ", yes_count:", prop.yes_count,
-    //     ", abstain_count:", prop.abstain_count,
-    //     ", unique_voters:", uint64_t(prop.unique_voters),
-    //     ", begin_time:", uint64_t(prop.begin_time),
-    //     ", end_time:", uint64_t(prop.end_time),
-    //     ", cycle_count:", uint64_t(prop.cycle_count),
-    //     ", status:", uint64_t(prop.status)
-    // );
     eosio_assert(prop.end_time < now(), "Cycle is still open");
     
     eosio_assert(prop.status == uint8_t(0), "Proposal is closed");
@@ -147,26 +134,26 @@ void workerproposal::claim(uint64_t sub_id) {
     uint64_t quorum_thresh = (e.totals[1] * wp_env_struct.threshold_pass_voters) / 100;
     auto divider = prop.yes_count.amount + prop.no_count.amount;
     if(divider < 0) divider = 1;
-    double votes_ratio = (prop.yes_count.amount / divider);
+    double votes_ratio = double(prop.yes_count.amount) / double(divider);
 
     //fee refund thresholds
     uint64_t q_fee_refund_thresh = (e.totals[1] * wp_env_struct.threshold_fee_voters) / 100; 
     asset p_fee_refund_thresh = (total_votes * wp_env_struct.threshold_fee_votes) / 100; 
 
-    print("nums : ", e.totals[1], " * ", wp_env_struct.threshold_pass_voters, " | ", wp_env_struct.threshold_fee_voters, " ---- ", total_votes, " ", votes_ratio);
-
     auto updated_fee = sub.fee;
+
+    // print("\n GET FEE BACK WHEN <<<< ", prop.yes_count, " >= ", p_fee_refund_thresh," && ", uint64_t(prop.unique_voters), " >= ", q_fee_refund_thresh);
     if( sub.fee && prop.yes_count.amount > 0 && prop.yes_count >= p_fee_refund_thresh && prop.unique_voters >= q_fee_refund_thresh) {
-        print("\n GET FEE BACK <<<< ", int64_t(sub.fee), " ", prop.yes_count," ", uint64_t(prop.unique_voters), " >= ", q_fee_refund_thresh);
         outstanding += asset(int64_t(sub.fee), symbol("TLOS", 4));
         updated_fee = 0;
     }
 
+    // print("\n GET MUNI WHEN <<<< ", votes_ratio, " > ", (wp_env_struct.threshold_pass_votes / 100), " && ", uint64_t(prop.unique_voters), " >= ", quorum_thresh);
     if( votes_ratio > (wp_env_struct.threshold_pass_votes / 100) && prop.unique_voters >= quorum_thresh ) {
-        print("\n GET MUNI <<<< ", votes_ratio, " > ", (wp_env_struct.threshold_pass_votes / 100)," ", uint64_t(prop.unique_voters), " >= ", quorum_thresh);
         outstanding += asset(int64_t(sub.amount), symbol("TLOS", 4));
     }
-
+    
+    // print("\n numbers : ", e.totals[1], " * ", wp_env_struct.threshold_pass_voters, " | ", wp_env_struct.threshold_fee_voters, " ---- ", total_votes, " ", votes_ratio, " ", prop.yes_count.amount, " ", prop.no_count.amount, " ", divider);
     if(outstanding.amount > 0) {
         action(permission_level{ _self, "active"_n }, "eosio.token"_n, "transfer"_n, make_tuple(
             _self,
@@ -179,7 +166,7 @@ void workerproposal::claim(uint64_t sub_id) {
     }
 
     if(prop.cycle_count == sub.cycles - 1) { //Close ballot because it was the last cycle for the submission.
-        print("\n>>>>>>> CLOSE");
+        // print("\n>>>>>>> CLOSE");
         uint8_t new_status = 1;
 		action(permission_level{ _self, "active"_n }, "eosio.trail"_n, "closeballot"_n, make_tuple(
 			_self,
@@ -187,7 +174,7 @@ void workerproposal::claim(uint64_t sub_id) {
 			new_status
 		)).send();
     } else if(prop.cycle_count < sub.cycles - 1) { //Start next cycle because number of cycles hasn't been reached.
-        print("\n>>>>>>> CYCLE");
+        // print("\n>>>>>>> CYCLE");
 		uint32_t begin_time = now() + wp_env_struct.start_delay;
 		uint32_t end_time = now() + wp_env_struct.cycle_duration;
 		action(permission_level{ _self, "active"_n }, "eosio.trail"_n, "nextcycle"_n, make_tuple(
