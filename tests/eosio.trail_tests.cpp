@@ -474,6 +474,142 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 	);
 } FC_LOG_AND_RETHROW()
 
-//TODO: Leaderboard test.
+BOOST_FIXTURE_TEST_CASE( full_leaderboard_flow, eosio_trail_tester ) try {
+	//TODO: regballot type 0 and check
+	account_name publisher = N(voteraaaaaaa);
+	uint64_t current_ballot_id = 0;
+	uint64_t current_leaderboard_id = 0;
+	string info_url = "Qmasfhuihfaufeanfangnr";
+	uint8_t ballot_type = 2;
+	uint32_t ballot_length = 1200 + test_voters.size() * 2;
+	uint32_t begin_time = now() + 20;
+	uint32_t end_time   = now() + ballot_length;
+	regballot(publisher, ballot_type, symbol(4, "VOTE"), begin_time, end_time, info_url);
+	
+	auto ballot_info = get_ballot(current_ballot_id);
+	REQUIRE_MATCHING_OBJECT(ballot_info, mvo()
+		("ballot_id", current_ballot_id)
+		("table_id", ballot_type)
+		("reference_id", current_leaderboard_id)
+	);
+
+	//TODO: set seats
+	string candidate1_info = "Qm1";
+	std::cout << "addcandidate 1" << std::endl;
+	addcandidate(publisher, current_ballot_id, N(voteraaaaaab), candidate1_info);
+
+
+	string candidate2_info = "Qm2";
+	//std::cout << "addcandidate 2" << std::endl;
+	//auto trace = addcandidate(publisher, current_ballot_id, N(voteraaaaaac), candidate2_info);
+	//std::cout << "console output addcandidate 2: " << trace->action_traces.console << std::endl;
+
+	string candidate3_info = "Qm3";
+	//std::cout << "addcandidate 2" << std::endl;
+	//addcandidate(publisher, current_ballot_id, N(voteraaaaaad), candidate3_info);
+
+	vector<mvo> candidates;
+	candidates.emplace_back(mvo()
+		("member", "voteraaaaaab")
+		("info_link", candidate1_info)
+		("votes", "0.0000 VOTE")
+		("status", uint8_t(0))
+	);
+
+	candidates.emplace_back(mvo()
+		("member", "voteraaaaaac")
+		("info_link", candidate2_info)
+		("votes", "0.0000 VOTE")
+		("status", uint8_t(0))
+	);
+
+	candidates.emplace_back(mvo()
+		("member", "voteraaaaaad")
+		("info_link", candidate3_info)
+		("votes", "0.0000 VOTE")
+		("status", uint8_t(0))
+	);
+
+	auto leaderboard_info = get_leaderboard(publisher, current_leaderboard_id);
+	REQUIRE_MATCHING_OBJECT(leaderboard_info, mvo()
+		("board_id", current_leaderboard_id)
+		("publisher", publisher)
+		("info_url", info_url)
+		("candidates", candidates)
+		("unique_voters", uint64_t(0))
+		("voting_symbol", symbol(4, "VOTE").to_string())
+		("available_seats", uint8_t(3))
+		("begin_time", begin_time)
+		("end_time", end_time)
+		("status", uint8_t(0))
+	);
+
+	uint32_t unique_voters = 0;
+	produce_blocks( 41 );
+
+	fc::variant voter_info = mvo();
+	fc::variant vote_receipt_info = mvo();
+	asset currency_balance = asset::from_string("0.0000 TLOS");
+	asset voter_total = asset::from_string("0.0000 VOTE");
+	vector<asset> candidate_votes { 
+		asset::from_string("0.0000 VOTE"), 
+		asset::from_string("0.0000 VOTE"), 
+		asset::from_string("0.0000 VOTE")
+	};
+	for (int i = 0; i < test_voters.size(); i++) {
+		regvoter(test_voters[i].value);
+		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
+		REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+			("owner", test_voters[i].to_string())
+			("tokens", "0.0000 VOTE")
+		);
+		
+		mirrorcast(test_voters[i].value, symbol(4, "VOTE"));
+		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
+		currency_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
+		voter_total = asset::from_string(voter_info["tokens"].as_string());
+		BOOST_REQUIRE_EQUAL(currency_balance.get_amount(), voter_total.get_amount());
+
+		uint16_t direction = std::rand() % 3;
+		std::cout << "random direction for vote: " << direction << std::endl;
+		castvote(test_voters[i].value, current_ballot_id, direction);
+
+		candidate_votes[direction] += voter_total;
+
+		unique_voters++;
+		produce_blocks();
+
+		vote_receipt_info = get_vote_receipt(test_voters[i].value, current_ballot_id);
+ 		std::cout << "direction: " << vote_receipt_info["directions"].get_array()[0] << std::endl;
+		REQUIRE_MATCHING_OBJECT(vote_receipt_info, mvo()
+			("ballot_id", current_ballot_id)
+			("directions", vector<uint16_t> {direction})
+			("weight", voter_total.to_string())
+			("expiration", end_time)
+		);
+
+		deloldvotes(test_voters[i].value, 1);
+		vote_receipt_info = get_vote_receipt(test_voters[i].value, current_ballot_id);
+		BOOST_REQUIRE_EQUAL(false, vote_receipt_info.is_null());
+	}
+
+	for (uint8_t i = 0; i < candidates.size(); i++) {
+		candidates[i]["votes"] = candidate_votes[i].to_string();
+	}
+
+	leaderboard_info = get_leaderboard(publisher, current_leaderboard_id);
+	REQUIRE_MATCHING_OBJECT(leaderboard_info, mvo()
+		("board_id", current_leaderboard_id)
+		("publisher", publisher)
+		("info_url", info_url)
+		("candidates", candidates)
+		("unique_voters", uint64_t(0))
+		("voting_symbol", symbol(4, "VOTE").to_string())
+		("available_seats", uint8_t(3))
+		("begin_time", begin_time)
+		("end_time", end_time)
+		("status", uint8_t(0))
+	);
+} FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

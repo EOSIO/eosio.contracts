@@ -65,6 +65,8 @@ struct candidate {
     string info_link;
     asset votes;
     uint8_t status;
+
+	EOSLIB_SERIALIZE(candidate, (member)(info_link)(votes)(status))
 };
 
 //NOTE: ballots MUST be scoped by name("eosio.trail").value
@@ -169,11 +171,11 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] env {
 
 typedef multi_index<name("ballots"), ballot> ballots_table;
 
-    typedef multi_index<name("proposals"), proposal> proposals_table;
+typedef multi_index<name("proposals"), proposal> proposals_table;
 
-    typedef multi_index<name("elections"), election> elections_table;
+typedef multi_index<name("elections"), election> elections_table;
 
-    typedef multi_index<name("leaderboards"), leaderboard> leaderboards_table;
+typedef multi_index<name("leaderboards"), leaderboard> leaderboards_table;
 
 typedef multi_index<name("votereceipts"), vote_receipt> votereceipts_table;
 

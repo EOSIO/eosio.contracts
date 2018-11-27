@@ -565,11 +565,12 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
 void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link) {
     require_auth(publisher);
 
+	//TODO: check not adding more candidates than seats available
+
     ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
     eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
     auto bal = *b;
-
     eosio_assert(bal.table_id == 2, "ballot type doesn't support candidates");
 
     leaderboards_table leaderboards(_self, _self.value);
@@ -586,10 +587,9 @@ void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate,
         0
     };
 
-    board.candidates.emplace_back(new_candidate_struct);
-
-    leaderboards.modify(l, same_payer, [&]( auto& a ) {
+    leaderboards.modify(*l, same_payer, [&]( auto& a ) {
         a.candidates = board.candidates;
+		a.status = uint8_t(5);
     });
 
     print("\nAdd Candidate: SUCCESS");
@@ -877,7 +877,15 @@ uint64_t trail::make_leaderboard(name publisher, symbol voting_symbol, uint32_t 
     leaderboards_table leaderboards(_self, _self.value);
     uint64_t new_board_id = leaderboards.available_primary_key();
 
+	candidate test_cand = candidate{
+        name("voteraaaaaac"),
+        "Qm2",
+        asset(0, symbol("VOTE", 4)),
+        0
+    };
+
     vector<candidate> candidates;
+	candidates.emplace_back(test_cand);
 
     leaderboards.emplace(publisher, [&]( auto& a ) {
         a.board_id = new_board_id;

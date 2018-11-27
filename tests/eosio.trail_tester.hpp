@@ -201,7 +201,7 @@ class eosio_trail_tester : public tester
 	}
 
 	fc::variant get_leaderboard(account_name voter, uint64_t board_id) {
-		vector<char> data = get_row_by_account(N(eosio.trail), voter, N(leaderboards), board_id);
+		vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(leaderboards), board_id);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("leaderboard", data, abi_serializer_max_time);
 	}
 
@@ -244,10 +244,6 @@ class eosio_trail_tester : public tester
 		set_transaction_headers(trx);
 		trx.sign(get_private_key(voter, "active"), control->get_chain_id());
 		return push_transaction( trx );
-	}
-
-	action_result push_mirrorcast(account_name voter, symbol sym) {
-		return trail_push_action(N(eosio.trail), N(mirrorcast), mvo()("voter", voter)("token_symbol", sym));
 	}
 
 	transaction_trace_ptr castvote(account_name voter, uint32_t ballot_id, uint16_t direction) {
@@ -359,6 +355,21 @@ class eosio_trail_tester : public tester
 			("publisher", publisher)
 			("ballot_id", ballot_id)
 			("pass", pass)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(publisher, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr addcandidate(account_name publisher, uint64_t ballot_id, account_name new_candidate, string info_link) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(addcandidate), vector<permission_level>{{publisher, config::active_name}},
+			mvo()
+			("publisher", publisher)
+			("ballot_id", ballot_id)
+			("new_candidate", new_candidate)
+			("info_link", info_link)
 			)
 		);
 		set_transaction_headers(trx);
