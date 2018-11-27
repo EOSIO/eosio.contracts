@@ -120,19 +120,19 @@ void workerproposal::claim(uint64_t sub_id) {
 	proposals_table props_table("eosio.trail"_n, "eosio.trail"_n.value);
 	auto& prop = props_table.get(bal.reference_id, "Proposal Not Found");
 
-    print( "\n",
-        "prop_id:", prop.prop_id,
-        ", publisher:", prop.publisher,
-        ", info_url:", string(prop.info_url),
-        ", no_count:", prop.no_count,
-        ", yes_count:", prop.yes_count,
-        ", abstain_count:", prop.abstain_count,
-        ", unique_voters:", uint64_t(prop.unique_voters),
-        ", begin_time:", uint64_t(prop.begin_time),
-        ", end_time:", uint64_t(prop.end_time),
-        ", cycle_count:", uint64_t(prop.cycle_count),
-        ", status:", uint64_t(prop.status)
-    );
+    // print( "\n",
+    //     "prop_id:", prop.prop_id,
+    //     ", publisher:", prop.publisher,
+    //     ", info_url:", string(prop.info_url),
+    //     ", no_count:", prop.no_count,
+    //     ", yes_count:", prop.yes_count,
+    //     ", abstain_count:", prop.abstain_count,
+    //     ", unique_voters:", uint64_t(prop.unique_voters),
+    //     ", begin_time:", uint64_t(prop.begin_time),
+    //     ", end_time:", uint64_t(prop.end_time),
+    //     ", cycle_count:", uint64_t(prop.cycle_count),
+    //     ", status:", uint64_t(prop.status)
+    // );
     eosio_assert(prop.end_time < now(), "Cycle is still open");
     
     eosio_assert(prop.status == uint8_t(0), "Proposal is closed");
