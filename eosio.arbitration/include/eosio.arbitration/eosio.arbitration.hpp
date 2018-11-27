@@ -11,7 +11,7 @@
 
 #pragma once
 
-// #include <../trail.service/trail.connections/trailconn.voting.hpp>
+#include <trail.voting.hpp>
 
 #include <eosiolib/action.hpp>
 #include <eosiolib/asset.hpp>
@@ -23,7 +23,7 @@
 using namespace std;
 using namespace eosio;
 
-class[[eosio::contract("arbitration")]] arbitration : public eosio::contract {
+class[[eosio::contract("eosio.arbitration")]] arbitration : public eosio::contract {
 public:
   using contract::contract;
    #pragma region Enums
@@ -79,7 +79,7 @@ public:
   // NOTE: diminishing subsequent response (default) times
   // NOTE: initial deposit saved
   // NOTE: class of claim where neither party can pay fees, TF pays instead
-  struct [[eosio::table("configs"), eosio::contract("arbitration")]] config {
+  struct [[eosio::table]] config {
     name publisher;
     uint16_t max_arbs;
     uint32_t default_time;         // TODO: double check time_point units
