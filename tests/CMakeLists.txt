@@ -2,7 +2,7 @@ cmake_minimum_required( VERSION 3.5 )
 
 set(EOSIO_VERSION_MIN "1.3")
 set(EOSIO_VERSION_SOFT_MAX "1.3")
-#set(EOSIO_VERSION_HARD_MAX "")
+set(EOSIO_VERSION_HARD_MAX "1.3")
 
 include(../CheckVersion.txt)
 
