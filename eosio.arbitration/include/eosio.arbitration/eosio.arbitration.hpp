@@ -172,9 +172,6 @@ public:
     void cancelarbapp(name candidate); //TODO: rename to arbunapply(), rmvarbapply()
 
     [[eosio::action]]
-    void voteforarb(name candidate, uint16_t direction, name voter);
-
-    [[eosio::action]]
     void endelection(name candidate); //automate in constructor?
 
     #pragma endregion Arb_Elections
@@ -248,24 +245,7 @@ public:
 
     protected:
 
-    #pragma region Helper_Functions
-
 	void validate_ipfs_url(string ipfs_url);
-
-    bool is_candidate(name candidate);
-
-    bool is_arb(name arb);
-
-    bool is_case(uint64_t case_id);
-
-    bool is_election_open(name candidate);
-
-    bool is_election_expired(name candidate);
-
-    //void require_arb(name arb);
-
-    #pragma endregion Helper_Functions
-
 
     #pragma region Tables
 
@@ -282,5 +262,5 @@ public:
     typedef multi_index<"evidence"_n, evidence> evidence_table;
     typedef multi_index<"dismissedev"_n, evidence> dismissed_evidence_table;
 
-        #pragma endregion Tables
+    #pragma endregion Tables
 };
