@@ -67,6 +67,7 @@ void trail::initsettings(name publisher, symbol token_symbol, token_settings new
     auto reg = *r;
 
     eosio_assert(reg.publisher == publisher, "cannot change settings of another account's registry");
+    eosio_assert(new_settings.counterbal_decay_rate > 0, "cannot have a counterbalance with zero decay");
 
     if (reg.settings.is_initialized) {
         eosio_assert(reg.settings.lock_after_initialize, "settings have been locked");
@@ -362,6 +363,8 @@ void trail::transfer(name sender, name recipient, asset amount) {
         a.tokens += amount;
     });
 
+    //NOTE: calculating counterbalances and decays
+
     counterbalances_table sendercb(_self, amount.symbol.code().raw());
     auto scb = sendercb.find(sender.value);
     
@@ -374,14 +377,16 @@ void trail::transfer(name sender, name recipient, asset amount) {
         });
     } else {
         auto scbal = *scb;
-        if (scbal.decayable_cb - amount < asset(0, amount.symbol)) { //NOTE: if scbal < 0, set to 0
+        asset s_decay_amount = get_decay_amount(sender, amount.symbol, reg.settings.counterbal_decay_rate);
+        asset new_s_cbal = (scbal.decayable_cb - s_decay_amount) - amount;
+
+        if (new_s_cbal < asset(0, decayable_cb.symbol)) { //NOTE: if scbal < 0, set to 0
             sendercb.modify(scb, same_payer, [&]( auto& a ) {
                 a.decayable_cb = asset(0, decayable_cb.symbol);
             });
         } else {
-            asset new_cbal = scbal.decayable_cb - amount;
             sendercb.modify(scb, same_payer, [&]( auto& a ) {
-                a.decayable_cb = new_cbal;
+                a.decayable_cb = new_s_cbal;
             });
         }
     }
@@ -392,22 +397,24 @@ void trail::transfer(name sender, name recipient, asset amount) {
     if (rcb == reccb.end()) { //NOTE: recipient doesn't have a counterbalance yet
         reccb.emplace(sender, [&]( auto& a ){
             a.owner = recipient;
-            a.decayable_cb = asset(0, amount.symbol);
+            a.decayable_cb = amount;
             a.persistent_cb = asset(0, amount.symbol);
             a.last_decay = now();
         });
     } else {
         auto rcbal = *rcb;
-        if (rcbal.decayable_cb - amount < asset(0, amount.symbol)) { //NOTE: if rcbal < 0, set to 0
-            reccb.modify(rcb, same_payer, [&]( auto& a ) {
-                a.decayable_cb = asset(0, decayable_cb.symbol);
-            });
-        } else {
-            asset new_cbal = rcbal.decayable_cb - amount;
-            reccb.modify(rcb, same_payer, [&]( auto& a ) {
-                a.decayable_cb = new_cbal;
-            });
+        asset r_decay_amount = get_decay_amount(recipient, amount.symbol, reg.settings.counterbal_decay_rate);
+        asset new_r_cbal = (rcbal.decayable_cb - r_decay_amount);
+
+        if (new_r_cbal <= asset(0, decayable_cb.symbol)) { //NOTE: only triggers if decayed below 0
+            new_r_cbal = asset(0, decayable_cb.symbol);
         }
+
+        new_r_cbal += amount;
+        
+        reccb.modify(rcb, same_payer, [&]( auto& a ) {
+            a.decayable_cb = new_cbal;
+        });
     }
 
     print("\nToken Transfer: SUCCESS");
@@ -490,7 +497,6 @@ void trail::mirrorcast(name voter, symbol token_symbol) {
 
     counterbalances_table counterbals(_self, new_votes.symbol.code().raw());
     auto cb = counterbals.find(voter.value);
-    //eosio_assert(cb != counterbals.end(), "this shouldnt happen"); //TODO: remove this line
     //asset cb_weight = asset(0, max_votes.symbol);
     counter_balance counter_bal;
 
@@ -1194,13 +1200,20 @@ asset trail::get_decay_amount(name voter, symbol token_symbol, uint32_t decay_ra
 
     uint32_t time_delta;
 
+    int prec = token_symbol.precision();
+    int val = 1;
+
+    for (int i = prec; i > 0; i--) {
+        val *= 10;
+    }
+
     if (cb_itr != counterbals.end()) {
         auto cb = *cb_itr;
         time_delta = env_struct.time_now - cb.last_decay;
-        return asset(int64_t(time_delta / decay_rate) * 10000, symbol("VOTE", 4)); //TODO: apply proper precision, currently only works for precision 4
+        return asset(int64_t(time_delta / decay_rate) * val, token_symbol);
     }
 
-    return asset(0, symbol("VOTE", 4));
+    return asset(0, token_symbol);
 }
 
 #pragma endregion Reactions
@@ -1259,6 +1272,8 @@ extern "C" {
             execute_action(name(self), name(code), &trail::raisemax);
         } else if (code == self && action == name("lowermax").value) {
             execute_action(name(self), name(code), &trail::lowermax);
+        } else if (code == self && action == name("transfer").value) {
+            execute_action(name(self), name(code), &trail::transfer);
         } else if (code == name("eosio.token").value && action == name("transfer").value) { //NOTE: updates counterbals after transfers
             trail trailservice(name(self), name(code), ds);
             auto args = unpack_action_data<transfer_args>();

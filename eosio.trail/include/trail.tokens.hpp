@@ -24,7 +24,7 @@ struct token_settings {
     bool is_burnable = false; //NOTE: can only burn from own balance
     bool is_seizable = false;
     bool is_max_mutable = false;
-    bool is_transferable = false; //NOTE: allows counerbalances and cb decay //TODO: implement
+    bool is_transferable = false; //NOTE: allows counerbalances and cb decay
     bool is_recastable = false;
     bool is_initialized = false;
 
