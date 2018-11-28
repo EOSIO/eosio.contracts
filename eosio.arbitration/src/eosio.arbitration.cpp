@@ -49,23 +49,19 @@ void arbitration::setconfig(uint16_t max_arbs, uint32_t default_time, vector<int
 void arbitration::applyforarb(name candidate, string creds_ipfs_url) {
   require_auth(candidate);
 
+  candidates_table candidates(_self, _self.value);
+  auto c = candidates.find(candidate.value);
+  eosio_assert(c != candidates.end(), "Candidate is already an applicant");
 
+  arbitrators_table arbitrators(_self, _self.value);
+  auto a = arbitrators.find(candidate.value);
+  eosio_assert(a != arbitrators.end(), "Candidate is already an arbitrator");
 
-// TODO
-//   elections_table elections(_self, _self.value);
-  
-//   auto c = elections.find(candidate.value);
-//   eosio_assert(c == elections.end(), "candidate is already a candidate");
-
-//   elections.emplace(_self, [&](auto &a) {
-//     a.candidate = candidate;
-//     a.credentials = creds_ipfs_url;
-//     a.yes_votes = uint32_t(0);
-//     a.no_votes = uint32_t(0);
-//     a.abstain_votes = uint32_t(0);
-//     a.expire_time = now() + _config.default_time;
-//     a.election_status = OPEN;
-//   });
+  candidates.emplace(_self, [&](auto &c) {
+    c.cand_name = candidate;
+    c.credential_link = creds_ipfs_url;
+    c.applied_time = now();
+  });
 
   print("\nArb Application: SUCCESS");
 }
@@ -73,47 +69,77 @@ void arbitration::applyforarb(name candidate, string creds_ipfs_url) {
 void arbitration::cancelarbapp(name candidate) {
   require_auth(candidate);
 
-//   elections_table elections(_self, _self.value);
-//   auto c = elections.find(candidate.value);
-  
-//   eosio_assert(c != elections.end(), "no application for given candidate");  
+  candidates_table candidates(_self, _self.value);
+  auto c = candidates.find(candidate.value);  
 
-//   elections.erase(c); // NOTE: erase or close? remember votes are in Trail
+  eosio_assert(c == candidates.end(), "Candidate isn't an applicant");
+
+  candidates.erase(c);
 
   print("\nCancel Application: SUCCESS");
 }
 
-void arbitration::endelection(name candidate) {
-//   elections_table elections(_self, _self.value);
-//   auto e = elections.find(candidate.value);
+void arbitration::endelection(name candidate, uint64_t ballot_id) {
+require_auth(candidate);
 
-//   eosio_assert(e != elections.end(), "candidate does not have an application");
-//   eosio_assert(e->election_status != OPEN, "election is not open");
-//   eosio_assert(now() > e->expire_time, "election has expired");
+ballots_table ballots("eosio.trail"_n, name("eosio.table").value);
+auto b = ballots.get(ballot_id, "ballots doesn't exist");
 
-//   uint64_t total_votes = (e->yes_votes + e->no_votes + e->abstain_votes); // total votes cast on election
-//   uint64_t pass_thresh = ((e->yes_votes + e->no_votes) / 3) * 2; // 66.67% of total votes
-//   bool elction_passed = false;  
-//   if (e->yes_votes >= pass_thresh) {
-//     elction_passed = true;
-    
-//     arbitrators_table arbitrators(_self, _self.value);
-    
-//     vector<uint64_t> open_cases;
-//     vector<uint64_t> closed_cases;
+auto election_id = b.reference_id;
 
-//     arbitrators.emplace(_self, [&](auto &a) {
-//       a.arb = candidate;
-//       a.arb_status = UNAVAILABLE;
-//       a.open_case_ids = open_cases;
-//       a.closed_case_ids = closed_cases;
-//     });
+leaderboards_table leaderboards("eosio.trail"_n, name("eosio.trail").value);
+auto board = leaderboards.get(election_id, "leaderboard doesnt exist");
 
-//     elections.erase(e);
+// sort board candidates by votes
+// get available seats (up to 21)
+// remove candidates from candidates table / arbitration contract 
+// add candidates to arbitration table / arbitration contract
+// close ballot action.
 
-//   } 
+auto first_cand_votes = board.candidates[0].votes;
 
-//   elections.modify(e, same_payer, [&](auto &a) { a.election_status = elction_passed == true ? PASSED : FAILED; });
+
+
+action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "closeballot"_n,
+         make_tuple(get_self(),
+                    ballot_id,
+                    CLOSED
+                    )).send();
+// name publisher, uint64_t ballot_id, uint8_t pass
+  //   elections_table elections(_self, _self.value);
+  //   auto e = elections.find(candidate.value);
+
+  //   eosio_assert(e != elections.end(), "candidate does not have an
+  //   application");
+  //   eosio_assert(e->election_status != OPEN, "election is not open");
+  //   eosio_assert(now() > e->expire_time, "election has expired");
+
+  //   uint64_t total_votes = (e->yes_votes + e->no_votes + e->abstain_votes);
+  //   // total votes cast on election
+  //   uint64_t pass_thresh = ((e->yes_votes + e->no_votes) / 3) * 2; // 66.67%
+  //   of total votes
+  //   bool elction_passed = false;
+  //   if (e->yes_votes >= pass_thresh) {
+  //     elction_passed = true;
+
+  //     arbitrators_table arbitrators(_self, _self.value);
+
+  //     vector<uint64_t> open_cases;
+  //     vector<uint64_t> closed_cases;
+
+  //     arbitrators.emplace(_self, [&](auto &a) {
+  //       a.arb = candidate;
+  //       a.arb_status = UNAVAILABLE;
+  //       a.open_case_ids = open_cases;
+  //       a.closed_case_ids = closed_cases;
+  //     });
+
+  //     elections.erase(e);
+
+  //   }
+
+  //   elections.modify(e, same_payer, [&](auto &a) { a.election_status =
+  //   elction_passed == true ? PASSED : FAILED; });
 }
 
 void arbitration::filecase(name claimant, uint16_t class_suggestion, string ev_ipfs_url) {
