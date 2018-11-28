@@ -73,47 +73,47 @@ void arbitration::applyforarb(name candidate, string creds_ipfs_url) {
 void arbitration::cancelarbapp(name candidate) {
   require_auth(candidate);
 
-  elections_table elections(_self, _self.value);
-  auto c = elections.find(candidate.value);
+//   elections_table elections(_self, _self.value);
+//   auto c = elections.find(candidate.value);
   
-  eosio_assert(c != elections.end(), "no application for given candidate");  
+//   eosio_assert(c != elections.end(), "no application for given candidate");  
 
-  elections.erase(c); // NOTE: erase or close? remember votes are in Trail
+//   elections.erase(c); // NOTE: erase or close? remember votes are in Trail
 
   print("\nCancel Application: SUCCESS");
 }
 
 void arbitration::endelection(name candidate) {
-  elections_table elections(_self, _self.value);
-  auto e = elections.find(candidate.value);
+//   elections_table elections(_self, _self.value);
+//   auto e = elections.find(candidate.value);
 
-  eosio_assert(e != elections.end(), "candidate does not have an application");
-  eosio_assert(e->election_status != OPEN, "election is not open");
-  eosio_assert(now() > e->expire_time, "election has expired");
+//   eosio_assert(e != elections.end(), "candidate does not have an application");
+//   eosio_assert(e->election_status != OPEN, "election is not open");
+//   eosio_assert(now() > e->expire_time, "election has expired");
 
-  uint64_t total_votes = (e->yes_votes + e->no_votes + e->abstain_votes); // total votes cast on election
-  uint64_t pass_thresh = ((e->yes_votes + e->no_votes) / 3) * 2; // 66.67% of total votes
-  bool elction_passed = false;  
-  if (e->yes_votes >= pass_thresh) {
-    elction_passed = true;
+//   uint64_t total_votes = (e->yes_votes + e->no_votes + e->abstain_votes); // total votes cast on election
+//   uint64_t pass_thresh = ((e->yes_votes + e->no_votes) / 3) * 2; // 66.67% of total votes
+//   bool elction_passed = false;  
+//   if (e->yes_votes >= pass_thresh) {
+//     elction_passed = true;
     
-    arbitrators_table arbitrators(_self, _self.value);
+//     arbitrators_table arbitrators(_self, _self.value);
     
-    vector<uint64_t> open_cases;
-    vector<uint64_t> closed_cases;
+//     vector<uint64_t> open_cases;
+//     vector<uint64_t> closed_cases;
 
-    arbitrators.emplace(_self, [&](auto &a) {
-      a.arb = candidate;
-      a.arb_status = UNAVAILABLE;
-      a.open_case_ids = open_cases;
-      a.closed_case_ids = closed_cases;
-    });
+//     arbitrators.emplace(_self, [&](auto &a) {
+//       a.arb = candidate;
+//       a.arb_status = UNAVAILABLE;
+//       a.open_case_ids = open_cases;
+//       a.closed_case_ids = closed_cases;
+//     });
 
-    elections.erase(e);
+//     elections.erase(e);
 
-  } 
+//   } 
 
-  elections.modify(e, same_payer, [&](auto &a) { a.election_status = elction_passed == true ? PASSED : FAILED; });
+//   elections.modify(e, same_payer, [&](auto &a) { a.election_status = elction_passed == true ? PASSED : FAILED; });
 }
 
 void arbitration::filecase(name claimant, uint16_t class_suggestion, string ev_ipfs_url) {

@@ -11,8 +11,6 @@
 
 #pragma once
 
-#include <trail.voting.hpp>
-
 #include <eosiolib/action.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
@@ -92,19 +90,19 @@ public:
   };
 
 
-    struct [[eosio::table]] election {
-        name candidate;
-        string credentials;
-        uint32_t yes_votes;
-        uint32_t no_votes;
-        uint32_t abstain_votes;
-        uint32_t expire_time;
-        uint16_t election_status;
+    // struct [[eosio::table]] election {
+    //     name candidate;
+    //     string credentials;
+    //     uint32_t yes_votes;
+    //     uint32_t no_votes;
+    //     uint32_t abstain_votes;
+    //     uint32_t expire_time;
+    //     uint16_t election_status;
 
-    uint64_t primary_key() const { return candidate.value; }
-    EOSLIB_SERIALIZE(election, (candidate)(credentials)(yes_votes)(no_votes)(
-                                   abstain_votes)(expire_time)(election_status))
-        };
+    // uint64_t primary_key() const { return candidate.value; }
+    // EOSLIB_SERIALIZE(election, (candidate)(credentials)(yes_votes)(no_votes)(
+    //                                abstain_votes)(expire_time)(election_status))
+    //     };
 
     struct [[eosio::table]] arbitrator {
         name arb;
@@ -253,7 +251,7 @@ public:
     config_singleton configs;
     config _config;
  
-    typedef multi_index<"elections"_n, election> elections_table;
+    // typedef multi_index<"elections"_n, election> elections_table;
     typedef multi_index<"arbitrators"_n, arbitrator> arbitrators_table;
 
     typedef multi_index<"casefiles"_n, casefile> casefiles_table;
