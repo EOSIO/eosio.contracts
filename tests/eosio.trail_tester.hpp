@@ -35,7 +35,6 @@ class eosio_trail_tester : public tester
 
 	eosio_trail_tester()
 	{
-		std::cout << "max_size(): " << test_voters.max_size() << std::endl;
 		produce_blocks( 2 );
 		create_accounts({N(eosio.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake),
 						 N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names), N(eosio.trail)});

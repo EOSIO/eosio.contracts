@@ -41,21 +41,47 @@ void workerproposal::setenv(wp_env new_environment) {
 	wpenv.set(new_environment, _self);
 }
 
+void workerproposal::getdeposit(name owner) {
+	deposits_table deposits(_self, _self.value);
+	auto d_itr = deposits.find(owner.value);
+	eosio_assert(d_itr != deposits.end(), "Deposit not found");
+
+	auto d = *d_itr;
+	require_auth(d.owner);
+
+	action(permission_level{_self, "active"_n}, "eosio.token"_n, "transfer"_n, make_tuple(
+		_self,
+		d.owner,
+		d.escrow,
+		"return unused deposit"
+	)).send();
+	
+	deposits.erase(d_itr);
+}
+
 void workerproposal::submit(name proposer, std::string title, uint16_t cycles, std::string ipfs_location, asset amount, name receiver) {
     require_auth(proposer);
 	
 	// calc fee
     uint64_t fee_amount = uint64_t(amount.amount) * uint64_t( wp_env_struct.fee_percentage ) / uint64_t(100);
     fee_amount = fee_amount > wp_env_struct.fee_min ? fee_amount :  wp_env_struct.fee_min;
+	asset fee = asset(fee_amount, symbol("TLOS", 4));
 
-    // transfer the fee
-    action(permission_level{ proposer, "active"_n }, "eosio.token"_n, "transfer"_n, make_tuple(
-    	proposer,
-        "eosio.saving"_n,
-        asset(int64_t(fee_amount), symbol("TLOS", 4)),
-        std::string("Worker Proposal Fee")
-	)).send();
+	deposits_table deposits(_self, _self.value);
+	auto d_itr = deposits.find(proposer.value);
+	eosio_assert(d_itr != deposits.end(), "Deposit not found, please transfer your TLOS fee");
+	auto d = *d_itr;
+	asset outstanding = d.escrow > fee ? d.escrow - fee : fee - d.escrow;
+	eosio_assert(d.escrow >= fee, "Deposit amount is less than fee, please transfer more TLOS");
 	
+	if(outstanding > asset(0, symbol("TLOS", 4))) {
+		deposits.modify(d, same_payer, [&](auto& depo) {
+			depo.escrow = outstanding;
+		});
+	} else {
+		deposits.erase(d_itr);
+	}
+
 	ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
 	uint32_t begin_time = now() + wp_env_struct.start_delay;
 	uint32_t end_time = now() + wp_env_struct.cycle_duration;
@@ -69,7 +95,7 @@ void workerproposal::submit(name proposer, std::string title, uint16_t cycles, s
 		ipfs_location
 	)).send();
 
-    submissions submissions(_self, _self.value);
+    submissions_table submissions(_self, _self.value);
     submissions.emplace( proposer, [&]( submission& info ){
         info.id             = submissions.available_primary_key();
         info.ballot_id      = next_ballot_id;
@@ -83,33 +109,8 @@ void workerproposal::submit(name proposer, std::string title, uint16_t cycles, s
     });
 }
 
-// void workerproposal::linkballot(uint64_t prop_id, uint64_t ballot_id, name proposer) {
-//     require_auth(proposer);
-
-//     proposals proptable(_self, _self.value);
-//     auto p = proptable.find(prop_id);
-//     eosio_assert(p != proptable.end(), "Proposal with given id doesn't exist");
-//     auto prop = *p;
-
-//     ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
-//     auto b = ballots.find(ballot_id);
-//     eosio_assert(b != ballots.end(), "Ballot with given id doesn't exist");
-//     auto bal = *b;
-
-//     eosio_assert(bal.publisher == proposer, "Cannot link to a ballot made by another account");
-
-//     proptable.modify(p, same_payer, [&]( auto& a ) {
-//         a.ballot_id     = bal.ballot_id;
-//         a.begin_time    = bal.begin_time;
-//         a.end_time      = bal.end_time;
-//         a.status        = 1; // ACTIVE
-//     });
-
-//     print("\nBallot Link: SUCCESS");
-// }
-
 void workerproposal::claim(uint64_t sub_id) {
-    submissions submissions(_self, _self.value);
+    submissions_table submissions(_self, _self.value);
     auto& sub = submissions.get(sub_id, "Worker Proposal Not Found");
 
 	require_auth(sub.proposer);
@@ -190,4 +191,51 @@ void workerproposal::claim(uint64_t sub_id) {
     });
 }
 
-EOSIO_DISPATCH(workerproposal, (submit)(claim)(setenv))
+void workerproposal::transfer_handler(name from, asset quantity) {
+	if(quantity.symbol == symbol("TLOS", 4)) {
+		deposits_table deposits(_self, _self.value);
+		auto d = deposits.find(from.value);
+
+		if(d == deposits.end()) {
+			deposits.emplace(get_self(), [&](auto& depo) {
+				depo.owner = from;
+				depo.escrow = quantity;
+			});
+		} else {
+			deposits.modify(d, same_payer, [&](auto& depo) {
+				depo.escrow += quantity;
+			});
+		}
+	}
+
+	print("\nDeposit Complete");
+}
+
+extern "C" {
+    void apply(uint64_t self, uint64_t code, uint64_t action) {
+
+        size_t size = action_data_size();
+        constexpr size_t max_stack_buffer_size = 512;
+        void* buffer = nullptr;
+        if( size > 0 ) {
+            buffer = max_stack_buffer_size < size ? malloc(size) : alloca(size);
+            read_action_data(buffer, size);
+        }
+        datastream<const char*> ds((char*)buffer, size);
+
+        workerproposal work(name(self), name(code), ds);
+
+        if(code == self && action == name("claim").value) {
+            execute_action(name(self), name(code), &workerproposal::claim);
+        } else if (code == self && action == name("getdeposit").value) {
+            execute_action(name(self), name(code), &workerproposal::getdeposit);
+        } else if (code == self && action == name("submit").value) {
+            execute_action(name(self), name(code), &workerproposal::submit);
+        } else if (code == self && action == name("setenv").value) {
+            execute_action(name(self), name(code), &workerproposal::setenv);
+        } else if (code == name("eosio.token").value && action == name("transfer").value) {
+            auto args = unpack_action_data<transfer_args>();
+            work.transfer_handler(args.from, args.quantity);
+        }
+    } //end apply
+}; //end dispatcher

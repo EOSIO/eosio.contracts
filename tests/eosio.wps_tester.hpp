@@ -66,6 +66,18 @@ class eosio_wps_tester : public eosio_trail_tester
          return push_transaction( trx );
       }
 
+	  transaction_trace_ptr getdeposit(account_name owner) {
+		 signed_transaction trx;
+		 trx.actions.emplace_back( get_action(N(eosio.saving), N(getdeposit), vector<permission_level>{{owner, config::active_name}},
+            mvo()
+				("owner", owner)
+		 	)
+         );
+         set_transaction_headers(trx);
+         trx.sign(get_private_key(owner, "active"), control->get_chain_id());
+         return push_transaction( trx );
+	  }
+
       void submit_worker_proposal( account_name proposer, std::string title, uint16_t cycles, std::string ipfs_location, asset amount, account_name receiver) {
          base_tester::push_action(N(eosio.saving), N(submit), proposer, mvo()
                                  ("proposer",      proposer)
@@ -126,6 +138,11 @@ class eosio_wps_tester : public eosio_trail_tester
          vector<char> data = get_row_by_account(N(eosio.saving), N(eosio.saving), N(submissions), submission_id);
          return data.empty() ? fc::variant() : abi_ser.binary_to_variant("submission", data, abi_serializer_max_time);
       }
+
+	  fc::variant get_deposit(account_name owner) {
+		 vector<char> data = get_row_by_account(N(eosio.saving), N(eosio.saving), N(deposits), owner);
+         return data.empty() ? fc::variant() : abi_ser.binary_to_variant("deposit", data, abi_serializer_max_time);
+	  }
 
       void register_voters(vector<name> test_voters, int start, int end){
          for (int i = start; i < end; i++) {
