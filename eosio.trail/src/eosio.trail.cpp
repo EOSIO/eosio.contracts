@@ -21,12 +21,7 @@ trail::trail(name self, name code, datastream<const char*> ds) : contract(self, 
 }
 
 trail::~trail() {
-    /*
-        => found out : 
-            calling actions from same contract overwrites the env on destructor being called twice 
-        => cause : apply function calls constr / destr once, then another time from action
-    */
-    if (environment.exists() && env_struct.time_now > 0) {
+    if (environment.exists()) {
         print("\n destructor existing env ! ", env_struct.totals[1]);
         environment.set(env_struct, env_struct.publisher);
     }
@@ -667,6 +662,8 @@ void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_tim
     eosio_assert(p != proposals.end(), "proposal doesn't exist");
     auto prop = *p;
 
+    //TODO: check the current ballot isn't open for voting (e.g. allow cycling either before start or after ended)
+
     auto sym = prop.no_count.symbol; //NOTE: uses same voting symbol as before
 
     proposals.modify(p, same_payer, [&]( auto& a ) {
@@ -1152,10 +1149,5 @@ extern "C" {
             trailservice.update_from_cb(args.from, asset(args.quantity.amount, symbol("VOTE", 4)));
             trailservice.update_to_cb(args.to, asset(args.quantity.amount, symbol("VOTE", 4)));
         }
-
-        // if( envUpdatedByAction ){
-        //     // don't update env_struct from here
-        //     trailservice.env_struct.time_now = 0;
-        // }
     } //end apply
 }; //end dispatcher
