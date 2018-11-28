@@ -663,6 +663,8 @@ void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_tim
     auto prop = *p;
 
     //TODO: check the current ballot isn't open for voting (e.g. allow cycling either before start or after ended)
+	eosio_assert(env_struct.time_now < prop.begin_time || env_struct.time_now > prop.end_time, 
+		"a proposal can only be cycled before begin_time or after end_time");
 
     auto sym = prop.no_count.symbol; //NOTE: uses same voting symbol as before
 
