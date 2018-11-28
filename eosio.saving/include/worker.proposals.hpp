@@ -44,7 +44,7 @@ class[[eosio::contract("eosio.saving")]] workerproposal : public contract
 		uint32_t cycle_duration;
 		uint16_t fee_percentage;
 		uint64_t fee_min;
-		uint64_t start_delay;
+		uint32_t start_delay;
 		double threshold_pass_voters;
 		double threshold_pass_votes;
 		double threshold_fee_voters;

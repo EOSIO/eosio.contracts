@@ -33,27 +33,28 @@ void workerproposal::setenv(wp_env new_environment) {
 	eosio_assert(new_environment.fee_percentage > 0, "fee_percentage must be a non-zero number");
 	eosio_assert(new_environment.start_delay > 0, "start_delay must be a non-zero number");
 	eosio_assert(new_environment.fee_min > 0, "fee_min must be a non-zero number");
-	eosio_assert(new_environment.threshold_pass_voters >= 0 && new_environment.threshold_pass_voters <= 100, "threshold_pass_voters must be between 0 and 100");
-	eosio_assert(new_environment.threshold_pass_votes >= 0 && new_environment.threshold_pass_votes <= 100, "threshold_pass_votes must be between 0 and 100");
-	eosio_assert(new_environment.threshold_fee_voters >= 0 && new_environment.threshold_fee_voters <= 100, "threshold_fee_voters must be between 0 and 100");
-	eosio_assert(new_environment.threshold_fee_votes >= 0 && new_environment.threshold_fee_votes <= 100, "threshold_fee_votes must be between 0 and 100");
+	eosio_assert(new_environment.threshold_pass_voters >= 0 && new_environment.threshold_pass_voters <= 100, "threshold pass_voters must be between 0 and 100");
+	eosio_assert(new_environment.threshold_pass_votes >= 0 && new_environment.threshold_pass_votes <= 100, "threshold pass_votes must be between 0 and 100");
+	eosio_assert(new_environment.threshold_fee_voters >= 0 && new_environment.threshold_fee_voters <= 100, "threshold fee_voters must be between 0 and 100");
+	eosio_assert(new_environment.threshold_fee_votes >= 0 && new_environment.threshold_fee_votes <= 100, "threshold fee_votes must be between 0 and 100");
 	require_auth(_self);
 	wpenv.set(new_environment, _self);
 }
 
 void workerproposal::getdeposit(name owner) {
+    require_auth(owner);
 	deposits_table deposits(_self, _self.value);
 	auto d_itr = deposits.find(owner.value);
-	eosio_assert(d_itr != deposits.end(), "Deposit not found");
+    eosio_assert(d_itr != deposits.end(), "Deposit not found");
 
 	auto d = *d_itr;
-	require_auth(d.owner);
+    require_auth(d.owner);
 
 	action(permission_level{_self, "active"_n}, "eosio.token"_n, "transfer"_n, make_tuple(
 		_self,
 		d.owner,
 		d.escrow,
-		"return unused deposit"
+		std::string("return unused deposit")
 	)).send();
 	
 	deposits.erase(d_itr);
@@ -71,10 +72,10 @@ void workerproposal::submit(name proposer, std::string title, uint16_t cycles, s
 	auto d_itr = deposits.find(proposer.value);
 	eosio_assert(d_itr != deposits.end(), "Deposit not found, please transfer your TLOS fee");
 	auto d = *d_itr;
-	asset outstanding = d.escrow > fee ? d.escrow - fee : fee - d.escrow;
 	eosio_assert(d.escrow >= fee, "Deposit amount is less than fee, please transfer more TLOS");
-	
-	if(outstanding > asset(0, symbol("TLOS", 4))) {
+
+	if(d.escrow > fee) {
+	    asset outstanding = d.escrow - fee;
 		deposits.modify(d, same_payer, [&](auto& depo) {
 			depo.escrow = outstanding;
 		});
@@ -84,7 +85,7 @@ void workerproposal::submit(name proposer, std::string title, uint16_t cycles, s
 
 	ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
 	uint32_t begin_time = now() + wp_env_struct.start_delay;
-	uint32_t end_time = now() + wp_env_struct.cycle_duration;
+	uint32_t end_time = now() + wp_env_struct.start_delay + wp_env_struct.cycle_duration;
 	uint64_t next_ballot_id = ballots.available_primary_key();
 	action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regballot"_n, make_tuple(
 		_self,
@@ -130,27 +131,35 @@ void workerproposal::claim(uint64_t sub_id) {
 
     asset outstanding = asset(0, symbol("TLOS", 4));
     asset total_votes = (prop.yes_count + prop.no_count + prop.abstain_count); //total votes cast on proposal
+    asset non_abstain_votes = (prop.yes_count + prop.no_count); 
 
     //pass thresholds
-    uint64_t quorum_thresh = (e.totals[1] * wp_env_struct.threshold_pass_voters) / 100;
-    auto divider = prop.yes_count.amount + prop.no_count.amount;
-    if(divider < 0) divider = 1;
-    double votes_ratio = double(prop.yes_count.amount) / double(divider);
+    uint64_t voters_pass_thresh = (e.totals[1] * wp_env_struct.threshold_pass_voters) / 100;
+    asset votes_pass_thresh = (non_abstain_votes * wp_env_struct.threshold_pass_votes) / 100;
 
     //fee refund thresholds
-    uint64_t q_fee_refund_thresh = (e.totals[1] * wp_env_struct.threshold_fee_voters) / 100; 
-    asset p_fee_refund_thresh = (total_votes * wp_env_struct.threshold_fee_votes) / 100; 
+    uint64_t voters_fee_thresh = (e.totals[1] * wp_env_struct.threshold_fee_voters) / 100; 
+    asset votes_fee_thresh = (total_votes * wp_env_struct.threshold_fee_votes) / 100; 
 
     auto updated_fee = sub.fee;
 
-    // print("\n GET FEE BACK WHEN <<<< ", prop.yes_count, " >= ", p_fee_refund_thresh," && ", uint64_t(prop.unique_voters), " >= ", q_fee_refund_thresh);
-    if( sub.fee && prop.yes_count.amount > 0 && prop.yes_count >= p_fee_refund_thresh && prop.unique_voters >= q_fee_refund_thresh) {
-        outstanding += asset(int64_t(sub.fee), symbol("TLOS", 4));
+    // print("\n GET FEE BACK WHEN <<<< ", prop.yes_count, " >= ", votes_fee_thresh," && ", uint64_t(prop.unique_voters), " >= ", voters_fee_thresh);
+    if( sub.fee && prop.yes_count.amount > 0 && prop.yes_count >= votes_fee_thresh && prop.unique_voters >= voters_fee_thresh) {
+        if(sub.receiver == sub.proposer){
+            outstanding += asset(int64_t(sub.fee), symbol("TLOS", 4));
+        }else{
+            action(permission_level{ _self, "active"_n }, "eosio.token"_n, "transfer"_n, make_tuple(
+                _self,
+                sub.proposer,
+                outstanding,
+                std::string("Worker proposal funds")
+            )).send();
+        }
         updated_fee = 0;
     }
 
-    // print("\n GET MUNI WHEN <<<< ", votes_ratio, " > ", (wp_env_struct.threshold_pass_votes / 100), " && ", uint64_t(prop.unique_voters), " >= ", quorum_thresh);
-    if( votes_ratio > (wp_env_struct.threshold_pass_votes / 100) && prop.unique_voters >= quorum_thresh ) {
+    // print("\n GET MUNI WHEN <<<< ", prop.yes_count, " > ", votes_pass_thresh, " && ", uint64_t(prop.unique_voters), " >= ", voters_pass_thresh);
+    if( prop.yes_count > votes_pass_thresh && prop.unique_voters >= voters_pass_thresh ) {
         outstanding += asset(int64_t(sub.amount), symbol("TLOS", 4));
     }
     
@@ -166,7 +175,7 @@ void workerproposal::claim(uint64_t sub_id) {
         print("\nNothing to claim from the last cycle");
     }
 
-    if(prop.cycle_count == sub.cycles - 1) { //Close ballot because it was the last cycle for the submission.
+    if(prop.cycle_count == uint16_t(sub.cycles - 1)) { //Close ballot because it was the last cycle for the submission.
         // print("\n>>>>>>> CLOSE");
         uint8_t new_status = 1;
 		action(permission_level{ _self, "active"_n }, "eosio.trail"_n, "closeballot"_n, make_tuple(
@@ -174,7 +183,7 @@ void workerproposal::claim(uint64_t sub_id) {
 			sub.ballot_id,
 			new_status
 		)).send();
-    } else if(prop.cycle_count < sub.cycles - 1) { //Start next cycle because number of cycles hasn't been reached.
+    } else if(prop.cycle_count < uint16_t(sub.cycles - 1)) { //Start next cycle because number of cycles hasn't been reached.
         // print("\n>>>>>>> CYCLE");
 		uint32_t begin_time = now() + wp_env_struct.start_delay;
 		uint32_t end_time = now() + wp_env_struct.cycle_duration;
@@ -191,6 +200,8 @@ void workerproposal::claim(uint64_t sub_id) {
     });
 }
 
+// note : this gets called when eosio.saving transfers OUT tokens too 
+// => deposits.owner eosio.saving will contain the entire sum of what was paid out , EVER (including fees and everything)
 void workerproposal::transfer_handler(name from, asset quantity) {
 	if(quantity.symbol == symbol("TLOS", 4)) {
 		deposits_table deposits(_self, _self.value);

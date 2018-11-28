@@ -34,11 +34,17 @@ BOOST_FIXTURE_TEST_CASE( reg_voters, eosio_trail_tester ) try {
 			("tokens", "0.0000 VOTE")
 		);
 
+		auto trail_env = get_trail_env();
+		BOOST_REQUIRE_EQUAL(trail_env["totals"][1], 1);
+
 		std::cout << "unregvoter for: " << test_voters[i].to_string() << std::endl;
 		unregvoter(test_voters[i].value);
 		produce_blocks();
 		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
 		BOOST_REQUIRE_EQUAL(true, voter_info.is_null());
+
+		trail_env = get_trail_env();
+		BOOST_REQUIRE_EQUAL(trail_env["totals"][1], 0);
 	}
 } FC_LOG_AND_RETHROW()
 
@@ -172,7 +178,12 @@ BOOST_FIXTURE_TEST_CASE( mirror_cast, eosio_trail_tester ) try {
 			("last_decay", now())
 		);
 	std::cout << "counter balance object exists after initial transfer" << std::endl;
-	produce_blocks( 172800 );
+
+	// produce_blocks( 172800 );
+	produce_blocks();
+	produce_block(fc::seconds(172798/2));
+	produce_blocks();
+
 	// regvoter and mirrorstake new account
 	std::cout << "regvoter for votedecay" << std::endl;
 	regvoter(N(votedecay));

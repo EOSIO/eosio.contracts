@@ -38,7 +38,7 @@ add_subdirectory(eosio.wrap)
 add_subdirectory(eosio.system)
 add_subdirectory(eosio.token)
 #add_subdirectory(eosio.arbitration)
-#add_subdirectory(eosio.amend)
+add_subdirectory(eosio.amend)
 add_subdirectory(eosio.trail)
 add_subdirectory(eosio.saving)
 

@@ -22,17 +22,11 @@ trail::trail(name self, name code, datastream<const char*> ds) : contract(self, 
 
 trail::~trail() {
     /*
-        weird behaviour ? number = totals[1]
-        existing env ! 0
-        existing env ! 0
-        Voter Registration: SUCCESS 1
-        destructor existing env ! 1
-        destructor existing env ! 0
         => found out : 
             calling actions from same contract overwrites the env on destructor being called twice 
         => cause : apply function calls constr / destr once, then another time from action
     */
-    if (environment.exists() && env_struct.time_now >= 0) {
+    if (environment.exists() && env_struct.time_now > 0) {
         print("\n destructor existing env ! ", env_struct.totals[1]);
         environment.set(env_struct, env_struct.publisher);
     }
@@ -1120,10 +1114,6 @@ extern "C" {
         }
         datastream<const char*> ds((char*)buffer, size);
 
-        trail trailservice(name(self), name(code), ds);
-        // don't update env_struct from here
-		//eosio_exit(0);
-
         if(code == self && action == name("regtoken").value) {
             execute_action(name(self), name(code), &trail::regtoken);
         } else if (code == self && action == name("unregtoken").value) {
@@ -1157,9 +1147,15 @@ extern "C" {
         } else if (code == self && action == name("issuetoken").value) {
             execute_action(name(self), name(code), &trail::issuetoken);
         } else if (code == name("eosio.token").value && action == name("transfer").value) { //NOTE: updates counterbals after transfers
+            trail trailservice(name(self), name(code), ds);
             auto args = unpack_action_data<transfer_args>();
             trailservice.update_from_cb(args.from, asset(args.quantity.amount, symbol("VOTE", 4)));
             trailservice.update_to_cb(args.to, asset(args.quantity.amount, symbol("VOTE", 4)));
         }
+
+        // if( envUpdatedByAction ){
+        //     // don't update env_struct from here
+        //     trailservice.env_struct.time_now = 0;
+        // }
     } //end apply
 }; //end dispatcher
