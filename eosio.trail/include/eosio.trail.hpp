@@ -74,16 +74,16 @@ public:
 
     [[eosio::action]] void lowermax(name publisher, asset amount);
 
-    [[eosio::action]] void deletewallet(name member, symbol token_symbol);
+    [[eosio::action]] void transfer(name sender, name recipient, asset amount); //TODO: rename to something other than transfer? may be confused with eosio.token transfer
 
     #pragma endregion Token_Actions
 
 
     #pragma region Voter_Registration
 
-    [[eosio::action]] void regvoter(name voter);
+    [[eosio::action]] void regvoter(name voter, symbol token_symbol);
 
-    [[eosio::action]] void unregvoter(name voter);
+    [[eosio::action]] void unregvoter(name voter, symbol token_symbol);
 
     #pragma endregion Voter_Registration
 

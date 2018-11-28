@@ -153,6 +153,8 @@ void trail::issuetoken(name publisher, name recipient, asset tokens, bool airgra
         print("\nToken Airdrop: SUCCESS");
     }
 
+    //TODO: add counterbalance to issue? or only transfer?
+
     print("\nAmount: ", tokens);
     print("\nRecipient: ", recipient);
 }
@@ -231,12 +233,26 @@ void trail::seizetoken(name publisher, name owner, asset tokens) {
     eosio_assert(reg.publisher == publisher, "only publisher can seize tokens");
     eosio_assert(reg.settings.is_seizable == true, "token registry doesn't allow seizing");
 
-    balances_table balances(_self, amount.symbol.code().raw());
-    auto b = balances.find(balance_owner.value);
-    eosio_assert(b != balances.end(), "balance owner has no balance to burn");
-    auto bal = *b;
+    balances_table ownerbals(_self, amount.symbol.code().raw());
+    auto ob = ownerbals.find(balance_owner.value);
+    eosio_assert(ob != ownerbals.end(), "user has no balance to seize");
+    auto obal = *b;
+    eosio_assert(obal.tokens - tokens >= asset(0, obal.tokens.symbol), "cannot seize more tokens than user owns");
 
-    
+    ownerbals.modify(ob, same_payer, [&]( auto& a ) { //NOTE: subtract amount from balance
+        a.tokens -= amount;
+    });
+
+    balances_table publisherbal(_self, amount.symbol.code().raw());
+    auto pb = publisherbal.find(publisher.value);
+    eosio_assert(pb != publisherbal.end(), "publisher has no balance to hold seized tokens");
+    auto pbal = *pb;
+
+    publisherbal.modify(pb, same_payer, [&]( auto& a ) { //NOTE: add seized tokens to publisher balance
+        a.tokens += amount;
+    });
+
+    print("\nToken Seizure: SUCCESS");
 }
 
 void trail::seizeairgrab(name publisher, name recipient, asset amount) {
@@ -246,37 +262,43 @@ void trail::seizeairgrab(name publisher, name recipient, asset amount) {
     auto r = registries.find(amount.symbol.code().raw());
     eosio_assert(r != registries.end(), "registry doesn't exist for given token");
     auto reg = *r;
-    eosio_assert(reg.publisher == publisher, "only publisher can burn airgrabs");
-    eosio_assert(reg.settings.is_burnable == true, "token registry doesn't allow airgrab burning");
+
+    eosio_assert(reg.publisher == publisher, "only publisher can seize airgrabs");
+    eosio_assert(reg.settings.is_seizable == true, "token registry doesn't allow seizing");
 
     airgrabs_table airgrabs(_self, publisher.value);
     auto g = airgrabs.find(recipient.value);
     eosio_assert(g != airgrabs.end(), "recipient has no airgrab");
     auto grab = *g;
 
-    eosio_assert(reg.supply - amount >= asset(0, reg.supply.symbol), "cannot burn supply below zero"); //NOTE: should never happen
-    
-    registries.modify(r, same_payer, [&]( auto& a ) {
-        a.supply -= amount;
-    });
+    eosio_assert(grab.tokens - amount >= asset(0, grab.tokens.symbol), "cannot seize more tokens than airgrab holds");
 
-    if (amount - grab.tokens <= asset(0, grab.tokens.symbol)) { //NOTE: new airgrab balance equal to or less than zero
+    if (amount - grab.tokens == asset(0, grab.tokens.symbol)) { //NOTE: all tokens seized :(
         airgrabs.erase(g);
-    } else { //NOTE: airgrab still has balance after reclaim
+    } else { //NOTE: airgrab still has balance after seizure
         airgrabs.modify(g, same_payer, [&]( auto& a ) {
             a.tokens -= amount;
         });
     }
 
-    print("\nAirgrab Burn: SUCCESS");
+    balances_table publisherbal(_self, amount.symbol.code().raw());
+    auto pb = publisherbal.find(publisher.value);
+    eosio_assert(pb != publisherbal.end(), "publisher has no balance to hold seized tokens");
+    auto pbal = *pb;
+
+    publisherbal.modify(pb, same_payer, [&]( auto& a ) { //NOTE: add seized tokens to publisher balance
+        a.tokens += amount;
+    });
+
+    print("\nAirgrab Seizure: SUCCESS");
 }
 
 void trail::raisemax(name publisher, asset amount) {
     require_auth(publisher);
 
     registries_table registries(_self, _self.value);
-    auto r = registries.find(amount.symbol.raw());
-    eosio_assert(r != registries.end(), "registry doesn't exist for that token");
+    auto r = registries.find(amount.symbol.code().raw());
+    eosio_assert(r != registries.end(), "registry doesn't exist for given token");
     auto reg = *r;
 
     eosio_assert(reg.publisher == publisher, "cannot raise another registry's max supply");
@@ -293,7 +315,7 @@ void trail::lowermax(name publisher, asset amount) {
     require_auth(publisher);
 
     registries_table registries(_self, _self.value);
-    auto r = registries.find(amount.symbol.raw());
+    auto r = registries.find(amount.symbol.code().raw());
     eosio_assert(r != registries.end(), "registry doesn't exist for that token");
     auto reg = *r;
 
@@ -309,35 +331,86 @@ void trail::lowermax(name publisher, asset amount) {
     print("\nLower Max Supply: SUCCESS");
 }
 
-void trail::deletewallet(name member, symbol token_symbol) {
-    require_auth(member);
-
-    balances_table balances(_self, token_symbol.raw());
-    auto b = balances.find(member.value);
-    eosio_assert(b != balances.end(), "account doesn't have a wallet of this token to delete");
+void trail::transfer(name sender, name recipient, asset amount) {
+    require_auth(sender);
 
     registries_table registries(_self, _self.value);
-    auto r = registries.find(token_symbol.raw());
+    auto r = registries.find(amount.symbol.code().raw());
+    eosio_assert(r != registries.end(), "token registry doesn't exist");
+    auto reg = *r;
 
-    if (r != registries.end()) { //NOTE: registry exists
-        auto reg = *r;
-        auto bal = *b;
+    eosio_assert(reg.settings.is_transferable == true, "token registry disallows transfers");
 
-        eosio_assert(reg.settings.is_burnable == true, "Token settings don't allow tokens to be burned");
-        
-        //NOTE: remove wallet balance from circulating supply
-        registries.modify(r, same_payer, [&]( auto& a ) {
-            a.supply -= bal.tokens;
+    balances_table senderbal(_self, amount.symbol.code().raw());
+    auto sb = senderbal.find(sender.value);
+    eosio_assert(sb != senderbal.end(), "sender doesn't have a balance");
+    auto sbal = *sb;
+    eosio_assert(sbal.tokens - amount >= asset(0, amount.symbol), "insufficient funds in sender's balance");
+
+    balances_table recbal(_self, amount.symbol.code().raw());
+    auto rb = recbal.find(recipient.value);
+    eosio_assert(rb != recbal.end(), "recipient doesn't have a balance to hold transferred funds"); //TODO: assert recipient has a balance?
+    auto rbal = *rb;
+
+    //NOTE: subtract amount from sender
+    senderbal.modify(sb, same_payer, [&]( auto& a ) {
+        a.tokens -= amount;
+    });
+
+    //NOTE: add amount to recipient
+    recbal.modify(rb, same_payer, [&]( auto& a ) {
+        a.tokens += amount;
+    });
+
+    counterbalances_table sendercb(_self, amount.symbol.code().raw());
+    auto scb = sendercb.find(sender.value);
+    
+    if (scb == sendercb.end()) { //NOTE: sender doesn't have a counterbalance yet
+        sendercb.emplace(sender, [&]( auto& a ){
+            a.owner = sender;
+            a.decayable_cb = asset(0, amount.symbol);
+            a.persistent_cb = asset(0, amount.symbol);
+            a.last_decay = now();
         });
-
-        print("\nBalance Safely Removed From Circulation: SUCCESS");
-    } else { //NOTE: registry no longer exists
-        balances.erase(b);
-
-        print("\nToken Registry Doesn't Exist. Wallet Balance Burned.");
+    } else {
+        auto scbal = *scb;
+        if (scbal.decayable_cb - amount < asset(0, amount.symbol)) { //NOTE: if scbal < 0, set to 0
+            sendercb.modify(scb, same_payer, [&]( auto& a ) {
+                a.decayable_cb = asset(0, decayable_cb.symbol);
+            });
+        } else {
+            asset new_cbal = scbal.decayable_cb - amount;
+            sendercb.modify(scb, same_payer, [&]( auto& a ) {
+                a.decayable_cb = new_cbal;
+            });
+        }
     }
 
-    print("\nWallet Burn: SUCCESS");
+    counterbalances_table reccb(_self, amount.symbol.code().raw());
+    auto rcb = reccb.find(recipient.value);
+
+    if (rcb == reccb.end()) { //NOTE: recipient doesn't have a counterbalance yet
+        reccb.emplace(sender, [&]( auto& a ){
+            a.owner = recipient;
+            a.decayable_cb = asset(0, amount.symbol);
+            a.persistent_cb = asset(0, amount.symbol);
+            a.last_decay = now();
+        });
+    } else {
+        auto rcbal = *rcb;
+        if (rcbal.decayable_cb - amount < asset(0, amount.symbol)) { //NOTE: if rcbal < 0, set to 0
+            reccb.modify(rcb, same_payer, [&]( auto& a ) {
+                a.decayable_cb = asset(0, decayable_cb.symbol);
+            });
+        } else {
+            asset new_cbal = rcbal.decayable_cb - amount;
+            reccb.modify(rcb, same_payer, [&]( auto& a ) {
+                a.decayable_cb = new_cbal;
+            });
+        }
+    }
+
+    print("\nToken Transfer: SUCCESS");
 }
 
 #pragma endregion Token_Actions
@@ -345,45 +418,57 @@ void trail::deletewallet(name member, symbol token_symbol) {
 
 #pragma region Voter_Registration
 
-void trail::regvoter(name voter) {
+//NOTE: effectively createwallet()
+void trail::regvoter(name voter, symbol token_symbol) {
     require_auth(voter);
 
     symbol core_symbol = symbol("VOTE", 4);
 
-    balances_table balances(_self, core_symbol.code().raw());
-    auto v = balances.find(voter.value);
-
-    eosio_assert(v == balances.end(), "Voter already exists");
+    balances_table balances(_self, token_symbol.code().raw());
+    auto b = balances.find(voter.value);
+    eosio_assert(b == balances.end(), "Voter already exists");
 
     balances.emplace(voter, [&]( auto& a ){
         a.owner = voter;
-        a.tokens = asset(0, core_symbol);
+        a.tokens = asset(0, token_symbol);
     });
 
-    env_struct.totals[1]++;
+    if (token_symbol == core_symbol) {
+        env_struct.totals[1]++;
+    }
 
     print("\nVoter Registration: SUCCESS ");
 }
 
-void trail::unregvoter(name voter) {
+//NOTE: effectively deletewallet()
+void trail::unregvoter(name voter, symbol token_symbol) {
     require_auth(voter);
 
     symbol core_symbol = symbol("VOTE", 4);
 
-    balances_table voters(_self, core_symbol.code().raw());
-    auto v = voters.find(voter.value);
+    balances_table balances(_self, token_symbol.code().raw());
+    auto b = balances.find(voter.value);
+    eosio_assert(v != balances.end(), "voter doesn't exist to unregister");
+    auto bal = *b;
 
-    eosio_assert(v != voters.end(), "Voter Doesn't Exist");
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(token_symbol.code().raw());
+    eosio_assert(r != registries.end(), "registry doesn't exist");
+    auto reg = *r;
 
-    auto vid = *v;
+    eosio_assert(reg.settings.is_burnable == true, "token registry disallows burning of funds, transfer whole balance before attempting to unregister.");
 
-    //TODO: remove VOTE's from supply? check burnable status?
+    registries.modify(r, same_payer, [&]( auto& a ) {
+        a.supply -= bal.tokens;
+    });
 
-    voters.erase(v);
+    balances.erase(b);
 
-    env_struct.totals[1]--;
+    if (token_symbol == core_symbol) {
+        env_struct.totals[1]--;
+    }
 
-    print("\nVoterID Unregistration: SUCCESS");
+    print("\nVoter Unregistration: SUCCESS");
 }
 
 #pragma endregion Voter_Registration
@@ -1174,8 +1259,6 @@ extern "C" {
             execute_action(name(self), name(code), &trail::raisemax);
         } else if (code == self && action == name("lowermax").value) {
             execute_action(name(self), name(code), &trail::lowermax);
-        } else if (code == self && action == name("deletewallet").value) {
-            execute_action(name(self), name(code), &trail::deletewallet);
         } else if (code == name("eosio.token").value && action == name("transfer").value) { //NOTE: updates counterbals after transfers
             trail trailservice(name(self), name(code), ds);
             auto args = unpack_action_data<transfer_args>();

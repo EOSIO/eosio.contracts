@@ -22,7 +22,7 @@ struct token_settings {
     bool is_destructible = false;
     bool is_proxyable = false; //NOTE: allows proxy system //TODO: implement
     bool is_burnable = false; //NOTE: can only burn from own balance
-    bool is_seizable = false; //TODO: implement
+    bool is_seizable = false;
     bool is_max_mutable = false;
     bool is_transferable = false; //NOTE: allows counerbalances and cb decay //TODO: implement
     bool is_recastable = false;
