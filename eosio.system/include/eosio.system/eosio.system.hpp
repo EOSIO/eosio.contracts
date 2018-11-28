@@ -176,6 +176,34 @@ namespace eosiosystem {
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
 
+   template <typename T>
+   int32_t remove_secondary_index( uint64_t code, uint64_t scope, uint64_t table ) {
+      using namespace eosio::_multi_index_detail;
+
+      uint64_t pk;
+
+      auto min = secondary_key_traits<T>::lowest();
+      auto itr = secondary_index_db_functions<T>::db_idx_lowerbound( code, scope, table, min, pk );
+
+      // itr == -1, no secondary index
+      // itr < -1, type mismatch
+      if( itr <= -1 ) return itr;
+
+      while( itr > -1 ) {
+         auto next_itr = secondary_index_db_functions<T>::db_idx_next( itr, &pk );
+         secondary_index_db_functions<T>::db_idx_remove( itr );
+         itr = next_itr;
+      }
+
+      // secondary index is removed
+      return 0;
+   }
+
+#define REMOVE_SECONDARY_INDEX( ITR, TYPE, CODE, SCOPE, TABLE ) \
+   ITR = remove_secondary_index<TYPE>( CODE, SCOPE, TABLE ); \
+   if ( ITR == -1 ) break; \
+   else if ( ITR == 0 ) continue;
+
    class [[eosio::contract("eosio.system")]] system_contract : public native {
       private:
          voters_table            _voters;
@@ -316,6 +344,9 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void bidrefund( name bidder, name newname );
+
+         [[eosio::action]]
+         void removetable( name code, uint64_t scope, name table );
 
       private:
          // Implementation details:

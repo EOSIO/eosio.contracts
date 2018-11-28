@@ -218,6 +218,32 @@ namespace eosiosystem {
       refunds_table.erase( it );
    }
 
+   void system_contract::removetable( name code, uint64_t scope, name table ) {
+      require_auth( code );
+
+      auto itr = db_end_i64( code.value, scope, table.value );
+      eosio_assert( itr != -1, "table not found" );
+
+      for( uint64_t i = 0; i < 0x10; ++i ) {
+         REMOVE_SECONDARY_INDEX( itr, uint64_t, code.value, scope, table.value | i )
+         REMOVE_SECONDARY_INDEX( itr, uint128_t, code.value, scope, table.value | i )
+         REMOVE_SECONDARY_INDEX( itr, double, code.value, scope, table.value | i )
+         REMOVE_SECONDARY_INDEX( itr, long double, code.value, scope, table.value | i )
+         REMOVE_SECONDARY_INDEX( itr, eosio::key256, code.value, scope, table.value | i )
+         //REMOVE_SECONDARY_INDEX( itr, eosio::digest256, code.value, scope, table.value | i )
+      }
+
+      uint64_t pk;
+
+      itr = db_lowerbound_i64( code.value, scope, table.value, std::numeric_limits<uint64_t>::min() );
+
+      while( itr > -1 ) {
+         auto next_itr = db_next_i64( itr, &pk );
+         db_remove_i64( itr );
+         itr = next_itr;
+      }
+   }
+
    /**
     *  Called after a new account is created. This code enforces resource-limits rules
     *  for new accounts as well as new account naming conventions.
@@ -308,7 +334,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
-     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
+     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)(removetable)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp
