@@ -88,17 +88,6 @@ public:
          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
          trail_abi_ser.set_abi(abi, abi_serializer_max_time);
       }
-
-
-      set_code( N(eosio.saving), contracts::worker_proposals_wasm() );
-      set_abi( N(eosio.saving),  contracts::worker_proposals_abi().data() );
-
-      {
-         const auto& accnt = control->db().get<account_object,by_name>( N(eosio.saving) );
-         abi_def abi;
-         BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
-         wp_abi_ser.set_abi(abi, abi_serializer_max_time);
-      }
       
    }
 
@@ -679,82 +668,6 @@ public:
          push_transaction( trx );
          produce_block();
       }
-   }
-
-   void submit_worker_proposal( account_name proposer, std::string title, uint16_t cycles, std::string ipfs_location, asset amount, account_name receiver) {
-      base_tester::push_action(N(eosio.saving), N(submit), proposer, mvo()
-                              ("proposer",      proposer)
-                              ("title",         title)
-                              ("cycles",        cycles)
-                              ("ipfs_location", ipfs_location)
-                              ("amount",        amount)
-                              ("receiver",      receiver));
-   }
-
-   void regvoter(account_name voter) {
-      base_tester::push_action(N(eosio.trail), N(regvoter), voter, mvo()("voter", voter));
-   }
-
-   void regballot(account_name publisher, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
-      base_tester::push_action(N(eosio.trail), N(regballot), publisher, mvo()
-                              ("publisher",     publisher)
-                              ("voting_symbol", voting_symbol)
-                              ("begin_time",    begin_time)
-                              ("end_time",      end_time)
-                              ("info_url",      info_url));
-   }
-
-   action_result linkballot(uint64_t prop_id, uint64_t ballot_id, account_name proposer) {
-      return push_wps_action(proposer, N(linkballot), mvo()("prop_id", prop_id)("ballot_id", ballot_id)("proposer", proposer));
-   }
-
-   action_result trail_castvote(account_name voter, uint64_t ballot_id, uint16_t direction) {
-      return push_trail_action(voter, N(castvote), mvo()("voter", voter)("ballot_id", ballot_id)("direction", direction));
-   }
-
-   action_result trail_mirrorstake(account_name voter, uint32_t lock_period) {
-      return push_trail_action(voter, N(mirrorstake), mvo()("voter", voter)("lock_period", lock_period));
-   }
-
-
-   action_result trail_nextcycle(account_name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
-      return push_trail_action(publisher, N(nextcycle), mvo()("publisher", publisher)("ballot_id", ballot_id)("new_begin_time", new_begin_time)("new_end_time", new_end_time));
-   }
-
-   action_result claim_proposal_funds(uint64_t proposal_id, account_name proposer) {
-      return push_wps_action(proposer, N(claim), mvo()("prop_id", proposal_id)("proposer", proposer));
-   }
-
-   fc::variant get_wp_info( const uint64_t id ) {
-      vector<char> data = get_row_by_account( N(eosio.saving), N(eosio.saving), N(proposals), id );
-      return wp_abi_ser.binary_to_variant( "proposal", data, abi_serializer_max_time );
-   }
-
-   fc::variant get_ballot( const uint64_t id ) {
-      vector<char> data = get_row_by_account( N(eosio.trail), N(eosio.trail), N(ballots), id );
-      return trail_abi_ser.binary_to_variant( "ballot", data, abi_serializer_max_time );
-   }
-
-   action_result push_wps_action( const account_name& signer, const action_name &name, const variant_object &data ) {
-      string action_type_name = wp_abi_ser.get_action_type(name);
-
-      action act;
-      act.account = N(eosio.saving);
-      act.name = name;
-      act.data = wp_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
-
-      return base_tester::push_action( std::move(act), uint64_t(signer));
-   }
-
-   action_result push_trail_action( const account_name& signer, const action_name &name, const variant_object &data ) {
-      string action_type_name = trail_abi_ser.get_action_type(name);
-
-      action act;
-      act.account = N(eosio.trail);
-      act.name = name;
-      act.data = trail_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
-
-      return base_tester::push_action( std::move(act), uint64_t(signer));
    }
 };
 
