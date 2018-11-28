@@ -229,23 +229,23 @@ void trail::seizetoken(name publisher, name owner, asset tokens) {
     eosio_assert(reg.publisher == publisher, "only publisher can seize tokens");
     eosio_assert(reg.settings.is_seizable == true, "token registry doesn't allow seizing");
 
-    balances_table ownerbals(_self, amount.symbol.code().raw());
-    auto ob = ownerbals.find(balance_owner.value);
+    balances_table ownerbals(_self, tokens.symbol.code().raw());
+    auto ob = ownerbals.find(owner.value);
     eosio_assert(ob != ownerbals.end(), "user has no balance to seize");
-    auto obal = *b;
+    auto obal = *ob;
     eosio_assert(obal.tokens - tokens >= asset(0, obal.tokens.symbol), "cannot seize more tokens than user owns");
 
     ownerbals.modify(ob, same_payer, [&]( auto& a ) { //NOTE: subtract amount from balance
-        a.tokens -= amount;
+        a.tokens -= tokens;
     });
 
-    balances_table publisherbal(_self, amount.symbol.code().raw());
+    balances_table publisherbal(_self, tokens.symbol.code().raw());
     auto pb = publisherbal.find(publisher.value);
     eosio_assert(pb != publisherbal.end(), "publisher has no balance to hold seized tokens");
     auto pbal = *pb;
 
     publisherbal.modify(pb, same_payer, [&]( auto& a ) { //NOTE: add seized tokens to publisher balance
-        a.tokens += amount;
+        a.tokens += tokens;
     });
 
     print("\nToken Seizure: SUCCESS");
@@ -375,9 +375,9 @@ void trail::transfer(name sender, name recipient, asset amount) {
         asset s_decay_amount = get_decay_amount(sender, amount.symbol, reg.settings.counterbal_decay_rate);
         asset new_s_cbal = (scbal.decayable_cb - s_decay_amount) - amount;
 
-        if (new_s_cbal < asset(0, decayable_cb.symbol)) { //NOTE: if scbal < 0, set to 0
+        if (new_s_cbal < asset(0, scbal.decayable_cb.symbol)) { //NOTE: if scbal < 0, set to 0
             sendercb.modify(scb, same_payer, [&]( auto& a ) {
-                a.decayable_cb = asset(0, decayable_cb.symbol);
+                a.decayable_cb = asset(0, scbal.decayable_cb.symbol);
             });
         } else {
             sendercb.modify(scb, same_payer, [&]( auto& a ) {
@@ -401,14 +401,14 @@ void trail::transfer(name sender, name recipient, asset amount) {
         asset r_decay_amount = get_decay_amount(recipient, amount.symbol, reg.settings.counterbal_decay_rate);
         asset new_r_cbal = (rcbal.decayable_cb - r_decay_amount);
 
-        if (new_r_cbal <= asset(0, decayable_cb.symbol)) { //NOTE: only triggers if decayed below 0
-            new_r_cbal = asset(0, decayable_cb.symbol);
+        if (new_r_cbal <= asset(0, rcbal.decayable_cb.symbol)) { //NOTE: only triggers if decayed below 0
+            new_r_cbal = asset(0, rcbal.decayable_cb.symbol);
         }
 
         new_r_cbal += amount;
         
         reccb.modify(rcb, same_payer, [&]( auto& a ) {
-            a.decayable_cb = new_cbal;
+            a.decayable_cb = new_r_cbal;
         });
     }
 
@@ -450,7 +450,7 @@ void trail::unregvoter(name voter, symbol token_symbol) {
 
     balances_table balances(_self, token_symbol.code().raw());
     auto b = balances.find(voter.value);
-    eosio_assert(v != balances.end(), "voter doesn't exist to unregister");
+    eosio_assert(b != balances.end(), "voter doesn't exist to unregister");
     auto bal = *b;
 
     registries_table registries(_self, _self.value);
