@@ -20,7 +20,7 @@ using mvo = fc::mutable_variant_object;
 class eosio_msig_tester : public tester {
 public:
    eosio_msig_tester() {
-      create_accounts( { N(eosio.msig), N(eosio.stake), N(eosio.ram), N(eosio.ramfee), N(alice), N(bob), N(carol) } );
+      create_accounts( { N(eosio.msig), N(eosio.stake), N(eosio.ram), N(eosio.ramfee), N(eosio.trail), N(alice), N(bob), N(carol) } );
       produce_block();
 
       auto trace = base_tester::push_action(config::system_account_name, N(setpriv),

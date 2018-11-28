@@ -22,29 +22,99 @@ using mvo = fc::mutable_variant_object;
 
 BOOST_AUTO_TEST_SUITE(eosio_wps_tests)
 
-BOOST_FIXTURE_TEST_CASE( ballot_id_distribution, eosio_wps_tester ) try {
+BOOST_FIXTURE_TEST_CASE( deposit_system, eosio_wps_tester) try {
+	asset local_sum = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), N(eosio.saving));
+	for(uint16_t i = 0; i < test_voters.size(); i++) {
+		auto deposit_info = get_deposit(test_voters[i].value);
+		BOOST_REQUIRE_EQUAL(true, deposit_info.is_null());
+		asset sum = asset::from_string("20.0000 TLOS");
+		auto voter_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
+		
+		BOOST_REQUIRE_EQUAL(voter_balance, asset::from_string("200.0000 TLOS"));
+		std::cout << "transfer " << "1" << " account " << i << std::endl;
+		transfer(test_voters[i].value, N(eosio.saving), sum, "WPS deposit");
+		produce_blocks( 2 );
+		auto contract_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), N(eosio.saving));
+		BOOST_REQUIRE_EQUAL(contract_balance, local_sum + sum);
+		local_sum += sum;
+
+		deposit_info = get_deposit(test_voters[i].value);
+		REQUIRE_MATCHING_OBJECT(deposit_info, mvo()
+			("owner", test_voters[i].to_string())
+			("escrow", sum.to_string())
+		);
+		std::cout << "transfer " << " 2 " << " account " << i << std::endl;
+		transfer(test_voters[i].value, N(eosio.saving), sum, "WPS depost");
+		produce_blocks( 2 );
+		contract_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), N(eosio.saving));
+		BOOST_REQUIRE_EQUAL(contract_balance, (local_sum + sum));
+		local_sum += sum;
+
+		deposit_info = get_deposit(test_voters[i].value);
+		REQUIRE_MATCHING_OBJECT(deposit_info, mvo()
+			("owner", test_voters[i].to_string())
+			("escrow", (sum + sum).to_string())
+		);
+
+		asset pre_refund = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
+		asset escrow = asset::from_string(get_deposit(test_voters[i].value)["escrow"].as_string());
+		getdeposit(test_voters[i].value);
+            local_sum -= escrow;
+		asset post_refund = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
+
+		BOOST_REQUIRE_EQUAL((pre_refund + escrow), post_refund);
+	}
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( ballot_id_and_deposit_amount, eosio_wps_tester ) try {
    register_voters(test_voters, 0, 1);
 
    auto proposer = test_voters[0];
    transfer(N(eosio), proposer.value, asset::from_string("2000.0000 TLOS"), "Blood Money");
+   transfer(N(eosio), eosio::chain::name("eosio.saving"), asset::from_string("0.0001 TLOS"), "Init WPS");
+
    auto title = std::string("my proposal test title");
    auto cycles = 1;
    auto ipfs_location = std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B9");
-   auto amnt = std::string("1");
    auto receiver = test_voters[0];
 
    int num_proposals = 10;
-
+   auto env = get_wps_env();
+   uint16_t fee_percentage = env["fee_percentage"].as<uint16_t>();
+   uint64_t fee_min = env["fee_min"].as<uint64_t>();
+   uint64_t base_amount = fee_min * 100 / fee_percentage + (10000 * (num_proposals / 2));
+   
+   asset expected_total = core_sym::from_string("0.0001");
    signed_transaction trx;
    for( int i = 0; i < num_proposals; i++){
-      std::string _amount = amnt + std::to_string(i);
+      uint64_t amount = base_amount - i * 10000;
+      uint64_t fee = amount * fee_percentage / 100;
+      fee = fee < fee_min ? fee_min : fee;
+      
+      std::stringstream ssa;
+      std::stringstream ssf;
+      ssa << std::fixed << std::setprecision(4) << (double(amount)/10000);
+      ssf << std::fixed << std::setprecision(4) << (double(fee)/10000);
+      asset _amount = core_sym::from_string(ssa.str());
+      asset _fee = core_sym::from_string(ssf.str());
+      expected_total += _fee;
+
+      trx.actions.emplace_back( get_action(N(eosio.token), N(transfer), vector<permission_level>{{proposer.value, config::active_name}},
+         mvo()
+            ("from", proposer)
+            ("to", eosio::chain::name("eosio.saving"))
+            ("quantity", _fee)
+            ("memo", std::string("proposal fee ")+i)
+         )
+      );
+      
       trx.actions.emplace_back( get_action(N(eosio.saving), N(submit), vector<permission_level>{{proposer.value, config::active_name}},
          mvo()
             ("proposer",      proposer)
             ("title",         title + i)
             ("cycles",        cycles + i)
             ("ipfs_location", ipfs_location + i)
-            ("amount",        core_sym::from_string(_amount))
+            ("amount",        _amount)
             ("receiver",      proposer)
          )
       );
@@ -54,10 +124,15 @@ BOOST_FIXTURE_TEST_CASE( ballot_id_distribution, eosio_wps_tester ) try {
    push_transaction( trx );
    produce_blocks(1);
 
+   asset saving_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), N(eosio.saving));
+
+   BOOST_REQUIRE_EQUAL(saving_balance, expected_total);
+
    for( int i = 0; i < num_proposals; i++){
       auto proposal = get_proposal(i);
       auto submission = get_wps_submission(i);
       auto ballot = get_ballot(i);
+
       // since only wps here, there should be same ids for props and subs
       BOOST_REQUIRE_EQUAL(proposal["prop_id"], submission["id"]);
       BOOST_REQUIRE_EQUAL(proposal["info_url"], submission["ipfs_location"]);
@@ -81,8 +156,8 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    int total_voters = test_voters.size();
 
    register_voters(test_voters, 0, total_voters - 1);
+   
    auto trail_env = get_trail_env();
-   wdump((trail_env));
    BOOST_REQUIRE_EQUAL(trail_env["totals"][1], total_voters - 1);
 
    name proposer = test_voters[total_voters - 1];
@@ -134,7 +209,8 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    double threshold_fee_votes = env["threshold_fee_votes"].as<double>();
 
    // std::cout<<"---- "<<quorum_voters_size_pass<<" = "<<quorum_voters_size_fail<<" = "<<fee_voters<<" = "<<threshold_pass_votes<<" = "<<threshold_fee_votes<<" ----"<<std::endl;
-
+   
+   transfer(proposer, eosio::chain::name("eosio.saving"), core_sym::from_string("50.0000"), "proposal 1 fee");
    submit_worker_proposal(
       proposer.value,
       std::string("test proposal 1"),
@@ -146,6 +222,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    // check if 50TLOS (3% < 50) fee was used
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1950.0000"), get_balance( proposer ) );
    
+   transfer(proposer, eosio::chain::name("eosio.saving"), core_sym::from_string("60.0000"), "proposal 2 fee");
    submit_worker_proposal(
       proposer.value,
       std::string("test proposal 2"),
