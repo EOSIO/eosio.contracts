@@ -64,9 +64,11 @@ public:
 
     [[eosio::action]] void claimairgrab(name claimant, name publisher, symbol token_symbol);
 
-    [[eosio::action]] void burntoken(name publisher, name recipient, asset amount);
+    [[eosio::action]] void burntoken(name balance_owner, asset amount);
 
-    [[eosio::action]] void burnairgrab(name publisher, name recipient, asset amount);
+    [[eosio::action]] void seizetoken(name publisher, name owner, asset tokens); //TODO: add string memo?
+
+    [[eosio::action]] void seizeairgrab(name publisher, name recipient, asset amount); //TODO: add string memo?
 
     [[eosio::action]] void raisemax(name publisher, asset amount);
 
@@ -88,7 +90,7 @@ public:
 
     #pragma region Voting_Actions
 
-    //NOTE: casts TLOS into VOTE tokens and subtract counterbalance
+    //NOTE: casts TLOS into VOTE tokens and subtracts counterbalance
     [[eosio::action]] void mirrorcast(name voter, symbol token_symbol);
 
     [[eosio::action]] void castvote(name voter, uint64_t ballot_id, uint16_t direction);
@@ -117,6 +119,8 @@ public:
     [[eosio::action]] void regballot(name publisher, uint8_t ballot_type, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url);
 
     [[eosio::action]] void unregballot(name publisher, uint64_t ballot_id);
+
+    //TODO: archivebal() action to replace ballot publisher's RAM with Trail's RAM. Could require TLOS payment?
 
     #pragma endregion Ballot_Registration
 

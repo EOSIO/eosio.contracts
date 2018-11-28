@@ -44,8 +44,7 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] registry {
     EOSLIB_SERIALIZE(registry, (max_supply)(supply)(publisher)(info_url)(settings))
 };
 
-//NOTE: balances are scoped by symbol 
-//TODO: scope by symbol.code().raw()
+//NOTE: balances are scoped by symbol.code().raw()
 struct [[eosio::table, eosio::contract("eosio.trail")]] balance {
     name owner;
     asset tokens;
@@ -63,7 +62,7 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] balance {
 //     EOSLIB_SERIALIZE(proxy_balance, (proxied_tokens)(proxy))
 // };
 
-//NOTE: airgrabs are scoped by publisher?
+//NOTE: airgrabs are scoped by publisher.value
 struct [[eosio::table, eosio::contract("eosio.trail")]] airgrab {
     name recipient;
     asset tokens;
@@ -72,7 +71,7 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] airgrab {
     EOSLIB_SERIALIZE(airgrab, (recipient)(tokens))
 };
 
-//NOTE: counterbalances are scoped by trail
+//NOTE: counterbalances are scoped by symbol.code().raw()
 struct [[eosio::table, eosio::contract("eosio.trail")]] counter_balance {
     name owner;
     asset decayable_cb;
@@ -103,26 +102,6 @@ typedef multi_index<name("registries"), registry> registries_table;
 
 #pragma region Helper_Functions
 
-// bool is_registered_token(symbol token_symbol) {
-//     registries_table registries(name("eosio.trail"), name("eosio.trail").value);
-//     auto itr = registries.find(token_symbol.raw());
-//     if (itr != registries.end()) {
-//         return true;
-//     }
-//     return false;
-// }
 
-// symbol get_voting_symbol(uint64_t reference_id, uint8_t table_id) {
-// }
-
-// asset get_token_balance(name owner, symbol token_symbol) {
-//     balances_table balances(name("eosio.trail"), token_symbol.raw());
-//     auto itr = balances.find(owner.value);
-//     if (itr != balances.end()) {
-//         auto bal = *itr;
-//         return bal.tokens;
-//     }
-//     return asset(0, token_symbol);
-// }
 
 #pragma endregion Helper_Functions
