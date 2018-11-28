@@ -4,6 +4,7 @@
 #include <eosio/chain/wast_to_wasm.hpp>
 
 #include <Runtime/Runtime.h>
+#include <iomanip>
 
 #include <fc/variant_object.hpp>
 #include "contracts.hpp"
@@ -132,6 +133,8 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    double threshold_pass_votes = env["threshold_pass_votes"].as<double>();
    double threshold_fee_votes = env["threshold_fee_votes"].as<double>();
 
+   // std::cout<<"---- "<<quorum_voters_size_pass<<" = "<<quorum_voters_size_fail<<" = "<<fee_voters<<" = "<<threshold_pass_votes<<" = "<<threshold_fee_votes<<" ----"<<std::endl;
+
    submit_worker_proposal(
       proposer.value,
       std::string("test proposal 1"),
@@ -182,8 +185,18 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    auto quorum = vector<account_name>(test_voters.begin(), test_voters.begin() + quorum_voters_size_pass); 
 
-   int vote_tipping_point = ((quorum_voters_size_pass * 100) / threshold_pass_votes) + 1;
-   int fee_tipping_point = ((quorum_voters_size_pass * 100) / threshold_fee_votes) + 1;
+   
+   auto calculateTippingPoint = [&](int quorum_size, int threshold, bool fee = false) {
+      if( fee )
+         return std::ceil( double(quorum_size * threshold) / 100);
+
+      return std::floor( double(quorum_size * threshold) / 100) + 1;
+   };
+ 
+   int vote_tipping_point = calculateTippingPoint(quorum_voters_size_fail, threshold_pass_votes);
+   int fee_tipping_point = calculateTippingPoint(quorum_voters_size_fail, threshold_fee_votes, true);
+
+   // std::cout<<"conditions: [ "<<vote_tipping_point<<" ] / [ i < "<<fee_tipping_point<<" - 1 ] "<<std::endl;
 
    // voting window (#0) started
    // not enough voters in first cycle
@@ -193,7 +206,9 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
       // fail vote from lack of voters, but get fee
       uint16_t vote_direction_0 = 1;
       // fail vote from lack of voters and the fee from no votes
-      uint16_t vote_direction_1 = (quorum_voters_size_fail - i < fee_tipping_point) ? uint16_t(0) : uint16_t(1);
+      uint16_t vote_direction_1 = ( i < fee_tipping_point - 1 ) ? uint16_t(1) : uint16_t(0);
+      
+      // std::cout<<i<<" => "<<vote_direction_0<<" "<<vote_direction_1<<std::endl;
 
       castvote(quorum[i].value, 0, vote_direction_0);
       castvote(quorum[i].value, 1, vote_direction_1);
@@ -227,20 +242,27 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    // 1 day later voting window opens
    produce_block(fc::days(1));
 
+   vote_tipping_point = calculateTippingPoint(quorum_voters_size_pass, threshold_pass_votes);
+   fee_tipping_point = calculateTippingPoint(quorum_voters_size_pass, threshold_fee_votes, true);
+
+   // std::cout<<"conditions: [ i < "<<vote_tipping_point<<" - 1 ] / [ i < "<<fee_tipping_point<<" - 1 ] "<<std::endl;
+
    // voting window (#1) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
       mirrorcast(quorum[i].value, symbol(4, "VOTE"));
 
       // fail vote, fee already claimed but would pass
-      uint16_t vote_direction_0 = ( i < vote_tipping_point || (quorum_voters_size_pass - i < fee_tipping_point) ) ? uint16_t(0) : uint16_t(1);
+      uint16_t vote_direction_0 = ( i < vote_tipping_point - 1 ) ? uint16_t(1) : uint16_t(0);
       // fail vote and fee from no votes
-      uint16_t vote_direction_1 = ( i < vote_tipping_point || (quorum_voters_size_pass - i >= fee_tipping_point) ) ? uint16_t(0) : uint16_t(1);
+      uint16_t vote_direction_1 = ( i < fee_tipping_point - 1 ) ? uint16_t(1) : uint16_t(0);
+
+      // std::cout<<i<<" => "<<vote_direction_0<<" "<<vote_direction_1<<std::endl;
 
       castvote(quorum[i].value, 0, vote_direction_0);
       castvote(quorum[i].value, 1, vote_direction_1);
       produce_blocks(1);
    }
-   
+
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "Cycle is still open" ), claim_proposal_funds(0, proposer.value));
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
 
@@ -263,14 +285,21 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    // 1 day later voting window opens
    produce_block(fc::days(1));
 
+   vote_tipping_point = calculateTippingPoint(quorum_voters_size_pass, threshold_pass_votes);
+   fee_tipping_point = calculateTippingPoint(quorum_voters_size_pass, threshold_fee_votes, true);
+
+   // std::cout<<"conditions: [ i < "<<vote_tipping_point<<" ] / [ i < "<<fee_tipping_point<<" ] "<<std::endl;
+
    // voting window (#2) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
       mirrorcast(quorum[i].value, symbol(4, "VOTE"));
       
       // pass vote, fee already claimed
-      uint16_t vote_direction_0 = ( i <= vote_tipping_point ) ? uint16_t(1) : uint16_t(0);
+      uint16_t vote_direction_0 = ( i < vote_tipping_point ) ? uint16_t(1) : uint16_t(0);
       // pass vote and fee
-      uint16_t vote_direction_1 = ( i <= vote_tipping_point ) ? uint16_t(1) : uint16_t(0);
+      uint16_t vote_direction_1 = ( i < vote_tipping_point ) ? uint16_t(1) : uint16_t(0);
+      
+      // std::cout<<i<<" => "<<vote_direction_0<<" "<<vote_direction_1<<std::endl;
 
       castvote(quorum[i].value, 0, vote_direction_0);
       castvote(quorum[i].value, 1, vote_direction_1);
