@@ -73,7 +73,6 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] airgrab {
 };
 
 //NOTE: counterbalances are scoped by trail
-//TODO: scope cbs by symbol.code().raw() for transfer system
 struct [[eosio::table, eosio::contract("eosio.trail")]] counter_balance {
     name owner;
     asset decayable_cb;

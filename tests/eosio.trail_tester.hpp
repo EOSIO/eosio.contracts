@@ -75,6 +75,31 @@ class eosio_trail_tester : public tester
 
 		deploy_contract();
 		produce_blocks( 2 );
+		asset max_supply = asset::from_string("10000000000.0000 VOTE");
+		string info_url = "Qmdsafkjhasdlfjh";
+		regtoken(max_supply, N(eosio.trail), info_url);
+		mvo settings = mvo()
+			("is_destructible", 0)
+			("is_proxyable", 0)
+			("is_burnable", 0)
+			("is_seizable", 0)
+			("is_max_mutable", 1)
+			("is_transferable", 0)
+			("is_recastable", 0) //TODO: should change once eosio.trial recasting logic is setup for leaderboard voting
+			("is_initialized", 1)
+			("counterbal_decay_rate", 300)
+			("lock_after_initialize", 1);
+		initsettings(N(eosio.trail), symbol(4, "VOTE"), settings);
+		//TODO: get registry and validate it
+		auto token_registry = get_registry(symbol(4, "VOTE"));
+		// REQUIRE_MATCHING_OBJECT(token_registry, mvo() //find new way to validate this struct
+		// 	("max_supply", max_supply.to_string())
+		// 	("supply", "0.0000 VOTE")
+		// 	("publisher", "eosio.trail")
+		// 	("info_url", info_url)
+		// 	("settings", settings)
+		// );
+		std::cout << "=======================END SETUP==============================" << std::endl;
 	}
 
 	#pragma region Setup_Actions
@@ -176,37 +201,22 @@ class eosio_trail_tester : public tester
 		if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "env", data, abi_serializer_max_time );
 	}
+
 	#pragma endregion Setup_Actions
 
-	#pragma region Voting_Actions
-
-	transaction_trace_ptr regvoter(account_name voter) {
-		signed_transaction trx;
-		trx.actions.emplace_back( get_action(N(eosio.trail), N(regvoter), vector<permission_level>{{voter, config::active_name}},
-			mvo()
-			("voter", voter)
-			)
-		);
-		set_transaction_headers(trx);
-		trx.sign(get_private_key(voter, "active"), control->get_chain_id());
-		return push_transaction( trx );
-	}
-
-	action_result push_regvoter(account_name voter) {
-		return trail_push_action(N(eosio.trail), N(regvoter), mvo()("voter", voter));
-	}
+	#pragma region Get_Functions
 
 	fc::variant get_voter(account_name voter, symbol_code scope) {
 		vector<char> data = get_row_by_account(N(eosio.trail), scope.value, N(balances), voter);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("balance", data, abi_serializer_max_time);
 	}
 
-	fc::variant get_vote_receipt(account_name voter, uint64_t receipt_id) {
-		vector<char> data = get_row_by_account(N(eosio.trail), voter, N(votereceipts), receipt_id);
+	fc::variant get_vote_receipt(account_name voter, uint64_t ballot_id) {
+		vector<char> data = get_row_by_account(N(eosio.trail), voter, N(votereceipts), ballot_id);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("vote_receipt", data, abi_serializer_max_time);
 	}
 
-	fc::variant get_leaderboard(account_name voter, uint64_t board_id) {
+	fc::variant get_leaderboard(uint64_t board_id) {
 		vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(leaderboards), board_id);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("leaderboard", data, abi_serializer_max_time);
 	}
@@ -225,6 +235,34 @@ class eosio_trail_tester : public tester
 	{
 		vector<char> data = get_row_by_account(N(eosio.trail), scope.value, N(counterbals), acc);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("counter_balance", data, abi_serializer_max_time);
+	}
+
+	fc::variant get_registry(symbol sym)
+	{
+		vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(registries), sym.to_symbol_code());
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("registry", data, abi_serializer_max_time);
+	}
+
+	fc::variant get_airgrab(account_name publisher, account_name recipient)
+	{
+		vector<char> data = get_row_by_account(N(eosio.trail), publisher, N(airgrabs), recipient);
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("airgrab", data, abi_serializer_max_time);
+	}
+
+	#pragma endregion Get_Functions
+
+	#pragma region Voting_Actions
+
+	transaction_trace_ptr regvoter(account_name voter) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(regvoter), vector<permission_level>{{voter, config::active_name}},
+			mvo()
+			("voter", voter)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(voter, "active"), control->get_chain_id());
+		return push_transaction( trx );
 	}
 
 	transaction_trace_ptr unregvoter(account_name voter) {
@@ -281,13 +319,137 @@ class eosio_trail_tester : public tester
 
 	#pragma endregion Voting_Actions
 
-	#pragma region Publisher_Actions
+	#pragma region Token_Action
 
-	transaction_trace_ptr regtoken(asset native, account_name publisher) {
+	transaction_trace_ptr issuetoken(account_name publisher, account_name recipient, asset tokens, bool airgrab) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(issuetoken), vector<permission_level>{{publisher, config::active_name}},
+			mvo()
+			("publisher", publisher)
+			("recipient", recipient)
+			("tokens", tokens)
+			("airgrab", airgrab)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(publisher, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr claimairgrab(account_name claimant, account_name publisher, symbol token_symbol) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(claimairgrab), vector<permission_level>{{claimant, config::active_name}},
+			mvo()
+			("claimant", claimant)
+			("publisher", publisher)
+			("token_symbol", token_symbol)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(claimant, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr initsettings(account_name publisher, symbol token_symbol, mvo new_settings) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(initsettings), vector<permission_level>{{publisher, config::active_name}},
+			mvo()
+			("publisher", publisher)
+			("token_symbol", token_symbol)
+			("new_settings", new_settings)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(publisher, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr burntoken(account_name publisher, account_name recipient, asset amount) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(burntoken), vector<permission_level>{{publisher, config::active_name}},
+			mvo()
+			("publisher", publisher)
+			("recipient", recipient)
+			("amount", amount)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(publisher, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr burnairgrab(account_name publisher, account_name recipient, asset amount) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(burnairgrab), vector<permission_level>{{publisher, config::active_name}},
+			mvo()
+			("publisher", publisher)
+			("recipient", recipient)
+			("amount", amount)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(publisher, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr raisemax(account_name publisher, asset amount) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(raisemax), vector<permission_level>{{publisher, config::active_name}},
+			mvo()
+			("publisher", publisher)
+			("amount", amount)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(publisher, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr lowermax(account_name publisher, asset amount) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(lowermax), vector<permission_level>{{publisher, config::active_name}},
+			mvo()
+			("publisher", publisher)
+			("amount", amount)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(publisher, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr deletewallet(account_name member, symbol token_symbol) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(deletewallet), vector<permission_level>{{member, config::active_name}},
+			mvo()
+			("member", member)
+			("token_symbol", token_symbol)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(member, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr regtoken(asset max_supply, name publisher, string info_url) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(eosio.trail), N(regtoken), vector<permission_level>{{publisher, config::active_name}},
 			mvo()
-			("native", native)
+			("max_supply", max_supply)
+			("publisher", publisher)
+			("info_url", info_url)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(publisher, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr unregtoken(symbol token_symbol, account_name publisher) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(unregtoken), vector<permission_level>{{publisher, config::active_name}},
+			mvo()
+			("token_symbol", token_symbol)
 			("publisher", publisher)
 			)
 		);
@@ -296,18 +458,9 @@ class eosio_trail_tester : public tester
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr unregtoken(asset native, account_name publisher) {
-		signed_transaction trx;
-		trx.actions.emplace_back( get_action(N(eosio.trail), N(unregtoken), vector<permission_level>{{publisher, config::active_name}},
-			mvo()
-			("native", native)
-			("publisher", publisher)
-			)
-		);
-		set_transaction_headers(trx);
-		trx.sign(get_private_key(publisher, "active"), control->get_chain_id());
-		return push_transaction( trx );
-	}
+	#pragma endregion Token_Actions
+
+	#pragma region Publisher_Actions
 
 	transaction_trace_ptr regballot(account_name publisher, uint8_t ballot_type, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
 		signed_transaction trx;
@@ -368,6 +521,20 @@ class eosio_trail_tester : public tester
 		return push_transaction( trx );
 	}
 
+	transaction_trace_ptr setseats(account_name publisher, uint64_t ballot_id, uint8_t num_seats) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(setseats), vector<permission_level>{{publisher, config::active_name}},
+			mvo()
+			("publisher", publisher)
+			("ballot_id", ballot_id)
+			("num_seats", num_seats)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(publisher, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
 	transaction_trace_ptr addcandidate(account_name publisher, uint64_t ballot_id, account_name new_candidate, string info_link) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(eosio.trail), N(addcandidate), vector<permission_level>{{publisher, config::active_name}},
@@ -384,4 +551,14 @@ class eosio_trail_tester : public tester
 	}
 
 	#pragma endregion Publisher_Actions
+
+	void dump_trace(transaction_trace_ptr trace_ptr) {
+		std::cout << std::endl << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+		for(auto trace : trace_ptr->action_traces) {
+			std::cout << "action_name trace: " << trace.act.name.to_string() << std::endl;
+			//TODO: split by new line character, loop and indent output
+			std::cout << trace.console << std::endl << std::endl;
+		}
+		std::cout << std::endl << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" << std::endl << std::endl;
+	}
 };

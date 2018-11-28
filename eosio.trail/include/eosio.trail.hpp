@@ -51,7 +51,7 @@ public:
 
     //[[eosio::action]] void settokenurl(name publisher, string info_url);
 
-    [[eosio::action]] void setsettings(name publisher, symbol token_symbol, token_settings new_settings);
+    [[eosio::action]] void initsettings(name publisher, symbol token_symbol, token_settings new_settings);
 
     [[eosio::action]] void unregtoken(symbol token_symbol, name publisher);
 
@@ -62,7 +62,7 @@ public:
 
     [[eosio::action]] void issuetoken(name publisher, name recipient, asset tokens, bool airgrab);
 
-    [[eosio::action]] void claimtoken(name claimant, name publisher, symbol token_symbol);
+    [[eosio::action]] void claimairgrab(name claimant, name publisher, symbol token_symbol);
 
     [[eosio::action]] void burntoken(name publisher, name recipient, asset amount);
 

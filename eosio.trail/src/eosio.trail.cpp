@@ -2,7 +2,7 @@
 
 trail::trail(name self, name code, datastream<const char*> ds) : contract(self, code, ds), environment(self, self.value) {
     if (!environment.exists()) {
-        print("\n new env !");
+        //print("\n new env !");
         vector<uint64_t> new_totals = {0,0,0,0,0,0};
 
         env_struct = env{
@@ -16,7 +16,7 @@ trail::trail(name self, name code, datastream<const char*> ds) : contract(self, 
     } else {
         env_struct = environment.get();
         env_struct.time_now = now();
-        print("\n existing env ! ",env_struct.totals[1]);
+        //print("\n existing env ! ", env_struct.totals[1]);
     }
 }
 
@@ -32,8 +32,8 @@ trail::~trail() {
             calling actions from same contract overwrites the env on destructor being called twice 
         => cause : apply function calls constr / destr once, then another time from action
     */
-    if (environment.exists() && env_struct.time_now > 0) {
-        print("\n destructor existing env ! ",env_struct.totals[1]);
+    if (environment.exists() && env_struct.time_now >= 0) {
+        print("\n destructor existing env ! ", env_struct.totals[1]);
         environment.set(env_struct, env_struct.publisher);
     }
 }
@@ -64,11 +64,11 @@ void trail::regtoken(asset max_supply, name publisher, string info_url) {
     print("\nToken Registration: SUCCESS");
 }
 
-void trail::setsettings(name publisher, symbol token_symbol, token_settings new_settings) {
+void trail::initsettings(name publisher, symbol token_symbol, token_settings new_settings) {
     require_auth(publisher);
 
     registries_table registries(_self, _self.value);
-    auto r = registries.find(token_symbol.raw());
+    auto r = registries.find(token_symbol.code().raw());
     eosio_assert(r != registries.end(), "Token Registry with that symbol doesn't exist");
     auto reg = *r;
 
@@ -113,7 +113,7 @@ void trail::issuetoken(name publisher, name recipient, asset tokens, bool airgra
     require_auth(publisher);
 
     registries_table registries(_self, _self.value);
-    auto r = registries.find(tokens.symbol.raw());
+    auto r = registries.find(tokens.symbol.code().raw());
     eosio_assert(r != registries.end(), "registry doesn't exist for that token");
     auto reg = *r;
     eosio_assert(reg.publisher == publisher, "only publisher can issue tokens");
@@ -142,7 +142,7 @@ void trail::issuetoken(name publisher, name recipient, asset tokens, bool airgra
 
         print("\nToken Airgrab: SUCCESS");
     } else { //NOTE: publisher pays RAM cost if recipient has no balance entry (airdrop)
-        balances_table balances(_self, tokens.symbol.raw());
+        balances_table balances(_self, tokens.symbol.code().raw());
         auto b = balances.find(recipient.value);
 
         if (b == balances.end()) { //NOTE: new balance
@@ -164,7 +164,7 @@ void trail::issuetoken(name publisher, name recipient, asset tokens, bool airgra
 }
 
 //TODO: search for publisher instead of require as param?
-void trail::claimtoken(name claimant, name publisher, symbol token_symbol) {
+void trail::claimairgrab(name claimant, name publisher, symbol token_symbol) {
     require_auth(claimant);
 
     airgrabs_table airgrabs(_self, publisher.value);
@@ -173,7 +173,7 @@ void trail::claimtoken(name claimant, name publisher, symbol token_symbol) {
     auto grab = *g;
     eosio_assert(grab.recipient == claimant, "cannot claim another account's airdrop");
 
-    balances_table balances(_self, token_symbol.raw());
+    balances_table balances(_self, token_symbol.code().raw());
     auto b = balances.find(claimant.value);
 
     if (b == balances.end()) { //NOTE: create a wallet, RAM paid by claimant
@@ -590,7 +590,7 @@ void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate,
     auto l = leaderboards.find(bal.reference_id);
     eosio_assert(l != leaderboards.end(), "leaderboard doesn't exist");
     auto board = *l;
-
+	eosio_assert(board.available_seats > 0, "num_seats must be a non-zero number");
     eosio_assert(board.publisher == publisher, "cannot add candidate to another account's leaderboard");
 
     candidate new_candidate_struct = candidate{
@@ -601,8 +601,7 @@ void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate,
     };
 
     leaderboards.modify(*l, same_payer, [&]( auto& a ) {
-        a.candidates = board.candidates;
-		a.status = uint8_t(5);
+        a.candidates.push_back(new_candidate_struct);
     });
 
     print("\nAdd Candidate: SUCCESS");
@@ -890,15 +889,7 @@ uint64_t trail::make_leaderboard(name publisher, symbol voting_symbol, uint32_t 
     leaderboards_table leaderboards(_self, _self.value);
     uint64_t new_board_id = leaderboards.available_primary_key();
 
-	candidate test_cand = candidate{
-        name("voteraaaaaac"),
-        "Qm2",
-        asset(0, symbol("VOTE", 4)),
-        0
-    };
-
     vector<candidate> candidates;
-	candidates.emplace_back(test_cand);
 
     leaderboards.emplace(publisher, [&]( auto& a ) {
         a.board_id = new_board_id;
@@ -939,16 +930,21 @@ bool trail::vote_for_leaderboard(name voter, uint64_t ballot_id, uint64_t board_
     auto b = leaderboards.find(board_id);
     eosio_assert(b != leaderboards.end(), "leaderboard doesn't exist");
     auto board = *b;
-
+	print("\nboard.candidates.size(): ", board.candidates.size());
+	eosio_assert(direction < board.candidates.size(), "direction must map to an existing candidate in the leaderboard struct");
     eosio_assert(env_struct.time_now >= board.begin_time && env_struct.time_now <= board.end_time, "ballot voting window not open");
-    //eosio_assert(vid.release_time >= bal.end_time, "can only vote for ballots that end before your lock period is over...prevents double voting!");
 
     votereceipts_table votereceipts(_self, voter.value);
     auto vr_itr = votereceipts.find(ballot_id);
-    //eosio_assert(vr_itr == votereceipts.end(), "voter has already cast vote for this ballot");
+
+	registries_table registries(_self, _self.value);
+	auto r = registries.find(board.voting_symbol.code().raw());
+	eosio_assert(r != registries.end(), "token registry does not exist");
     
     uint32_t new_voter = 1;
     asset vote_weight = get_vote_weight(voter, board.voting_symbol);
+	print("\nvote weight amount: ", vote_weight);
+	eosio_assert(vote_weight > asset(0, board.voting_symbol), "vote weight must be greater than 0");
 
     if (vr_itr == votereceipts.end()) { //NOTE: voter hasn't voted on ballot before
 
@@ -966,9 +962,8 @@ bool trail::vote_for_leaderboard(name voter, uint64_t ballot_id, uint64_t board_
         
     } else { //NOTE: vote for ballot_id already exists
         auto vr = *vr_itr;
-
+		auto reg = *r;
         if (vr.expiration == board.end_time && !has_direction(direction, vr.directions)) { //NOTE: hasn't voted for candidate before
-
             new_voter = 0;
             vr.directions.emplace_back(direction);
 
@@ -978,7 +973,11 @@ bool trail::vote_for_leaderboard(name voter, uint64_t ballot_id, uint64_t board_
 
             print("\nVote Recast: SUCCESS");
 
-        }//TODO: implement recasting vote for same candidate
+        } else if(vr.expiration == board.end_time && has_direction(direction, vr.directions)) { //NOTE: vote already exists for candidate (recasting)
+			eosio_assert(reg.settings.is_recastable, "token settings disallow vote recasting on the same candidate");
+
+			//TODO: implement recasting logic
+		}
         
     }
 
@@ -1009,37 +1008,19 @@ bool trail::close_leaderboard(uint64_t board_id, uint8_t pass, name publisher) {
     return true;
 }
 
-
-
 asset trail::get_vote_weight(name voter, symbol voting_symbol) {
 
     balances_table balances(_self, voting_symbol.code().raw());
     auto b = balances.find(voter.value);
 
     if (b == balances.end()) { //NOTE: no balance found, returning 0
+		print("\n no balance object found!");
         return asset(0, voting_symbol);
     } else {
         auto bal = *b;
+		print("\n bal.tokens: ", bal.tokens);
         return bal.tokens;
     }
-
-    // if (voting_symbol == symbol("VOTE", 4)) {
-    //     voters_table voters(_self, _self.value);
-    //     auto v = voters.find(voter.value);
-    //     eosio_assert(v != voters.end(), "voter isn't registered");
-    //     auto vid = *v;
-
-    //     return vid.votes;
-    // } else {
-    //     eosio_assert(is_registered_token(voting_token), "token is not registered");
-
-    //     balances_table balances(_self, voting_token.raw());
-    //     auto b = balances.find(voter.value);
-    //     eosio_assert(b != balances.end(), "voter doesn't have a balance of the voting token");
-    //     auto bal = *b;
-        
-    //     return bal.tokens;   
-    // }
 }
 
 bool trail::has_direction(uint16_t direction, vector<uint16_t> direction_list) {
@@ -1063,11 +1044,12 @@ void trail::update_from_cb(name from, asset amount) {
     auto cb_itr = fromcbs.find(from.value);
     
     if (cb_itr == fromcbs.end()) {
+		uint32_t new_now = now();
         fromcbs.emplace(_self, [&]( auto& a ){ //TODO: change ram payer to user? may prevent TLOS transfers
             a.owner = from;
             a.decayable_cb = asset(0, symbol("VOTE", 4));
 			a.persistent_cb = asset(0, symbol("VOTE", 4));
-            a.last_decay = env_struct.time_now;
+            a.last_decay = new_now;
         });
     } else {
         auto from_cb = *cb_itr;
@@ -1089,6 +1071,7 @@ void trail::update_to_cb(name to, asset amount) {
     auto cb_itr = tocbs.find(to.value);
 
     if (cb_itr == tocbs.end()) {
+		print("\ntime_now: ", env_struct.time_now);
         tocbs.emplace(_self, [&]( auto& a ){ //TODO: change ram payer to user? may prevent TLOS transfers
             a.owner = to;
             a.decayable_cb = asset(amount.amount, symbol("VOTE", 4));
@@ -1139,7 +1122,7 @@ extern "C" {
 
         trail trailservice(name(self), name(code), ds);
         // don't update env_struct from here
-        trailservice.env_struct.time_now = 0;
+		//eosio_exit(0);
 
         if(code == self && action == name("regtoken").value) {
             execute_action(name(self), name(code), &trail::regtoken);
@@ -1163,7 +1146,17 @@ extern "C" {
             execute_action(name(self), name(code), &trail::nextcycle);
         } else if (code == self && action == name("deloldvotes").value) {
             execute_action(name(self), name(code), &trail::deloldvotes);
-        } else if (code == name("eosio.token").value && action == name("transfer").value) { //NOTE: updates vote_levy after transfers
+        } else if (code == self && action == name("addcandidate").value) {
+            execute_action(name(self), name(code), &trail::addcandidate);
+        } else if (code == self && action == name("setseats").value) {
+            execute_action(name(self), name(code), &trail::setseats);
+        } else if (code == self && action == name("claimairgrab").value) {
+            execute_action(name(self), name(code), &trail::claimairgrab);
+        } else if (code == self && action == name("initsettings").value) {
+            execute_action(name(self), name(code), &trail::initsettings);
+        } else if (code == self && action == name("issuetoken").value) {
+            execute_action(name(self), name(code), &trail::issuetoken);
+        } else if (code == name("eosio.token").value && action == name("transfer").value) { //NOTE: updates counterbals after transfers
             auto args = unpack_action_data<transfer_args>();
             trailservice.update_from_cb(args.from, asset(args.quantity.amount, symbol("VOTE", 4)));
             trailservice.update_to_cb(args.to, asset(args.quantity.amount, symbol("VOTE", 4)));
