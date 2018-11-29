@@ -314,6 +314,122 @@ BOOST_FIXTURE_TEST_CASE( reg_proposal_ballot, eosio_trail_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( proposal_voting_weight_calcs, eosio_trail_tester ) try {
+	account_name publisher = N(voteraaaaaaa);
+	uint64_t current_ballot_id = 0;
+	uint64_t current_proposal_id = 0;
+	string info_url = "Qmasfhuihfaufeanfangnr";
+	uint8_t ballot_type = 0;
+	uint32_t ballot_length = 1200 + test_voters.size() * 2;
+	uint32_t begin_time = now() + 20;
+	uint32_t end_time   = now() + ballot_length;
+	regballot(publisher, 0, symbol(4, "VOTE"), begin_time, end_time, info_url);
+	mvo settings = mvo()
+		("is_destructible", 0)
+		("is_proxyable", 0)
+		("is_burnable", 1) //NOTE: We think this is find fine, considering the functionality of the previous unregvoter implementation
+		("is_seizable", 0)
+		("is_max_mutable", 1)
+		("is_transferable", 0)
+		("is_recastable", 1) 
+		("is_initialized", 1)
+		("counterbal_decay_rate", 300)
+		("lock_after_initialize", 1);
+	initsettings(N(eosio.trail), symbol(4, "VOTE"), settings);
+	produce_blocks(1);
+
+	auto ballot_info = get_ballot(current_ballot_id);
+	REQUIRE_MATCHING_OBJECT(ballot_info, mvo()
+		("ballot_id", current_ballot_id)
+		("table_id", ballot_type)
+		("reference_id", current_proposal_id)
+	);
+
+	auto proposal_info = get_proposal(current_proposal_id);
+	REQUIRE_MATCHING_OBJECT(proposal_info, mvo()
+		("prop_id", current_proposal_id)
+		("publisher", publisher.to_string())
+		("info_url", info_url)
+		("no_count", "0.0000 VOTE")
+		("yes_count", "0.0000 VOTE")
+		("abstain_count", "0.0000 VOTE")
+		("unique_voters", uint32_t(0))
+		("begin_time", begin_time)
+		("end_time", end_time)
+		("cycle_count", 0)
+		("status", uint8_t(0))
+	);
+	
+	vector<asset> vote_count = {asset(0, symbol(4, "VOTE")), asset(0, symbol(4, "VOTE")), asset(0, symbol(4, "VOTE"))};
+	uint32_t unique_voters = 0;
+
+	fc::variant voter_info = mvo();
+	fc::variant vote_receipt_info = mvo();
+	asset currency_balance = asset::from_string("0.0000 TLOS");
+	asset voter_total = asset::from_string("0.0000 VOTE");
+	for (int i = 0; i < test_voters.size(); i++) {
+		regvoter(test_voters[i].value, symbol(4, "VOTE"));
+		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
+		REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+			("owner", test_voters[i].to_string())
+			("tokens", "0.0000 VOTE")
+		);
+		
+		//TODO: mirror stake and check
+		mirrorcast(test_voters[i].value, symbol(4, "VOTE"));
+		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
+		voter_total = asset::from_string(voter_info["tokens"].as_string());
+		currency_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
+		BOOST_REQUIRE_EQUAL(currency_balance.get_amount(), voter_total.get_amount());
+		produce_blocks(1);
+	}
+
+	auto doVote = [&](vector<name> voters, int start, int end, uint64_t ballot_id, uint16_t pD, uint16_t D, vector<asset> &totals, uint32_t *unique_voters){
+		for (int i = start; i < end; i++) {
+			castvote(test_voters[i].value, ballot_id, D);
+			produce_blocks(1);
+
+			auto voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
+			auto voter_total = asset::from_string(voter_info["tokens"].as_string());
+			if(i >= *unique_voters){
+				++(*unique_voters);
+			}else{
+				totals[pD] = totals[pD] - voter_total;
+			}
+			
+			totals[D] = totals[D] + voter_total;
+		}
+	};
+
+	uint16_t prev_direction = -1, direction = 0;
+	doVote(test_voters, 0, 5, current_ballot_id, prev_direction, direction, vote_count, &unique_voters);
+	proposal_info = get_proposal(current_proposal_id);	
+	BOOST_REQUIRE_EQUAL(asset(10000000, symbol(4, "VOTE")), proposal_info["no_count"].as<asset>());
+	BOOST_REQUIRE_EQUAL(proposal_info["no_count"].as<asset>(), vote_count[0]);
+	BOOST_REQUIRE_EQUAL(proposal_info["yes_count"].as<asset>(), vote_count[1]);
+	BOOST_REQUIRE_EQUAL(proposal_info["abstain_count"].as<asset>(), vote_count[2]);
+
+	prev_direction = direction; direction = 1;
+	doVote(test_voters, 3, 7, current_ballot_id, prev_direction, direction, vote_count, &unique_voters);
+	proposal_info = get_proposal(current_proposal_id);	
+	BOOST_REQUIRE_EQUAL(asset(6000000, symbol(4, "VOTE")), vote_count[0]);
+	BOOST_REQUIRE_EQUAL(asset(8000000, symbol(4, "VOTE")), vote_count[1]);
+	BOOST_REQUIRE_EQUAL(proposal_info["no_count"].as<asset>(), vote_count[0]);
+	BOOST_REQUIRE_EQUAL(proposal_info["yes_count"].as<asset>(), vote_count[1]);
+	BOOST_REQUIRE_EQUAL(proposal_info["abstain_count"].as<asset>(), vote_count[2]);
+	
+	prev_direction = 1; direction = 2;
+	doVote(test_voters, 6, 9, current_ballot_id, prev_direction, direction, vote_count, &unique_voters);
+	proposal_info = get_proposal(current_proposal_id);	
+	BOOST_REQUIRE_EQUAL(asset(6000000, symbol(4, "VOTE")), vote_count[0]);
+	BOOST_REQUIRE_EQUAL(asset(6000000, symbol(4, "VOTE")), vote_count[1]);
+	BOOST_REQUIRE_EQUAL(asset(6000000, symbol(4, "VOTE")), vote_count[2]);
+	BOOST_REQUIRE_EQUAL(proposal_info["no_count"].as<asset>(), vote_count[0]);
+	BOOST_REQUIRE_EQUAL(proposal_info["yes_count"].as<asset>(), vote_count[1]);
+	BOOST_REQUIRE_EQUAL(proposal_info["abstain_count"].as<asset>(), vote_count[2]);
+	
+} FC_LOG_AND_RETHROW()
+
 //TODO: full flow test
 BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 	//TODO: regballot type 0 and check

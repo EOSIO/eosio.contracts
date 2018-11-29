@@ -878,25 +878,28 @@ bool trail::vote_for_proposal(name voter, uint64_t ballot_id, uint64_t prop_id, 
     } else { //NOTE: vote for ballot_id already exists
         auto vr = *vr_itr;
 
-        if (vr.expiration == prop.end_time && vr.directions[0] != direction) { //NOTE: vote different and for same cycle
+        if (vr.expiration == prop.end_time) { //NOTE: vote for same cycle
 
 			eosio_assert(reg.settings.is_recastable, "token registry disallows vote recasting");
 
-            switch (vr.directions[0]) { //NOTE: remove old vote weight from proposal
-                case 0 : prop.no_count -= vr.weight; break;
-                case 1 : prop.yes_count -= vr.weight; break;
-                case 2 : prop.abstain_count -= vr.weight; break;
+            if(vr.directions[0] == direction){
+                vote_weight -= vr.weight;
+            }else{
+                switch (vr.directions[0]) { //NOTE: remove old vote weight from proposal
+                    case 0 : prop.no_count -= vr.weight; break;
+                    case 1 : prop.yes_count -= vr.weight; break;
+                    case 2 : prop.abstain_count -= vr.weight; break;
+                }
+
+                vr.directions[0] = direction;
+
+                votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
+                    a.directions = vr.directions;
+                    a.weight = vote_weight;
+                });
             }
-
-            vr.directions[0] = direction;
-
-            votereceipts.modify(vr_itr, same_payer, [&]( auto& a ) {
-                a.directions = vr.directions;
-                a.weight = vote_weight;
-            });
-
+            
             new_voter = 0;
-
             print("\nVote Recast: SUCCESS");
         } else if (vr.expiration < prop.end_time) { //NOTE: vote for new cycle on same proposal
             
