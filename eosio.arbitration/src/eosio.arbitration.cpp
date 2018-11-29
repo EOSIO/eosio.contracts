@@ -82,7 +82,7 @@ void arbitration::cancelarbapp(name candidate) {
 void arbitration::endelection(name candidate, uint64_t ballot_id) {
   require_auth(candidate);
 
-  ballots_table ballots("eosio.trail"_n, name("eosio.table").value);
+  ballots_table ballots("eosio.trail"_n, name("eosio.trail").value);
   auto b = ballots.get(ballot_id, "ballots doesn't exist");
 
   leaderboards_table leaderboards("eosio.trail"_n, name("eosio.trail").value);
@@ -127,7 +127,7 @@ void arbitration::endelection(name candidate, uint64_t ballot_id) {
         print("\ncandidate: ", name{cand_name}, " was not found.");
     }
   }
-  uint32_t majority_arbs = arbs_perms.size() / 3 + 1;
+  uint32_t majority_arbs = ( 2 * arbs_perms.size() ) / 3 + 1;
   action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
          std::make_tuple(
              get_self(), 
