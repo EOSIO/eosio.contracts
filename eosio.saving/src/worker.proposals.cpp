@@ -10,14 +10,14 @@ workerproposal::workerproposal(name self, name code, datastream<const char*> ds)
 
         wp_env_struct = wp_env{
 			_self,
-            2500000,    // cycle duration in seconds (default 2,500,000 or 5,000,000 blocks or ~29 days)
-            3,          // percent from requested amount (default 3%)
-            500000,     // minimum fee amount (default 50 TLOS)
-			86400,      // delay before voting starts on a submission in seconds (~1 day)
-            5,          // % of all registered voters to pass (minimum, including exactly this value)
-            50,         // % yes over no, to consider it passed (strictly over this value)
-            4,          // % of all registered voters to refund fee (minimum, including exactly this value)
-            20          // % of yes to give fee back
+            uint32_t(2500000),    // cycle duration in seconds (default 2,500,000 or 5,000,000 blocks or ~29 days)
+            uint16_t(3),          // percent from requested amount (default 3%)
+            uint64_t(500000),     // minimum fee amount (default 50 TLOS)
+			uint32_t(864000000),      // delay before voting starts on a submission in seconds (~30 years)
+            double(5),          // % of all registered voters to pass (minimum, including exactly this value)
+            double(50),         // % yes over no, to consider it passed (strictly over this value)
+            double(4),          // % of all registered voters to refund fee (minimum, including exactly this value)
+            double(20)          // % of yes to give fee back
         };
 
         wpenv.set(wp_env_struct, _self);
@@ -63,23 +63,26 @@ void workerproposal::getdeposit(name owner) {
 void workerproposal::submit(name proposer, std::string title, uint16_t cycles, std::string ipfs_location, asset amount, name receiver) {
     require_auth(proposer);
 	
-	// calc fee
-    uint64_t fee_amount = uint64_t(amount.amount) * uint64_t( wp_env_struct.fee_percentage ) / uint64_t(100);
+	print("\nCalculating fee");
+	uint64_t fee_amount = uint64_t(amount.amount) * uint64_t( wp_env_struct.fee_percentage ) / uint64_t(100);
     fee_amount = fee_amount > wp_env_struct.fee_min ? fee_amount :  wp_env_struct.fee_min;
 	asset fee = asset(fee_amount, symbol("TLOS", 4));
 
+	print("\nFinding deposit");
 	deposits_table deposits(_self, _self.value);
 	auto d_itr = deposits.find(proposer.value);
 	eosio_assert(d_itr != deposits.end(), "Deposit not found, please transfer your TLOS fee");
 	auto d = *d_itr;
 	eosio_assert(d.escrow >= fee, "Deposit amount is less than fee, please transfer more TLOS");
-
+	
 	if(d.escrow > fee) {
+		print("\nModify deposit");
 	    asset outstanding = d.escrow - fee;
-		deposits.modify(d, same_payer, [&](auto& depo) {
+		deposits.modify(d_itr, same_payer, [&](auto& depo) {
 			depo.escrow = outstanding;
 		});
 	} else {
+		print("\ndelete deposit");
 		deposits.erase(d_itr);
 	}
 
@@ -104,10 +107,66 @@ void workerproposal::submit(name proposer, std::string title, uint16_t cycles, s
         info.receiver       = receiver;
         info.title          = title;
         info.ipfs_location  = ipfs_location;
-        info.cycles         = cycles;
+        info.cycles         = cycles + 1;
         info.amount         = uint64_t(amount.amount);
         info.fee            = fee_amount;
     });
+}
+
+void workerproposal::openvoting(uint64_t sub_id) {
+	print("\n look for sub id");
+	submissions_table submissions(_self, _self.value);
+	auto s = submissions.get(sub_id, "Submission not found");
+
+	require_auth(s.proposer);
+
+	print("\n getting ballot");
+	ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
+	auto b = ballots.get(s.ballot_id, "Ballot not found on eosio.trail ballots_table");
+
+	print("\n getting proposal");
+	proposals_table proposals("eosio.trail"_n, "eosio.trail"_n.value);
+	auto p = proposals.get(b.reference_id, "Prosal not found on eosio.trail proposals_table");
+
+	eosio_assert(p.cycle_count == uint16_t(0), "proposal is no longer in building stage");
+    eosio_assert(p.status == uint8_t(0), "Proposal is already closed");
+
+	uint32_t begin_time = now();
+	uint32_t end_time = now() + wp_env_struct.cycle_duration;
+	print("\n sending inline trx");
+    action(permission_level{ _self, "active"_n }, "eosio.trail"_n, "nextcycle"_n, make_tuple(
+        _self,
+        s.ballot_id,
+        begin_time,
+        end_time
+    )).send();
+	print("\n after inline trx");
+
+    print("\nReady Proposal: SUCCESS");
+}
+
+void workerproposal::cancelsub(uint64_t sub_id) {
+	submissions_table submissions(_self, _self.value);
+    auto s_itr = submissions.find(sub_id);
+    eosio_assert(s_itr != submissions.end(), "Submission not found");
+	auto s = *s_itr;
+
+	require_auth(s.proposer);
+	ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
+	auto b = ballots.get(s.ballot_id, "Ballot not found on eosio.trail ballots_table");
+
+	proposals_table proposals("eosio.trail"_n, "eosio.trail"_n.value);
+	auto p = proposals.get(b.reference_id, "Prosal not found on eosio.trail proposals_table");
+
+	eosio_assert(p.cycle_count == uint16_t(0), "proposal is no longer in building stage");
+    eosio_assert(p.status == uint8_t(0), "Proposal is already closed");
+
+	action(permission_level{ _self, "active"_n }, "eosio.trail"_n, "unregballot"_n, make_tuple(
+        _self,
+		s.ballot_id
+    )).send();
+
+	submissions.erase(s_itr);
 }
 
 void workerproposal::claim(uint64_t sub_id) {
@@ -145,13 +204,14 @@ void workerproposal::claim(uint64_t sub_id) {
 
     // print("\n GET FEE BACK WHEN <<<< ", prop.yes_count, " >= ", votes_fee_thresh," && ", uint64_t(prop.unique_voters), " >= ", voters_fee_thresh);
     if( sub.fee && prop.yes_count.amount > 0 && prop.yes_count >= votes_fee_thresh && prop.unique_voters >= voters_fee_thresh) {
+        asset the_fee = asset(int64_t(sub.fee), symbol("TLOS", 4));
         if(sub.receiver == sub.proposer){
-            outstanding += asset(int64_t(sub.fee), symbol("TLOS", 4));
+            outstanding += the_fee;
         }else{
             action(permission_level{ _self, "active"_n }, "eosio.token"_n, "transfer"_n, make_tuple(
                 _self,
                 sub.proposer,
-                outstanding,
+                the_fee,
                 std::string("Worker proposal funds")
             )).send();
         }
@@ -163,7 +223,7 @@ void workerproposal::claim(uint64_t sub_id) {
         outstanding += asset(int64_t(sub.amount), symbol("TLOS", 4));
     }
     
-    // print("\n numbers : ", e.totals[1], " * ", wp_env_struct.threshold_pass_voters, " | ", wp_env_struct.threshold_fee_voters, " ---- ", total_votes, " ", votes_ratio, " ", prop.yes_count.amount, " ", prop.no_count.amount, " ", divider);
+    // print("\n numbers : ", e.totals[1], " * ", wp_env_struct.threshold_pass_voters, " | ", wp_env_struct.threshold_fee_voters, " ---- ", total_votes, " ", prop.yes_count, " ", prop.no_count);
     if(outstanding.amount > 0) {
         action(permission_level{ _self, "active"_n }, "eosio.token"_n, "transfer"_n, make_tuple(
             _self,
@@ -176,7 +236,7 @@ void workerproposal::claim(uint64_t sub_id) {
     }
 
     if(prop.cycle_count == uint16_t(sub.cycles - 1)) { //Close ballot because it was the last cycle for the submission.
-        // print("\n>>>>>>> CLOSE");
+        print("\n>>>>>>> CLOSE");
         uint8_t new_status = 1;
 		action(permission_level{ _self, "active"_n }, "eosio.trail"_n, "closeballot"_n, make_tuple(
 			_self,
@@ -184,8 +244,8 @@ void workerproposal::claim(uint64_t sub_id) {
 			new_status
 		)).send();
     } else if(prop.cycle_count < uint16_t(sub.cycles - 1)) { //Start next cycle because number of cycles hasn't been reached.
-        // print("\n>>>>>>> CYCLE");
-		uint32_t begin_time = now() + wp_env_struct.start_delay;
+        print("\n>>>>>>> CYCLE");
+		uint32_t begin_time = now();
 		uint32_t end_time = now() + wp_env_struct.cycle_duration;
 		action(permission_level{ _self, "active"_n }, "eosio.trail"_n, "nextcycle"_n, make_tuple(
 			_self,
@@ -234,17 +294,20 @@ extern "C" {
         }
         datastream<const char*> ds((char*)buffer, size);
 
-        workerproposal work(name(self), name(code), ds);
-
         if(code == self && action == name("claim").value) {
             execute_action(name(self), name(code), &workerproposal::claim);
         } else if (code == self && action == name("getdeposit").value) {
             execute_action(name(self), name(code), &workerproposal::getdeposit);
+        } else if (code == self && action == name("openvoting").value) {
+            execute_action(name(self), name(code), &workerproposal::openvoting);
+        } else if (code == self && action == name("cancelsub").value) {
+            execute_action(name(self), name(code), &workerproposal::cancelsub);
         } else if (code == self && action == name("submit").value) {
             execute_action(name(self), name(code), &workerproposal::submit);
         } else if (code == self && action == name("setenv").value) {
             execute_action(name(self), name(code), &workerproposal::setenv);
         } else if (code == name("eosio.token").value && action == name("transfer").value) {
+            workerproposal work(name(self), name(code), ds);
             auto args = unpack_action_data<transfer_args>();
             work.transfer_handler(args.from, args.quantity);
         }

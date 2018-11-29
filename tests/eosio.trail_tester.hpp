@@ -80,7 +80,7 @@ class eosio_trail_tester : public tester
 		mvo settings = mvo()
 			("is_destructible", 0)
 			("is_proxyable", 0)
-			("is_burnable", 0)
+			("is_burnable", 1) //NOTE: We think this is find fine, considering the functionality of the previous unregvoter implementation
 			("is_seizable", 0)
 			("is_max_mutable", 1)
 			("is_transferable", 0)
@@ -91,6 +91,7 @@ class eosio_trail_tester : public tester
 		initsettings(N(eosio.trail), symbol(4, "VOTE"), settings);
 		//TODO: get registry and validate it
 		auto token_registry = get_registry(symbol(4, "VOTE"));
+		BOOST_REQUIRE_EQUAL(settings["is_burnable"].as<bool>(), token_registry["settings"].as<mvo>()["is_burnable"].as<bool>());
 		// REQUIRE_MATCHING_OBJECT(token_registry, mvo() //find new way to validate this struct
 		// 	("max_supply", max_supply.to_string())
 		// 	("supply", "0.0000 VOTE")
@@ -187,6 +188,10 @@ class eosio_trail_tester : public tester
 		return base_tester::push_action(std::move(act), uint64_t(signer));
 	}
 
+	#pragma endregion Setup_Actions
+
+	#pragma region Get_Functions
+
 	fc::variant get_account(account_name acc, const string &symbolname)
 	{
 		auto symb = eosio::chain::symbol::from_string(symbolname);
@@ -200,10 +205,6 @@ class eosio_trail_tester : public tester
 		if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "env", data, abi_serializer_max_time );
 	}
-
-	#pragma endregion Setup_Actions
-
-	#pragma region Get_Functions
 
 	fc::variant get_voter(account_name voter, symbol_code scope) {
 		vector<char> data = get_row_by_account(N(eosio.trail), scope.value, N(balances), voter);
@@ -252,11 +253,12 @@ class eosio_trail_tester : public tester
 
 	#pragma region Voting_Actions
 
-	transaction_trace_ptr regvoter(account_name voter) {
+	transaction_trace_ptr regvoter(account_name voter, symbol token_symbol) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(eosio.trail), N(regvoter), vector<permission_level>{{voter, config::active_name}},
 			mvo()
 			("voter", voter)
+			("token_symbol", token_symbol)
 			)
 		);
 		set_transaction_headers(trx);
@@ -264,11 +266,12 @@ class eosio_trail_tester : public tester
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr unregvoter(account_name voter) {
+	transaction_trace_ptr unregvoter(account_name voter, symbol token_symbol) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(eosio.trail), N(unregvoter), vector<permission_level>{{voter, config::active_name}},
 			mvo()
 			("voter", voter)
+			("token_symbol", token_symbol)
 			)
 		);
 		set_transaction_headers(trx);
@@ -363,13 +366,26 @@ class eosio_trail_tester : public tester
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr burntoken(account_name publisher, account_name recipient, asset amount) {
+	transaction_trace_ptr burntoken(account_name balance_owner, asset amount) {
 		signed_transaction trx;
-		trx.actions.emplace_back( get_action(N(eosio.trail), N(burntoken), vector<permission_level>{{publisher, config::active_name}},
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(burntoken), vector<permission_level>{{balance_owner, config::active_name}},
+			mvo()
+			("balance_owner", balance_owner)
+			("amount", amount)
+			)
+		);
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(balance_owner, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr seizetoken(account_name publisher, account_name owner, asset tokens) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(seizetoken), vector<permission_level>{{publisher, config::active_name}},
 			mvo()
 			("publisher", publisher)
-			("recipient", recipient)
-			("amount", amount)
+			("owner", owner)
+			("tokens", tokens)
 			)
 		);
 		set_transaction_headers(trx);
@@ -377,9 +393,9 @@ class eosio_trail_tester : public tester
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr burnairgrab(account_name publisher, account_name recipient, asset amount) {
+	transaction_trace_ptr seizeairgrab(account_name publisher, account_name recipient, asset amount) {
 		signed_transaction trx;
-		trx.actions.emplace_back( get_action(N(eosio.trail), N(burnairgrab), vector<permission_level>{{publisher, config::active_name}},
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(seizeairgrab), vector<permission_level>{{publisher, config::active_name}},
 			mvo()
 			("publisher", publisher)
 			("recipient", recipient)
@@ -417,16 +433,17 @@ class eosio_trail_tester : public tester
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr deletewallet(account_name member, symbol token_symbol) {
+	transaction_trace_ptr transfer(account_name sender, account_name recipient, asset amount) {
 		signed_transaction trx;
-		trx.actions.emplace_back( get_action(N(eosio.trail), N(deletewallet), vector<permission_level>{{member, config::active_name}},
+		trx.actions.emplace_back( get_action(N(eosio.trail), N(transfer), vector<permission_level>{{sender, config::active_name}},
 			mvo()
-			("member", member)
-			("token_symbol", token_symbol)
+			("sender", sender)
+			("recipient", recipient)
+			("amount", amount)
 			)
 		);
 		set_transaction_headers(trx);
-		trx.sign(get_private_key(member, "active"), control->get_chain_id());
+		trx.sign(get_private_key(sender, "active"), control->get_chain_id());
 		return push_transaction( trx );
 	}
 
@@ -550,6 +567,27 @@ class eosio_trail_tester : public tester
 	}
 
 	#pragma endregion Publisher_Actions
+
+	#pragma region Common_Helpers
+
+	void register_voters(vector<name> test_voters, int start, int end, symbol smb){
+		for (int i = start; i < end; i++) {
+			regvoter(test_voters[i].value, smb);
+			produce_blocks(1);
+
+			auto voter_info = get_voter(test_voters[i], smb.to_symbol_code());
+			REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+				("owner", test_voters[i].to_string())
+				("tokens", std::string(std::string("0.0000 ") + smb.name()))
+			);
+		}
+	}
+      
+	asset get_balance( const account_name& act, symbol balance_symbol = symbol{CORE_SYM}, const account_name& contract = N(eosio.token) ) {
+		return get_currency_balance(contract, balance_symbol, act);
+	}
+
+	#pragma endregion Common_Helpers
 
 	void dump_trace(transaction_trace_ptr trace_ptr) {
 		std::cout << std::endl << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;

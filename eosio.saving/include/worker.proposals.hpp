@@ -73,5 +73,9 @@ class[[eosio::contract("eosio.saving")]] workerproposal : public contract
 
 	[[eosio::action]] void getdeposit(name owner);
 
+	[[eosio::action]] void cancelsub(uint64_t sub_id);
+
+	[[eosio::action]] void openvoting(uint64_t sub_id);
+
 	void transfer_handler(name from, asset quantity);
 };
