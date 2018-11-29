@@ -162,16 +162,6 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    name proposer = test_voters[total_voters - 1];
    transfer(N(eosio), proposer.value, asset::from_string("1800.0000 TLOS"), "Blood Money");
-   base_tester::set_authority( 
-      proposer.value, 
-      name(config::active_name).to_string(), 
-      authority(
-            1,
-            {key_weight{get_public_key( proposer.value, "active" ), 1}},
-            {permission_level_weight{{N(eosio.saving), config::eosio_code_name}, 1}}
-         ),
-      name(config::owner_name).to_string()
-   );
    produce_blocks(1);
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("2000.0000"), get_balance( proposer ) );
@@ -194,7 +184,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
          ("threshold_fee_votes", 11)
    );
 
-   wps_set_env(2500000, 3, 86400, 500000, 5, 50, 4, 20);
+   wps_set_env(2500000, 3, 864000000, 500000, 5, 50, 4, 20);
    produce_blocks(1);
    env = get_wps_env();
    // wdump((env));
@@ -242,9 +232,14 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 	BOOST_REQUIRE_EXCEPTION( castvote(test_voters[0].value, 0, 1), eosio_assert_message_exception, 
       eosio_assert_message_is( "ballot voting window not open" ));
 
-   // 1 day later voting window opens
    produce_block(fc::days(1));
 
+   BOOST_REQUIRE_EXCEPTION( castvote(test_voters[0].value, 0, 1), eosio_assert_message_exception, 
+      eosio_assert_message_is( "ballot voting window not open" ));
+
+	openvoting(proposer.value, 0);
+	openvoting(proposer.value, 1);
+   
    // validate vote integrity
 	BOOST_REQUIRE_EXCEPTION( castvote(test_voters[0].value, 0, 3), eosio_assert_message_exception, 
       eosio_assert_message_is( "Invalid Vote. [0 = NO, 1 = YES, 2 = ABSTAIN]" ));
@@ -312,12 +307,12 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    produce_blocks(1);
 
-   // voting windows starts in 1 day
-	BOOST_REQUIRE_EXCEPTION( castvote(test_voters[0].value, 0, 1), eosio_assert_message_exception, 
-      eosio_assert_message_is( "ballot voting window not open" ));
+//    // voting windows starts in 1 day
+// 	BOOST_REQUIRE_EXCEPTION( castvote(test_voters[0].value, 0, 1), eosio_assert_message_exception, 
+//       eosio_assert_message_is( "ballot voting window not open" ));
 
-   // 1 day later voting window opens
-   produce_block(fc::days(1));
+//    // 1 day later voting window opens
+//    produce_block(fc::days(1));
 
    vote_tipping_point = calculateTippingPoint(quorum_voters_size_pass, threshold_pass_votes);
    fee_tipping_point = calculateTippingPoint(quorum_voters_size_pass, threshold_fee_votes, true);
@@ -353,19 +348,19 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    claim_proposal_funds(0, proposer.value);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
 
-   produce_blocks(1);
+   produce_blocks(2);
 
-   // voting windows starts in 1 day
-	BOOST_REQUIRE_EXCEPTION( castvote(test_voters[0].value, 0, 1), eosio_assert_message_exception, 
-      eosio_assert_message_is( "ballot voting window not open" ));
+//    // voting windows starts in 1 day
+// 	BOOST_REQUIRE_EXCEPTION( castvote(test_voters[0].value, 0, 1), eosio_assert_message_exception, 
+//       eosio_assert_message_is( "ballot voting window not open" ));
 
-   // 1 day later voting window opens
-   produce_block(fc::days(1));
+//    // 1 day later voting window opens
+//    produce_block(fc::days(1));
 
    vote_tipping_point = calculateTippingPoint(quorum_voters_size_pass, threshold_pass_votes);
    fee_tipping_point = calculateTippingPoint(quorum_voters_size_pass, threshold_fee_votes, true);
 
-   // std::cout<<"conditions: [ i < "<<vote_tipping_point<<" ] / [ i < "<<fee_tipping_point<<" ] "<<std::endl;
+   std::cout<<"conditions: [ i < "<<vote_tipping_point<<" ] / [ i < "<<fee_tipping_point<<" ] "<<std::endl;
 
    // voting window (#2) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
@@ -376,7 +371,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
       // pass vote and fee
       uint16_t vote_direction_1 = ( i < vote_tipping_point ) ? uint16_t(1) : uint16_t(0);
       
-      // std::cout<<i<<" => "<<vote_direction_0<<" "<<vote_direction_1<<std::endl;
+      std::cout<<i<<" => "<<vote_direction_0<<" "<<vote_direction_1<<std::endl;
 
       castvote(quorum[i].value, 0, vote_direction_0);
       castvote(quorum[i].value, 1, vote_direction_1);

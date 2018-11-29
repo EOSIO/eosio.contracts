@@ -117,14 +117,6 @@ void ratifyamend::makeproposal(string prop_title, uint64_t doc_id, uint8_t new_c
 		deposits.erase(d_itr);
 	}
 
-    // //NOTE: 100.0000 TLOS fee, refunded if proposal passes or meets specified lower thresholds
-    // action(permission_level{ proposer, "active"_n }, "eosio.token"_n, "transfer"_n, make_tuple(
-    // 	proposer,
-    //     _self,
-    //     asset(int64_t(1000000), symbol("TLOS", 4)),
-    //     std::string("Ratify/Amend Proposal Fee")
-	// )).send();
-
 	ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
 	uint32_t begin_time = now() + configs_struct.start_delay;
 	uint32_t end_time = now() + configs_struct.start_delay + configs_struct.expiration_length;

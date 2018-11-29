@@ -88,9 +88,17 @@ class eosio_wps_tester : public eosio_trail_tester
                                  ("receiver",      receiver));
       }
 
-      // action_result linkballot(uint64_t prop_id, uint64_t ballot_id, account_name proposer) {
-      //    return push_wps_action(proposer, N(linkballot), mvo()("prop_id", prop_id)("ballot_id", ballot_id)("proposer", proposer));
-      // }
+      transaction_trace_ptr openvoting(account_name proposer, uint64_t sub_id) {
+		 signed_transaction trx;
+		 trx.actions.emplace_back( get_action(N(eosio.saving), N(openvoting), vector<permission_level>{{proposer, config::active_name}},
+            mvo()
+				("sub_id", sub_id)
+		 	)
+         );
+         set_transaction_headers(trx);
+         trx.sign(get_private_key(proposer, "active"), control->get_chain_id());
+         return push_transaction( trx );
+	  }
       
       asset get_balance( const account_name& act, symbol balance_symbol = symbol{CORE_SYM} ) {
          vector<char> data = get_row_by_account( N(eosio.token), act, N(accounts), balance_symbol.to_symbol_code().value );
