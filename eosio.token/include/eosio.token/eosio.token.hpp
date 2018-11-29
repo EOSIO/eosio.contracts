@@ -57,6 +57,13 @@ namespace eosio {
             return ac.balance;
          }
 
+         static account_name_t get_issuer( name token_contract_account, symbol_code sym_code )
+         {
+            stats statstable( token_contract_account, sym_code.raw() );
+            const auto& st = statstable.get( sym_code.raw() );
+            return st.issuer;
+         }
+
       private:
          struct [[eosio::table]] account {
             asset    balance;
@@ -78,5 +85,4 @@ namespace eosio {
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
    };
-
 } /// namespace eosio

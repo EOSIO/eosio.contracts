@@ -1,3 +1,5 @@
+set(BUILD_CYBERWAY_CHAINDB_MONGO TRUE CACHE BOOL "Build chaindb based on mongodb")
+
 cmake_minimum_required( VERSION 3.5 )
 
 set(EOSIO_VERSION_MIN "1.4")
