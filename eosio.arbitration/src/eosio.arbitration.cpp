@@ -17,17 +17,35 @@ arbitration::~arbitration() {
   if (configs.exists()) configs.set(_config, get_self());
 }
 
-void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t default_time, uint32_t start_next_election_days, vector<int64_t> fees) {
+void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duration_days, uint32_t start_election_days, vector<int64_t> fees) {
   require_auth2("eosio.prods"_n.value, "active"_n.value);
 
   _config = config{"eosio.prods"_n,  // publisher
                    max_elected_arbs,
-                   default_time,
-                   start_next_election_days,
+                   election_duration_days,
+                   start_election_days,
                    fees,
                    now()};
 
   print("\nSettings Configured: SUCCESS");
+}
+
+void arbitration::init() {
+  require_auth2("eosio.prods"_n.value, "active"_n.value);
+
+  uint32_t begin_time = _config.election_duration_days + _config.start_election_days;
+  uint32_t end_time = begin_time + _config.election_duration_days;
+
+  action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "regballot"_n,
+      make_tuple(get_self(),         // publisher
+                 2,                  // ballot_type (leaderboard)
+                 symbol("VOTES", 4), // voting_symbol
+                 begin_time,         // begin_time
+                 end_time,           // end_time
+                 ""                  // info_url
+                 )
+          ).send();
+  print("\Election started: SUCCESS");
 }
 
 void arbitration::applyforarb(name candidate, string creds_ipfs_url) {
@@ -478,7 +496,7 @@ arbitration::config arbitration::get_default_config() {
       get_self(),     // publisher
       uint16_t(10),   // max_elected_arbs
       uint32_t(5000), // default_time
-      uint32_t(5),    // start_election_days
+      uint32_t(5),    // start_next_election_days
       fees,           // fee_structure
       now()
   };

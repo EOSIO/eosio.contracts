@@ -121,13 +121,13 @@ public:
   struct[[eosio::table]] config {
     name publisher;
     uint16_t max_elected_arbs;
-    uint32_t default_time;
-    uint32_t start_next_election_days;
+    uint32_t election_duration_days;
+    uint32_t start_election_days;
     vector<int64_t> fee_structure; 
     uint32_t last_time_edited; 
 
     uint64_t primary_key() const { return publisher.value; }
-    EOSLIB_SERIALIZE(config, (publisher)(max_elected_arbs)(default_time)(start_next_election_days)(fee_structure))
+    EOSLIB_SERIALIZE(config, (publisher)(max_elected_arbs)(election_duration_days)(start_election_days)(fee_structure))
   };
 
   struct[[eosio::table]] arbitrator {
@@ -188,7 +188,9 @@ public:
   arbitration(name s, name code, datastream<const char *> ds);
   ~arbitration();
 
-  [[eosio::action]] void setconfig(uint16_t max_elected_arbs, uint32_t default_time, uint32_t ststart_next_election_daysart_election_days, vector<int64_t> fees);
+  [[eosio::action]] void init();
+
+  [[eosio::action]] void setconfig(uint16_t max_elected_arbs, uint32_t election_duration_days, uint32_t start_election_days, vector<int64_t> fees);
 
 #pragma region Arb_Elections
 
