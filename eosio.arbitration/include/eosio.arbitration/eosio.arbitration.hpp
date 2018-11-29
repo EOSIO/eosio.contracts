@@ -120,14 +120,14 @@ public:
   // NOTE: class of claim where neither party can pay fees, TF pays instead
   struct[[eosio::table]] config {
     name publisher;
-    uint16_t max_arbs;
-    uint32_t default_time;         // TODO: double check time_point units
-    vector<int64_t> fee_structure; // NOTE: int64_t is pre-precision value
-    // TODO: Arbitrator schedule field based on class
-    // CLARIFY: usage of "schedule" in requirements doc
+    uint16_t max_elected_arbs;
+    uint32_t default_time;
+    uint32_t start_next_election_days;
+    vector<int64_t> fee_structure; 
+    uint32_t last_time_edited; 
 
     uint64_t primary_key() const { return publisher.value; }
-    EOSLIB_SERIALIZE(config, (publisher)(max_arbs)(default_time)(fee_structure))
+    EOSLIB_SERIALIZE(config, (publisher)(max_elected_arbs)(default_time)(start_next_election_days)(fee_structure))
   };
 
   struct[[eosio::table]] arbitrator {
@@ -188,7 +188,7 @@ public:
   arbitration(name s, name code, datastream<const char *> ds);
   ~arbitration();
 
-  [[eosio::action]] void setconfig(uint16_t max_arbs, uint32_t default_time, vector<int64_t> fees);
+  [[eosio::action]] void setconfig(uint16_t max_elected_arbs, uint32_t default_time, uint32_t ststart_next_election_daysart_election_days, vector<int64_t> fees);
 
 #pragma region Arb_Elections
 
@@ -270,6 +270,7 @@ public:
 
 protected:
   void validate_ipfs_url(string ipfs_url);
+  config get_default_config();
 
 #pragma region Tables
 
