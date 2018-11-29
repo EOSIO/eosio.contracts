@@ -25,7 +25,7 @@ BOOST_FIXTURE_TEST_CASE( reg_voters, eosio_trail_tester ) try {
 	std::cout << "test_voters.size(): " << test_voters.size() << std::endl;
 	for (int i = 0; i < test_voters.size(); i++) {
 		std::cout << "regvoter for: " << test_voters[i].to_string() << std::endl;
-		regvoter(test_voters[i].value);
+		regvoter(test_voters[i].value, symbol(4, "VOTE"));
 		produce_blocks();
 		auto voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
 		
@@ -38,7 +38,7 @@ BOOST_FIXTURE_TEST_CASE( reg_voters, eosio_trail_tester ) try {
 		BOOST_REQUIRE_EQUAL(trail_env["totals"][1], 1);
 
 		std::cout << "unregvoter for: " << test_voters[i].to_string() << std::endl;
-		unregvoter(test_voters[i].value);
+		unregvoter(test_voters[i].value, symbol(4, "VOTE"));
 		produce_blocks();
 		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
 		BOOST_REQUIRE_EQUAL(true, voter_info.is_null());
@@ -152,7 +152,7 @@ BOOST_FIXTURE_TEST_CASE( mirror_cast, eosio_trail_tester ) try {
 	fc::variant voter_info = mvo();
 	uint32_t future = 0;
 	for (int i = 0; i < test_voters.size(); i++) {
-		regvoter(test_voters[i].value);
+		regvoter(test_voters[i].value, symbol(4, "VOTE"));
 		std::cout << "regvoter for: " << test_voters[i].to_string() << std::endl;
 
 		// asset balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
@@ -186,7 +186,7 @@ BOOST_FIXTURE_TEST_CASE( mirror_cast, eosio_trail_tester ) try {
 
 	// regvoter and mirrorstake new account
 	std::cout << "regvoter for votedecay" << std::endl;
-	regvoter(N(votedecay));
+	regvoter(N(votedecay), symbol(4, "VOTE"));
 	std::cout << "mirrorcast for voter" << std::endl;
 	mirrorcast(N(votedecay), symbol(4, "VOTE"));
 
@@ -216,7 +216,7 @@ BOOST_FIXTURE_TEST_CASE( reg_proposal_ballot, eosio_trail_tester ) try {
 	uint32_t begin_time = now() + 20;
 	uint32_t end_time   = now() + ballot_length;
 	
-	regvoter(publisher);
+	regvoter(publisher, symbol(4, "VOTE"));
 	regballot(publisher, ballot_type, symbol(4, "VOTE"), begin_time, end_time, info_url);
 
 	auto ballot_info = get_ballot(current_ballot_id);
@@ -360,7 +360,7 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 	asset currency_balance = asset::from_string("0.0000 TLOS");
 	asset voter_total = asset::from_string("0.0000 VOTE");
 	for (int i = 0; i < test_voters.size(); i++) {
-		regvoter(test_voters[i].value);
+		regvoter(test_voters[i].value, symbol(4, "VOTE"));
 		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
 		REQUIRE_MATCHING_OBJECT(voter_info, mvo()
 			("owner", test_voters[i].to_string())
@@ -562,7 +562,7 @@ BOOST_FIXTURE_TEST_CASE( full_leaderboard_flow, eosio_trail_tester ) try {
 		asset::from_string("0.0000 VOTE")
 	};
 	for (int i = 0; i < test_voters.size(); i++) {
-		regvoter(test_voters[i].value);
+		regvoter(test_voters[i].value, symbol(4, "VOTE"));
 		voter_info = get_voter(test_voters[i], symbol(4, "VOTE").to_symbol_code());
 		REQUIRE_MATCHING_OBJECT(voter_info, mvo()
 			("owner", test_voters[i].to_string())
@@ -803,6 +803,184 @@ BOOST_FIXTURE_TEST_CASE( custom_token_voting, eosio_trail_tester ) try {
 	for(int i = 0; i < candidates_from_board.size(); i++) {
 		REQUIRE_MATCHING_OBJECT(candidates[i], candidates_from_board[i]);
 	}
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( token_functions, eosio_trail_tester ) try {
+	//TODO: regtoken
+	account_name publisher = N(voteraaaaaaa);
+	string info_url = "Token Function Testing";
+	symbol test_symbol = symbol(2, "CRAIG");
+	asset total_supply = asset(test_voters.size() * 500, test_symbol);
+	asset per_voter = asset(total_supply.get_amount() / test_voters.size(), test_symbol);
+	BOOST_REQUIRE_EQUAL(true, per_voter.get_amount() == 500);
+	
+	regtoken(total_supply, publisher, info_url);
+	auto registry_info = get_registry(test_symbol);
+	BOOST_REQUIRE_EQUAL(false, registry_info.is_null());
+
+	regvoter(N(voteraaaaaaa), test_symbol);
+	auto voter_info = get_voter(N(voteraaaaaaa), test_symbol.to_symbol_code());
+	REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+		("owner", "voteraaaaaaa")
+		("tokens", "0.00 CRAIG")
+	);
+
+	produce_blocks(2);
+
+	//TODO: initsettings
+	mvo token_settings = mvo()
+		("is_destructible", 1)
+		("is_proxyable", 0)
+		("is_burnable", 1)
+		("is_seizable", 1)
+		("is_max_mutable", 1)
+		("is_transferable", 1)
+		("is_recastable", 0) //TODO: should change once eosio.trial recasting logic is setup for leaderboard voting
+		("is_initialized", 1)
+		("counterbal_decay_rate", 500)
+		("lock_after_initialize", 0); //for easy testing
+
+	initsettings(publisher, test_symbol, token_settings);
+	registry_info = get_registry(test_symbol);
+	REQUIRE_MATCHING_OBJECT(registry_info["settings"].as<mvo>(), token_settings);
+
+	produce_blocks(2);
+
+	//TODO: test registry destructibility
+	unregtoken(test_symbol, publisher);
+	registry_info = get_registry(test_symbol);
+	BOOST_REQUIRE_EQUAL(true, registry_info.is_null());
+
+	produce_blocks(2);
+
+	//check is null
+
+	//make registry again, initsettings again with is_destructible off
+	regtoken(total_supply, publisher, info_url);
+	registry_info = get_registry(test_symbol);
+	BOOST_REQUIRE_EQUAL(false, registry_info.is_null());
+
+	initsettings(publisher, test_symbol, token_settings);
+	registry_info = get_registry(test_symbol);
+	REQUIRE_MATCHING_OBJECT(registry_info["settings"].as<mvo>(), token_settings);
+
+	produce_blocks(2);
+
+	regvoter(N(voteraaaaaab), test_symbol);
+	voter_info = get_voter(N(voteraaaaaab), test_symbol.to_symbol_code());
+	REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+		("owner", "voteraaaaaab")
+		("tokens", "0.00 CRAIG")
+	);
+	
+	//TODO: test issuance airgrab/drop
+
+	issuetoken(publisher, N(voteraaaaaab), per_voter, true);
+	auto airgrab_info = get_airgrab(publisher, N(voteraaaaaab));
+	REQUIRE_MATCHING_OBJECT(airgrab_info, mvo()
+		("recipient", "voteraaaaaab")
+		("tokens", per_voter.to_string())
+	);
+	claimairgrab(N(voteraaaaaab), publisher, test_symbol);
+	airgrab_info = get_airgrab(publisher, N(voteraaaaaab));
+	BOOST_REQUIRE_EQUAL(true, airgrab_info.is_null());
+	voter_info = get_voter(N(voteraaaaaab), per_voter.get_symbol().to_symbol_code());
+	BOOST_REQUIRE_EQUAL(false, voter_info.is_null());
+	REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+		("owner", "voteraaaaaab")
+		("tokens", per_voter.to_string())
+	);
+
+	issuetoken(publisher, N(voteraaaaaac), per_voter, false);
+	voter_info = get_voter(N(voteraaaaaac), per_voter.get_symbol().to_symbol_code());
+	BOOST_REQUIRE_EQUAL(false, voter_info.is_null());
+	REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+		("owner", "voteraaaaaac")
+		("tokens", per_voter.to_string())
+	);
+
+	issuetoken(publisher, N(voteraaaaaad), per_voter, true);
+	airgrab_info = get_airgrab(publisher, N(voteraaaaaad));
+	REQUIRE_MATCHING_OBJECT(airgrab_info, mvo()
+		("recipient", "voteraaaaaad")
+		("tokens", per_voter.to_string())
+	);
+
+	produce_blocks(2);
+
+	//TODO: test token burning (unregvoter, burntoken)
+
+	burntoken(N(voteraaaaaab), asset(100, test_symbol));
+	voter_info = get_voter(N(voteraaaaaab), test_symbol.to_symbol_code());
+	BOOST_REQUIRE_EQUAL(false, voter_info.is_null());
+	REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+		("owner", "voteraaaaaab")
+		("tokens", per_voter - asset(100, test_symbol))
+	);
+
+	unregvoter(N(voteraaaaaac), test_symbol);
+	voter_info = get_voter(N(voteraaaaaac), test_symbol.to_symbol_code());
+	BOOST_REQUIRE_EQUAL(true, voter_info.is_null());
+
+	//TODO: test seizingtoken
+	voter_info = get_voter(N(voteraaaaaaa), test_symbol.to_symbol_code());
+	BOOST_REQUIRE_EQUAL(false, voter_info.is_null());
+	REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+		("owner", "voteraaaaaaa")
+		("tokens", "0.00 CRAIG")
+	);
+	seizetoken(publisher, N(voteraaaaaab), asset(100, test_symbol));
+	voter_info = get_voter(N(voteraaaaaaa), test_symbol.to_symbol_code());
+	BOOST_REQUIRE_EQUAL(false, voter_info.is_null());
+	REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+		("owner", "voteraaaaaaa")
+		("tokens", "1.00 CRAIG")
+	);
+
+	voter_info = get_voter(N(voteraaaaaab), test_symbol.to_symbol_code());
+	REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+		("owner", "voteraaaaaab")
+		("tokens", "3.00 CRAIG")
+	);
+
+	//TODO: test seize airgrab
+
+	seizeairgrab(publisher, N(voteraaaaaad), asset(100, test_symbol));
+	airgrab_info = get_airgrab(publisher, N(voteraaaaaad));
+	REQUIRE_MATCHING_OBJECT(airgrab_info, mvo()
+		("recipient", "voteraaaaaad")
+		("tokens", (per_voter - asset(100, test_symbol)).to_string())
+	);
+
+	voter_info = get_voter(N(voteraaaaaaa), test_symbol.to_symbol_code());
+	REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+		("owner", "voteraaaaaaa")
+		("tokens", "2.00 CRAIG")
+	);
+
+	seizeairgrab(publisher, N(voteraaaaaad), asset(400, test_symbol));
+	airgrab_info = get_airgrab(publisher, N(voteraaaaaad));
+	BOOST_REQUIRE_EQUAL(true, airgrab_info.is_null());
+
+	voter_info = get_voter(N(voteraaaaaaa), test_symbol.to_symbol_code());
+	REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+		("owner", "voteraaaaaaa")
+		("tokens", "6.00 CRAIG")
+	);
+
+	produce_blocks(2);
+
+	//TODO: test raising/lowering max
+
+
+
+	//TODO: test transfers and counterbalances
+
+
+
+	//TODO: test recasting?
+	//TODO: test proxyable once implemented
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

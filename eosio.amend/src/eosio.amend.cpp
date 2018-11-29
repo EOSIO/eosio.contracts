@@ -197,6 +197,29 @@ void ratifyamend::addclause(uint64_t sub_id, uint8_t new_clause_num, string new_
     print("\nAdd Clause: SUCCESS");
 }
 
+void ratifyamend::cancelsub(uint64_t sub_id) {
+	submissions_table submissions(_self, _self.value);
+	auto s = submissions.get(sub_id, "Submission not found");
+
+	require_auth(s.proposer);
+	ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
+	auto b = ballots.get(s.ballot_id, "Ballot not found on eosio.trail ballots_table");
+
+	proposals_table proposals("eosio.trail"_n, "eosio.trail"_n.value);
+	auto p = proposals.get(b.reference_id, "Prosal not found on eosio.trail proposals_table");
+
+	eosio_assert(p.cycle_count == uint16_t(0), "proposal is no longer in building stage");
+    eosio_assert(p.status == uint8_t(0), "Proposal is already closed");
+	eosio_assert(now() < p.begin_time, "Proposal voting has already begun. Unable to cancel.");
+
+	action(permission_level{ _self, "active"_n }, "eosio.trail"_n, "unregballot"_n, make_tuple(
+        _self,
+		s.ballot_id
+    )).send();
+
+	submissions.erase(s);
+}
+
 void ratifyamend::openvoting(uint64_t sub_id) {
     submissions_table submissions(_self, _self.value);
     auto& sub = submissions.get(sub_id, "Proposal Not Found");
@@ -311,14 +334,14 @@ extern "C" {
         }
         datastream<const char*> ds((char*)buffer, size);
 
-        ratifyamend ramend(name(self), name(code), ds);
-
         if(code == self && action == name("insertdoc").value) {
             execute_action(name(self), name(code), &ratifyamend::insertdoc);
         } else if (code == self && action == name("getdeposit").value) {
             execute_action(name(self), name(code), &ratifyamend::getdeposit);
         } else if (code == self && action == name("makeproposal").value) {
             execute_action(name(self), name(code), &ratifyamend::makeproposal);
+        } else if (code == self && action == name("cancelsub").value) {
+            execute_action(name(self), name(code), &ratifyamend::cancelsub);
         } else if (code == self && action == name("addclause").value) {
             execute_action(name(self), name(code), &ratifyamend::addclause);
         } else if (code == self && action == name("openvoting").value) {
@@ -328,10 +351,9 @@ extern "C" {
         } else if (code == self && action == name("setenv").value) {
             execute_action(name(self), name(code), &ratifyamend::setenv);
         } else if (code == name("eosio.token").value && action == name("transfer").value) {
+			ratifyamend ramend(name(self), name(code), ds);
             auto args = unpack_action_data<transfer_args>();
             ramend.transfer_handler(args.from, args.quantity);
         }
     } //end apply
 };
-
-// EOSIO_DISPATCH(ratifyamend, (insertdoc)(makeproposal)(addclause)(linkballot)(closeprop)(getdeposit))

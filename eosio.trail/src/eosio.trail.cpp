@@ -81,7 +81,7 @@ void trail::unregtoken(symbol token_symbol, name publisher) {
     require_auth(publisher);
     
     registries_table registries(_self, _self.value);
-    auto r = registries.find(token_symbol.raw());
+    auto r = registries.find(token_symbol.code().raw());
     eosio_assert(r != registries.end(), "No Token Registry found matching given symbol");
     auto reg = *r;
 
@@ -846,6 +846,11 @@ bool trail::vote_for_proposal(name voter, uint64_t ballot_id, uint64_t prop_id, 
     eosio_assert(p != proposals.end(), "proposal doesn't exist");
     auto prop = *p;
 
+	registries_table registries(_self, _self.value);
+    auto r = registries.find(prop.no_count.symbol.code().raw());
+    eosio_assert(r != registries.end(), "Token Registry with that symbol doesn't exist");
+    auto reg = *r;
+
     eosio_assert(env_struct.time_now >= prop.begin_time && env_struct.time_now <= prop.end_time, "ballot voting window not open");
     //eosio_assert(vid.release_time >= bal.end_time, "can only vote for ballots that end before your lock period is over...prevents double voting!");
 
@@ -874,6 +879,8 @@ bool trail::vote_for_proposal(name voter, uint64_t ballot_id, uint64_t prop_id, 
         auto vr = *vr_itr;
 
         if (vr.expiration == prop.end_time && vr.directions[0] != direction) { //NOTE: vote different and for same cycle
+
+			eosio_assert(reg.settings.is_recastable, "token registry disallows vote recasting");
 
             switch (vr.directions[0]) { //NOTE: remove old vote weight from proposal
                 case 0 : prop.no_count -= vr.weight; break;
@@ -1233,6 +1240,8 @@ extern "C" {
 
         if(code == self && action == name("regtoken").value) {
             execute_action(name(self), name(code), &trail::regtoken);
+        } else if(code == self && action == name("initsettings").value) {
+            execute_action(name(self), name(code), &trail::initsettings);
         } else if (code == self && action == name("unregtoken").value) {
             execute_action(name(self), name(code), &trail::unregtoken);
         } else if (code == self && action == name("regvoter").value) {

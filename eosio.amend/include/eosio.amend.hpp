@@ -116,16 +116,19 @@ class [[eosio::contract("eosio.amend")]] ratifyamend : public contract {
         void insertdoc(string title, vector<string> clauses);
 
 		[[eosio::action]]
-        void makeproposal(string prop_title, uint64_t doc_id, uint8_t new_clause_num, string new_ipfs_url, name proposer);
+        void makeproposal(string sub_title, uint64_t doc_id, uint8_t new_clause_num, string new_ipfs_url, name proposer);
 
 		[[eosio::action]]
-        void addclause(uint64_t prop_id, uint8_t new_clause_num, string new_ipfs_url);
+        void addclause(uint64_t sub_id, uint8_t new_clause_num, string new_ipfs_url);
 
 		[[eosio::action]]
-        void openvoting(uint64_t prop_id);
+        void openvoting(uint64_t sub_id);
+
+		[[eosio::action]]
+		void cancelsub(uint64_t sub_id);
 
 	   	[[eosio::action]]
-        void closeprop(uint64_t proposal_id);
+        void closeprop(uint64_t sub_id);
         
         [[eosio::action]]
 	    void getdeposit(name owner);

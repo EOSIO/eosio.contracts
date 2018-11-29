@@ -154,7 +154,7 @@ class eosio_wps_tester : public eosio_trail_tester
 
       void register_voters(vector<name> test_voters, int start, int end){
          for (int i = start; i < end; i++) {
-            regvoter(test_voters[i].value);
+            regvoter(test_voters[i].value, symbol(4, "VOTE"));
             base_tester::set_authority( test_voters[i].value, name(config::active_name).to_string(), 
                               authority(
                                  1,
