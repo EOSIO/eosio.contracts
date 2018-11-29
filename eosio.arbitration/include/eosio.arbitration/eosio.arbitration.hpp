@@ -127,7 +127,7 @@ public:
     // CLARIFY: usage of "schedule" in requirements doc
 
     uint64_t primary_key() const { return publisher.value; }
-    EOSLIB_SERIALIZE(config, (publisher)(max_arbs)(default_time))
+    EOSLIB_SERIALIZE(config, (publisher)(max_arbs)(default_time)(fee_structure))
   };
 
   struct[[eosio::table]] arbitrator {

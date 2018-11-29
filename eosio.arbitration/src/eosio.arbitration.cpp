@@ -51,11 +51,11 @@ void arbitration::applyforarb(name candidate, string creds_ipfs_url) {
 
   candidates_table candidates(_self, _self.value);
   auto c = candidates.find(candidate.value);
-  eosio_assert(c != candidates.end(), "Candidate is already an applicant");
+  eosio_assert(c == candidates.end(), "Candidate is already an applicant");
 
   arbitrators_table arbitrators(_self, _self.value);
   auto a = arbitrators.find(candidate.value);
-  eosio_assert(a != arbitrators.end(), "Candidate is already an arbitrator");
+  eosio_assert(a == arbitrators.end(), "Candidate is already an arbitrator");
 
   candidates.emplace(_self, [&](auto &c) {
     c.cand_name = candidate;
@@ -72,7 +72,7 @@ void arbitration::cancelarbapp(name candidate) {
   candidates_table candidates(_self, _self.value);
   auto c = candidates.find(candidate.value);  
 
-  eosio_assert(c == candidates.end(), "Candidate isn't an applicant");
+  eosio_assert(c != candidates.end(), "Candidate isn't an applicant");
 
   candidates.erase(c);
 
@@ -218,7 +218,7 @@ void arbitration::removeclaim(uint64_t case_id, uint16_t claim_num, name claiman
 
 	vector<claim> new_claims = c.claims;
 	eosio_assert(new_claims.size() > 0, "no claims to remove");
-	eosio_assert(claim_num < new_claims.size() - 1, "claim number does not exist");
+	eosio_assert(claim_num < new_claims.size(), "claim number does not exist");
 	new_claims.erase(new_claims.begin() + claim_num);
 
 	casefiles.modify(c, same_payer, [&](auto& a) {
@@ -323,12 +323,12 @@ void arbitration::dismissev(uint64_t case_id, uint16_t claim_index, uint16_t ev_
   auto arb_case = std::find(c.arbitrators.begin(), c.arbitrators.end(), arb);
 
   eosio_assert(arb_case != c.arbitrators.end(), "only arbitrator can dismiss case");
-  eosio_assert(claim_index < 0 || claim_index > c.claims.size() - 1, "claim_index is out of range");
+  eosio_assert(claim_index < 0 || claim_index >= c.claims.size(), "claim_index is out of range");
 
   vector<claim> new_claims = c.claims;
   auto clm = c.claims[claim_index];
 
-  eosio_assert(ev_index < 0 || ev_index > clm.accepted_ev_ids.size() - 1, "ev_index is out of range");
+  eosio_assert(ev_index < 0 || ev_index >= clm.accepted_ev_ids.size(), "ev_index is out of range");
 
   vector<uint64_t> new_accepted_ev_ids = clm.accepted_ev_ids;
   new_accepted_ev_ids.erase(clm.accepted_ev_ids.begin() + ev_index);
@@ -359,12 +359,12 @@ void arbitration::acceptev(uint64_t case_id, uint16_t claim_index, uint16_t ev_i
   auto arb_case = std::find(c.arbitrators.begin(), c.arbitrators.end(), arb);
 
   eosio_assert(arb_case != c.arbitrators.end(), "only arbitrator can accept");
-  eosio_assert(claim_index < 0 || claim_index > c.claims.size() - 1, "claim_index is out of range");
+  eosio_assert(claim_index < 0 || claim_index >= c.claims.size(), "claim_index is out of range");
 
   vector<claim> new_claims = c.claims;
   auto clm = c.claims[claim_index];
 
-  eosio_assert(ev_index < 0 || ev_index > clm.submitted_pending_evidence.size() - 1, "ev_index is out of range");
+  eosio_assert(ev_index < 0 || ev_index >= clm.submitted_pending_evidence.size(), "ev_index is out of range");
 
   vector<string> new_submitted_pending_evidence = clm.submitted_pending_evidence;
   new_submitted_pending_evidence.erase(clm.submitted_pending_evidence.begin() +
@@ -429,7 +429,7 @@ void arbitration::changeclass(uint64_t case_id, uint16_t claim_index, uint16_t n
   auto arb_case = std::find(c.arbitrators.begin(), c.arbitrators.end(), arb);
 
   eosio_assert(arb_case != c.arbitrators.end(), "arbitrator isn't selected for this case.");
-  eosio_assert(claim_index < 0 || claim_index > c.claims.size() - 1, "claim_index is out of range");
+  eosio_assert(claim_index < 0 || claim_index >= c.claims.size(), "claim_index is out of range");
 
   vector<claim> new_claims = c.claims;
   new_claims[claim_index].class_suggestion = new_class;
