@@ -295,8 +295,6 @@ extern "C" {
         }
         datastream<const char*> ds((char*)buffer, size);
 
-        workerproposal work(name(self), name(code), ds);
-
         if(code == self && action == name("claim").value) {
             execute_action(name(self), name(code), &workerproposal::claim);
         } else if (code == self && action == name("getdeposit").value) {
@@ -310,6 +308,7 @@ extern "C" {
         } else if (code == self && action == name("setenv").value) {
             execute_action(name(self), name(code), &workerproposal::setenv);
         } else if (code == name("eosio.token").value && action == name("transfer").value) {
+            workerproposal work(name(self), name(code), ds);
             auto args = unpack_action_data<transfer_args>();
             work.transfer_handler(args.from, args.quantity);
         }
