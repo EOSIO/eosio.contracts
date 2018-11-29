@@ -188,6 +188,10 @@ class eosio_trail_tester : public tester
 		return base_tester::push_action(std::move(act), uint64_t(signer));
 	}
 
+	#pragma endregion Setup_Actions
+
+	#pragma region Get_Functions
+
 	fc::variant get_account(account_name acc, const string &symbolname)
 	{
 		auto symb = eosio::chain::symbol::from_string(symbolname);
@@ -201,10 +205,6 @@ class eosio_trail_tester : public tester
 		if (data.empty()) std::cout << "\nData is empty\n" << std::endl;
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "env", data, abi_serializer_max_time );
 	}
-
-	#pragma endregion Setup_Actions
-
-	#pragma region Get_Functions
 
 	fc::variant get_voter(account_name voter, symbol_code scope) {
 		vector<char> data = get_row_by_account(N(eosio.trail), scope.value, N(balances), voter);
@@ -567,6 +567,27 @@ class eosio_trail_tester : public tester
 	}
 
 	#pragma endregion Publisher_Actions
+
+	#pragma region Common_Helpers
+
+	void register_voters(vector<name> test_voters, int start, int end, symbol smb){
+		for (int i = start; i < end; i++) {
+			regvoter(test_voters[i].value, smb);
+			produce_blocks(1);
+
+			auto voter_info = get_voter(test_voters[i], smb.to_symbol_code());
+			REQUIRE_MATCHING_OBJECT(voter_info, mvo()
+				("owner", test_voters[i].to_string())
+				("tokens", std::string(std::string("0.0000 ") + smb.name()))
+			);
+		}
+	}
+      
+	asset get_balance( const account_name& act, symbol balance_symbol = symbol{CORE_SYM}, const account_name& contract = N(eosio.token) ) {
+		return get_currency_balance(contract, balance_symbol, act);
+	}
+
+	#pragma endregion Common_Helpers
 
 	void dump_trace(transaction_trace_ptr trace_ptr) {
 		std::cout << std::endl << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;

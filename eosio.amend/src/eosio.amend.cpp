@@ -9,10 +9,10 @@ ratifyamend::ratifyamend(name self, name code, datastream<const char*> ds) : con
             uint32_t(2500000),    // cycle duration in seconds (default 2,500,000 or 5,000,000 blocks or ~29 days)
             uint64_t(1000000),    // default fee amount 100 TLOS
 			uint32_t(864000000),  // delay before voting starts on a submission in seconds (~1 day) // or building time ~30 years
-            5,          // % of all registered voters to pass (minimum, including exactly this value)
-            66.67,      // % yes over no, to consider it passed (minimum, including exactly this value)
-            4,          // % of all registered voters to refund fee (minimum, including exactly this value)
-            25          // % of yes to give fee back
+            double(5),          // % of all registered voters to pass (minimum, including exactly this value)
+            double(66.67),      // % yes over no, to consider it passed (minimum, including exactly this value)
+            double(4),          // % of all registered voters to refund fee (minimum, including exactly this value)
+            double(25)          // % of yes to give fee back
         };
         configs.set(configs_struct, _self);
     } else {
@@ -90,7 +90,7 @@ void ratifyamend::insertdoc(string title, vector<string> clauses) {
     print("\nAssigned Document ID: ", doc_id);
 }
 
-void ratifyamend::makeproposal(string prop_title, uint64_t doc_id, uint8_t new_clause_num, string new_ipfs_url, name proposer) {
+void ratifyamend::makeproposal(string sub_title, uint64_t doc_id, uint8_t new_clause_num, string new_ipfs_url, name proposer) {
     require_auth(proposer);
 
     documents_table documents(_self, _self.value);
@@ -98,7 +98,7 @@ void ratifyamend::makeproposal(string prop_title, uint64_t doc_id, uint8_t new_c
     eosio_assert(d != documents.end(), "Document Not Found");
     auto doc = *d;
 
-    eosio_assert(new_clause_num <= doc.clauses.size() + 1 && new_clause_num >= 0, "new clause num is not valid");
+    eosio_assert(new_clause_num <= doc.clauses.size() && new_clause_num >= 0, "new clause num is not valid");
 
 	deposits_table deposits(_self, _self.value);
 	auto d_itr = deposits.find(proposer.value);
@@ -145,7 +145,7 @@ void ratifyamend::makeproposal(string prop_title, uint64_t doc_id, uint8_t new_c
         a.proposer = proposer;
 
         a.document_id = doc_id;
-        a.proposal_title = prop_title;
+        a.proposal_title = sub_title;
         a.new_clause_nums = clause_nums;
         a.new_ipfs_urls = clause_urls;
     });
@@ -175,7 +175,7 @@ void ratifyamend::addclause(uint64_t sub_id, uint8_t new_clause_num, string new_
     eosio_assert(d != documents.end(), "Document Not Found");
     auto doc = *d;
 
-    eosio_assert(new_clause_num <= doc.clauses.size() + 1 && new_clause_num >= 0, "new clause num is not valid");
+    eosio_assert(new_clause_num <= doc.clauses.size() && new_clause_num >= 0, "new clause num is not valid");
     bool existing_clause = false;
 
     for (int i = 0; i < sub.new_clause_nums.size(); i++) {
@@ -199,7 +199,9 @@ void ratifyamend::addclause(uint64_t sub_id, uint8_t new_clause_num, string new_
 
 void ratifyamend::cancelsub(uint64_t sub_id) {
 	submissions_table submissions(_self, _self.value);
-	auto s = submissions.get(sub_id, "Submission not found");
+	auto s_itr = submissions.find(sub_id);
+    eosio_assert(s_itr != submissions.end(), "Submission not found");
+    auto s = *s_itr;
 
 	require_auth(s.proposer);
 	ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
@@ -217,7 +219,7 @@ void ratifyamend::cancelsub(uint64_t sub_id) {
 		s.ballot_id
     )).send();
 
-	submissions.erase(s);
+	submissions.erase(s_itr);
 }
 
 void ratifyamend::openvoting(uint64_t sub_id) {

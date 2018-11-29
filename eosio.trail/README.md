@@ -28,10 +28,6 @@ For our contract example, we will be making a simple document updater where upda
 
     The makeproposal action stores the new paragraph retrievable by a proposal id, after first making sure the associated document exists. No vote counts are stored for this proposal (remember, that's Trail's job).
 
-* `linkballot(uint64_t prop_id, uint64_t ballot_id)`
-
-    The linkballot action will link a proposal to an existing ballot in Trail. The proposal object has a field `ballot_id` which this action updates with the associated ballot id. This step isn't strictly necessary, but is a nice way to have a quick reference of which ballots your proposals are targeting. This action can also be rolled into the makeproposal action (so it all happens atomically), but for this example it will be left separate for clarity.
-
 * `closeprop(uint64_t prop_id)`
 
     The closeprop action is important for performing custom logic on ballot results, and simply sends an inline action to Trail's `closeballot()` action upon completion. The `status` field of the ballot allows ballot closers the ability to assign any meaning to status codes they desire. For example, a voting contract could interpret a status code of `7` to mean `REFUNDED`. However, status codes `0`, `1`, and `2` are reserved for meaning `OPEN`, `PASS`, and `FAIL`, respectively.

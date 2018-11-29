@@ -22,7 +22,7 @@ using namespace std;
 using namespace eosio;
 
 class [[eosio::contract("eosio.amend")]] ratifyamend : public contract {
-    protected:
+    // protected:
         struct [[eosio::table, eosio::contract("eosio.amend")]] deposit
         {
             name owner;
@@ -68,7 +68,7 @@ class [[eosio::contract("eosio.amend")]] ratifyamend : public contract {
 		    double threshold_fee_votes;
 
             uint64_t primary_key() const { return publisher.value; }
-            EOSLIB_SERIALIZE(config, (publisher)(expiration_length)
+            EOSLIB_SERIALIZE(config, (publisher)(expiration_length)(fee)(start_delay)
                 (threshold_pass_voters)(threshold_pass_votes)
                 (threshold_fee_voters)(threshold_fee_votes))
         };

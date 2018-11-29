@@ -66,8 +66,8 @@ BOOST_FIXTURE_TEST_CASE( deposit_system, eosio_wps_tester) try {
 	}
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( ballot_id_and_deposit_amount, eosio_wps_tester ) try {
-   register_voters(test_voters, 0, 1);
+BOOST_FIXTURE_TEST_CASE( ballot_id_and_fee, eosio_wps_tester ) try {
+   register_voters(test_voters, 0, 1, symbol(4, "VOTE"));
 
    auto proposer = test_voters[0];
    transfer(N(eosio), proposer.value, asset::from_string("2000.0000 TLOS"), "Blood Money");
@@ -124,7 +124,7 @@ BOOST_FIXTURE_TEST_CASE( ballot_id_and_deposit_amount, eosio_wps_tester ) try {
    push_transaction( trx );
    produce_blocks(1);
 
-   asset saving_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), N(eosio.saving));
+   asset saving_balance = get_balance(N(eosio.saving));
 
    BOOST_REQUIRE_EQUAL(saving_balance, expected_total);
 
@@ -142,30 +142,10 @@ BOOST_FIXTURE_TEST_CASE( ballot_id_and_deposit_amount, eosio_wps_tester ) try {
 
       // submission should have correct ballot_id
       BOOST_REQUIRE_EQUAL(submission["ballot_id"], ballot["ballot_id"]);
-
-      // wdump((proposal));
-      // wdump((submission));
-      // wdump((ballot));
-      // ilog("----------");
    }
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
-   uint32_t wp_cycle_duration = 2500000; // 2.5 mil seconds = 5 mil blocks
-
-   int total_voters = test_voters.size();
-
-   register_voters(test_voters, 0, total_voters - 1);
-   
-   auto trail_env = get_trail_env();
-   BOOST_REQUIRE_EQUAL(trail_env["totals"][1], total_voters - 1);
-
-   name proposer = test_voters[total_voters - 1];
-   transfer(N(eosio), proposer.value, asset::from_string("1800.0000 TLOS"), "Blood Money");
-   produce_blocks(1);
-
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("2000.0000"), get_balance( proposer ) );
-
+BOOST_FIXTURE_TEST_CASE( set_env, eosio_wps_tester ) try {
    wps_set_env(1111111, 1, 111111, 11111, 1, 11, 1, 11);
    produce_blocks(1);
 
@@ -183,11 +163,101 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
          ("threshold_fee_voters", 1)
          ("threshold_fee_votes", 11)
    );
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( create_proposal_and_cancel, eosio_wps_tester ) try {
+   int total_voters = test_voters.size();
+   name proposer = test_voters[total_voters - 1];
+   
+   wps_set_env(2500000, 3, 864000000, 500000, 5, 50, 4, 20);
+   produce_blocks(1);
+
+   transfer(N(eosio), proposer.value, core_sym::from_string("300.0000"), "Blood Money");
+   produce_blocks(1);
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("500.0000"), get_balance( proposer ) );
+   
+   transfer(proposer, eosio::chain::name("eosio.saving"), core_sym::from_string("30.0000"), "proposal 1 fee");
+   
+	BOOST_REQUIRE_EXCEPTION( 
+      submit_worker_proposal(
+         proposer.value,
+         std::string("test proposal 1"),
+         (uint16_t)3,
+         std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B99"),
+         core_sym::from_string("1000.0000"),
+         proposer.value
+      ), 
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "Deposit amount is less than fee, please transfer more TLOS" )
+   );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("470.0000"), get_balance( proposer ) );
+
+   transfer(proposer, eosio::chain::name("eosio.saving"), core_sym::from_string("20.0000"), "proposal 1 fee");
+   submit_worker_proposal(
+      proposer.value,
+      std::string("test proposal 1"),
+      (uint16_t)3,
+      std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B99"),
+      core_sym::from_string("1000.0000"),
+      proposer.value
+   );
+   // check if 50TLOS (3% < 50) fee was used
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("450.0000"), get_balance( proposer ) );
+   
+	BOOST_REQUIRE_EXCEPTION( 
+      submit_worker_proposal(
+         proposer.value,
+         std::string("test proposal 2"),
+         (uint16_t)3,
+         std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B99"),
+         core_sym::from_string("2000.0000"),
+         proposer.value
+      ),
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "Deposit not found, please transfer your TLOS fee" )
+   );
+
+   transfer(proposer, eosio::chain::name("eosio.saving"), core_sym::from_string("60.0000"), "proposal 2 fee");
+   submit_worker_proposal(
+      proposer.value,
+      std::string("test proposal 2"),
+      (uint16_t)3,
+      std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B99"),
+      core_sym::from_string("2000.0000"),
+      proposer.value
+   );
+   // check if 60TLOS (3% > 50) fee was used
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("390.0000"), get_balance( proposer ) );
+
+   auto deposit_info = get_deposit(proposer.value);
+   BOOST_REQUIRE(deposit_info.is_null());
+
+   cancelsub(proposer, 0);
+   cancelsub(proposer, 1);
+
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("390.0000"), get_balance( proposer ) );
+   
+   BOOST_REQUIRE(get_proposal(0).is_null());
+   BOOST_REQUIRE(get_proposal(1).is_null());
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
+   uint32_t wp_cycle_duration = 2500000; // 2.5 mil seconds = 5 mil blocks
+
+   int total_voters = test_voters.size();
+   register_voters(test_voters, 0, total_voters - 1, symbol(4, "VOTE"));
+   
+   auto trail_env = get_trail_env();
+   BOOST_REQUIRE_EQUAL(trail_env["totals"][1], total_voters - 1);
+
+   name proposer = test_voters[total_voters - 1];
+   transfer(N(eosio), proposer.value, asset::from_string("1800.0000 TLOS"), "Blood Money");
+   produce_blocks(1);
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("2000.0000"), get_balance( proposer ) );
 
    wps_set_env(2500000, 3, 864000000, 500000, 5, 50, 4, 20);
    produce_blocks(1);
-   env = get_wps_env();
-   // wdump((env));
+   auto env = get_wps_env();
    
    double threshold_pass_voters = env["threshold_pass_voters"].as<double>();
    double threshold_fee_voters = env["threshold_fee_voters"].as<double>();
@@ -207,7 +277,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
       (uint16_t)3,
       std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B99"),
       core_sym::from_string("1000.0000"),
-      proposer.value
+      test_voters[0]
    );
    // check if 50TLOS (3% < 50) fee was used
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1950.0000"), get_balance( proposer ) );
@@ -299,6 +369,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // CLAIM: get fee back
    claim_proposal_funds(0, proposer.value);
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("200.0000"), get_balance( test_voters[0] ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
 
    // CLAIM: nothing to claim
@@ -360,7 +431,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    vote_tipping_point = calculateTippingPoint(quorum_voters_size_pass, threshold_pass_votes);
    fee_tipping_point = calculateTippingPoint(quorum_voters_size_pass, threshold_fee_votes, true);
 
-   std::cout<<"conditions: [ i < "<<vote_tipping_point<<" ] / [ i < "<<fee_tipping_point<<" ] "<<std::endl;
+//    std::cout<<"conditions: [ i < "<<vote_tipping_point<<" ] / [ i < "<<fee_tipping_point<<" ] "<<std::endl;
 
    // voting window (#2) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
@@ -371,7 +442,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
       // pass vote and fee
       uint16_t vote_direction_1 = ( i < vote_tipping_point ) ? uint16_t(1) : uint16_t(0);
       
-      std::cout<<i<<" => "<<vote_direction_0<<" "<<vote_direction_1<<std::endl;
+      // std::cout<<i<<" => "<<vote_direction_0<<" "<<vote_direction_1<<std::endl;
 
       castvote(quorum[i].value, 0, vote_direction_0);
       castvote(quorum[i].value, 1, vote_direction_1);
@@ -383,30 +454,28 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    produce_block(fc::seconds(2500000)); // end the cycle
 
-   // CLAIM: funds - 2060 should be added
+   // // last cycle check = prep 0 + cycle 1, cycle 2 [ended] / cycle 3 waiting for claim [3rd cycle is not counted until claim]
+   BOOST_REQUIRE_EQUAL(1 + 2, get_proposal(0)["cycle_count"].as_uint64());
+   BOOST_REQUIRE_EQUAL(1 + 2, get_proposal(1)["cycle_count"].as_uint64());
+
+   // CLAIM: funds - 2060 should be added => close ballot
    claim_proposal_funds(1, proposer.value);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("4000.0000"), get_balance( proposer ) );
    
-   // CLAIM: funds - 1000 should be added
+   // CLAIM: funds - 1000 should be added => close ballot 
    claim_proposal_funds(0, proposer.value);
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("5000.0000"), get_balance( proposer ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("1200.0000"), get_balance( test_voters[0] ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("4000.0000"), get_balance( proposer ) );
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000"), get_balance( eosio::chain::name("eosio.saving") ) );
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "Proposal is closed" ), claim_proposal_funds(0, proposer.value));
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "Proposal is closed" ), claim_proposal_funds(1, proposer.value));
 
-   // // CHECK IF BOTH PROPOSALS ENDED
-   // BOOST_REQUIRE_EQUAL(0, get_wp_info(0)["status"].as_uint64());
-   // BOOST_REQUIRE_EQUAL(3, get_wp_info(0)["current_cycle"].as_uint64());
+   // CHECK IF BOTH PROPOSALS ENDED 
+   BOOST_REQUIRE_EQUAL(get_proposal(0)["status"].as<uint8_t>(), uint8_t(1));
+   BOOST_REQUIRE_EQUAL(get_proposal(1)["status"].as<uint8_t>(), uint8_t(1));
 
-   // BOOST_REQUIRE_EQUAL(0, get_wp_info(1)["status"].as_uint64());
-   // BOOST_REQUIRE_EQUAL(3, get_wp_info(1)["current_cycle"].as_uint64());
-
-   // // CLAIM AFTER PROPOSALS ENDED
-   // BOOST_REQUIRE_EQUAL( wasm_assert_msg( "Proposal is closed" ), claim_proposal_funds(0, N(proposer1111)));
-
-   // // TODO: check list + close ballot
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -12,6 +12,10 @@ class eosio_amend_tester : public eosio_trail_tester
   public:
 	abi_serializer abi_ser;
 	abi_serializer token_abi_ser;
+	vector<mvo> documents = {
+		mvo()("document_id", 0)("document_title", std::string("Document 0"))("clauses", std::vector<std::string>({std::string("clause 0.1"), std::string("clause 0.2"), std::string("clause 0.3")}))("last_amend", 0),
+		mvo()("document_id", 1)("document_title", std::string("Document 1"))("clauses", std::vector<std::string>({std::string("clause 1.1"), std::string("clause 1.2"), std::string("clause 1.3")}))("last_amend", 0),
+		mvo()("document_id", 2)("document_title", std::string("Document 2"))("clauses", std::vector<std::string>({std::string("clause 2.1"), std::string("clause 2.2"), std::string("clause 2.3")}))("last_amend", 0)};
 
 	eosio_amend_tester()
 	{
@@ -41,6 +45,19 @@ class eosio_amend_tester : public eosio_trail_tester
 		}
 	}
 
+	void insert_default_docs()
+	{
+		for (int i = 0; i < documents.size(); i++)
+		{
+			insertdoc(documents[i]["document_title"].as<std::string>(), documents[i]["clauses"].as<std::vector<std::string>>());
+		}
+		produce_blocks(1);
+
+		REQUIRE_MATCHING_OBJECT(get_document(0), documents[0]);
+		REQUIRE_MATCHING_OBJECT(get_document(1), documents[1]);
+		REQUIRE_MATCHING_OBJECT(get_document(2), documents[2]);
+	}
+
 	transaction_trace_ptr getdeposit(account_name owner)
 	{
 		signed_transaction trx;
@@ -64,7 +81,7 @@ class eosio_amend_tester : public eosio_trail_tester
 	transaction_trace_ptr makeproposal(string sub_title, uint64_t doc_id, uint8_t new_clause_num, string new_ipfs_url, account_name proposer)
 	{
 		signed_transaction trx;
-		trx.actions.emplace_back(get_action(N(eosio.amend), N(insertdoc), vector<permission_level>{{proposer, config::active_name}},
+		trx.actions.emplace_back(get_action(N(eosio.amend), N(makeproposal), vector<permission_level>{{proposer, config::active_name}},
 											mvo()("sub_title", sub_title)("doc_id", doc_id)("new_clause_num", new_clause_num)("new_ipfs_url", new_ipfs_url)("proposer", proposer)));
 		set_transaction_headers(trx);
 		trx.sign(get_private_key(proposer, "active"), control->get_chain_id());
@@ -111,6 +128,24 @@ class eosio_amend_tester : public eosio_trail_tester
 		return push_transaction(trx);
 	}
 
+	transaction_trace_ptr set_env(
+		uint32_t expiration_length,
+		uint64_t fee,
+		uint32_t start_delay,
+		double threshold_pass_voters,
+		double threshold_pass_votes,
+		double threshold_fee_voters,
+		double threshold_fee_votes)
+	{
+		signed_transaction trx;
+		trx.actions.emplace_back(get_action(N(eosio.amend), N(setenv), vector<permission_level>{{N(eosio.amend), config::active_name}},
+											mvo()("new_environment",
+												  mvo()("publisher", eosio::chain::name("eosio.amend"))("expiration_length", uint32_t(expiration_length))("fee", uint64_t(fee))("start_delay", uint32_t(start_delay))("threshold_pass_voters", double(threshold_pass_voters))("threshold_pass_votes", double(threshold_pass_votes))("threshold_fee_voters", double(threshold_fee_voters))("threshold_fee_votes", double(threshold_fee_votes)))));
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(N(eosio.amend), "active"), control->get_chain_id());
+		return push_transaction(trx);
+	}
+
 	fc::variant get_deposit(account_name owner)
 	{
 		vector<char> data = get_row_by_account(N(eosio.amend), N(eosio.amend), N(deposits), owner);
@@ -120,18 +155,18 @@ class eosio_amend_tester : public eosio_trail_tester
 	fc::variant get_document(uint64_t doc_id)
 	{
 		vector<char> data = get_row_by_account(N(eosio.amend), N(eosio.amend), N(documents), doc_id);
-		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("deposit", data, abi_serializer_max_time);
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("document", data, abi_serializer_max_time);
 	}
 
 	fc::variant get_submission(uint64_t sub_id)
 	{
 		vector<char> data = get_row_by_account(N(eosio.amend), N(eosio.amend), N(submissions), sub_id);
-		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("deposit", data, abi_serializer_max_time);
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("submission", data, abi_serializer_max_time);
 	}
 
 	fc::variant get_env()
 	{
-		vector<char> data = get_row_by_account(N(eosio.amend), N(eosio.amend), N(configs), N(eosio.amend));
-		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("deposit", data, abi_serializer_max_time);
+		vector<char> data = get_row_by_account(N(eosio.amend), N(eosio.amend), N(configs), N(configs));
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("config", data, abi_serializer_max_time);
 	}
 };
