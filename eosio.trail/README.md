@@ -150,7 +150,7 @@ All users on the Telos Blockchain Network can register their accounts and receiv
 
 * `mirrorcast(name voter, symbol token_symbol)`
 
-    The mirrorstake function is the fundamental action that operates the Trail voting system. Registered voters may call mirrorstake to receive a 1:10000 issuance of VOTE tokens for every TLOS they own in their account (both liquid and staked) for a period of time equal to the given lock period. Users cannot call mirrorstake again until the lock period has ended.
+    The mirrorcast function is the fundamental action that operates the Trail voting system. Registered voters may call mirrorcast to receive a 1:1 issuance of VOTE tokens for every TLOS they own in their account (both liquid and staked). Users cannot call mirrorcast again for the next 86400 seconds (1 day).
 
     `voter` is the name of the account attempting to mirror their TLOS for VOTES.
 

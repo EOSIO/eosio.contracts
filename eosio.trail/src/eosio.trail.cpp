@@ -691,6 +691,7 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
 
 #pragma region Ballot_Actions
 
+//TODO: refactor for elections when implemented
 void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link) {
     require_auth(publisher);
     eosio_assert(is_account(new_candidate), "new candidate is not an account");
@@ -721,6 +722,40 @@ void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate,
     });
 
     print("\nAdd Candidate: SUCCESS");
+}
+
+//TODO: refactor for elections when implemented
+void trail::rmvcandidate(name publisher, uint64_t ballot_id, name candidate) {
+    require_auth(publisher);
+
+    ballots_table ballots(_self, _self.value);
+    auto b = ballots.find(ballot_id);
+    eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
+    auto bal = *b;
+    eosio_assert(bal.table_id == 2, "ballot type doesn't support candidates");
+
+    leaderboards_table leaderboards(_self, _self.value);
+    auto l = leaderboards.find(bal.reference_id);
+    eosio_assert(l != leaderboards.end(), "leaderboard doesn't exist");
+    auto board = *l;
+    eosio_assert(board.publisher == publisher, "cannot remove candidate from another account's leaderboard");
+    eosio_assert(now() < board.begin_time, "cannot remove candidates once voting has begun");
+
+    auto new_candidates = board.candidates;
+
+    for (auto itr = new_candidates.begin(); itr != new_candidates.end(); itr++) {
+        auto cand = *itr;
+        if (cand.member == candidate) {
+            new_candidates.erase(itr);
+            break;
+        }
+    }
+
+    leaderboards.modify(*l, same_payer, [&]( auto& a ) {
+        a.candidates = new_candidates;
+    });
+
+    print("\nRemove Candidate: SUCCESS");
 }
 
 void trail::setseats(name publisher, uint64_t ballot_id, uint8_t num_seats) {
@@ -1281,6 +1316,8 @@ extern "C" {
             execute_action(name(self), name(code), &trail::deloldvotes);
         } else if (code == self && action == name("addcandidate").value) {
             execute_action(name(self), name(code), &trail::addcandidate);
+        } else if (code == self && action == name("rmvcandidate").value) {
+            execute_action(name(self), name(code), &trail::rmvcandidate);
         } else if (code == self && action == name("setseats").value) {
             execute_action(name(self), name(code), &trail::setseats);
         } else if (code == self && action == name("issuetoken").value) {
