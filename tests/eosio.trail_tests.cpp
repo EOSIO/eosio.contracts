@@ -35,8 +35,8 @@ BOOST_FIXTURE_TEST_CASE( reg_voters, eosio_trail_tester ) try {
 			("tokens", "0.0000 VOTE")
 		);
 
-		auto trail_env = get_trail_env();
-		BOOST_REQUIRE_EQUAL(trail_env["totals"][1], 1);
+		auto registry_info = get_registry(test_symbol);
+		BOOST_REQUIRE_EQUAL(registry_info["total_voters"], 1);
 
 		unregvoter(test_voters[i].value, test_symbol);
 		produce_blocks();
@@ -44,8 +44,8 @@ BOOST_FIXTURE_TEST_CASE( reg_voters, eosio_trail_tester ) try {
 		voter_info = get_voter(test_voters[i], test_code);
 		BOOST_REQUIRE_EQUAL(true, voter_info.is_null());
 
-		trail_env = get_trail_env();
-		BOOST_REQUIRE_EQUAL(trail_env["totals"][1], 0);
+		registry_info = get_registry(test_symbol);
+		BOOST_REQUIRE_EQUAL(registry_info["total_voters"], 0);
 	}
 } FC_LOG_AND_RETHROW()
 
@@ -160,7 +160,7 @@ BOOST_FIXTURE_TEST_CASE( mirror_cast, eosio_trail_tester ) try {
 		regvoter(test_voters[i].value, test_symbol);
 		// std::cout << "regvoter for: " << test_voters[i].to_string() << std::endl;
 
-		mirrorcast(test_voters[i].value, test_symbol);
+		mirrorcast(test_voters[i].value, symbol(4, "TLOS"));
 		voter_info = get_voter(test_voters[i], test_code);
 		REQUIRE_MATCHING_OBJECT(voter_info, mvo()
 			("owner", test_voters[i].to_string())
@@ -188,7 +188,7 @@ BOOST_FIXTURE_TEST_CASE( mirror_cast, eosio_trail_tester ) try {
 	// std::cout << "regvoter for votedecay" << std::endl;
 	regvoter(N(votedecay), test_symbol);
 	// std::cout << "mirrorcast for voter" << std::endl;
-	mirrorcast(N(votedecay), test_symbol);
+	mirrorcast(N(votedecay), symbol(4, "TLOS"));
 
 	//1200 blocks = 5.0000 VOTE or 240 blocks / 1.0000 VOTE
 	string levy_amount_after_decay = "280.0000 VOTE";
@@ -382,7 +382,7 @@ BOOST_FIXTURE_TEST_CASE( proposal_voting_weight_calcs, eosio_trail_tester ) try 
 		);
 		
 		//TODO: mirror stake and check
-		mirrorcast(test_voters[i].value, test_symbol);
+		mirrorcast(test_voters[i].value, symbol(4, "TLOS"));
 		voter_info = get_voter(test_voters[i], test_code);
 		voter_total = asset::from_string(voter_info["tokens"].as_string());
 		currency_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
@@ -645,7 +645,7 @@ BOOST_FIXTURE_TEST_CASE( full_leaderboard_flow, eosio_trail_tester ) try {
 			("tokens", "0.0000 VOTE")
 		);
 		
-		mirrorcast(test_voters[i].value, test_symbol);
+		mirrorcast(test_voters[i].value, symbol(4, "TLOS"));
 		voter_info = get_voter(test_voters[i], test_code);
 		currency_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
 		voter_total = asset::from_string(voter_info["tokens"].as_string());

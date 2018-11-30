@@ -774,7 +774,7 @@ void trail::closeballot(name publisher, uint64_t ballot_id, uint8_t pass) {
 
 void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
     require_auth(publisher);
-    eosio_assert(begin_time < end_time, "begin time must be less than end time");
+    eosio_assert(new_begin_time < new_end_time, "begin time must be less than end time");
 
     ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
