@@ -96,6 +96,7 @@ void trail::unregtoken(symbol token_symbol, name publisher) {
 
 void trail::issuetoken(name publisher, name recipient, asset tokens, bool airgrab) {
     require_auth(publisher);
+    eosio_assert(tokens > asset(0, tokens.symbol), "must issue more than 0 tokens");
 
     registries_table registries(_self, _self.value);
     auto r = registries.find(tokens.symbol.code().raw());
@@ -150,7 +151,7 @@ void trail::issuetoken(name publisher, name recipient, asset tokens, bool airgra
     print("\nRecipient: ", recipient);
 }
 
-//TODO: remove pulisher as param? is findable through token symbol
+//TODO: remove pulisher as param? is findable through token symbol (implemented, just need to remove from signature)
 void trail::claimairgrab(name claimant, name publisher, symbol token_symbol) {
     require_auth(claimant);
 
@@ -187,6 +188,7 @@ void trail::claimairgrab(name claimant, name publisher, symbol token_symbol) {
 //NOTE: only balance owner can burn tokens
 void trail::burntoken(name balance_owner, asset amount) {
     require_auth(balance_owner);
+    eosio_assert(amount > asset(0, amount.symbol), "must claim more than 0 tokens");
 
     registries_table registries(_self, _self.value);
     auto r = registries.find(amount.symbol.code().raw());
@@ -220,6 +222,8 @@ void trail::burntoken(name balance_owner, asset amount) {
 //TODO: allow seizing if registry doesn't exist?
 void trail::seizetoken(name publisher, name owner, asset tokens) {
     require_auth(publisher);
+    eosio_assert(publisher != owner, "cannot seize your own tokens");
+    eosio_assert(tokens > asset(0, tokens.symbol), "must seize greater than 0 tokens");
 
     registries_table registries(_self, _self.value);
     auto r = registries.find(tokens.symbol.code().raw());
@@ -253,6 +257,7 @@ void trail::seizetoken(name publisher, name owner, asset tokens) {
 
 void trail::seizeairgrab(name publisher, name recipient, asset amount) {
     require_auth(publisher);
+    eosio_assert(amount > asset(0, amount.symbol), "must seize greater than 0 tokens");
 
     registries_table registries(_self, _self.value);
     auto r = registries.find(amount.symbol.code().raw());
@@ -291,6 +296,7 @@ void trail::seizeairgrab(name publisher, name recipient, asset amount) {
 
 void trail::raisemax(name publisher, asset amount) {
     require_auth(publisher);
+    eosio_assert(amount > asset(0, amount.symbol), "amount must be greater than 0");
 
     registries_table registries(_self, _self.value);
     auto r = registries.find(amount.symbol.code().raw());
@@ -309,6 +315,7 @@ void trail::raisemax(name publisher, asset amount) {
 
 void trail::lowermax(name publisher, asset amount) {
     require_auth(publisher);
+    eosio_assert(amount > asset(0, amount.symbol), "amount must be greater than 0");
 
     registries_table registries(_self, _self.value);
     auto r = registries.find(amount.symbol.code().raw());
@@ -329,6 +336,8 @@ void trail::lowermax(name publisher, asset amount) {
 
 void trail::transfer(name sender, name recipient, asset amount) {
     require_auth(sender);
+    eosio_assert(sender != recipient, "cannot send tokens to yourself");
+    eosio_assert(amount > asset(0, amount.symbol), "must transfer grater than 0 tokens");
 
     registries_table registries(_self, _self.value);
     auto r = registries.find(amount.symbol.code().raw());
@@ -567,6 +576,7 @@ void trail::castvote(name voter, uint64_t ballot_id, uint16_t direction) {
 
 void trail::deloldvotes(name voter, uint16_t num_to_delete) {
     require_auth(voter);
+    eosio_assert(num_to_delete > uint16_t(0), "must delete greater than 0 receipts");
 
     votereceipts_table votereceipts(_self, voter.value);
     auto itr = votereceipts.begin();
@@ -604,6 +614,7 @@ void trail::deloldvotes(name voter, uint16_t num_to_delete) {
 void trail::regballot(name publisher, uint8_t ballot_type, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
     require_auth(publisher);
     eosio_assert(ballot_type >= 0 && ballot_type <= 2, "invalid ballot type"); //NOTE: update valid range as new ballot types are developed
+    eosio_assert(begin_time < end_time, "begin time must be less than end time");
 
     registries_table registries(_self, _self.value);
     auto r = registries.find(voting_symbol.code().raw());
@@ -682,6 +693,7 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
 
 void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link) {
     require_auth(publisher);
+    eosio_assert(is_account(new_candidate), "new candidate is not an account");
 
     ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
@@ -712,6 +724,7 @@ void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate,
 
 void trail::setseats(name publisher, uint64_t ballot_id, uint8_t num_seats) {
     require_auth(publisher);
+    eosio_assert(num_seats > uint8_t(0), "num seats must be greater than 0");
 
     ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
@@ -761,6 +774,7 @@ void trail::closeballot(name publisher, uint64_t ballot_id, uint8_t pass) {
 
 void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time) {
     require_auth(publisher);
+    eosio_assert(begin_time < end_time, "begin time must be less than end time");
 
     ballots_table ballots(_self, _self.value);
     auto b = ballots.find(ballot_id);
