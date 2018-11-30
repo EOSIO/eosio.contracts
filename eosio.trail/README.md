@@ -164,7 +164,7 @@ All users on the Telos Blockchain Network can register their accounts and receiv
 
     `ballot_id` is the id of the ballot for which to cast the votes.
 
-    `direction` is the direction in which to cast the votes. The default mappings for proposals are `0 = NO, 1 = YES, 2 = ABSTAIN`. For elections and leaderboards, the direction corresponds to the index of the candidates vector. For instance, a direction of 2 would cast a vote for the candidate name that was returned from resolving `candidates[2]` (the third candidate in the list).
+    `direction` is the direction in which to cast the votes. The default mappings for proposals are `0 = NO, 1 = YES, 2 = ABSTAIN`. For elections and leaderboards, the direction corresponds to the index of the candidates vector. For instance, a direction of 2 would cast a vote for the candidate name that would be returned from resolving `candidates[2]` (the third candidate in the list).
 
 ### 3. Clearing Out Old Vote Receipts
 
@@ -306,3 +306,11 @@ Trail offers a wide range of token features designed to offer maximum flexibilit
     `recipient` is the name of the account receiving the tokens.
 
     `amount` is the amount of tokens to be sent.
+
+## Fraud Prevention
+
+
+
+## Wrapping Up
+
+

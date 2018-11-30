@@ -150,11 +150,16 @@ void trail::issuetoken(name publisher, name recipient, asset tokens, bool airgra
     print("\nRecipient: ", recipient);
 }
 
-//TODO: search for publisher instead of require as param?
+//TODO: remove pulisher as param? is findable through token symbol
 void trail::claimairgrab(name claimant, name publisher, symbol token_symbol) {
     require_auth(claimant);
 
-    airgrabs_table airgrabs(_self, publisher.value);
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(token_symbol.code().raw());
+    eosio_assert(r != registries.end(), "Token Registry with that symbol doesn't exist in Trail");
+    auto reg = *r;
+
+    airgrabs_table airgrabs(_self, reg.publisher.value);
     auto g = airgrabs.find(claimant.value);
     eosio_assert(g != airgrabs.end(), "no airgrab to claim");
     auto grab = *g;
@@ -188,7 +193,7 @@ void trail::burntoken(name balance_owner, asset amount) {
     eosio_assert(r != registries.end(), "registry doesn't exist for given token");
     auto reg = *r;
 
-    //eosio_assert(reg.publisher == publisher, "only publisher can burn tokens"); //TODO: make is_burnable_by_publisher/is_burnable_by_holder?
+    //TODO: make is_burnable_by_publisher/is_burnable_by_holder?
     eosio_assert(reg.settings.is_burnable == true, "token registry doesn't allow burning");
 
     balances_table balances(_self, amount.symbol.code().raw());
@@ -340,7 +345,7 @@ void trail::transfer(name sender, name recipient, asset amount) {
 
     balances_table recbal(_self, amount.symbol.code().raw());
     auto rb = recbal.find(recipient.value);
-    eosio_assert(rb != recbal.end(), "recipient doesn't have a balance to hold transferred funds"); //TODO: assert recipient has a balance?
+    eosio_assert(rb != recbal.end(), "recipient doesn't have a balance to hold transferred funds");
     auto rbal = *rb;
 
     //NOTE: subtract amount from sender
@@ -505,7 +510,7 @@ void trail::mirrorcast(name voter, symbol token_symbol) {
         eosio_assert(now() - counter_bal.last_decay >= MIN_LOCK_PERIOD, "cannot get more votes until min lock period is over");
         asset new_cb = (counter_bal.decayable_cb - decay_amount); //subtracting total cb
 
-		//TODO: should mirrorcasting add new_votes to counterbalance?
+		//TODO: should mirrorcasting add new_votes to counterbalance? same logically as adding when calling issuetokens
 
         if (new_cb < asset(0, symbol("VOTE", 4))) {
             new_cb = asset(0, symbol("VOTE", 4));
@@ -596,12 +601,13 @@ void trail::deloldvotes(name voter, uint16_t num_to_delete) {
 
 #pragma region Ballot_Registration
 
-//TODO: change symbol param to symbol_code?
 void trail::regballot(name publisher, uint8_t ballot_type, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
     require_auth(publisher);
     eosio_assert(ballot_type >= 0 && ballot_type <= 2, "invalid ballot type"); //NOTE: update valid range as new ballot types are developed
 
-    //TODO: check for voting_token existence?
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(voting_symbol.code().raw());
+    eosio_assert(r != registries.end(), "Token registry with that symbol doesn't exist in Trail");
 
     uint64_t new_ref_id;
 
@@ -770,7 +776,6 @@ void trail::nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_tim
     eosio_assert(p != proposals.end(), "proposal doesn't exist");
     auto prop = *p;
 
-    //TODO: check the current ballot isn't open for voting (e.g. allow cycling either before start or after ended)
 	eosio_assert(env_struct.time_now < prop.begin_time || env_struct.time_now > prop.end_time, 
 		"a proposal can only be cycled before begin_time or after end_time");
 
