@@ -707,6 +707,7 @@ void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate,
     auto board = *l;
 	eosio_assert(board.available_seats > 0, "num_seats must be a non-zero number");
     eosio_assert(board.publisher == publisher, "cannot add candidate to another account's leaderboard");
+    eosio_assert(now() < board.begin_time , "cannot add candidates once voting has begun");
 
     candidate new_candidate_struct = candidate{
         new_candidate,
