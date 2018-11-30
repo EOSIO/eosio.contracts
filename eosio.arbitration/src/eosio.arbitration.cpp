@@ -8,6 +8,8 @@
 #include <eosio.arbitration/eosio.arbitration.hpp>
 
 #define MAX_ARBS_WINNER 21
+#define DAYS_TO_SECONDS(days) days * 86400;
+
 
 arbitration::arbitration(name s, name code, datastream<const char *> ds)
     : eosio::contract(s, code, ds), configs(_self, _self.value) {
@@ -565,8 +567,8 @@ arbitration::config arbitration::get_default_config() {
 }
 
 void arbitration::start_new_election() {
-  uint32_t begin_time = now() + _config.start_election_days;
-  uint32_t end_time = begin_time + _config.election_duration_days;
+  uint32_t begin_time = now() + DAYS_TO_SECONDS(_config.start_election_days);
+  uint32_t end_time = begin_time + DAYS_TO_SECONDS(_config.election_duration_days);
 
   action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "regballot"_n,
          make_tuple(get_self(),         // publisher
