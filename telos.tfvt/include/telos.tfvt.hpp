@@ -5,8 +5,8 @@
  * @copyright defined in telos/LICENSE.txt
  */
 
-#include <trail.voting.hpp>
-#include <trail.tokens.hpp>
+#include <../../eosio.trail/include/trail.voting.hpp>
+#include <../../eosio.trail/include/trail.tokens.hpp>
 
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/permission.hpp>
@@ -30,7 +30,7 @@ public:
         name nominee;
         
         uint64_t primary_key() const { return nominee.value; }
-        EOSLIB_SERIALZE(board_nominee, (nominee))
+        EOSLIB_SERIALZE( board_nominee, (nominee) )
     };
 
     struct [[eosio::table]] board_member {
@@ -55,7 +55,7 @@ public:
     typedef multi_index<name("boardmembers"), board_member> members_table;
 
     typedef singleton<name("configs"), config> config_table;
-    
+
 
     //[[eosio::action]] void inittfvt(); //NOTE: sends inline actions to register and initialize TFVT token registry
 

@@ -6,8 +6,9 @@ telfound::telfound(name self, name code, datastream<const char*> ds) : contract(
 
 telfound::~telfound() {}
 
+
 void setconfig(name member, uint8_t new_max_seats, uint8_t new_open_seats) {
-    require_auth(publisher);
+    require_auth(member);
     eosio_assert(new_max_seats >= new_open_seats, "can't have more open seats than max seats");
     //eosio_assert(is_board_member(member), "member is not on the board"); //NOTE: restrict to board members?
 
@@ -61,7 +62,6 @@ void telfound::closeissue(name holder, uint64_t ballot_id) {
 void telfound::makelboard(name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
     require_auth(holder);
     eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller must be a TFVT or TFBOARD holder");
-
     action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regballot"_n, make_tuple(
 		_self,
 		uint8_t(2), //NOTE: makes a leaderboard on Trail
@@ -76,6 +76,20 @@ void telfound::closelboard(name holder, uint64_t ballot_id) {
     require_auth(holder);
 
     uint8_t status = 1;
+
+    ballots_table ballots(name("eosio.trail"), name("eosio.trail").value);
+    auto bal = ballots.get(ballot_id);
+    
+    leaderboard_table leaderboards(name("eosio.trail"), name("eosio.trail").value);
+    auto board = leaderboard.get(bal.reference_id);
+
+    auto board_candidates = board.candidates;
+    sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes > c2.votes; });
+
+    //add first n candidates after sorting by votes, where n is available seats on leaderboard
+    for (uint8_t n = 0; n < board.available_seats; n++) {
+        add_to_tfboard(board.candidates[n].member);
+    }
 
     action(permission_level{_self, "active"_n}, "eosio.trail"_n, "closeballot"_n, make_tuple(
 		_self,
@@ -105,7 +119,7 @@ void telfound::add_to_tfboard(name nominee) {
 
 void telfound::rmv_from_tfboard(name member) {
     members_table mems(_self, _self.value);
-    auto m = mems.find(nominee.value);
+    auto m = mems.find(member.value);
     eosio_assert(m != mems.end(), "member is not on the board");
 
     mems.erase(m);
