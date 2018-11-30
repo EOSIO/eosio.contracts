@@ -61,7 +61,8 @@ public:
   enum arb_status {
     AVAILABLE,   // 0
     UNAVAILABLE, // 1
-    INACTIVE     // 2
+    INACTIVE,    // 2
+    SEAT_EXPIRED // 3
   };
 
   enum election_status {
@@ -124,10 +125,12 @@ public:
     uint32_t election_duration_days;
     uint32_t start_election_days;
     vector<int64_t> fee_structure; 
-    uint32_t last_time_edited; 
+    uint32_t arb_seat_expiration_time_days;
+    uint32_t last_time_edited;
+    uint64_t ballot_id = 0; 
 
     uint64_t primary_key() const { return publisher.value; }
-    EOSLIB_SERIALIZE(config, (publisher)(max_elected_arbs)(election_duration_days)(start_election_days)(fee_structure))
+    EOSLIB_SERIALIZE(config, (publisher)(max_elected_arbs)(election_duration_days)(start_election_days)(fee_structure)(arb_seat_expiration_time_days)(last_time_edited)(ballot_id))
   };
 
   struct[[eosio::table]] arbitrator {
@@ -136,11 +139,13 @@ public:
     vector<uint64_t> open_case_ids;
     vector<uint64_t> closed_case_ids;
     string credential_link; //ipfs_url of credentials
+    uint32_t elected_time;
+    uint32_t seat_expiration_time_days;
     vector<string> languages; //NOTE: language codes for space
 
     uint64_t primary_key() const { return arb.value; }
     EOSLIB_SERIALIZE(arbitrator,
-                     (arb)(arb_status)(open_case_ids)(closed_case_ids)(credential_link)(languages))
+                     (arb)(arb_status)(open_case_ids)(closed_case_ids)(credential_link)(elected_time)(seat_expiration_time_days)(languages))
   };
 
   struct[[eosio::table]] claim {
@@ -190,7 +195,7 @@ public:
 
   [[eosio::action]] void init();
 
-  [[eosio::action]] void setconfig(uint16_t max_elected_arbs, uint32_t election_duration_days, uint32_t start_election_days, vector<int64_t> fees);
+  [[eosio::action]] void setconfig(uint16_t max_elected_arbs, uint32_t election_duration_days, uint32_t start_election_days, uint32_t arb_seat_expiration_time_days, vector<int64_t> fees);
 
 #pragma region Arb_Elections
 
