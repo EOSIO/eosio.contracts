@@ -98,6 +98,7 @@ void token::transfer( name    from,
 
     require_recipient( from );
     require_recipient( to );
+	require_recipient( name("eosio.trail") );
 
     eosio_assert( quantity.is_valid(), "invalid quantity" );
     eosio_assert( quantity.amount > 0, "must transfer positive quantity" );
