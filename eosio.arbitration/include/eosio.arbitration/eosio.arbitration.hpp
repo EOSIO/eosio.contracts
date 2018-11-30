@@ -127,10 +127,11 @@ public:
     vector<int64_t> fee_structure; 
     uint32_t arb_seat_expiration_time_days;
     uint32_t last_time_edited;
-    uint64_t ballot_id = 0; 
+    uint64_t ballot_id = 0;
+    bool auto_start_election = false;     
 
     uint64_t primary_key() const { return publisher.value; }
-    EOSLIB_SERIALIZE(config, (publisher)(max_elected_arbs)(election_duration_days)(start_election_days)(fee_structure)(arb_seat_expiration_time_days)(last_time_edited)(ballot_id))
+    EOSLIB_SERIALIZE(config, (publisher)(max_elected_arbs)(election_duration_days)(start_election_days)(fee_structure)(arb_seat_expiration_time_days)(last_time_edited)(ballot_id)(auto_start_election))
   };
 
   struct[[eosio::table]] arbitrator {
@@ -203,7 +204,7 @@ public:
 
   [[eosio::action]] void cancelarbapp( name candidate);
 
-  [[eosio::action]] void endelection(name candidate, uint64_t ballot_id); 
+  [[eosio::action]] void endelection(name candidate); 
                                                       
 #pragma endregion Arb_Elections
 
@@ -276,9 +277,6 @@ public:
 #pragma endregion BP_Multisig_Actions
 
 protected:
-  void validate_ipfs_url(string ipfs_url);
-  config get_default_config();
-
 #pragma region Tables
 
   typedef singleton<"configs"_n, config> config_singleton;
@@ -295,4 +293,13 @@ protected:
   typedef multi_index<"dismissedev"_n, evidence> dismissed_evidence_table;
 
 #pragma endregion Tables
+
+  void validate_ipfs_url(string ipfs_url);
+  
+  config get_default_config();
+  
+  void start_new_election();
+  
+  bool has_available_seats(arbitrators_table &arbitrators);
+
 };
