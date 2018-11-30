@@ -214,7 +214,7 @@ Trail stores metadata about tokens in a custom data structure called a Token Reg
 
     * `is_destructible` allows the registry to be erased completely by the publisher.
     * `is_proxyable` allows managed tokens to be proxiable to users that have been registered as a valid proxy.
-    * `is_burnable` allows tokens to be burned from circulation, either by the publisher or the token holder. 
+    * `is_burnable` allows tokens to be burned from circulation, by either the publisher or the token holder. 
     * `is_seizable` allows the tokens to be seized by the publisher.
     * `is_max_mutable` allows the registry's max_supply field to be adjusted through an action call. Only the publisher can call the `raisemax` and `lowermax` actions.
     * `is_transferable` allows the tokens to be transferred to other users.
