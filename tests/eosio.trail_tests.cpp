@@ -210,7 +210,7 @@ BOOST_FIXTURE_TEST_CASE( reg_proposal_ballot, eosio_trail_tester ) try {
 	account_name publisher = N(voteraaaaaaa);
 	uint64_t current_ballot_id = 0;
 	uint64_t current_proposal_id = 0;
-	string info_url = "f901d470-f431-11e8-8eb2-f2801f1b9fd1";
+	string info_url = "879e0c2c-f436-11e8-8eb2-f2801f1b9fd1";
 	uint8_t ballot_type = 0;
 	uint32_t ballot_length = 1200;
 	uint32_t begin_time = now() + 20;
@@ -321,7 +321,7 @@ BOOST_FIXTURE_TEST_CASE( proposal_voting_weight_calcs, eosio_trail_tester ) try 
 	account_name publisher = N(voteraaaaaaa);
 	uint64_t current_ballot_id = 0;
 	uint64_t current_proposal_id = 0;
-	string info_url = "f901d470-f431-11e8-8eb2-f2801f1b9fd1";
+	string info_url = "8e18fa58-f436-11e8-8eb2-f2801f1b9fd1";
 	uint8_t ballot_type = 0;
 	uint32_t ballot_length = 1200 + test_voters.size() * 2;
 	uint32_t begin_time = now() + 20;
@@ -442,7 +442,7 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 	account_name publisher = N(voteraaaaaaa);
 	uint64_t current_ballot_id = 0;
 	uint64_t current_proposal_id = 0;
-	string info_url = "f901d470-f431-11e8-8eb2-f2801f1b9fd1";
+	string info_url = "950e7c8e-f436-11e8-8eb2-f2801f1b9fd1";
 	uint8_t ballot_type = 0;
 	uint32_t ballot_length = 1200 + test_voters.size() * 2;
 	uint32_t begin_time = now() + 20;
@@ -625,7 +625,7 @@ BOOST_FIXTURE_TEST_CASE( full_leaderboard_flow, eosio_trail_tester ) try {
 	account_name publisher = N(voteraaaaaaa);
 	uint64_t current_ballot_id = 0;
 	uint64_t current_leaderboard_id = 0;
-	string info_url = "f901d470-f431-11e8-8eb2-f2801f1b9fd1";
+	string info_url = "9bd47bae-f436-11e8-8eb2-f2801f1b9fd1";
 	uint8_t ballot_type = 2;
 	uint32_t ballot_length = 1200 + test_voters.size() * 2;
 	uint32_t begin_time = now() + 20;
@@ -756,7 +756,7 @@ BOOST_FIXTURE_TEST_CASE( full_leaderboard_flow, eosio_trail_tester ) try {
 BOOST_FIXTURE_TEST_CASE( custom_token_voting, eosio_trail_tester ) try {
 	//TODO: regtoken for TFVT
 	account_name publisher = N(voteraaaaaaa);
-	string info_url = "f901d470-f431-11e8-8eb2-f2801f1b9fd1";
+	string info_url = "6da746f8-f436-11e8-8eb2-f2801f1b9fd1";
 	symbol test_symbol = symbol(0, "TFVT");
 	symbol_code test_code = test_symbol.to_symbol_code();
 	asset total_supply = asset(test_voters.size() * 5, test_symbol);
@@ -942,7 +942,7 @@ BOOST_FIXTURE_TEST_CASE( custom_token_voting, eosio_trail_tester ) try {
 BOOST_FIXTURE_TEST_CASE( token_functions, eosio_trail_tester ) try {
 	//TODO: regtoken
 	account_name publisher = N(voteraaaaaaa);
-	string info_url = "Token Function Testing";
+	string info_url = "64c05ec6-f436-11e8-8eb2-f2801f1b9fd1";
 	symbol test_symbol = symbol(2, "CRAIG");
 	asset total_supply = asset(test_voters.size() * 500, test_symbol);
 	asset per_voter = asset(total_supply.get_amount() / test_voters.size(), test_symbol);
