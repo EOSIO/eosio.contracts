@@ -473,151 +473,95 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 		("cycle_count", 0)
 		("status", uint8_t(0))
 	);
-	
-	asset no_count = asset(0, test_symbol);
-	asset yes_count = asset(0, test_symbol);
-	asset abstain_count = asset(0, test_symbol);
-	uint32_t unique_voters = 0;
-	produce_blocks( 41 );
 
-	fc::variant voter_info = mvo();
-	fc::variant vote_receipt_info = mvo();
-	asset currency_balance = asset::from_string("0.0000 TLOS");
-	asset voter_total = asset::from_string("0.0000 VOTE");
-	for (int i = 0; i < test_voters.size(); i++) {
-		regvoter(test_voters[i].value, test_symbol);
-		voter_info = get_voter(test_voters[i], test_code);
+	voter_map(0, test_voters.size(), [&](account_name voter) {
+		regvoter(voter, test_symbol);
+		produce_blocks();
+		auto voter_info = get_voter(voter, test_code);
 		REQUIRE_MATCHING_OBJECT(voter_info, mvo()
-			("owner", test_voters[i].to_string())
+			("owner", voter.to_string())
 			("tokens", "0.0000 VOTE")
 		);
-		
-		//TODO: mirror stake and check
-		mirrorcast(test_voters[i].value, test_symbol);
-		voter_info = get_voter(test_voters[i], test_code);
-		currency_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
-		voter_total = asset::from_string(voter_info["tokens"].as_string());
-		BOOST_REQUIRE_EQUAL(currency_balance.get_amount(), voter_total.get_amount());
-
-		uint16_t direction = std::rand() % 3;
-		// std::cout << "random direction for vote: " << direction << std::endl;
-		castvote(test_voters[i].value, current_ballot_id, direction);
-		switch(direction) {
-			case 0:
-				no_count = no_count + voter_total;
-				break;
-			case 1:
-				yes_count = yes_count + voter_total;
-				break;
-			case 2:
-				abstain_count = abstain_count + voter_total;
-				break;
-		}
-		unique_voters++;
-		produce_blocks();
-
-		vote_receipt_info = get_vote_receipt(test_voters[i].value, current_ballot_id);
- 		std::cout << "direction: " << vote_receipt_info["directions"].get_array()[0] << std::endl;
-		REQUIRE_MATCHING_OBJECT(vote_receipt_info, mvo()
-			("ballot_id", current_ballot_id)
-			("directions", vector<uint16_t> {direction})
-			("weight", voter_total.to_string())
-			("expiration", end_time)
-		);
-
-		deloldvotes(test_voters[i].value, 1);
-		vote_receipt_info = get_vote_receipt(test_voters[i].value, current_ballot_id);
-		BOOST_REQUIRE_EQUAL(false, vote_receipt_info.is_null());
-	}
-	// std::cout << "local_no_count: " << no_count.to_string() << std::endl;
-	// std::cout << "local_yes_count: " << yes_count.to_string() << std::endl;
-	// std::cout << "local_abstain_count: " << abstain_count.to_string() << std::endl;
-	proposal_info = get_proposal(current_proposal_id);
-	REQUIRE_MATCHING_OBJECT(proposal_info, mvo()
-		("prop_id", current_proposal_id)
-		("publisher", publisher.to_string())
-		("info_url", info_url)
-		("no_count", no_count.to_string())
-		("yes_count", yes_count.to_string())
-		("abstain_count", abstain_count.to_string())
-		("unique_voters", unique_voters)
-		("begin_time", begin_time)
-		("end_time", end_time)
-		("cycle_count", 0)
-		("status", uint8_t(0))
-	);
+	});
 	
-	//produce blocks until expiration period
-	// do {
-	// 	produce_blocks( 100 );
-	// } while(now() < end_time);
+	auto proposal_flow = [&](int cycle_num) {
+		asset no_count = asset(0, test_symbol);
+		asset yes_count = asset(0, test_symbol);
+		asset abstain_count = asset(0, test_symbol);
+		asset currency_balance = asset(0, test_symbol);
+		asset voter_total = asset(0, test_symbol);
+
+		fc::variant voter_info = mvo();
+		fc::variant vote_receipt_info = mvo();
+		uint32_t unique_voters = 0;
+		produce_blocks( 41 );
+		for (int i = 0; i < test_voters.size(); i++) {
+			if(cycle_num == 0) {
+				mirrorcast(test_voters[i].value, symbol(4, "TLOS"));
+			}
+			voter_info = get_voter(test_voters[i], test_code);
+			currency_balance = get_currency_balance(N(eosio.token), symbol(4, "TLOS"), test_voters[i].value);
+			voter_total = asset::from_string(voter_info["tokens"].as_string());
+			BOOST_REQUIRE_EQUAL(currency_balance.get_amount(), voter_total.get_amount());
+
+			uint16_t direction = std::rand() % 3;
+			castvote(test_voters[i].value, current_ballot_id, direction);
+			switch(direction) {
+				case 0:
+					no_count = no_count + voter_total;
+					break;
+				case 1:
+					yes_count = yes_count + voter_total;
+					break;
+				case 2:
+					abstain_count = abstain_count + voter_total;
+					break;
+			}
+			unique_voters++;
+			produce_blocks();
+
+			vote_receipt_info = get_vote_receipt(test_voters[i].value, current_ballot_id);
+			REQUIRE_MATCHING_OBJECT(vote_receipt_info, mvo()
+				("ballot_id", current_ballot_id)
+				("directions", vector<uint16_t> {direction})
+				("weight", voter_total.to_string())
+				("expiration", end_time)
+			);
+
+			deloldvotes(test_voters[i].value, 1);
+			vote_receipt_info = get_vote_receipt(test_voters[i].value, current_ballot_id);
+			BOOST_REQUIRE_EQUAL(false, vote_receipt_info.is_null());
+		}
+
+		proposal_info = get_proposal(current_proposal_id);
+		REQUIRE_MATCHING_OBJECT(proposal_info, mvo()
+			("prop_id", current_proposal_id)
+			("publisher", publisher.to_string())
+			("info_url", info_url)
+			("no_count", no_count.to_string())
+			("yes_count", yes_count.to_string())
+			("abstain_count", abstain_count.to_string())
+			("unique_voters", unique_voters)
+			("begin_time", begin_time)
+			("end_time", end_time)
+			("cycle_count", cycle_num)
+			("status", uint8_t(0))
+		);
+	};
+
+	std::cout << "proposal cycle 0: " << std::endl;
+	proposal_flow(0);
 
 	produce_blocks();
 	produce_block(fc::seconds(end_time - now()));
 	produce_blocks();
-	
-	// nextcycle
+
+	std::cout << "proposal cycle 1: " << std::endl;
 	begin_time = now() + 20;
 	end_time   = now() + ballot_length;
-	nextcycle(publisher, current_ballot_id, begin_time, end_time);
-	no_count = asset(0, test_symbol);
-	yes_count = asset(0, test_symbol);
-	abstain_count = asset(0, test_symbol);
-	unique_voters = 0;
-	produce_blocks( 41 );
-	for (int i = 0; i < test_voters.size(); i++) {
-		//TODO: castvote and check
-		deloldvotes(test_voters[i].value, 1);
-		vote_receipt_info = get_vote_receipt(test_voters[i].value, current_ballot_id);
-		BOOST_REQUIRE_EQUAL(true, vote_receipt_info.is_null());
+	nextcycle(publisher, current_ballot_id, begin_time, end_time );
+	proposal_flow(1);
 
-		uint16_t direction = std::rand() % 3;
-		std::cout << "random direction for vote: " << direction << std::endl;
-		castvote(test_voters[i].value, current_ballot_id, direction);
-		voter_info = get_voter(test_voters[i], test_code);
-		voter_total = asset::from_string(voter_info["tokens"].as_string());
-		switch(direction) {
-			case 0:
-				no_count = no_count + voter_total;
-				break;
-			case 1:
-				yes_count = yes_count + voter_total;
-				break;
-			case 2:
-				abstain_count = abstain_count + voter_total;
-				break;
-		}
-		produce_blocks();
-		vote_receipt_info = get_vote_receipt(test_voters[i].value, current_ballot_id);
-		REQUIRE_MATCHING_OBJECT(vote_receipt_info, mvo()
-			("ballot_id", current_ballot_id)
-			("directions", vector<uint16_t> { direction })
-			("weight", voter_total.to_string())
-			("expiration", end_time)
-		);
-		unique_voters++;
-	}
-	
-	do {
-		produce_blocks( 100 );
-	} while(now() < end_time);
-
-	//closeballot and check
-	closeballot(publisher, current_ballot_id, 1);
-	proposal_info = get_proposal(current_proposal_id);
-	REQUIRE_MATCHING_OBJECT(proposal_info, mvo()
-		("prop_id", current_proposal_id)
-		("publisher", publisher.to_string())
-		("info_url", info_url)
-		("no_count", no_count.to_string())
-		("yes_count", yes_count.to_string())
-		("abstain_count", abstain_count.to_string())
-		("unique_voters", unique_voters)
-		("begin_time", begin_time)
-		("end_time", end_time)
-		("cycle_count", 1)
-		("status", 1)
-	);
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( full_leaderboard_flow, eosio_trail_tester ) try {
