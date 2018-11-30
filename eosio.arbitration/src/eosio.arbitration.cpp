@@ -108,7 +108,12 @@ void arbitration::cancelarbapp(name candidate) {
   auto board = leaderboards.get(b.reference_id, "leaderboard doesnt exist");
   
   if(now() < board.begin_time) {
-    //TODO: remove candidate inline action.
+    action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "rmvcandidate"_n,
+      make_tuple(get_self(), 
+        _config.ballot_id, 
+        candidate
+      )
+    ).send();
   }
   candidates.erase(c);
 
