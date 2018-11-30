@@ -50,4 +50,21 @@ TODO: show permissions here
 
 * `void claim(uint64_t sub_id)`
 
-	The claim action allows the proposer of ``
+	The claim action allows the proposer of the submission with `sub_id` to claim the `amount` of `TLOS` described in the submission.
+
+# Proposal Lifecycle
+
+`testaccounta` wants to create a proposal for designing a plug
+
+1. `eosio.saving::submit`
+
+2. `eosio.saving::openvoting`
+
+3. `eosio.trail` actions
+
+	1. `eosio.trail::regvoter`
+	2. `eosio.trail::castvote`
+
+4. `eosio.saving::claim`
+
+5. Repeat steps 3 and 4 until the number of cycles described in `submit` is reached.
