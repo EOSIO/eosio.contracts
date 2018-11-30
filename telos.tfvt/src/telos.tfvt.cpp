@@ -33,6 +33,60 @@ void telfound::nominate(name nominee, name nominator) {
     });
 }
 
+void telfound::makeissue(name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
+    require_auth(holder);
+
+    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regballot"_n, make_tuple(
+		_self,
+		uint8_t(0), //NOTE: makes a proposal on Trail
+		symbol("TFVT", 0),
+		begin_time,
+        end_time,
+        info_url
+	)).send();
+}
+
+void telfound::closeissue(name holder, uint64_t ballot_id) {
+    require_auth(holder);
+
+    uint8_t status = 1;
+
+    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "closeballot"_n, make_tuple(
+		_self,
+		ballot_id,
+		status
+	)).send();
+}
+
+void telfound::makelboard(name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
+    require_auth(holder);
+    eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller must be a TFVT or TFBOARD holder");
+
+    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regballot"_n, make_tuple(
+		_self,
+		uint8_t(2), //NOTE: makes a leaderboard on Trail
+		symbol("TFVT", 0),
+		begin_time,
+        end_time,
+        info_url
+	)).send();
+}
+
+void telfound::closelboard(name holder, uint64_t ballot_id) {
+    require_auth(holder);
+
+    uint8_t status = 1;
+
+    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "closeballot"_n, make_tuple(
+		_self,
+		ballot_id,
+		status
+	)).send();
+}
+
+
+#pragma region Helper_Functions
+
 void telfound::add_to_tfboard(name nominee) {
     nominees_table noms(_self, _self.value);
     auto n = noms.find(nominee.value);
@@ -72,7 +126,7 @@ void telfound::addseats(name member, uint8_t num_seats) {
     });
 }
 
-bool is_board_member(name user) {
+bool telfound::is_board_member(name user) {
     members_table mems(_self, _self.value);
     auto m = mems.find(user.value);
     
@@ -83,7 +137,7 @@ bool is_board_member(name user) {
     return false;
 }
 
-bool is_nominee(name user) {
+bool telfound::is_nominee(name user) {
     nominees_table noms(_self, _self.value);
     auto n = noms.find(user.value);
 
@@ -94,4 +148,26 @@ bool is_nominee(name user) {
     return false;
 }
 
+bool telfound::is_tfvt_holder(name user) {
+    balances_table balances(name("eosio.trail"), symbol("TFVT", 0).code().raw());
+    auto b = balances.find(user.value);
 
+    if (b != balances.end()) {
+        return true;
+    }
+
+    return false;
+}
+
+bool telfound::is_tfboard_holder(name user) {
+    balances_table balances(name("eosio.trail"), symbol("TFBOARD", 0).code().raw());
+    auto b = balances.find(user.value);
+
+    if (b != balances.end()) {
+        return true;
+    }
+
+    return false;
+}
+
+#pragma endregion Helper_Functions

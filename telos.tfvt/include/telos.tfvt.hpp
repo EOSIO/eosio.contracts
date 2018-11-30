@@ -55,7 +55,11 @@ public:
     typedef multi_index<name("boardmembers"), board_member> members_table;
 
     typedef singleton<name("configs"), config> config_table;
+    
 
+    //[[eosio::action]] void inittfvt(); //NOTE: sends inline actions to register and initialize TFVT token registry
+
+    //[[eosio::action]] void inittfboard(); //NOTE: sends inline actions to register and initialize TFBOARD token registry
 
     [[eosio::action]]
     void setconfig(name publisher, uint8_t new_max_seats, uint8_t new_open_seats);
@@ -64,16 +68,16 @@ public:
     void nominate(name nominee, name nominator);
 
     [[eosio::action]]
-    void makeissue(name holder, uint32_t begin_time, uint32_t end_time, string info_url); //NOTE: ballot type is 0, symbol is TFVT
+    void makeissue(name holder, uint32_t begin_time, uint32_t end_time, string info_url);
 
     [[eosio::action]]
-    void closeissue(name holder, uint64_t ballot_id, uint8_t status); //TODO: sends inline action from self
+    void closeissue(name holder, uint64_t ballot_id);
 
     [[eosio::action]]
-    void holdelection(name holder, uint32_t begin_time, uint32_t end_time, string info_url);
+    void makelboard(name holder, uint32_t begin_time, uint32_t end_time, string info_url);
 
     [[eosio::action]]
-    void closeelec(name holder, uint64_t ballot_id, uint8_t status);
+    void closelboard(name holder, uint64_t ballot_id);
 
 
 
