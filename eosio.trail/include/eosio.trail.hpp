@@ -36,8 +36,6 @@ public:
 
     uint32_t const MIN_LOCK_PERIOD = 86400; //86,400 seconds is ~1 day
 
-    //uint32_t const MAX_LOCK_PERIOD = 7776000; //7,776,000 seconds is ~3 months
-
     uint32_t const DECAY_RATE = 120; //number of seconds to decay by 1 VOTE
 
     //TODO: add constants for totals vector mappings?
@@ -128,6 +126,8 @@ public:
     #pragma region Ballot_Actions
 
     [[eosio::action]] void addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link);
+
+    [[eosio::action]] void rmvcandidate(name publisher, uint64_t ballot_id, name candidate); //TODO: should candidates be allowed to remove themselves? or only publisher?
 
     [[eosio::action]] void setseats(name publisher, uint64_t ballot_id, uint8_t num_seats);
 

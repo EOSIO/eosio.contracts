@@ -2,7 +2,6 @@
 #include <eosio/testing/tester.hpp>
 #include <eosio/chain/abi_serializer.hpp>
 #include <eosio/chain/name.hpp>
-#include <eosio/chain/name.hpp>
 #include <iostream>
 
 #include <eosio/chain/wast_to_wasm.hpp>
@@ -61,7 +60,6 @@ class eosio_trail_tester : public tester
 			temp_name = "voter" + toBase31(i);
 			curr = eosio::chain::name(temp_name);
 			voters.emplace_back(curr);
-			std::cout << "creating account_name: " << temp_name << std::endl;
 			create_accounts({curr.value});
 			produce_blocks(1);
 			transfer(N(eosio), curr.value, asset::from_string("200.0000 TLOS"), "Monopoly Money");
@@ -89,16 +87,8 @@ class eosio_trail_tester : public tester
 			("counterbal_decay_rate", 300)
 			("lock_after_initialize", 1);
 		initsettings(N(eosio.trail), symbol(4, "VOTE"), settings);
-		//TODO: get registry and validate it
 		auto token_registry = get_registry(symbol(4, "VOTE"));
-		BOOST_REQUIRE_EQUAL(settings["is_burnable"].as<bool>(), token_registry["settings"].as<mvo>()["is_burnable"].as<bool>());
-		// REQUIRE_MATCHING_OBJECT(token_registry, mvo() //find new way to validate this struct
-		// 	("max_supply", max_supply.to_string())
-		// 	("supply", "0.0000 VOTE")
-		// 	("publisher", "eosio.trail")
-		// 	("info_url", info_url)
-		// 	("settings", settings)
-		// );
+		BOOST_REQUIRE_EQUAL(settings["is_burnable"], token_registry["settings"].as<mvo>()["is_burnable"]);
 		std::cout << "=======================END SETUP==============================" << std::endl;
 	}
 
@@ -580,6 +570,15 @@ class eosio_trail_tester : public tester
 				("owner", test_voters[i].to_string())
 				("tokens", std::string(std::string("0.0000 ") + smb.name()))
 			);
+		}
+	}
+
+	template<typename Lambda>
+	void voter_map(int start, int end, Lambda&& func) {
+		BOOST_REQUIRE_EQUAL(true, start <= end);
+		BOOST_REQUIRE_EQUAL(true, end <= test_voters.size());
+		for (int i = start; i < end; i++) {
+			func(test_voters[i]);
 		}
 	}
       

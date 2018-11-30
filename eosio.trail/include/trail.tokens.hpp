@@ -36,12 +36,15 @@ struct token_settings {
 struct [[eosio::table, eosio::contract("eosio.trail")]] registry {
     asset max_supply;
     asset supply;
+    uint32_t total_voters;
+    uint32_t total_proxies;
     name publisher;
     string info_url;
     token_settings settings;
 
+
     uint64_t primary_key() const { return max_supply.symbol.code().raw(); }
-    EOSLIB_SERIALIZE(registry, (max_supply)(supply)(publisher)(info_url)(settings))
+    EOSLIB_SERIALIZE(registry, (max_supply)(supply)(total_voters)(total_proxies)(publisher)(info_url)(settings))
 };
 
 //NOTE: balances are scoped by symbol.code().raw()
@@ -54,7 +57,7 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] balance {
 };
 
 //NOTE: proxy balances are scoped by balance owner
-//TODO: scope by symbol.code().raw(), key by name constituent, rename proxied_balance?
+//TODO: scope by symbol.code().raw(), key by constituent name?
 // struct [[eosio::table, eosio::contract("eosio.trail")]] proxy_balance {
 //     asset proxied_tokens;
 //     name proxy;
