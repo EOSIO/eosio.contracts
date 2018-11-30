@@ -129,6 +129,8 @@ public:
 
     [[eosio::action]] void addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link);
 
+    //[[eosio::action]] void rmvcandidate(name publisher, uint64_t ballot_id, name candidate); //TODO: should candidates be allowed to remove themselves? or only publisher?
+
     [[eosio::action]] void setseats(name publisher, uint64_t ballot_id, uint8_t num_seats);
 
     [[eosio::action]] void nextcycle(name publisher, uint64_t ballot_id, uint32_t new_begin_time, uint32_t new_end_time); //only for ballots?
