@@ -36,8 +36,6 @@ public:
 
     uint32_t const MIN_LOCK_PERIOD = 86400; //86,400 seconds is ~1 day
 
-    //uint32_t const MAX_LOCK_PERIOD = 7776000; //7,776,000 seconds is ~3 months
-
     uint32_t const DECAY_RATE = 120; //number of seconds to decay by 1 VOTE
 
     //TODO: add constants for totals vector mappings?
