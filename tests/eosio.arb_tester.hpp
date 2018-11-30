@@ -32,7 +32,7 @@ class eosio_arb_tester : public eosio_trail_tester
         }
     }
 
-    #pragma regions getters
+    // #pragma regions getters
     
     fc::variant get_config()
     {
@@ -82,9 +82,9 @@ class eosio_arb_tester : public eosio_trail_tester
         return data.empty() ? fc::variant() : abi_ser.binary_to_variant("evidence", data, abi_serializer_max_time);
     }
 
-    #pragma endregion getters
+    // #pragma endregion getters
 
-    #pragma region actions
+    // #pragma region actions
 
     transaction_trace_ptr setconfig(
         uint16_t max_arbs,
@@ -99,7 +99,7 @@ class eosio_arb_tester : public eosio_trail_tester
         return push_transaction(trx);
     }
 
-    #pragma region actions_Arb_Elections
+    // #pragma region actions_Arb_Elections
 
     transaction_trace_ptr applyforarb(name candidate, string creds_ipfs_url)
     {
@@ -131,8 +131,8 @@ class eosio_arb_tester : public eosio_trail_tester
         return push_transaction(trx);
     }            
 
-    #pragma endregion actions_Arb_Elections
-    #pragma region actions_Case_Setup
+    // #pragma endregion actions_Arb_Elections
+    // #pragma region actions_Case_Setup
 
     transaction_trace_ptr filecase(name claimant, uint16_t class_suggestion, string ev_ipfs_url)
     {
@@ -184,8 +184,8 @@ class eosio_arb_tester : public eosio_trail_tester
         return push_transaction(trx);
     }
 
-    #pragma endregion actions_Case_Setup
-    #pragma region actions_Member_Only
+    // #pragma endregion actions_Case_Setup
+    // #pragma region actions_Member_Only
 
     transaction_trace_ptr vetoarb(uint64_t case_id, name arb, name selector)
     {   
@@ -280,8 +280,8 @@ class eosio_arb_tester : public eosio_trail_tester
         return push_transaction(trx);
     }
 
-    #pragma endregion actions_Arb_Only
-    #pragma region actions_BP_Multisig_Actions
+    // #pragma endregion actions_Arb_Only
+    // #pragma region actions_BP_Multisig_Actions
 
     // ! double check permissions on this ! 
     transaction_trace_ptr dismissarb(name arb)
@@ -294,11 +294,11 @@ class eosio_arb_tester : public eosio_trail_tester
         return push_transaction(trx);
     }
 
-    #pragma endregion actions_BP_Multisig_Actions
+    // #pragma endregion actions_BP_Multisig_Actions
 
-    #pragma endregion actions
+    // #pragma endregion actions
 
-    #pragma region Enums
+    // #pragma region Enums
 
     enum case_state {
         CASE_SETUP,         // 0
@@ -346,5 +346,5 @@ class eosio_arb_tester : public eosio_trail_tester
 
     // TODO: Evidence states
 
-    #pragma endregion Enums
+    // #pragma endregion Enums
 };
