@@ -392,7 +392,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // voting window (#1) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
-      mirrorcast(quorum[i].value, symbol(4, "TLOS"));
+      //mirrorcast(quorum[i].value, symbol(4, "TLOS"));
 
       // fail vote, fee already claimed but would pass
       uint16_t vote_direction_0 = ( i < vote_tipping_point - 1 ) ? uint16_t(1) : uint16_t(0);
@@ -435,7 +435,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // voting window (#2) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
-      mirrorcast(quorum[i].value, symbol(4, "TLOS"));
+      //mirrorcast(quorum[i].value, symbol(4, "TLOS"));
       
       // pass vote, fee already claimed
       uint16_t vote_direction_0 = ( i < vote_tipping_point ) ? uint16_t(1) : uint16_t(0);
