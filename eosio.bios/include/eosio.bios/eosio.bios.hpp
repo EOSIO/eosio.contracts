@@ -1,13 +1,103 @@
 #pragma once
+#include <eosiolib/action.hpp>
 #include <eosiolib/crypto.h>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/privileged.hpp>
+#include <eosiolib/producer_schedule.hpp>
 
 namespace eosio {
+   using eosio::permission_level;
+   using eosio::public_key;
+   using eosio::ignore;
+
+   struct permission_level_weight {
+      permission_level  permission;
+      uint16_t          weight;
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( permission_level_weight, (permission)(weight) )
+   };
+
+   struct key_weight {
+      eosio::public_key  key;
+      uint16_t           weight;
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( key_weight, (key)(weight) )
+   };
+
+   struct wait_weight {
+      uint32_t           wait_sec;
+      uint16_t           weight;
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( wait_weight, (wait_sec)(weight) )
+   };
+
+   struct authority {
+      uint32_t                              threshold = 0;
+      std::vector<key_weight>               keys;
+      std::vector<permission_level_weight>  accounts;
+      std::vector<wait_weight>              waits;
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts)(waits) )
+   };
+
+   struct block_header {
+      uint32_t                                  timestamp;
+      name                                      producer;
+      uint16_t                                  confirmed = 0;
+      capi_checksum256                          previous;
+      capi_checksum256                          transaction_mroot;
+      capi_checksum256                          action_mroot;
+      uint32_t                                  schedule_version = 0;
+      std::optional<eosio::producer_schedule>   new_producers;
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE(block_header, (timestamp)(producer)(confirmed)(previous)(transaction_mroot)(action_mroot)
+                                     (schedule_version)(new_producers))
+   };
 
    class [[eosio::contract("eosio.bios")]] bios : public contract {
       public:
          using contract::contract;
+         [[eosio::action]]
+         void newaccount( name             creator,
+                          name             name,
+                          ignore<authority> owner,
+                          ignore<authority> active){}
+
+
+         [[eosio::action]]
+         void updateauth(  ignore<name>  account,
+                           ignore<name>  permission,
+                           ignore<name>  parent,
+                           ignore<authority> auth ) {}
+
+         [[eosio::action]]
+         void deleteauth( ignore<name>  account,
+                          ignore<name>  permission ) {}
+
+         [[eosio::action]]
+         void linkauth(  ignore<name>    account,
+                         ignore<name>    code,
+                         ignore<name>    type,
+                         ignore<name>    requirement  ) {}
+
+         [[eosio::action]]
+         void unlinkauth( ignore<name>  account,
+                          ignore<name>  code,
+                          ignore<name>  type ) {}
+
+         [[eosio::action]]
+         void canceldelay( ignore<permission_level> canceling_auth, ignore<capi_checksum256> trx_id ) {}
+
+         [[eosio::action]]
+         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {}
+
+         [[eosio::action]]
+         void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
 
          [[eosio::action]]
          void setpriv( name account, uint8_t is_priv ) {
