@@ -5,8 +5,8 @@
  * @copyright defined in telos/LICENSE.txt
  */
 
-#include <../../eosio.trail/include/trail.voting.hpp>
-#include <../../eosio.trail/include/trail.tokens.hpp>
+#include "../../eosio.trail/include/trail.voting.hpp"
+#include "../../eosio.trail/include/trail.tokens.hpp"
 
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/permission.hpp>
@@ -30,14 +30,14 @@ public:
         name nominee;
         
         uint64_t primary_key() const { return nominee.value; }
-        EOSLIB_SERIALZE( board_nominee, (nominee) )
+        EOSLIB_SERIALIZE(board_nominee, (nominee))
     };
 
     struct [[eosio::table]] board_member {
         name member;
 
         uint64_t primary_key() const { return member.value; }
-        EOSLIB_SERIALZE(board_member, (member))
+        EOSLIB_SERIALIZE(board_member, (member))
     };
 
     struct [[eosio::table]] config {
@@ -46,7 +46,7 @@ public:
         uint8_t open_seats = 0;
 
         uint64_t primary_key() const { return publisher.value; }
-        EOSLIB_SERIALZE(config, (publisher)(max_board_seats)(open_seats))
+        EOSLIB_SERIALIZE(config, (publisher)(max_board_seats)(open_seats))
     };
 
     

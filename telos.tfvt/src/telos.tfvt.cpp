@@ -1,19 +1,21 @@
-#include <telos.tfvt.hpp>
+#include "../include/telos.tfvt.hpp"
 #include <eosiolib/symbol.hpp>
-#include <eosiolib/print.hpp>
+//#include <eosiolib/print.hpp>
 
 telfound::telfound(name self, name code, datastream<const char*> ds) : contract(self, code, ds) {}
 
 telfound::~telfound() {}
 
 
-void setconfig(name member, uint8_t new_max_seats, uint8_t new_open_seats) {
+#pragma region Actions
+
+
+void telfound::setconfig(name member, uint8_t new_max_seats, uint8_t new_open_seats) {
     require_auth(member);
     eosio_assert(new_max_seats >= new_open_seats, "can't have more open seats than max seats");
     //eosio_assert(is_board_member(member), "member is not on the board"); //NOTE: restrict to board members?
 
     config_table configs(_self, _self.value);
-    auto c = configs.find(_self.value);
 
     config configs_struct = config{
         _self, //publisher
@@ -29,9 +31,9 @@ void telfound::nominate(name nominee, name nominator) {
     eosio_assert(!is_nominee(nominee), "nominee has already been nominated");
     eosio_assert(!is_board_member(nominee), "nominee is already a board member");
 
-    noms.emplace(get_self(), [&](auto& m) {
-        m.nominee = nominee;
-    });
+    // noms.emplace(get_self(), [&](auto& m) {
+    //     m.nominee = nominee;
+    // });
 }
 
 void telfound::makeissue(name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
@@ -80,8 +82,8 @@ void telfound::closelboard(name holder, uint64_t ballot_id) {
     ballots_table ballots(name("eosio.trail"), name("eosio.trail").value);
     auto bal = ballots.get(ballot_id);
     
-    leaderboard_table leaderboards(name("eosio.trail"), name("eosio.trail").value);
-    auto board = leaderboard.get(bal.reference_id);
+    leaderboards_table leaderboards(name("eosio.trail"), name("eosio.trail").value);
+    auto board = leaderboards.get(bal.reference_id);
 
     auto board_candidates = board.candidates;
     sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes > c2.votes; });
@@ -97,6 +99,8 @@ void telfound::closelboard(name holder, uint64_t ballot_id) {
 		status
 	)).send();
 }
+
+#pragma endregion Actions
 
 
 #pragma region Helper_Functions
@@ -130,14 +134,15 @@ void telfound::addseats(name member, uint8_t num_seats) {
     eosio_assert(is_board_member(member), "only board members can add seats");
 
     config_table configs(_self, _self.value);
-    auto c = configs.find(_self.value);
-    eosio_assert(c != configs.end(), "config doesn't exist");
-    auto conf = *c;
+    auto c = configs.get();
 
-    configs.modify(c, same_payer, [&](auto& l) {
-        l.max_board_seats += num_seats;
-        l.open_seats += num_seats;
-    });
+    config configs_struct = config{
+        _self, //publisher
+        c.max_board_seats += num_seats, //max_board_seats
+        c.open_seats += num_seats //open_seats
+    };
+
+    configs.set(configs_struct, _self);
 }
 
 bool telfound::is_board_member(name user) {
@@ -185,3 +190,5 @@ bool telfound::is_tfboard_holder(name user) {
 }
 
 #pragma endregion Helper_Functions
+
+EOSIO_DISPATCH(telfound, (setconfig)(nominate)(makeissue)(closeissue)(makelboard)(closelboard))
