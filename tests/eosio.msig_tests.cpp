@@ -20,7 +20,7 @@ using mvo = fc::mutable_variant_object;
 class eosio_msig_tester : public tester {
 public:
    eosio_msig_tester() {
-      create_accounts( { N(eosio.msig), N(eosio.stake), N(eosio.ram), N(eosio.ramfee), N(alice), N(bob), N(carol) } );
+      create_accounts( { N(eosio.msig), N(eosio.stake), N(eosio.ram), N(eosio.ramfee), N(eosio.trail), N(alice), N(bob), N(carol) } );
       produce_block();
 
       auto trace = base_tester::push_action(config::system_account_name, N(setpriv),
@@ -859,6 +859,92 @@ BOOST_FIXTURE_TEST_CASE( approve_by_two_old, eosio_msig_tester ) try {
    BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
 
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( approve_with_hash, eosio_msig_tester ) try {
+   auto trx = reqauth("alice", {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   auto trx_hash = fc::sha256::hash( trx );
+   auto not_trx_hash = fc::sha256::hash( trx_hash );
+
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx)
+                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+   );
+
+   //fail to approve with incorrect hash
+   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(approve), mvo()
+                                          ("proposer",      "alice")
+                                          ("proposal_name", "first")
+                                          ("level",         permission_level{ N(alice), config::active_name })
+                                          ("proposal_hash", not_trx_hash)
+                            ),
+                            eosio::chain::crypto_api_exception,
+                            fc_exception_message_is("hash mismatch")
+   );
+
+   //approve and execute
+   push_action( N(alice), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("proposal_hash", trx_hash)
+   );
+
+   transaction_trace_ptr trace;
+   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   push_action( N(alice), N(exec), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("executer",      "alice")
+   );
+
+   BOOST_REQUIRE( bool(trace) );
+   BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
+   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( switch_proposal_and_fail_approve_with_hash, eosio_msig_tester ) try {
+   auto trx1 = reqauth("alice", {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   auto trx1_hash = fc::sha256::hash( trx1 );
+
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx1)
+                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+   );
+
+   auto trx2 = reqauth("alice",
+                       { permission_level{N(alice), config::active_name},
+                         permission_level{N(alice), config::owner_name}  },
+                       abi_serializer_max_time );
+
+   push_action( N(alice), N(cancel), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("canceler",       "alice")
+   );
+
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx2)
+                  ("requested", vector<permission_level>{ { N(alice), config::active_name },
+                                                          { N(alice), config::owner_name } })
+   );
+
+   //fail to approve with hash meant for old proposal
+   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(approve), mvo()
+                                          ("proposer",      "alice")
+                                          ("proposal_name", "first")
+                                          ("level",         permission_level{ N(alice), config::active_name })
+                                          ("proposal_hash", trx1_hash)
+                            ),
+                            eosio::chain::crypto_api_exception,
+                            fc_exception_message_is("hash mismatch")
+   );
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

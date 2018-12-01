@@ -22,7 +22,7 @@ public:
    eosio_token_tester() {
       produce_blocks( 2 );
 
-      create_accounts( { N(alice), N(bob), N(carol), N(eosio.token) } );
+      create_accounts( { N(alice), N(bob), N(carol), N(eosio.token), N(eosio.trail) } );
       produce_blocks( 2 );
 
       set_code( N(eosio.token), contracts::token_wasm() );
