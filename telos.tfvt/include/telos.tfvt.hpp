@@ -62,7 +62,7 @@ public:
     //[[eosio::action]] void inittfboard(); //NOTE: sends inline actions to register and initialize TFBOARD token registry
 
     [[eosio::action]]
-    void setconfig(name publisher, uint8_t new_max_seats, uint8_t new_open_seats);
+    void setconfig(name publisher, config new_configs);
 
     [[eosio::action]]
     void nominate(name nominee, name nominator);

@@ -10,30 +10,26 @@ telfound::~telfound() {}
 #pragma region Actions
 
 
-void telfound::setconfig(name member, uint8_t new_max_seats, uint8_t new_open_seats) {
+void telfound::setconfig(name member, config new_configs) {
     require_auth(member);
-    eosio_assert(new_max_seats >= new_open_seats, "can't have more open seats than max seats");
+    eosio_assert(new_configs.max_board_seats >= new_configs.open_seats, "can't have more open seats than max seats");
     //eosio_assert(is_board_member(member), "member is not on the board"); //NOTE: restrict to board members?
 
     config_table configs(_self, _self.value);
-
-    config configs_struct = config{
-        _self, //publisher
-        uint8_t(new_max_seats), //max_board_seats
-        uint8_t(new_open_seats), //open_seats
-    };
-
-    configs.set(configs_struct, _self);
+    configs.set(new_configs, _self);
 }
 
 void telfound::nominate(name nominee, name nominator) {
     require_auth(nominator);
-    eosio_assert(!is_nominee(nominee), "nominee has already been nominated");
     eosio_assert(!is_board_member(nominee), "nominee is already a board member");
 
-    // noms.emplace(get_self(), [&](auto& m) {
-    //     m.nominee = nominee;
-    // });
+    nominees_table noms(_self, _self.value);
+    auto n = noms.find(nominee.value);
+    eosio_assert(n == noms.end(), "nominee has already been nominated");
+
+    noms.emplace(get_self(), [&](auto& m) {
+        m.nominee = nominee;
+    });
 }
 
 void telfound::makeissue(name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
@@ -76,6 +72,7 @@ void telfound::makelboard(name holder, uint32_t begin_time, uint32_t end_time, s
 
 void telfound::closelboard(name holder, uint64_t ballot_id) {
     require_auth(holder);
+    eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller is not a tfvt or tfboard token holder");
 
     uint8_t status = 1;
 
@@ -86,6 +83,7 @@ void telfound::closelboard(name holder, uint64_t ballot_id) {
     auto board = leaderboards.get(bal.reference_id);
 
     auto board_candidates = board.candidates;
+    //TODO: resolve ties
     sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes > c2.votes; });
 
     //add first n candidates after sorting by votes, where n is available seats on leaderboard
