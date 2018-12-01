@@ -342,7 +342,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // voting window (#0) started
    // not enough voters in first cycle
-   for(int i = 0; i < quorum_voters_size_fail; i++){
+   for(int i = 0; i < quorum_voters_size_fail; i++) {
       mirrorcast(quorum[i].value, symbol(4, "TLOS"));
 
       // fail vote from lack of voters, but get fee
@@ -369,7 +369,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // CLAIM: get fee back
    claim_proposal_funds(0, proposer.value);
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("200.0000"), get_balance( test_voters[0] ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("1200.0000"), get_balance( test_voters[0] ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
 
    // CLAIM: nothing to claim
