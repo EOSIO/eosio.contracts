@@ -322,7 +322,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    //    eosio_assert_message_is( "voter is not registered" ));
 
    // mirrorcast on the other hand will throw an exception 
-	BOOST_REQUIRE_EXCEPTION( mirrorcast(proposer.value, symbol(4, "VOTE")), eosio_assert_message_exception, 
+	BOOST_REQUIRE_EXCEPTION( mirrorcast(proposer.value, symbol(4, "TLOS")), eosio_assert_message_exception, 
       eosio_assert_message_is( "voter is not registered" ));
 
    auto quorum = vector<account_name>(test_voters.begin(), test_voters.begin() + quorum_voters_size_pass); 
