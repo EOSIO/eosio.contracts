@@ -13,8 +13,11 @@ To minimize the creation of spam accounts on the Telos Network, the `configure` 
 The `create` action requires four (4) parameters before an account can be successfully created.
 
 `new_account` - this is the 12-character name of the new account
+
 `owner_key` - this is the owner public key used to associate with the account
+
 `active_key` - this is the active public key used to associate with the account
+
 `key_prefix` - this is the prefix for the owner and active public keys. Set to 'EOS' for chains using EOS public key prefixes
 
 ## How It Works
