@@ -247,7 +247,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    int total_voters = test_voters.size();
    register_voters(test_voters, 0, total_voters - 1, symbol(4, "VOTE"));
    
-   auto registry_info = get_registry(test_symbol);
+   auto registry_info = get_registry(symbol(4, "VOTE"));
 		BOOST_REQUIRE_EQUAL(registry_info["total_voters"], total_voters - 1);
 
    name proposer = test_voters[total_voters - 1];
