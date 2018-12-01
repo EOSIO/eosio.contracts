@@ -247,8 +247,8 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    int total_voters = test_voters.size();
    register_voters(test_voters, 0, total_voters - 1, symbol(4, "VOTE"));
    
-   auto trail_env = get_trail_env();
-   BOOST_REQUIRE_EQUAL(trail_env["totals"][1], total_voters - 1);
+   auto registry_info = get_registry(test_symbol);
+		BOOST_REQUIRE_EQUAL(registry_info["total_voters"], total_voters - 1);
 
    name proposer = test_voters[total_voters - 1];
    transfer(N(eosio), proposer.value, asset::from_string("1800.0000 TLOS"), "Blood Money");
