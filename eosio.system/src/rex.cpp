@@ -65,10 +65,8 @@ namespace eosiosystem {
       require_auth( owner );
 
       eosio_assert( from_net.symbol == core_symbol() && from_cpu.symbol == core_symbol(), "asset must be core token" );
-      eosio_assert( 0 <= from_net.amount, "must unstake a positive amount to buy rex" );
-      eosio_assert( 0 <= from_cpu.amount, "must unstake a positive amount to buy rex" );
-      eosio_assert( 0 < from_net.amount || 0 < from_cpu.amount, "must unstake a positive amount to buy rex" );
-      
+      eosio_assert( (0 <= from_net.amount) && (0 <= from_cpu.amount) && (0 < from_net.amount || 0 < from_cpu.amount),
+                    "must unstake a positive amount to buy rex" );
       {
          auto vitr = _voters.find( owner.value );
          eosio_assert( vitr != _voters.end() && ( vitr->proxy || vitr->producers.size() >= 21 ),
@@ -110,9 +108,10 @@ namespace eosiosystem {
       eosio_assert( rex_system_initialized(), "rex system not initialized yet" );
 
       auto bitr = _rexbalance.require_find( from.value, "user must first buyrex" );
-      eosio_assert( rex.symbol == bitr->rex_balance.symbol , "asset symbol must be (REX, 4)" );
+      eosio_assert( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol,
+                    "asset must be a positive amount of (REX, 4)" );
       process_rex_maturities( bitr );
-      eosio_assert( rex.amount <= bitr->matured_rex, "insufficient funds" );
+      eosio_assert( rex.amount <= bitr->matured_rex, "insufficient available rex" );
 
       auto current_order = fill_rex_order( bitr, rex );
       update_rex_account( from, current_order.proceeds, current_order.stake_change );
@@ -555,7 +554,7 @@ namespace eosiosystem {
       eosio_assert( payment.symbol == core_symbol(), "must use core token" );
       transfer_from_fund( from, payment );
       auto itr = table.require_find( loan_num, "loan not found" );
-      eosio_assert( itr->from == from, "actor has to be loan creator" );
+      eosio_assert( itr->from == from, "user must be loan creator" );
       eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
       table.modify( itr, same_payer, [&]( auto& loan ) {
          loan.balance.amount += payment.amount;
@@ -567,7 +566,7 @@ namespace eosiosystem {
    {
       eosio_assert( amount.symbol == core_symbol(), "must use core token" );
       auto itr = table.require_find( loan_num, "loan not found" );
-      eosio_assert( itr->from == from, "actor has to be loan creator" );
+      eosio_assert( itr->from == from, "user must be loan creator" );
       eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
       eosio_assert( itr->balance >= amount, "insufficent loan balance" );
       table.modify( itr, same_payer, [&]( auto& loan ) {

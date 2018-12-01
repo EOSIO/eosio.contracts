@@ -468,6 +468,11 @@ public:
       return get_loan_info( loan_num, false );
    }
 
+   fc::variant get_dbw_obj( const account_name& from, const account_name& receiver ) const {
+      vector<char> data = get_row_by_account( config::system_account_name, from, N(delband), receiver );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant("delegated_bandwidth", data, abi_serializer_max_time);
+   }
+      
    asset get_rex_balance( const account_name& act ) const {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexbal), act );
       return data.empty() ? asset(0, symbol(SY(4, REX))) : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["rex_balance"].as<asset>();
