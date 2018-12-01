@@ -86,7 +86,7 @@ class eosio_wps_tester : public eosio_trail_tester
 
     action_result claim_proposal_funds(uint64_t sub_id, account_name proposer)
     {
-        return push_wps_action(proposer, N(claim), mvo()("sub_id", proposal_id)("proposer", proposer));
+        return push_wps_action(proposer, N(claim), mvo()("sub_id", sub_id)("proposer", proposer));
     }
 
     fc::variant get_wps_info(const uint64_t id)
