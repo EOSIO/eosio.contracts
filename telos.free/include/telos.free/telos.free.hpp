@@ -14,6 +14,7 @@
 #include <eosiolib/permission.hpp>
 #include <eosiolib/singleton.hpp>
 #include <eosiolib/transaction.hpp>
+#include "exchange_state.hpp"
 
 #include <string>
 
@@ -57,15 +58,17 @@ public:
       void create( name new_account, string owner_key, string active_key, string key_prefix );
 
       [[eosio::action]]
-      void configure( int16_t max_accounts_per_hour );
+      void configure( int16_t max_accounts_per_hour, int64_t stake_cpu_tlos_amount, int64_t stake_net_tlos_amount );
 
       struct [[eosio::table]] freeacctcfg {
             name publisher;
             int16_t max_accounts_per_hour = 50;
+            int64_t stake_cpu_tlos_amount = 9000;
+            int64_t stake_net_tlos_amount = 1000;
 
             auto primary_key() const { return publisher.value; }
 
-            EOSLIB_SERIALIZE(freeacctcfg, (publisher)(max_accounts_per_hour))
+            EOSLIB_SERIALIZE(freeacctcfg, (publisher)(max_accounts_per_hour)(stake_cpu_tlos_amount)(stake_net_tlos_amount))
       };
 
       struct [[eosio::table]] freeacctlog {
@@ -78,7 +81,7 @@ public:
             EOSLIB_SERIALIZE(freeacctlog, (account_name)(created_on))
       };
 
-      typedef multi_index<"freeacctlogs"_n, freeacctlog> t_freeaccounts;
+      typedef multi_index<"freeacctlogs"_n, freeacctlog> t_freeaccountlogs;
 
       freeaccounts(name self, name code, datastream<const char*> ds);
 
@@ -87,7 +90,13 @@ public:
 protected:
       typedef singleton<"config"_n, freeacctcfg> config_singleton;
       config_singleton configuration;
-      t_freeaccounts freeaccountstable;
+      t_freeaccountlogs freeacctslogtable;
+
+      rammarket rammarkettable;
+      static constexpr eosio::name             system_account{"eosio"_n};
+      static constexpr symbol RAMCORE_symbol = symbol(symbol_code("RAMCORE"), 4);
+      static constexpr symbol RAM_symbol     = symbol(symbol_code("RAM"), 0);
+      static constexpr symbol TLOS_symbol    = symbol(symbol_code("TLOS"), 4);
 
       signup_public_key getpublickey(string public_key, string key_prefix);
       freeacctcfg getconfig();
