@@ -228,35 +228,24 @@ public:
 
 #pragma endregion Case_Setup
 
-#pragma region Member_Only
-  [[eosio::action]] void vetoarb(uint64_t case_id, name arb, name selector);
-
-#pragma endregion Member_Only
-
 #pragma region Arb_Only
 
   // TODO: Set case respondant action
   [[eosio::action]] void dismisscase(
       uint64_t case_id, name arb, string ipfs_url); // TODO: require rationale?
 
-  [[eosio::action]] void closecase(uint64_t case_id, name arb,
-                                   string ipfs_url); // TODO: require decision?
+  [[eosio::action]] void closecase(uint64_t case_id, name arb, string ipfs_url); // TODO: require decision?
 
-  [[eosio::action]] void dismissev(
-      uint64_t case_id, uint16_t claim_index, uint16_t ev_index, name arb,
-      string ipfs_url); // NOTE: moves to dismissed_evidence table
+  [[eosio::action]] void dismissev( uint64_t case_id, uint16_t claim_index, uint16_t ev_index, name arb, string ipfs_url); // NOTE: moves to dismissed_evidence table
 
   [[eosio::action]] void acceptev(
-      uint64_t case_id, uint16_t claim_index, uint16_t ev_index, name arb,
-      string ipfs_url); // NOTE: moves to evidence_table and assigns ID
+      uint64_t case_id, uint16_t claim_index, uint16_t ev_index, name arb, string ipfs_url); // NOTE: moves to evidence_table and assigns ID
 
   [[eosio::action]] void arbstatus(uint16_t new_status, name arb);
 
-  [[eosio::action]] void casestatus(uint64_t case_id, uint16_t new_status,
-                                    name arb);
+  [[eosio::action]] void casestatus(uint64_t case_id, uint16_t new_status, name arb);
 
-  [[eosio::action]] void changeclass(uint64_t case_id, uint16_t claim_index,
-                                     uint16_t new_class, name arb);
+  [[eosio::action]] void changeclass(uint64_t case_id, uint16_t claim_index, uint16_t new_class, name arb);
 
   // [[eosio::action]]
   // void joincases(vector<uint64_t> case_ids, name arb); //CLARIFY: joined case

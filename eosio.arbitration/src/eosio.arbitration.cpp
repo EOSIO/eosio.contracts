@@ -38,9 +38,7 @@ void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duratio
 void arbitration::init() {
   require_auth2("eosio.prods"_n.value, "active"_n.value);
 
-  eosio_assert(_config.auto_start_election, " ");
-  
-  eosio_assert(_config.ballot_id == 0, "Current election needs to be ended in order to have a new election.");
+  eosio_assert(!_config.auto_start_election, "Election is on auto start mode.");
 
   ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
   
@@ -63,7 +61,7 @@ void arbitration::applyforarb(name candidate, string creds_ipfs_url) {
   auto arb = arbitrators.find(candidate.value);
 
   if (arb != arbitrators.end()) {
-    eosio_assert(now() > arb->seat_expiration_time_days, "Arbitrator seat didn't expire");
+    eosio_assert(now() > DAYS_TO_SECONDS(arb->seat_expiration_time_days), "Arbitrator seat didn't expire");
 
     arbitrators.modify(arb, same_payer, [&](auto &a) {
       a.arb_status = SEAT_EXPIRED;
@@ -116,8 +114,8 @@ void arbitration::cancelarbapp(name candidate) {
         candidate
       )
     ).send();
+    candidates.erase(c);
   }
-  candidates.erase(c);
 
   print("\nCancel Application: SUCCESS");
 }
@@ -135,7 +133,8 @@ void arbitration::endelection(name candidate) {
   
   // sort board candidates by votes
   auto board_candidates = board.candidates;
-  sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes > c2.votes; });
+ 
+  sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes >= c2.votes; });
 
   candidates_table candidates(_self, _self.value);
   
@@ -146,6 +145,7 @@ void arbitration::endelection(name candidate) {
   
   std::vector<permission_level_weight> arbs_perms;  
   // get available seats (up to 21)
+  //TODO: resolve tie clonficts.
   for (int i = 0; i < board.available_seats && i < MAX_ARBS_WINNER; i++) {
     name cand_name = board_candidates[i].member;  
     auto c = candidates.find(cand_name.value);
@@ -169,6 +169,7 @@ void arbitration::endelection(name candidate) {
     }
   }
 
+  // review update auth permissions and weights.
   uint32_t weight = ( 2 * arbs_perms.size() ) / 3 + 1;
   action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
          std::make_tuple(
@@ -249,7 +250,7 @@ void arbitration::filecase(name claimant, uint16_t class_suggestion, string ev_i
 } 
 
 void arbitration::addclaim(uint64_t case_id, uint16_t class_suggestion, string ev_ipfs_url, name claimant) { 
-    require_auth(claimant);
+  require_auth(claimant);
 	eosio_assert(class_suggestion >= UNDECIDED && class_suggestion <= MISC, "class suggestion must be between 0 and 14"); //TODO: improve this message to include directions
 	validate_ipfs_url(ev_ipfs_url);
 
@@ -272,12 +273,11 @@ void arbitration::addclaim(uint64_t case_id, uint16_t class_suggestion, string e
 }
 
 void arbitration::removeclaim(uint64_t case_id, uint16_t claim_num, name claimant) {
-    require_auth(claimant);
+  require_auth(claimant);
 
 	casefiles_table casefiles(_self, _self.value);
 	auto c = casefiles.get(case_id, "Case Not Found");
-	print("\nProposal Found!");
-
+	
 	require_auth(c.claimant);
 	eosio_assert(c.case_status == CASE_SETUP, "claims cannot be removed after CASE_SETUP is complete.");
 
@@ -324,13 +324,6 @@ void arbitration::readycase(uint64_t case_id, name claimant) {
     });
 
   print("\nCase Readied!");
-}
-
-void arbitration::vetoarb(uint64_t case_id, name arb, name selector) {
-    require_auth(selector);
-    // eosio_assert(is_case(case_id), "no case for given case_id");
-
-    //TODO: check that case is in AWAITING_ARBS state
 }
 
 void arbitration::closecase(uint64_t case_id, name arb, string ipfs_url) {
@@ -582,11 +575,11 @@ void arbitration::start_new_election() {
 }
 
 bool arbitration::has_available_seats(arbitrators_table &arbitrators) {
-  uint32_t occupied_seats = 0;
+  uint16_t occupied_seats = 0;
   
   for (const auto arb : arbitrators) {
     // check if arb seat is expired
-    if (now() > arb.seat_expiration_time_days && arb.arb_status != uint16_t(SEAT_EXPIRED)) {
+    if (now() > DAYS_TO_SECONDS(arb.seat_expiration_time_days) && arb.arb_status != uint16_t(SEAT_EXPIRED)) {
       arbitrators.modify(arb, same_payer, [&](auto &a) {
         a.arb_status = uint16_t(SEAT_EXPIRED);
       });
