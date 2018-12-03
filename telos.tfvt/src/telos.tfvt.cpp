@@ -107,6 +107,23 @@ void tfvt::makeelection(name holder, uint32_t begin_time, uint32_t end_time, str
 
 }
 
+void tfvt::addallcands(name holder, uint64_t ballot_id, vector<candidate> new_cands) {
+    require_auth(holder);
+    eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller must be a TFVT or TFBOARD holder");
+
+    for (candidate c : new_cands) {
+        eosio_assert(is_nominee(c.member), "candidates must be a nonimee");
+    }
+
+    //NOTE: requires {_self}@eosio.code to send
+    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "setallcands"_n, make_tuple(
+		_self, //publisher
+		ballot_id, //ballot_id
+		new_cands //new_candidates
+	)).send();
+
+}
+
 void tfvt::endelection(name holder, uint64_t ballot_id) {
     require_auth(holder);
     eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller is not a tfvt or tfboard token holder");

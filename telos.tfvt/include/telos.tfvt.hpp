@@ -112,6 +112,9 @@ public:
     void makeelection(name holder, uint32_t begin_time, uint32_t end_time, string info_url);
 
     [[eosio::action]]
+    void addallcands(name holder, uint64_t ballot_id, vector<candidate> new_cands);
+
+    [[eosio::action]]
     void endelection(name holder, uint64_t ballot_id);
 
 
