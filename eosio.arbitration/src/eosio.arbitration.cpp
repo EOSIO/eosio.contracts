@@ -7,8 +7,7 @@
 
 #include <eosio.arbitration/eosio.arbitration.hpp>
 
-#define MAX_ARBS_WINNER 21
-#define DAYS_TO_SECONDS(days) days * 86400;
+#define DAYS_TO_SECONDS(days) days * 86400
 
 
 arbitration::arbitration(name s, name code, datastream<const char *> ds)
@@ -21,9 +20,11 @@ arbitration::~arbitration() {
   if (configs.exists()) configs.set(_config, get_self());
 }
 
-void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duration_days, uint32_t start_election_days, uint32_t arb_seat_expiration_time_days, vector<int64_t> fees) {
+void arbitration::setconfig(uint8_t max_elected_arbs, uint32_t election_duration_days, uint32_t start_election_days, uint32_t arb_seat_expiration_time_days, vector<int64_t> fees) {
   require_auth2("eosio.prods"_n.value, "active"_n.value);
 
+  eosio_assert(max_elected_arbs < uint8_t(21), "Maximum elected arbitrators must be less than 22."); 
+  eosio_assert(max_elected_arbs > uint8_t(0), "num seats must be greater than 0");
   _config = config{"eosio.prods"_n,  // publisher
                    max_elected_arbs,
                    election_duration_days,
@@ -44,7 +45,13 @@ void arbitration::init() {
   
   _config.ballot_id = ballots.available_primary_key();
   _config.auto_start_election = true;
-  start_new_election();
+
+  arbitrators_table arbitrators(_self, _self.value);
+
+  uint8_t available_seats = 0;
+  if (has_available_seats(arbitrators, available_seats)) {
+    start_new_election(available_seats);
+  }
 
   print("\Election started: SUCCESS");
 }
@@ -146,7 +153,7 @@ void arbitration::endelection(name candidate) {
   std::vector<permission_level_weight> arbs_perms;  
   // get available seats (up to 21)
   //TODO: resolve tie clonficts.
-  for (int i = 0; i < board.available_seats && i < MAX_ARBS_WINNER; i++) {
+  for (int i = 0; i < board.available_seats && i < _config.max_elected_arbs; i++) {
     name cand_name = board_candidates[i].member;  
     auto c = candidates.find(cand_name.value);
     
@@ -164,6 +171,7 @@ void arbitration::endelection(name candidate) {
       
       // add ard to list of permissions  
       arbs_perms.emplace_back( permission_level_weight { permission_level{  cand_name,  "active"_n }, 1 });
+    
     } else {
         print("\ncandidate: ", name{cand_name}, " was not found.");
     }
@@ -196,10 +204,12 @@ void arbitration::endelection(name candidate) {
 
   // start new election with remaining candidates 
   // and new candidates that registered after past election had started.
+  uint8_t available_seats = 0;
   auto remaining_candidates = distance(candidates.begin(), candidates.end());
-  if ( has_available_seats(arbitrators) && remaining_candidates > 0 ) {
+  if ( has_available_seats(arbitrators, available_seats) && remaining_candidates > 0 ) {
     _config.ballot_id = ballots.available_primary_key();
-    start_new_election();
+    
+    start_new_election(available_seats);
 
     for (const auto &c : candidates) {
       action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "addcandidate"_n,
@@ -550,16 +560,16 @@ arbitration::config arbitration::get_default_config() {
   vector<int64_t> fees{100000, 200000, 300000};
   return config {
       get_self(),     // publisher
-      uint16_t(10),   // max_elected_arbs
+      uint8_t(10),    // max_elected_arbs
       uint32_t(7),    // election_duration_days
       uint32_t(5),    // start_election_days
       fees,           // fee_structure
-      uint32_t(30),    // arb_seat_expiration_time_days
+      uint32_t(30),   // arb_seat_expiration_time_days
       now()           // last_time_edited
   };
 }
 
-void arbitration::start_new_election() {
+void arbitration::start_new_election(uint8_t available_seats) {
   uint32_t begin_time = now() + DAYS_TO_SECONDS(_config.start_election_days);
   uint32_t end_time = begin_time + DAYS_TO_SECONDS(_config.election_duration_days);
 
@@ -572,12 +582,19 @@ void arbitration::start_new_election() {
                     std::string("")     // info_url
                   )
                 ).send();
+
+  action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "setseats"_n,
+         make_tuple(get_self(),
+          _config.ballot_id, 
+          available_seats
+        )
+      ).send();
 }
 
-bool arbitration::has_available_seats(arbitrators_table &arbitrators) {
-  uint16_t occupied_seats = 0;
+bool arbitration::has_available_seats(arbitrators_table &arbitrators, uint8_t &available_seats) {
+  uint8_t occupied_seats = 0;
   
-  for (const auto arb : arbitrators) {
+  for (auto &arb : arbitrators) {
     // check if arb seat is expired
     if (now() > DAYS_TO_SECONDS(arb.seat_expiration_time_days) && arb.arb_status != uint16_t(SEAT_EXPIRED)) {
       arbitrators.modify(arb, same_payer, [&](auto &a) {
@@ -588,7 +605,7 @@ bool arbitration::has_available_seats(arbitrators_table &arbitrators) {
     if(arb.arb_status != uint16_t(SEAT_EXPIRED)) occupied_seats++;
   }
 
-  auto available_seats = _config.max_elected_arbs - occupied_seats;
+  available_seats = uint8_t(_config.max_elected_arbs - occupied_seats);
   
   return available_seats > 0;
 }
@@ -597,5 +614,5 @@ bool arbitration::has_available_seats(arbitrators_table &arbitrators) {
 
 EOSIO_DISPATCH( arbitration, (setconfig)(applyforarb)(cancelarbapp)(endelection)
                              (filecase)(addclaim)(removeclaim)(shredcase)(readycase)
-                             (vetoarb)(dismisscase)(closecase)(dismissev)(acceptev)
+                             (dismisscase)(closecase)(dismissev)(acceptev)
                              (arbstatus)(casestatus)(changeclass)(recuse)(dismissarb) )

@@ -121,7 +121,7 @@ public:
   // NOTE: class of claim where neither party can pay fees, TF pays instead
   struct[[eosio::table]] config {
     name publisher;
-    uint16_t max_elected_arbs;
+    uint8_t max_elected_arbs;
     uint32_t election_duration_days;
     uint32_t start_election_days;
     vector<int64_t> fee_structure; 
@@ -196,7 +196,7 @@ public:
 
   [[eosio::action]] void init();
 
-  [[eosio::action]] void setconfig(uint16_t max_elected_arbs, uint32_t election_duration_days, uint32_t start_election_days, uint32_t arb_seat_expiration_time_days, vector<int64_t> fees);
+  [[eosio::action]] void setconfig(uint8_t max_elected_arbs, uint32_t election_duration_days, uint32_t start_election_days, uint32_t arb_seat_expiration_time_days, vector<int64_t> fees);
 
 #pragma region Arb_Elections
 
@@ -287,8 +287,8 @@ protected:
   
   config get_default_config();
   
-  void start_new_election();
+  void start_new_election(uint8_t available_seats);
   
-  bool has_available_seats(arbitrators_table &arbitrators);
+  bool has_available_seats(arbitrators_table &arbitrators, uint8_t &available_seats);
 
 };
