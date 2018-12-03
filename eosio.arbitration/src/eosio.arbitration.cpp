@@ -24,7 +24,7 @@ void arbitration::setconfig(uint8_t max_elected_arbs, uint32_t election_duration
   require_auth2("eosio.prods"_n.value, "active"_n.value);
 
   eosio_assert(max_elected_arbs < uint8_t(21), "Maximum elected arbitrators must be less than 22."); 
-  eosio_assert(max_elected_arbs > uint8_t(0), "num seats must be greater than 0");
+  eosio_assert(max_elected_arbs > uint8_t(0), "Arbitraitors must be greater than 0");
   _config = config{"eosio.prods"_n,  // publisher
                    max_elected_arbs,
                    election_duration_days,
@@ -36,7 +36,7 @@ void arbitration::setconfig(uint8_t max_elected_arbs, uint32_t election_duration
   print("\nSettings Configured: SUCCESS");
 }
 
-void arbitration::init() {
+void arbitration::initelection() {
   require_auth2("eosio.prods"_n.value, "active"_n.value);
 
   eosio_assert(!_config.auto_start_election, "Election is on auto start mode.");
@@ -68,7 +68,7 @@ void arbitration::applyforarb(name candidate, string creds_ipfs_url) {
   auto arb = arbitrators.find(candidate.value);
 
   if (arb != arbitrators.end()) {
-    eosio_assert(now() > DAYS_TO_SECONDS(arb->seat_expiration_time_days), "Arbitrator seat didn't expire");
+    eosio_assert(now() < DAYS_TO_SECONDS(arb->seat_expiration_time_days), "Arbitrator seat didn't expire");
 
     arbitrators.modify(arb, same_payer, [&](auto &a) {
       a.arb_status = SEAT_EXPIRED;
@@ -142,6 +142,22 @@ void arbitration::endelection(name candidate) {
   auto board_candidates = board.candidates;
  
   sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes >= c2.votes; });
+  
+  //resolve tie clonficts.
+  if(board_candidates.size() > board.available_seats) {
+    board_candidates.resize(board.available_seats + 1);
+    auto first_cand_out = board_candidates[board_candidates.size() - 1];
+
+    // remove candidates that are tied with first_cand_out
+    uint8_t tied_cands = 0;
+    for(auto i = board_candidates.size() - 2; i >= 0; i--) {
+      auto cand = board_candidates[i];
+      if(cand.votes == first_cand_out.votes) tied_cands++;
+    }
+
+    if(tied_cands > 0) board_candidates.resize(board_candidates.size() - tied_cands);
+  
+  }
 
   candidates_table candidates(_self, _self.value);
   
@@ -152,8 +168,8 @@ void arbitration::endelection(name candidate) {
   
   std::vector<permission_level_weight> arbs_perms;  
   // get available seats (up to 21)
-  //TODO: resolve tie clonficts.
-  for (int i = 0; i < board.available_seats && i < _config.max_elected_arbs; i++) {
+  
+  for (int i = 0; i < board.available_seats && i < board_candidates.size(); i++) {
     name cand_name = board_candidates[i].member;  
     auto c = candidates.find(cand_name.value);
     

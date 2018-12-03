@@ -194,7 +194,7 @@ public:
   arbitration(name s, name code, datastream<const char *> ds);
   ~arbitration();
 
-  [[eosio::action]] void init();
+  [[eosio::action]] void initelection();
 
   [[eosio::action]] void setconfig(uint8_t max_elected_arbs, uint32_t election_duration_days, uint32_t start_election_days, uint32_t arb_seat_expiration_time_days, vector<int64_t> fees);
 
