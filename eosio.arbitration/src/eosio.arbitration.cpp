@@ -155,7 +155,7 @@ void arbitration::endelection(name candidate) {
       if(cand.votes == first_cand_out.votes) tied_cands++;
     }
 
-    if(tied_cands > 0) board_candidates.resize(board_candidates.size() - tied_cands);
+    if(tied_cands > 0) board_candidates.resize(board_candidates.size() - tied_cands - 1);
   
   }
 
