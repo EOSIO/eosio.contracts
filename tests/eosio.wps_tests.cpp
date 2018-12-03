@@ -245,10 +245,11 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    uint32_t wp_cycle_duration = 2500000; // 2.5 mil seconds = 5 mil blocks
 
    int total_voters = test_voters.size();
-   register_voters(test_voters, 0, total_voters - 1, symbol(4, "VOTE"));
+	symbol vote_symbol = symbol(4, "VOTE");
+   register_voters(test_voters, 0, total_voters - 1, vote_symbol);
    
-   auto trail_env = get_trail_env();
-   BOOST_REQUIRE_EQUAL(trail_env["totals"][1], total_voters - 1);
+   auto registry_info = get_registry(vote_symbol);
+   BOOST_REQUIRE_EQUAL(registry_info["total_voters"], total_voters - 1);
 
    name proposer = test_voters[total_voters - 1];
    transfer(N(eosio), proposer.value, asset::from_string("1800.0000 TLOS"), "Blood Money");
@@ -322,7 +323,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    //    eosio_assert_message_is( "voter is not registered" ));
 
    // mirrorcast on the other hand will throw an exception 
-	BOOST_REQUIRE_EXCEPTION( mirrorcast(proposer.value, symbol(4, "VOTE")), eosio_assert_message_exception, 
+	BOOST_REQUIRE_EXCEPTION( mirrorcast(proposer.value, symbol(4, "TLOS")), eosio_assert_message_exception, 
       eosio_assert_message_is( "voter is not registered" ));
 
    auto quorum = vector<account_name>(test_voters.begin(), test_voters.begin() + quorum_voters_size_pass); 
@@ -343,7 +344,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    // voting window (#0) started
    // not enough voters in first cycle
    for(int i = 0; i < quorum_voters_size_fail; i++){
-      mirrorcast(quorum[i].value, symbol(4, "VOTE"));
+      mirrorcast(quorum[i].value, symbol(4, "TLOS"));
 
       // fail vote from lack of voters, but get fee
       uint16_t vote_direction_0 = 1;
@@ -392,7 +393,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // voting window (#1) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
-      mirrorcast(quorum[i].value, symbol(4, "VOTE"));
+      mirrorcast(quorum[i].value, symbol(4, "TLOS"));
 
       // fail vote, fee already claimed but would pass
       uint16_t vote_direction_0 = ( i < vote_tipping_point - 1 ) ? uint16_t(1) : uint16_t(0);
@@ -435,7 +436,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // voting window (#2) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
-      mirrorcast(quorum[i].value, symbol(4, "VOTE"));
+      mirrorcast(quorum[i].value, symbol(4, "TLOS"));
       
       // pass vote, fee already claimed
       uint16_t vote_direction_0 = ( i < vote_tipping_point ) ? uint16_t(1) : uint16_t(0);
