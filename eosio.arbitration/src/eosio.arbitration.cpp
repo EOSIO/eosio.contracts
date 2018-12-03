@@ -628,7 +628,7 @@ bool arbitration::has_available_seats(arbitrators_table &arbitrators, uint8_t &a
 
 #pragma endregion Helper_Functions
 
-EOSIO_DISPATCH( arbitration, (setconfig)(applyforarb)(cancelarbapp)(endelection)
+EOSIO_DISPATCH( arbitration, (setconfig)(initelection)(applyforarb)(cancelarbapp)(endelection)
                              (filecase)(addclaim)(removeclaim)(shredcase)(readycase)
                              (dismisscase)(closecase)(dismissev)(acceptev)
                              (arbstatus)(casestatus)(changeclass)(recuse)(dismissarb) )
