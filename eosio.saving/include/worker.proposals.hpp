@@ -69,7 +69,7 @@ class[[eosio::contract("eosio.saving")]] workerproposal : public contract
 
 	[[eosio::action]] void submit(name proposer, std::string title, uint16_t cycles, std::string ipfs_location, asset amount, name receiver);
 
-	[[eosio::action]] void claim(uint64_t prop_id);
+	[[eosio::action]] void claim(uint64_t sub_id);
 
 	[[eosio::action]] void getdeposit(name owner);
 
