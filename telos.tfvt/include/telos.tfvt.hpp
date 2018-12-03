@@ -17,14 +17,47 @@
 using namespace std;
 using namespace eosio;
 
-class [[eosio::contract("telos.tfvt")]] telfound : public contract {
+class [[eosio::contract("telos.tfvt")]] tfvt : public contract {
 
 public:
 
-    telfound(name self, name code, datastream<const char*> ds);
+    tfvt(name self, name code, datastream<const char*> ds);
 
-    ~telfound();
+    ~tfvt();
 
+    #pragma region Constants
+
+    asset const INITIAL_TFVT_MAX_SUPPLY = asset(500, symbol("TFVT", 0)); //TODO: finalize initial supply
+    
+    asset const INITIAL_TFBOARD_MAX_SUPPLY = asset(12, symbol("TFBOARD", 0)); //TODO: finalize initial supply
+    
+    token_settings const INITIAL_TFVT_SETTINGS = token_settings{ //TODO: finalize initial tfvt settings
+        false, //is_destructible
+        false, //is_proxyable
+        false, //is_burnable
+        false, //is_seizable
+        true, //is_max_mutable
+        false, //is_transferable
+        true, //is_recastable
+        false, //is_initialized
+        uint32_t(500), //counterbal_decay_rate (not applicable since non-transferable)
+        true, //lock_after_initialize
+    };
+
+    token_settings const INITIAL_TFBOARD_SETTINGS = token_settings{ //TODO: finalize initial tfboard settings
+        false, //is_destructible
+        false, //is_proxyable
+        false, //is_burnable
+        false, //is_seizable
+        true, //is_max_mutable
+        false, //is_transferable
+        false, //is_recastable
+        false, //is_initialized
+        uint32_t(500), //counterbal_decay_rate (not applicable since non-transferable)
+        true, //lock_after_initialize
+    };
+
+    #pragma endregion Constants
 
     struct [[eosio::table]] board_nominee {
         name nominee;
@@ -57,9 +90,11 @@ public:
     typedef singleton<name("configs"), config> config_table;
 
 
-    //[[eosio::action]] void inittfvt(); //NOTE: sends inline actions to register and initialize TFVT token registry
+    [[eosio::action]] //NOTE: sends inline actions to register and initialize TFVT token registry
+    void inittfvt(string initial_info_link);
 
-    //[[eosio::action]] void inittfboard(); //NOTE: sends inline actions to register and initialize TFBOARD token registry
+    [[eosio::action]] //NOTE: sends inline actions to register and initialize TFBOARD token registry
+    void inittfboard(string initial_info_link);
 
     [[eosio::action]]
     void setconfig(name publisher, config new_configs);
@@ -74,10 +109,10 @@ public:
     void closeissue(name holder, uint64_t ballot_id);
 
     [[eosio::action]]
-    void makelboard(name holder, uint32_t begin_time, uint32_t end_time, string info_url);
+    void makeelection(name holder, uint32_t begin_time, uint32_t end_time, string info_url);
 
     [[eosio::action]]
-    void closelboard(name holder, uint64_t ballot_id);
+    void endelection(name holder, uint64_t ballot_id);
 
 
 

@@ -2,15 +2,50 @@
 #include <eosiolib/symbol.hpp>
 //#include <eosiolib/print.hpp>
 
-telfound::telfound(name self, name code, datastream<const char*> ds) : contract(self, code, ds) {}
+tfvt::tfvt(name self, name code, datastream<const char*> ds) : contract(self, code, ds) {}
 
-telfound::~telfound() {}
+tfvt::~tfvt() {}
 
 
 #pragma region Actions
 
+void tfvt::inittfvt(string initial_info_link) {
+    require_auth(_self);
+    
+    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regtoken"_n, make_tuple(
+		INITIAL_TFVT_MAX_SUPPLY, //max_supply
+		_self, //publisher
+		initial_info_link //info_url
+	)).send();
 
-void telfound::setconfig(name member, config new_configs) {
+    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "initsettings"_n, make_tuple(
+		_self, //publisher
+		INITIAL_TFVT_MAX_SUPPLY.symbol, //token_symbol
+		INITIAL_TFVT_SETTINGS //new_settings
+	)).send();
+
+    print("\nTFVT Registration and Initialization Actions Sent...");
+}
+
+void tfvt::inittfboard(string initial_info_link) {
+    require_auth(_self);
+    
+    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regtoken"_n, make_tuple(
+		INITIAL_TFBOARD_MAX_SUPPLY, //max_supply
+		_self, //publisher
+		initial_info_link //info_url
+	)).send();
+
+    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "initsettings"_n, make_tuple(
+		_self, //publisher
+		INITIAL_TFBOARD_MAX_SUPPLY.symbol, //token_symbol
+		INITIAL_TFBOARD_SETTINGS //new_settings
+	)).send();
+
+    print("\nTFBOARD Registration and Initialization Actions Sent...");
+}
+
+void tfvt::setconfig(name member, config new_configs) {
     require_auth(member);
     eosio_assert(new_configs.max_board_seats >= new_configs.open_seats, "can't have more open seats than max seats");
     //eosio_assert(is_board_member(member), "member is not on the board"); //NOTE: restrict to board members?
@@ -19,7 +54,7 @@ void telfound::setconfig(name member, config new_configs) {
     configs.set(new_configs, _self);
 }
 
-void telfound::nominate(name nominee, name nominator) {
+void tfvt::nominate(name nominee, name nominator) {
     require_auth(nominator);
     eosio_assert(!is_board_member(nominee), "nominee is already a board member");
 
@@ -32,7 +67,7 @@ void telfound::nominate(name nominee, name nominator) {
     });
 }
 
-void telfound::makeissue(name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
+void tfvt::makeissue(name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
     require_auth(holder);
 
     action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regballot"_n, make_tuple(
@@ -45,7 +80,7 @@ void telfound::makeissue(name holder, uint32_t begin_time, uint32_t end_time, st
 	)).send();
 }
 
-void telfound::closeissue(name holder, uint64_t ballot_id) {
+void tfvt::closeissue(name holder, uint64_t ballot_id) {
     require_auth(holder);
 
     uint8_t status = 1;
@@ -57,9 +92,10 @@ void telfound::closeissue(name holder, uint64_t ballot_id) {
 	)).send();
 }
 
-void telfound::makelboard(name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
+void tfvt::makeelection(name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
     require_auth(holder);
     eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller must be a TFVT or TFBOARD holder");
+    
     action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regballot"_n, make_tuple(
 		_self,
 		uint8_t(2), //NOTE: makes a leaderboard on Trail
@@ -68,9 +104,10 @@ void telfound::makelboard(name holder, uint32_t begin_time, uint32_t end_time, s
         end_time,
         info_url
 	)).send();
+
 }
 
-void telfound::closelboard(name holder, uint64_t ballot_id) {
+void tfvt::endelection(name holder, uint64_t ballot_id) {
     require_auth(holder);
     eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller is not a tfvt or tfboard token holder");
 
@@ -83,13 +120,15 @@ void telfound::closelboard(name holder, uint64_t ballot_id) {
     auto board = leaderboards.get(bal.reference_id);
 
     auto board_candidates = board.candidates;
-    //TODO: resolve ties
-    sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes > c2.votes; });
+    //TODO: does >= resolve ties?
+    sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes >= c2.votes; });
 
     //add first n candidates after sorting by votes, where n is available seats on leaderboard
     for (uint8_t n = 0; n < board.available_seats; n++) {
         add_to_tfboard(board.candidates[n].member);
     }
+    
+    //TODO: send setallstats() inline to trail
 
     action(permission_level{_self, "active"_n}, "eosio.trail"_n, "closeballot"_n, make_tuple(
 		_self,
@@ -103,7 +142,7 @@ void telfound::closelboard(name holder, uint64_t ballot_id) {
 
 #pragma region Helper_Functions
 
-void telfound::add_to_tfboard(name nominee) {
+void tfvt::add_to_tfboard(name nominee) {
     nominees_table noms(_self, _self.value);
     auto n = noms.find(nominee.value);
     eosio_assert(n != noms.end(), "nominee doesn't exist in table");
@@ -119,7 +158,7 @@ void telfound::add_to_tfboard(name nominee) {
     });
 }
 
-void telfound::rmv_from_tfboard(name member) {
+void tfvt::rmv_from_tfboard(name member) {
     members_table mems(_self, _self.value);
     auto m = mems.find(member.value);
     eosio_assert(m != mems.end(), "member is not on the board");
@@ -127,7 +166,7 @@ void telfound::rmv_from_tfboard(name member) {
     mems.erase(m);
 }
 
-void telfound::addseats(name member, uint8_t num_seats) {
+void tfvt::addseats(name member, uint8_t num_seats) {
     require_auth(member);
     eosio_assert(is_board_member(member), "only board members can add seats");
 
@@ -143,7 +182,7 @@ void telfound::addseats(name member, uint8_t num_seats) {
     configs.set(configs_struct, _self);
 }
 
-bool telfound::is_board_member(name user) {
+bool tfvt::is_board_member(name user) {
     members_table mems(_self, _self.value);
     auto m = mems.find(user.value);
     
@@ -154,7 +193,7 @@ bool telfound::is_board_member(name user) {
     return false;
 }
 
-bool telfound::is_nominee(name user) {
+bool tfvt::is_nominee(name user) {
     nominees_table noms(_self, _self.value);
     auto n = noms.find(user.value);
 
@@ -165,7 +204,7 @@ bool telfound::is_nominee(name user) {
     return false;
 }
 
-bool telfound::is_tfvt_holder(name user) {
+bool tfvt::is_tfvt_holder(name user) {
     balances_table balances(name("eosio.trail"), symbol("TFVT", 0).code().raw());
     auto b = balances.find(user.value);
 
@@ -176,7 +215,7 @@ bool telfound::is_tfvt_holder(name user) {
     return false;
 }
 
-bool telfound::is_tfboard_holder(name user) {
+bool tfvt::is_tfboard_holder(name user) {
     balances_table balances(name("eosio.trail"), symbol("TFBOARD", 0).code().raw());
     auto b = balances.find(user.value);
 
@@ -189,4 +228,4 @@ bool telfound::is_tfboard_holder(name user) {
 
 #pragma endregion Helper_Functions
 
-EOSIO_DISPATCH(telfound, (setconfig)(nominate)(makeissue)(closeissue)(makelboard)(closelboard))
+EOSIO_DISPATCH(tfvt, (inittfvt)(inittfboard)(setconfig)(nominate)(makeissue)(closeissue)(makeelection)(endelection))
