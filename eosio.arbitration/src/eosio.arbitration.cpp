@@ -23,7 +23,7 @@ uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees) 
 
   eosio_assert(max_elected_arbs < uint16_t(21), "Maximum elected arbitrators must be less than 22."); 
   eosio_assert(max_elected_arbs > uint16_t(0), "Arbitraitors must be greater than 0");
-  _config = config{get_Self(),       // publisher
+  _config = config{get_self(),       // publisher
                    max_elected_arbs,
                    election_duration,
                    start_election,
@@ -572,15 +572,18 @@ void arbitration::validate_ipfs_url(string ipfs_url) {
 
 arbitration::config arbitration::get_default_config() {
   vector<int64_t> fees{100000, 200000, 300000};
-  return config {
-      get_self(),     // publisher
-      uint16_t(0),    // max_elected_arbs
-      uint32_t(0),    // election_duration
-      uint32_t(0),    // start_election
-      fees,           // fee_structure
-      uint32_t(0),   // arbitrator_term_length
-      now()           // last_time_edited
+  auto c = config{
+      get_self(),  // publisher
+      uint16_t(0), // max_elected_arbs
+      uint32_t(0), // election_duration
+      uint32_t(0), // start_election
+      fees,        // fee_structure
+      uint32_t(0), // arbitrator_term_length
+      now()        // last_time_edited
   };
+  configs.set(c, get_self());
+
+  return c;
 }
 
 void arbitration::start_new_election(uint8_t available_seats) {

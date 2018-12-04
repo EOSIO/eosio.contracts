@@ -54,6 +54,7 @@ BOOST_FIXTURE_TEST_CASE( set_env, eosio_arb_tester ) try {
    produce_blocks(1);
 
    auto env = get_config();
+   BOOST_REQUIRE_EQUAL(false, env.is_null());
    REQUIRE_MATCHING_OBJECT(
       env, 
       mvo()
@@ -61,9 +62,11 @@ BOOST_FIXTURE_TEST_CASE( set_env, eosio_arb_tester ) try {
          ("max_elected_arbs", uint16_t(20))
          ("election_duration", uint32_t(300))
          ("start_election", uint32_t(now() + 300))
-         ("arbitrator_term_length", uint32_t(now() + (one_day * 10)))
          ("fee_structure", vector<int64_t>({int64_t(1), int64_t(2), int64_t(3), int64_t(4)}))
+         ("arbitrator_term_length", uint32_t(now() + (one_day * 10)))
          ("last_time_edited", now())
+         ("ballot_id", 0)
+         ("auto_start_election", false)
    );
 } FC_LOG_AND_RETHROW()
 
