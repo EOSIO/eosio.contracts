@@ -144,7 +144,7 @@ namespace eosiosystem {
       bool                  is_active = true;
       std::string           url;
       uint32_t              unpaid_blocks = 0;
-      uint32_t              lifetime_unpaid_blocks = 0;
+      uint32_t              lifetime_produced_blocks = 0;
       uint32_t              missed_blocks_per_rotation = 0;
       uint32_t              lifetime_missed_blocks = 0;
       time_point            last_claim_time;
@@ -191,7 +191,7 @@ namespace eosiosystem {
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
-                        (unpaid_blocks)(lifetime_unpaid_blocks)(missed_blocks_per_rotation)(lifetime_missed_blocks)(last_claim_time)
+                        (unpaid_blocks)(lifetime_produced_blocks)(missed_blocks_per_rotation)(lifetime_missed_blocks)(last_claim_time)
                         (location)(kick_reason_id)(kick_reason)(times_kicked)(kick_penalty_hours)(last_time_kicked) )
    };
 
