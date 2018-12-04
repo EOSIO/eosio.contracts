@@ -62,9 +62,9 @@ namespace eosiosystem {
 
    struct [[eosio::table, eosio::contract("eosio.system")]] refund_request {
       name            owner;
-      time_point_sec  request_time;
-      eosio::asset    net_amount;
-      eosio::asset    cpu_amount;
+      std::vector< time_point_sec >  request_time;
+      std::vector< eosio::asset >  net_amount;
+      std::vector< eosio::asset >  cpu_amount;
 
       uint64_t  primary_key()const { return owner.value; }
 
@@ -310,30 +310,22 @@ namespace eosiosystem {
             if ( req != refunds_tbl.end() ) { //need to update refund
                refunds_tbl.modify( req, same_payer, [&]( refund_request& r ) {
                   if ( net_balance.amount < 0 || cpu_balance.amount < 0 ) {
-                     r.request_time = current_time_point();
+                     r.request_time.push_back(current_time_point());
                   }
-                  r.net_amount -= net_balance;
-                  if ( r.net_amount.amount < 0 ) {
-                     net_balance = -r.net_amount;
-                     r.net_amount.amount = 0;
-                  } else {
-                     net_balance.amount = 0;
-                  }
-                  r.cpu_amount -= cpu_balance;
-                  if ( r.cpu_amount.amount < 0 ){
-                     cpu_balance = -r.cpu_amount;
-                     r.cpu_amount.amount = 0;
-                  } else {
-                     cpu_balance.amount = 0;
-                  }
+                  r.net_amount.push_back(-net_balance);
+                  r.cpu_amount.push_back(-cpu_balance);
                });
 
-               eosio_assert( 0 <= req->net_amount.amount, "negative net refund amount" ); //should never happen
-               eosio_assert( 0 <= req->cpu_amount.amount, "negative cpu refund amount" ); //should never happen
+               eosio_assert( 0 <= req->net_amount.at(req->net_amount.size()-1).amount, "negative net refund amount" ); //should never happen
+               eosio_assert( 0 <= req->cpu_amount.at(req->cpu_amount.size()-1).amount, "negative cpu refund amount" ); //should never happen
 
-               if ( req->net_amount.amount == 0 && req->cpu_amount.amount == 0 ) {
-                  refunds_tbl.erase( req );
-                  need_deferred_trx = false;
+               if ( req->net_amount.at(req->net_amount.size()-1).amount == 0 && req->cpu_amount.at(req->cpu_amount.size()-1).amount == 0 ) {
+                 refunds_tbl.modify( req, same_payer, [&]( refund_request& r ) {
+                     r.request_time.pop_back();
+                     r.net_amount.pop_back();
+                     r.cpu_amount.pop_back();
+                     });
+                 need_deferred_trx = false;
                } else {
                   need_deferred_trx = true;
                }
@@ -341,18 +333,18 @@ namespace eosiosystem {
                refunds_tbl.emplace( from, [&]( refund_request& r ) {
                   r.owner = from;
                   if ( net_balance.amount < 0 ) {
-                     r.net_amount = -net_balance;
+                     r.net_amount.push_back(-net_balance);
                      net_balance.amount = 0;
                   } else {
-                     r.net_amount = asset( 0, core_symbol() );
+                     r.net_amount.push_back(asset( 0, core_symbol() ));
                   }
                   if ( cpu_balance.amount < 0 ) {
-                     r.cpu_amount = -cpu_balance;
+                     r.cpu_amount.push_back(-cpu_balance);
                      cpu_balance.amount = 0;
                   } else {
-                     r.cpu_amount = asset( 0, core_symbol() );
+                     r.cpu_amount.push_back(asset( 0, core_symbol() ));
                   }
-                  r.request_time = current_time_point();
+                  r.request_time.push_back(current_time_point());
                });
                need_deferred_trx = true;
             } // else stake increase requested with no existing row in refunds_tbl -> nothing to do with refunds_tbl
@@ -438,15 +430,23 @@ namespace eosiosystem {
       refunds_table refunds_tbl( _self, owner.value );
       auto req = refunds_tbl.find( owner.value );
       eosio_assert( req != refunds_tbl.end(), "refund request not found" );
-      eosio_assert( req->request_time + seconds(refund_delay_sec) <= current_time_point(),
+      eosio_assert( req->request_time.at(0) + seconds(refund_delay_sec) <= current_time_point(),
                     "refund is not available yet" );
 
       INLINE_ACTION_SENDER(eosio::token, transfer)(
          token_account, { {stake_account, active_permission}, {req->owner, active_permission} },
-         { stake_account, req->owner, req->net_amount + req->cpu_amount, std::string("unstake") }
+         { stake_account, req->owner, req->net_amount.at(0) + req->cpu_amount.at(0), std::string("unstake") }
       );
 
-      refunds_tbl.erase( req );
+      if(req->request_time.size() == 1) {
+        refunds_tbl.erase( req );
+      } else {
+        refunds_tbl.modify( req, owner, [&]( refund_request& r ) {
+            r.request_time.erase(r.request_time.begin());
+            r.net_amount.erase(r.net_amount.begin());
+            r.cpu_amount.erase(r.cpu_amount.begin());
+            });
+      }
    }
 
 
