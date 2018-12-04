@@ -1,4 +1,4 @@
-#include "../include/telos.tfvt.hpp"
+#include <telos.tfvt.hpp>
 #include <eosiolib/symbol.hpp>
 //#include <eosiolib/print.hpp>
 
@@ -32,8 +32,8 @@ void tfvt::inittfboard(string initial_info_link) {
     
     action(permission_level{_self, name("active")}, name("eosio.trail"), name("regtoken"), make_tuple(
 		INITIAL_TFBOARD_MAX_SUPPLY, //max_supply
-		_self, //publisher
-		initial_info_link //info_url
+		_self, 						//publisher
+		initial_info_link 			//info_url
 	)).send();
 
     action(permission_level{_self, name("active")}, name("eosio.trail"), name("initsettings"), make_tuple(
@@ -72,7 +72,7 @@ void tfvt::makeissue(name holder, uint32_t begin_time, uint32_t end_time, string
 
     action(permission_level{_self, name("active")}, name("eosio.trail"), name("regballot"), make_tuple(
 		_self,
-		uint8_t(0), //NOTE: makes a proposal on Trail
+		uint8_t(0), 			//NOTE: makes a proposal on Trail
 		symbol("TFVT", 0),
 		begin_time,
         end_time,
@@ -98,13 +98,12 @@ void tfvt::makeelection(name holder, uint32_t begin_time, uint32_t end_time, str
     
     action(permission_level{_self, name("active")}, name("eosio.trail"), name("regballot"), make_tuple(
 		_self,
-		uint8_t(2), //NOTE: makes a leaderboard on Trail
+		uint8_t(2), 			//NOTE: makes a leaderboard on Trail
 		symbol("TFVT", 0),
 		begin_time,
         end_time,
         info_url
 	)).send();
-
 }
 
 void tfvt::addallcands(name holder, uint64_t ballot_id, vector<candidate> new_cands) {
@@ -121,7 +120,6 @@ void tfvt::addallcands(name holder, uint64_t ballot_id, vector<candidate> new_ca
 		ballot_id, //ballot_id
 		new_cands //new_candidates
 	)).send();
-
 }
 
 void tfvt::endelection(name holder, uint64_t ballot_id) {
