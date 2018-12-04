@@ -86,16 +86,25 @@ class eosio_arb_tester : public eosio_trail_tester
 
     // #pragma region actions
 
-    transaction_trace_ptr setconfig(
-        uint16_t max_arbs,
-        uint32_t default_time,
-        vector<int64_t> fees)
+    transaction_trace_ptr setconfig(uint16_t max_elected_arbs, uint32_t election_duration, 
+  uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees)
     {
         signed_transaction trx;
-        trx.actions.emplace_back(get_action(N(eosio.arb), N(setconfig), vector<permission_level>{{N(eosio.arb), config::active_name}},
-                                            mvo()("max_arbs", max_arbs)("default_time", default_time)("fees", fees)));
+        trx.actions.emplace_back(get_action(
+            N(eosio.prods), N(setconfig), 
+            vector<permission_level>{{N(eosio.prods), config::active_name}},
+            mvo()
+                ("publisher", eosio::chain::name("eosio.prods"))
+                ("max_elected_arbs", max_elected_arbs)
+                ("election_duration", election_duration)
+                ("start_election", start_election)
+                ("arbitrator_term_length", arbitrator_term_length)
+                ("fee_structure", fees)
+                ("last_time_edited", now())
+        ));
+
         set_transaction_headers(trx);
-        trx.sign(get_private_key(N(eosio.arb), "active"), control->get_chain_id());
+        trx.sign(get_private_key(N(eosio.prods), "active"), control->get_chain_id());
         return push_transaction(trx);
     }
 

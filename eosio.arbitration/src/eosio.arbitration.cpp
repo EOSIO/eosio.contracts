@@ -18,7 +18,7 @@ arbitration::~arbitration() {
 }
 
 void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duration, uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees) {
-  require_auth2("eosio.prods"_n.value, "active"_n.value);
+  require_auth("eosio"_n);
 
   eosio_assert(max_elected_arbs < uint16_t(21), "Maximum elected arbitrators must be less than 22."); 
   eosio_assert(max_elected_arbs > uint16_t(0), "Arbitraitors must be greater than 0");
@@ -34,7 +34,7 @@ void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duratio
 }
 
 void arbitration::initelection() {
-  require_auth2("eosio.prods"_n.value, "active"_n.value);
+  require_auth("eosio"_n);
 
   eosio_assert(!_config.auto_start_election, "Election is on auto start mode.");
 
