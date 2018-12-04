@@ -125,7 +125,7 @@ namespace eosiosystem {
         auto to_workers = new_tokens - to_producers; //60% to WP's
 
         INLINE_ACTION_SENDER(eosio::token, issue)
-        ("eosio.token"_n, {{"eosio"_n, "active"_n}}, {"eosio"_n, asset(new_tokens, core_symbol()), std:string("Issue new TLOS tokens")});
+        ("eosio.token"_n, {{"eosio"_n, "active"_n}}, {"eosio"_n, asset(new_tokens, core_symbol()), std::string("Issue new TLOS tokens")});
 
         INLINE_ACTION_SENDER(eosio::token, transfer)
         ("eosio.token"_n, {"eosio"_n, "active"_n}, {"eosio"_n, "eosio.saving"_n, asset(to_workers, core_symbol()), std::string("Transfer worker proposal share to eosio.saving account")});
@@ -145,13 +145,13 @@ namespace eosiosystem {
     //calculate shares, should be between 2 and 72 shares
     for (const auto &prod : sortedprods)
     {
-        if (prod.active()) { //only count activated producers
+        if (prod.active()) { 			//only count activated producers
             if (sharecount <= 42) {
-                sharecount += 2; //top producers count as double shares
+                sharecount += 2; 		//top producers count as double shares
             } else if (sharecount >= 43 && sharecount < 72) {
                 sharecount++;
             } else
-            	break; //no need to count past 72 shares
+            	break; 					//no need to count past 72 shares
         }
     }
 
