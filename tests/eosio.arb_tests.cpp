@@ -40,63 +40,30 @@ test matching full object :  warning , if the objects don't match, the error wil
 
 */
 
-
-// BOOST_FIXTURE_TEST_CASE( deposit_system, eosio_arb_tester) try {
-// 	asset local_sum = get_balance(N(eosio.arb));
-// 	for(uint16_t i = 0; i < test_voters.size(); i++) {
-// 		auto deposit_info = get_deposit(test_voters[i].value);
-// 		BOOST_REQUIRE_EQUAL(true, deposit_info.is_null());
-// 		asset sum = asset::from_string("20.0000 TLOS");
-// 		auto voter_balance = get_balance(test_voters[i].value);
-		
-// 		BOOST_REQUIRE_EQUAL(voter_balance, asset::from_string("200.0000 TLOS"));
-// 		std::cout << "transfer " << "1" << " account " << i << std::endl;
-// 		transfer(test_voters[i].value, N(eosio.arb), sum, "arb deposit");
-// 		produce_blocks( 2 );
-// 		auto contract_balance = get_balance(N(eosio.arb));
-// 		BOOST_REQUIRE_EQUAL(contract_balance, local_sum + sum);
-// 		local_sum += sum;
-
-// 		deposit_info = get_deposit(test_voters[i].value);
-// 		REQUIRE_MATCHING_OBJECT(deposit_info, mvo()
-// 			("owner", test_voters[i].to_string())
-// 			("escrow", sum.to_string())
-// 		);
-// 		std::cout << "transfer " << " 2 " << " account " << i << std::endl;
-// 		transfer(test_voters[i].value, N(eosio.arb), sum, "WPS depost");
-// 		produce_blocks( 2 );
-// 		contract_balance = get_balance(N(eosio.arb));
-// 		BOOST_REQUIRE_EQUAL(contract_balance, (local_sum + sum));
-// 		local_sum += sum;
-
-// 		deposit_info = get_deposit(test_voters[i].value);
-// 		REQUIRE_MATCHING_OBJECT(deposit_info, mvo()
-// 			("owner", test_voters[i].to_string())
-// 			("escrow", (sum + sum).to_string())
-// 		);
-
-// 		asset pre_refund = get_balance(test_voters[i].value);
-// 		asset escrow = asset::from_string(get_deposit(test_voters[i].value)["escrow"].as_string());
-// 		getdeposit(test_voters[i].value);
-//             local_sum -= escrow;
-// 		asset post_refund = get_balance(test_voters[i].value);
-
-// 		BOOST_REQUIRE_EQUAL((pre_refund + escrow), post_refund);
-// 	}
-// } FC_LOG_AND_RETHROW()
-
 BOOST_FIXTURE_TEST_CASE( set_env, eosio_arb_tester ) try {
-   setconfig(1111, 2222222, vector<int64_t>({int64_t(1), int64_t(2), int64_t(3), int64_t(4)}));
+   auto one_day = 86400;
+   
+   setconfig (
+   20, 
+   300, 
+   now() + 300, 
+   now() + (one_day * 10), 
+   vector<int64_t>({int64_t(1), int64_t(2), int64_t(3), int64_t(4)},
+   ));
+
    produce_blocks(1);
 
    auto env = get_config();
    REQUIRE_MATCHING_OBJECT(
       env, 
       mvo()
-         ("publisher", eosio::chain::name("eosio.arb"))
-         ("max_arbs", uint16_t(1111))
-         ("default_time", uint32_t(2222222))
+         ("publisher", eosio::chain::name("eosio.prods"))
+         ("max_elected_arbs", uint16_t(20))
+         ("election_duration", uint32_t(300))
+         ("start_election", uint32_t(now() + 300))
+         ("arbitrator_term_length", uint32_t(now() + (one_day * 10))
          ("fee_structure", vector<int64_t>({int64_t(1), int64_t(2), int64_t(3), int64_t(4)}))
+         ("last_time_edited", now())
    );
 } FC_LOG_AND_RETHROW()
 

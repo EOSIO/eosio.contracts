@@ -7,9 +7,6 @@
 
 #include <eosio.arbitration/eosio.arbitration.hpp>
 
-#define DAYS_TO_SECONDS(days) days * 86400
-
-
 arbitration::arbitration(name s, name code, datastream<const char *> ds)
     : eosio::contract(s, code, ds), configs(_self, _self.value) {
 
@@ -20,17 +17,17 @@ arbitration::~arbitration() {
   if (configs.exists()) configs.set(_config, get_self());
 }
 
-void arbitration::setconfig(uint8_t max_elected_arbs, uint32_t election_duration_days, uint32_t start_election_days, uint32_t arb_seat_expiration_time_days, vector<int64_t> fees) {
+void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duration, uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees) {
   require_auth2("eosio.prods"_n.value, "active"_n.value);
 
-  eosio_assert(max_elected_arbs < uint8_t(21), "Maximum elected arbitrators must be less than 22."); 
-  eosio_assert(max_elected_arbs > uint8_t(0), "Arbitraitors must be greater than 0");
+  eosio_assert(max_elected_arbs < uint16_t(21), "Maximum elected arbitrators must be less than 22."); 
+  eosio_assert(max_elected_arbs > uint16_t(0), "Arbitraitors must be greater than 0");
   _config = config{"eosio.prods"_n,  // publisher
                    max_elected_arbs,
-                   election_duration_days,
-                   start_election_days,
+                   election_duration,
+                   start_election,
                    fees,
-                   arb_seat_expiration_time_days,
+                   arbitrator_term_length,
                    now()};
 
   print("\nSettings Configured: SUCCESS");
@@ -56,7 +53,7 @@ void arbitration::initelection() {
   print("\Election started: SUCCESS");
 }
 
-void arbitration::applyforarb(name candidate, string creds_ipfs_url) {
+void arbitration::regarb(name candidate, string creds_ipfs_url) {
   require_auth(candidate);
   
   candidates_table candidates(_self, _self.value);
@@ -68,7 +65,7 @@ void arbitration::applyforarb(name candidate, string creds_ipfs_url) {
   auto arb = arbitrators.find(candidate.value);
 
   if (arb != arbitrators.end()) {
-    eosio_assert(now() < DAYS_TO_SECONDS(arb->seat_expiration_time_days), "Arbitrator seat didn't expire");
+    eosio_assert(now() < arb->term_length, "Arbitrator seat didn't expire");
 
     arbitrators.modify(arb, same_payer, [&](auto &a) {
       a.arb_status = SEAT_EXPIRED;
@@ -100,7 +97,7 @@ void arbitration::applyforarb(name candidate, string creds_ipfs_url) {
   print("\nArb Application: SUCCESS");
 }
 
-void arbitration::cancelarbapp(name candidate) {
+void arbitration::unregarb(name candidate) {
   require_auth(candidate);
   
   candidates_table candidates(_self, _self.value);
@@ -576,18 +573,18 @@ arbitration::config arbitration::get_default_config() {
   vector<int64_t> fees{100000, 200000, 300000};
   return config {
       get_self(),     // publisher
-      uint8_t(10),    // max_elected_arbs
-      uint32_t(7),    // election_duration_days
-      uint32_t(5),    // start_election_days
+      uint16_t(0),    // max_elected_arbs
+      uint32_t(0),    // election_duration
+      uint32_t(0),    // start_election
       fees,           // fee_structure
-      uint32_t(30),   // arb_seat_expiration_time_days
+      uint32_t(0),   // arbitrator_term_length
       now()           // last_time_edited
   };
 }
 
 void arbitration::start_new_election(uint8_t available_seats) {
-  uint32_t begin_time = now() + DAYS_TO_SECONDS(_config.start_election_days);
-  uint32_t end_time = begin_time + DAYS_TO_SECONDS(_config.election_duration_days);
+  uint32_t begin_time = now() + _config.start_election;
+  uint32_t end_time = begin_time + _config.election_duration;
 
   action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "regballot"_n,
          make_tuple(get_self(),         // publisher
@@ -612,7 +609,7 @@ bool arbitration::has_available_seats(arbitrators_table &arbitrators, uint8_t &a
   
   for (auto &arb : arbitrators) {
     // check if arb seat is expired
-    if (now() > DAYS_TO_SECONDS(arb.seat_expiration_time_days) && arb.arb_status != uint16_t(SEAT_EXPIRED)) {
+    if (now() > arb.term_length && arb.arb_status != uint16_t(SEAT_EXPIRED)) {
       arbitrators.modify(arb, same_payer, [&](auto &a) {
         a.arb_status = uint16_t(SEAT_EXPIRED);
       });
@@ -628,7 +625,7 @@ bool arbitration::has_available_seats(arbitrators_table &arbitrators, uint8_t &a
 
 #pragma endregion Helper_Functions
 
-EOSIO_DISPATCH( arbitration, (setconfig)(initelection)(applyforarb)(cancelarbapp)(endelection)
+EOSIO_DISPATCH( arbitration, (setconfig)(initelection)(regarb)(unregarb)(endelection)
                              (filecase)(addclaim)(removeclaim)(shredcase)(readycase)
                              (dismisscase)(closecase)(dismissev)(acceptev)
                              (arbstatus)(casestatus)(changeclass)(recuse)(dismissarb) )

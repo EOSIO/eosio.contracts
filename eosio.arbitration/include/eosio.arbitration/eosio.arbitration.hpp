@@ -121,17 +121,18 @@ public:
   // NOTE: class of claim where neither party can pay fees, TF pays instead
   struct[[eosio::table]] config {
     name publisher;
-    uint8_t max_elected_arbs;
-    uint32_t election_duration_days;
-    uint32_t start_election_days;
+    uint16_t max_elected_arbs;
+    uint32_t election_duration;
+    uint32_t start_election;
     vector<int64_t> fee_structure; 
-    uint32_t arb_seat_expiration_time_days;
+    uint32_t arbitrator_term_length;
     uint32_t last_time_edited;
     uint64_t ballot_id = 0;
     bool auto_start_election = false;     
 
     uint64_t primary_key() const { return publisher.value; }
-    EOSLIB_SERIALIZE(config, (publisher)(max_elected_arbs)(election_duration_days)(start_election_days)(fee_structure)(arb_seat_expiration_time_days)(last_time_edited)(ballot_id)(auto_start_election))
+    EOSLIB_SERIALIZE(config, (publisher)(max_elected_arbs)(election_duration)(start_election)
+    (fee_structure)(arbitrator_term_length)(last_time_edited)(ballot_id)(auto_start_election))
   };
 
   struct[[eosio::table]] arbitrator {
@@ -141,12 +142,12 @@ public:
     vector<uint64_t> closed_case_ids;
     string credential_link; //ipfs_url of credentials
     uint32_t elected_time;
-    uint32_t seat_expiration_time_days;
+    uint32_t term_length;
     vector<string> languages; //NOTE: language codes for space
 
     uint64_t primary_key() const { return arb.value; }
-    EOSLIB_SERIALIZE(arbitrator,
-                     (arb)(arb_status)(open_case_ids)(closed_case_ids)(credential_link)(elected_time)(seat_expiration_time_days)(languages))
+    EOSLIB_SERIALIZE(arbitrator,(arb)(arb_status)(open_case_ids)(closed_case_ids)
+                                (credential_link)(elected_time)(term_length)(languages))
   };
 
   struct[[eosio::table]] claim {
@@ -196,13 +197,14 @@ public:
 
   [[eosio::action]] void initelection();
 
-  [[eosio::action]] void setconfig(uint8_t max_elected_arbs, uint32_t election_duration_days, uint32_t start_election_days, uint32_t arb_seat_expiration_time_days, vector<int64_t> fees);
+  [[eosio::action]] void setconfig(uint16_t max_elected_arbs, uint32_t election_duration, 
+  uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees);
 
 #pragma region Arb_Elections
 
-  [[eosio::action]] void applyforarb( name candidate, string creds_ipfs_url);
+  [[eosio::action]] void regarb( name candidate, string creds_ipfs_url);
 
-  [[eosio::action]] void cancelarbapp( name candidate);
+  [[eosio::action]] void unregarb( name candidate);
 
   [[eosio::action]] void endelection(name candidate); 
                                                       
