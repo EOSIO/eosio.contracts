@@ -17,12 +17,13 @@ arbitration::~arbitration() {
   if (configs.exists()) configs.set(_config, get_self());
 }
 
-void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duration, uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees) {
+void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duration, 
+uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees) {
   require_auth("eosio"_n);
 
   eosio_assert(max_elected_arbs < uint16_t(21), "Maximum elected arbitrators must be less than 22."); 
   eosio_assert(max_elected_arbs > uint16_t(0), "Arbitraitors must be greater than 0");
-  _config = config{"eosio.prods"_n,  // publisher
+  _config = config{get_Self(),       // publisher
                    max_elected_arbs,
                    election_duration,
                    start_election,

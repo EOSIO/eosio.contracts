@@ -91,20 +91,18 @@ class eosio_arb_tester : public eosio_trail_tester
     {
         signed_transaction trx;
         trx.actions.emplace_back(get_action(
-            N(eosio.prods), N(setconfig), 
-            vector<permission_level>{{N(eosio.prods), config::active_name}},
+            N(eosio.arb), N(setconfig), 
+            vector<permission_level>{{N(eosio), config::active_name}},
             mvo()
-                ("publisher", eosio::chain::name("eosio.prods"))
                 ("max_elected_arbs", max_elected_arbs)
                 ("election_duration", election_duration)
                 ("start_election", start_election)
                 ("arbitrator_term_length", arbitrator_term_length)
-                ("fee_structure", fees)
-                ("last_time_edited", now())
-        ));
+                ("fees", fees))
+        );
 
         set_transaction_headers(trx);
-        trx.sign(get_private_key(N(eosio.prods), "active"), control->get_chain_id());
+        trx.sign(get_private_key(N(eosio), "active"), control->get_chain_id());
         return push_transaction(trx);
     }
 

@@ -48,7 +48,7 @@ BOOST_FIXTURE_TEST_CASE( set_env, eosio_arb_tester ) try {
    300, 
    now() + 300, 
    now() + (one_day * 10), 
-   vector<int64_t>({int64_t(1), int64_t(2), int64_t(3), int64_t(4)},
+   vector<int64_t>({int64_t(1), int64_t(2), int64_t(3), int64_t(4)}
    ));
 
    produce_blocks(1);
@@ -57,7 +57,7 @@ BOOST_FIXTURE_TEST_CASE( set_env, eosio_arb_tester ) try {
    REQUIRE_MATCHING_OBJECT(
       env, 
       mvo()
-         ("publisher", eosio::chain::name("eosio.prods"))
+         ("publisher", eosio::chain::name("eosio.arb"))
          ("max_elected_arbs", uint16_t(20))
          ("election_duration", uint32_t(300))
          ("start_election", uint32_t(now() + 300))
