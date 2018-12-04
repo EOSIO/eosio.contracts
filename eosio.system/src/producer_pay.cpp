@@ -125,13 +125,13 @@ namespace eosiosystem {
         auto to_workers = new_tokens - to_producers; //60% to WP's
 
         INLINE_ACTION_SENDER(eosio::token, issue)
-        ("eosio.token"_n, {{"eosio"_n, "active"_n}}, {"eosio"_n, asset(new_tokens, core_symbol()), "Issue new TLOS tokens"});
+        ("eosio.token"_n, {{"eosio"_n, "active"_n}}, {"eosio"_n, asset(new_tokens, core_symbol()), std:string("Issue new TLOS tokens")});
 
         INLINE_ACTION_SENDER(eosio::token, transfer)
-        ("eosio.token"_n, {"eosio"_n, "active"_n}, {"eosio"_n, "eosio.saving"_n, asset(to_workers, core_symbol()), "Transfer worker proposal share to eosio.saving account"});
+        ("eosio.token"_n, {"eosio"_n, "active"_n}, {"eosio"_n, "eosio.saving"_n, asset(to_workers, core_symbol()), std::string("Transfer worker proposal share to eosio.saving account")});
 
         INLINE_ACTION_SENDER(eosio::token, transfer)
-        ("eosio.token"_n, {"eosio"_n, "active"_n}, {"eosio"_n, "eosio.bpay"_n, asset(to_producers, core_symbol()), "Transfer producer share to per-block bucket"});
+        ("eosio.token"_n, {"eosio"_n, "active"_n}, {"eosio"_n, "eosio.bpay"_n, asset(to_producers, core_symbol()), std::string("Transfer producer share to per-block bucket")});
 
         _gstate.perblock_bucket += to_producers;
         _gstate.last_pervote_bucket_fill = ct;
