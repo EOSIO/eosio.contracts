@@ -516,7 +516,7 @@ void trail::mirrorcast(name voter, symbol token_symbol) {
     
     if (cb != counterbals.end()) { //NOTE: if no cb found, give cb of 0
         auto counter_bal = *cb;
-        eosio_assert(now() - counter_bal.last_decay >= MIN_LOCK_PERIOD, "cannot get more votes until min lock period is over");
+        //eosio_assert(now() - counter_bal.last_decay >= MIN_LOCK_PERIOD, "cannot get more votes until min lock period is over");
         asset new_cb = (counter_bal.decayable_cb - decay_amount); //subtracting total cb
 
 		//TODO: should mirrorcasting add new_votes to counterbalance? same logically as adding when calling issuetokens
@@ -722,6 +722,58 @@ void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate,
     });
 
     print("\nAdd Candidate: SUCCESS");
+}
+
+//TODO: refactor for elections when implemented
+void trail::setallcands(name publisher, uint64_t ballot_id, vector<candidate> new_candidates) {
+    require_auth(publisher);
+
+    //TODO: add validations
+
+    ballots_table ballots(_self, _self.value);
+    auto b = ballots.find(ballot_id);
+    eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
+    auto bal = *b;
+    eosio_assert(bal.table_id == 2, "ballot type doesn't support candidates");
+
+    leaderboards_table leaderboards(_self, _self.value);
+    auto l = leaderboards.find(bal.reference_id);
+    eosio_assert(l != leaderboards.end(), "leaderboard doesn't exist");
+    auto board = *l;
+    eosio_assert(board.publisher == publisher, "cannot change candidates on another account's leaderboard");
+    eosio_assert(now() < board.begin_time , "cannot change candidates once voting has begun");
+
+    leaderboards.modify(l, same_payer, [&]( auto& a ) {
+        a.candidates = new_candidates;
+    });
+
+    print("\nSet All Candidates: SUCCESS");
+}
+
+//TODO: refactor for elections when implemented
+void trail::setallstats(name publisher, uint64_t ballot_id, vector<uint8_t> new_cand_statuses) {
+    require_auth(publisher);
+
+    ballots_table ballots(_self, _self.value);
+    auto b = ballots.find(ballot_id);
+    eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
+    auto bal = *b;
+    eosio_assert(bal.table_id == 2, "ballot type doesn't support candidates");
+
+    leaderboards_table leaderboards(_self, _self.value);
+    auto l = leaderboards.find(bal.reference_id);
+    eosio_assert(l != leaderboards.end(), "leaderboard doesn't exist");
+    auto board = *l;
+    eosio_assert(board.publisher == publisher, "cannot change candidate statuses on another account's leaderboard");
+    eosio_assert(now() > board.end_time , "cannot change candidate statuses until voting has ended");
+
+    auto new_cands = set_candidate_statuses(board.candidates, new_cand_statuses);
+
+    leaderboards.modify(l, same_payer, [&]( auto& a ) {
+        a.candidates = new_cands;
+    });
+
+    print("\nSet All Candidate Statuses: SUCCESS");
 }
 
 //TODO: refactor for elections when implemented
@@ -1201,6 +1253,16 @@ bool trail::has_direction(uint16_t direction, vector<uint16_t> direction_list) {
     return false;
 }
 
+vector<candidate> trail::set_candidate_statuses(vector<candidate> candidate_list, vector<uint8_t> new_status_list) {
+    eosio_assert(candidate_list.size() == new_status_list.size(), "status list does not correctly map to candidate list");
+
+    for (int idx = 0; idx < candidate_list.size(); idx++) {
+        candidate_list[idx].status = new_status_list[idx];
+    }
+
+    return candidate_list;
+}
+
 #pragma endregion Helper_Functions
 
 
@@ -1316,6 +1378,8 @@ extern "C" {
             execute_action(name(self), name(code), &trail::deloldvotes);
         } else if (code == self && action == name("addcandidate").value) {
             execute_action(name(self), name(code), &trail::addcandidate);
+        } else if (code == self && action == name("setallcands").value) {
+            execute_action(name(self), name(code), &trail::setallcands);
         } else if (code == self && action == name("rmvcandidate").value) {
             execute_action(name(self), name(code), &trail::rmvcandidate);
         } else if (code == self && action == name("setseats").value) {
