@@ -253,7 +253,7 @@ void arbitration::endelection(name candidate) {
       print("\nA new election has started.");
    } else {
       for(const auto &cand : candidates) {
-        candidates.erase(c);
+        candidates.erase(cand);
       }
       _config.auto_start_election = false;
       print("\nThere aren't enough seats available or candidates to start a new election.\nUse init action to start a new election.");
