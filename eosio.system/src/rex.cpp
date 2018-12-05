@@ -12,21 +12,9 @@ namespace eosiosystem {
 
       eosio_assert( amount.symbol == core_symbol(), "must deposit core token" );
       eosio_assert( 0 < amount.amount, "must deposit a positive amount" );
-
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { owner, active_permission },
                                                     { owner, rex_account, amount, "deposit to REX fund" } );
-      auto itr = _rexfunds.find( owner.value );
-      if ( itr == _rexfunds.end()  ) {
-         _rexfunds.emplace( owner, [&]( auto& fund ) {
-            fund.owner   = owner;
-            fund.balance = amount;
-         });
-      } else {
-         _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
-            fund.balance.amount += amount.amount;
-         });
-      }
-      
+      transfer_to_fund( owner, amount );
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
 
@@ -38,7 +26,6 @@ namespace eosiosystem {
       eosio_assert( 0 < amount.amount, "must withdraw a positive amount" );
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( owner, amount );
-
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { rex_account, active_permission },
                                                     { rex_account, owner, amount, "withdraw from REX fund" } );
    }
@@ -52,7 +39,6 @@ namespace eosiosystem {
 
       eosio_assert( amount.symbol == core_symbol(), "asset must be core token" );
       eosio_assert( amount.amount > 0, "must use positive amount" );
-      
       transfer_from_fund( from, amount );
       const asset rex_received    = add_to_rex_pool( amount );
       const asset delta_rex_stake = add_to_rex_balance( from, amount, rex_received );
@@ -60,6 +46,14 @@ namespace eosiosystem {
       update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
    }
 
+   /**
+    * @brief Buys REX using staked SYS tokens
+    *
+    * @param owner - owner of staked tokens account name
+    * @param receiver - account name that tokens have previously been staked to
+    * @param from_net - amount of tokens to be unstaked from Net bandwidth and used for REX purchase
+    * @param from_cpu - amount of tokens to be unstaked from CPU bandwidth and used for REX purchase
+    */
    void system_contract::unstaketorex( const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu )
    {
       require_auth( owner );
@@ -92,13 +86,18 @@ namespace eosiosystem {
       const asset payment = from_net + from_cpu;
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { stake_account, active_permission },
                                                     { stake_account, rex_account, payment, "buy REX with staked tokens" } );
-
       const asset rex_received = add_to_rex_pool( payment );
       add_to_rex_balance( owner, payment, rex_received );
       runrex(2);
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ), true );
    }
 
+   /**
+    * @brief Sells REX in exchange for SYS tokens
+    *
+    * @param from - owner of REX tokens
+    * @param rex - amount of REX tokens to be sold
+    */
    void system_contract::sellrex( const name& from, const asset& rex )
    {
       runrex(2);
@@ -150,8 +149,16 @@ namespace eosiosystem {
    }
 
    /**
-    * Uses payment to rent as many SYS tokens as possible and stake them for either cpu or net for the benefit of receiver,
-    * after 30 days the rented SYS delegation of CPU or NET will expire.
+    * Rents as many SYS tokens as determined by market price and stakes them for CPU bandwidth
+    * for the benefit of receiver account. After 30 days the rented SYS delegation of CPU will
+    * expire or be renewed at new market price depending on available loan fund.
+    *
+    * @brief Rents CPU resources for 30 days in exchange for market-determined price
+    *
+    * @param from - account creating and paying for CPU loan
+    * @param receiver - account receiving rented CPU resources
+    * @param loan_payment - tokens paid for the loan
+    * @param loan_fund - additional tokens added to loan fund and used later for loan renewal
     */
    void system_contract::rentcpu( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund )
    {
@@ -162,6 +169,18 @@ namespace eosiosystem {
       update_resource_limits( from, receiver, 0, rented_tokens );
    }
    
+   /**
+    * Rents as many SYS tokens as determined by market price and stakes them for NET bandwidth
+    * for the benefit of receiver account. After 30 days the rented SYS delegation of NET will
+    * expire or be renewed at new market price depending on available loan fund.
+    *
+    * @brief Rents NET resources for 30 days in exchange for market-determined price
+    *
+    * @param from - account creating and paying for NET loan
+    * @param receiver - account receiving rented NET resources
+    * @param loan_payment - tokens paid for the loan
+    * @param loan_fund - additional tokens added to loan fund and used later for loan renewal
+    */
    void system_contract::rentnet( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund )
    {
       require_auth( from );
@@ -171,6 +190,14 @@ namespace eosiosystem {
       update_resource_limits( from, receiver, rented_tokens, 0 );
    }
 
+   /**
+    * @brief Transfers tokens to the fund of a specific CPU loan in order to be used in loan
+    * renewal at expiry
+    *
+    * @param from - loan creator
+    * @param loan_num - loan id
+    * @param payment - tokens added to loan fund
+    */
    void system_contract::fundcpuloan( const name& from, uint64_t loan_num, const asset& payment )
    {
       require_auth( from );
@@ -179,6 +206,14 @@ namespace eosiosystem {
       fund_rex_loan( cpu_loans, from, loan_num, payment  );
    }
 
+   /**
+    * @brief Transfers tokens to the fund of a specific NET loan in order to be used in loan
+    * renewal at expiry
+    *
+    * @param from - loan creator
+    * @param loan_num - loan id
+    * @param payment - tokens added to loan fund
+    */
    void system_contract::fundnetloan( const name& from, uint64_t loan_num, const asset& payment )
    {
       require_auth( from );
@@ -187,6 +222,13 @@ namespace eosiosystem {
       fund_rex_loan( net_loans, from, loan_num, payment );
    }
 
+   /**
+    * @brief Withdraws tokens from the fund of a specific CPU loan
+    *
+    * @param from - loan creator
+    * @param loan_num - loan id
+    * @param amount - tokens to be withdrawn from loan fund 
+    */
    void system_contract::defcpuloan( const name& from, uint64_t loan_num, const asset& amount )
    {     
       require_auth( from );
@@ -195,6 +237,13 @@ namespace eosiosystem {
       defund_rex_loan( cpu_loans, from, loan_num, amount );
    }
 
+   /**
+    * @brief Withdraws tokens from the fund of a specific NET loan
+    *
+    * @param from - loan creator
+    * @param loan_num - loan id
+    * @param amount - tokens to be withdrawn from loan fund
+    */
    void system_contract::defnetloan( const name& from, uint64_t loan_num, const asset& amount )
    {
       require_auth( from );
@@ -203,6 +252,11 @@ namespace eosiosystem {
       defund_rex_loan( net_loans, from, loan_num, amount );
    }
 
+   /**
+    * @brief Updates REX owner vote weight to current value of held REX tokens
+    *
+    * @param owner - owner of REX tokens  
+    */
    void system_contract::updaterex( const name& owner )
    {   
       require_auth( owner );
@@ -229,6 +283,13 @@ namespace eosiosystem {
       process_rex_maturities( itr );
    }
 
+   /**
+    * @brief Performs REX maintenance by processing a specified number of REX sell orders
+    * and expired loans
+    *
+    * @param user - any user can execute this action
+    * @param max - number of each of CPU loans, NET loans, and sell orders to be processed
+    */
    void system_contract::rexexec( const name& user, uint16_t max )
    {
       require_auth( user );
@@ -236,6 +297,12 @@ namespace eosiosystem {
       runrex( max );
    }
 
+   /**
+    * @brief Consolidates REX maturity buckets into one bucket that cannot be sold before
+    * 4 days
+    *
+    * @param owner - account name of REX owner
+    */
    void system_contract::consolidate( const name& owner )
    {
       require_auth( owner );
@@ -247,6 +314,11 @@ namespace eosiosystem {
       consolidate_rex_balance( bitr, rex_in_sell_order );
    }
 
+   /**
+    * @brief Deletes unused REX-related database entries and frees RAM
+    *
+    * @param owner - user account name
+    */
    void system_contract::closerex( const name& owner )
    {
       require_auth( owner );
@@ -468,9 +540,6 @@ namespace eosiosystem {
 
    }
 
-   /**
-    * 
-    */
    template <typename T>
    int64_t system_contract::rent_rex( T& table, const name& from, const name& receiver, const asset& payment, const asset& fund )
    {
@@ -636,12 +705,14 @@ namespace eosiosystem {
       asset to_stake( delta_stake );
       asset rex_in_sell_order( 0, core_symbol() );
       auto itr = _rexorders.find( owner.value );
-      if ( itr != _rexorders.end() && !itr->is_open ) {
-         to_fund.amount  += itr->proceeds.amount;
-         to_stake.amount += itr->stake_change.amount;
-         _rexorders.erase( itr );
-      } else if ( itr != _rexorders.end() ) { // itr->is_open is true
-         rex_in_sell_order.amount = itr->rex_requested.amount;
+      if ( itr != _rexorders.end() ) {
+         if ( itr->is_open ) {
+            rex_in_sell_order.amount = itr->rex_requested.amount;
+         } else {
+            to_fund.amount  += itr->proceeds.amount;
+            to_stake.amount += itr->stake_change.amount;
+            _rexorders.erase( itr );
+         }
       }
 
       if ( to_fund.amount > 0 )
