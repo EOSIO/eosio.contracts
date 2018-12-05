@@ -40,7 +40,7 @@ test matching full object :  warning , if the objects don't match, the error wil
 
 */
 
-BOOST_FIXTURE_TEST_CASE( init_election, eosio_arb_tester ) try {
+BOOST_FIXTURE_TEST_CASE( full_election, eosio_arb_tester ) try {
    auto one_day = 86400;
    
    setconfig (
@@ -69,7 +69,7 @@ BOOST_FIXTURE_TEST_CASE( init_election, eosio_arb_tester ) try {
          ("auto_start_election", false)
    );
    produce_blocks(1);
-   eosio_arb_tester::init_election();
+   dump_trace(eosio_arb_tester::init_election());
    produce_blocks(1);
 
    auto cbid = config["ballot_id"].as_uint64();   
@@ -79,6 +79,9 @@ BOOST_FIXTURE_TEST_CASE( init_election, eosio_arb_tester ) try {
 
    auto leaderboard = get_leaderboard(bid);
    auto lid = leaderboard["board_id"].as_uint64();
+
+   std::cout << "start time: " << leaderboard["begin_time"].as<uint32_t>() << std::endl;
+   std::cout << "end time: " << leaderboard["begin_time"].as<uint32_t>() << std::endl;
 
    BOOST_REQUIRE_EQUAL(bid, lid);
    BOOST_REQUIRE_EQUAL(cbid, lid);
@@ -123,11 +126,14 @@ BOOST_FIXTURE_TEST_CASE( init_election, eosio_arb_tester ) try {
    produce_blocks(1);
 
    eosio_arb_tester::unregarb(candidate1.value);
-   produce_blocks(one_day*10*2);
+   produce_blocks(1);
 
+   produce_block(fc::days(5));
+   produce_blocks(1);
 
-
-
+//    BOOST_REQUIRE_EQUAL( true, now() > leaderboard["end_time"].as<uint32_t>() );
+//    eosio_arb_tester::endelection(candidate2.value);
+//    produce_blocks(1);
 
 
 } FC_LOG_AND_RETHROW()

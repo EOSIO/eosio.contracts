@@ -153,7 +153,7 @@ class eosio_arb_tester : public eosio_trail_tester
     {
         signed_transaction trx;
         trx.actions.emplace_back(get_action(N(eosio.arb), N(endelection), vector<permission_level>{{candidate, config::active_name}},
-                                    mvo()("candidate", candidate));
+                                    mvo()("candidate", candidate)));
         set_transaction_headers(trx);
         trx.sign(get_private_key(candidate, "active"), control->get_chain_id());
         return push_transaction(trx);

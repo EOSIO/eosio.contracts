@@ -607,6 +607,8 @@ void arbitration::start_new_election(uint8_t available_seats) {
           available_seats
         )
       ).send();
+
+      print("\nNew election has started.");
 }
 
 bool arbitration::has_available_seats(arbitrators_table &arbitrators, uint8_t &available_seats) {
