@@ -29,7 +29,7 @@ else()
    set(TEST_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
 
-
+add_subdirectory(eosio.assert)
 add_subdirectory(eosio.bios)
 add_subdirectory(eosio.msig)
 add_subdirectory(eosio.wrap)

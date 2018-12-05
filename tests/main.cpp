@@ -15,6 +15,8 @@
 using namespace eosio_system;
 #define BOOST_TEST_STATIC_LINK
 
+bool write_mode = false;
+
 void translate_fc_exception(const fc::exception &e) {
    std::cerr << "\033[33m" <<  e.to_detail_string() << "\033[0m" << std::endl;
    BOOST_TEST_FAIL("Caught Unexpected Exception");
@@ -25,11 +27,12 @@ boost::unit_test::test_suite* init_unit_test_suite(int argc, char* argv[]) {
    // To have verbose enabled, call "tests/chain_test -- --verbose"
    bool is_verbose = false;
    std::string verbose_arg = "--verbose";
+   std::string write_arg   = "--write";
    for (int i = 0; i < argc; i++) {
-      if (verbose_arg == argv[i]) {
+      if (argv[i] == verbose_arg)
          is_verbose = true;
-         break;
-      }
+      if (argv[i] == write_arg)
+         write_mode = true;
    }
    if(!is_verbose) fc::logger::get(DEFAULT_LOGGER).set_log_level(fc::log_level::off);
 

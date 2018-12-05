@@ -1,0 +1,258 @@
+
+add.manifest: missing authority
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "add.manifest",
+      "authorization": [{
+          "actor": "dapp2",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "account": "dapp1",
+        "appmeta": "distributed app 1",
+        "domain": "https://nowhere",
+        "whitelist": []
+      }
+    }
+  ]
+}
+Exception: missing authority of dapp1
+
+add.manifest
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "add.manifest",
+      "authorization": [{
+          "actor": "dapp1",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "account": "dapp1",
+        "appmeta": "distributed app 1",
+        "domain": "https://nowhere",
+        "whitelist": []
+      }
+    }
+  ]
+}
+transaction pushed
+table: eosio.assert eosio.assert chain.params
+    add row:
+        {
+          "chain_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "chain_name": "",
+          "icon": "0000000000000000000000000000000000000000000000000000000000000000",
+          "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "next_unique_id": 2
+        }
+table: eosio.assert eosio.assert manifests
+    add row:
+        {
+          "unique_id": 1,
+          "id": "49b4217257a723b59bbe6ff46e2d504734e3c4a5233938a4a843ed2bce380e2a",
+          "account": "dapp1",
+          "domain": "https://nowhere",
+          "appmeta": "distributed app 1",
+          "whitelist": []
+        }
+
+add.manifest: duplicate
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "add.manifest",
+      "authorization": [{
+          "actor": "dapp1",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "account": "dapp1",
+        "appmeta": "distributed app 1",
+        "domain": "https://nowhere",
+        "whitelist": []
+      }
+    }
+  ]
+}
+Exception: assertion failure with message: manifest already present
+
+add.manifest: whitelist
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "add.manifest",
+      "authorization": [{
+          "actor": "dapp1",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "account": "dapp1",
+        "appmeta": "distributed app 1",
+        "domain": "https://nowhere",
+        "whitelist": [{
+            "contract": "contract.2",
+            "action": ""
+          },{
+            "contract": "contract.1",
+            "action": "just.this"
+          },{
+            "contract": "contract.3",
+            "action": ""
+          }
+        ]
+      }
+    }
+  ]
+}
+transaction pushed
+table: eosio.assert eosio.assert chain.params
+    change row:
+        {
+          "chain_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "chain_name": "",
+          "icon": "0000000000000000000000000000000000000000000000000000000000000000",
+          "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+          "next_unique_id": 3
+        }
+table: eosio.assert eosio.assert manifests
+    add row:
+        {
+          "unique_id": 2,
+          "id": "50e7051e63420d2912dbbf72e32bc511722057311544d4b3226706354f787433",
+          "account": "dapp1",
+          "domain": "https://nowhere",
+          "appmeta": "distributed app 1",
+          "whitelist": [{
+              "contract": "contract.2",
+              "action": ""
+            },{
+              "contract": "contract.1",
+              "action": "just.this"
+            },{
+              "contract": "contract.3",
+              "action": ""
+            }
+          ]
+        }
+
+del.manifest: not found
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "del.manifest",
+      "authorization": [{
+          "actor": "dapp2",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "id": "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
+      }
+    }
+  ]
+}
+Exception: assertion failure with message: manifest not found
+table: eosio.assert eosio.assert chain.params
+table: eosio.assert eosio.assert manifests
+
+del.manifest: wrong auth
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "del.manifest",
+      "authorization": [{
+          "actor": "dapp2",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "id": "50e7051e63420d2912dbbf72e32bc511722057311544d4b3226706354f787433"
+      }
+    }
+  ]
+}
+Exception: missing authority of dapp1
+table: eosio.assert eosio.assert chain.params
+table: eosio.assert eosio.assert manifests
+
+del.manifest
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "del.manifest",
+      "authorization": [{
+          "actor": "dapp1",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "id": "50e7051e63420d2912dbbf72e32bc511722057311544d4b3226706354f787433"
+      }
+    }
+  ]
+}
+transaction pushed
+table: eosio.assert eosio.assert chain.params
+table: eosio.assert eosio.assert manifests
+    del row:
+        {
+          "unique_id": 2,
+          "id": "50e7051e63420d2912dbbf72e32bc511722057311544d4b3226706354f787433",
+          "account": "dapp1",
+          "domain": "https://nowhere",
+          "appmeta": "distributed app 1",
+          "whitelist": [{
+              "contract": "contract.2",
+              "action": ""
+            },{
+              "contract": "contract.1",
+              "action": "just.this"
+            },{
+              "contract": "contract.3",
+              "action": ""
+            }
+          ]
+        }
+
+del.manifest
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "del.manifest",
+      "authorization": [{
+          "actor": "dapp1",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "id": "49b4217257a723b59bbe6ff46e2d504734e3c4a5233938a4a843ed2bce380e2a"
+      }
+    }
+  ]
+}
+transaction pushed
+table: eosio.assert eosio.assert chain.params
+table: eosio.assert eosio.assert manifests
+    del row:
+        {
+          "unique_id": 1,
+          "id": "49b4217257a723b59bbe6ff46e2d504734e3c4a5233938a4a843ed2bce380e2a",
+          "account": "dapp1",
+          "domain": "https://nowhere",
+          "appmeta": "distributed app 1",
+          "whitelist": []
+        }

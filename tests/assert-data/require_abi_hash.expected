@@ -1,0 +1,260 @@
+
+setchain
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "setchain",
+      "authorization": [{
+          "actor": "eosio",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "chain_id": "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF",
+        "chain_name": "My Mega Sidechain",
+        "icon": "BEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEF"
+      }
+    }
+  ]
+}
+transaction pushed
+table: eosio.assert eosio.assert chain.params
+    add row:
+        {
+          "chain_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "chain_name": "My Mega Sidechain",
+          "icon": "beefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeef",
+          "hash": "a5e2578a54c35885716a63d70d4b51b227d8aa47ad9a3163c733b79160bb513c",
+          "next_unique_id": 1
+        }
+
+hash: add.manifest
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "add.manifest",
+      "authorization": [{
+          "actor": "wild",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "account": "wild",
+        "appmeta": "distributed app 1",
+        "domain": "https://nowhere",
+        "whitelist": [{
+            "contract": "",
+            "action": ""
+          }
+        ]
+      }
+    }
+  ]
+}
+transaction pushed
+table: eosio.assert eosio.assert chain.params
+    change row:
+        {
+          "chain_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "chain_name": "My Mega Sidechain",
+          "icon": "beefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeef",
+          "hash": "a5e2578a54c35885716a63d70d4b51b227d8aa47ad9a3163c733b79160bb513c",
+          "next_unique_id": 2
+        }
+table: eosio.assert eosio.assert manifests
+    add row:
+        {
+          "unique_id": 1,
+          "id": "4fc817b2e2d537b4a7311df3faeaafcbdfe35b25b19269e89da818a06a4a2997",
+          "account": "wild",
+          "domain": "https://nowhere",
+          "appmeta": "distributed app 1",
+          "whitelist": [{
+              "contract": "",
+              "action": ""
+            }
+          ]
+        }
+
+hash: unknown
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "require",
+      "authorization": [{
+          "actor": "user",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "chain_params_hash": "a5e2578a54c35885716a63d70d4b51b227d8aa47ad9a3163c733b79160bb513c",
+        "manifest_id": "4fc817b2e2d537b4a7311df3faeaafcbdfe35b25b19269e89da818a06a4a2997",
+        "actions": [{
+            "contract": "unk.account",
+            "action": "unk.action"
+          }
+        ],
+        "abi_hashes": [
+          "0000000000000000000000000000000000000000000000000000000000000000"
+        ]
+      }
+    }
+  ]
+}
+transaction pushed
+
+hash: 1
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "require",
+      "authorization": [{
+          "actor": "user",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "chain_params_hash": "a5e2578a54c35885716a63d70d4b51b227d8aa47ad9a3163c733b79160bb513c",
+        "manifest_id": "4fc817b2e2d537b4a7311df3faeaafcbdfe35b25b19269e89da818a06a4a2997",
+        "actions": [{
+            "contract": "bar",
+            "action": "unk.action"
+          }
+        ],
+        "abi_hashes": [
+          "d6878c7fc285a65df6cf02cad9e11532321e6c5a3dc48f6f9fd150bc1b90c378"
+        ]
+      }
+    }
+  ]
+}
+transaction pushed
+
+hash: 3
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "require",
+      "authorization": [{
+          "actor": "user",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "chain_params_hash": "a5e2578a54c35885716a63d70d4b51b227d8aa47ad9a3163c733b79160bb513c",
+        "manifest_id": "4fc817b2e2d537b4a7311df3faeaafcbdfe35b25b19269e89da818a06a4a2997",
+        "actions": [{
+            "contract": "baz",
+            "action": "unk.action"
+          },{
+            "contract": "foo",
+            "action": "unk.action"
+          },{
+            "contract": "baz",
+            "action": "another"
+          },{
+            "contract": "foo",
+            "action": "whoa"
+          },{
+            "contract": "bar",
+            "action": "unk.action"
+          }
+        ],
+        "abi_hashes": [
+          "d6878c7fc285a65df6cf02cad9e11532321e6c5a3dc48f6f9fd150bc1b90c378",
+          "58e2dec1abd4dcbf8121736b39b07f5db4a1dd29025c44023c7a37d305e40b14",
+          "b82da7015d860512403b6fec2188ffb8b1803d07df654bb79986465f2d5895c6"
+        ]
+      }
+    }
+  ]
+}
+transaction pushed
+
+hash: mismatch
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "require",
+      "authorization": [{
+          "actor": "user",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "chain_params_hash": "a5e2578a54c35885716a63d70d4b51b227d8aa47ad9a3163c733b79160bb513c",
+        "manifest_id": "4fc817b2e2d537b4a7311df3faeaafcbdfe35b25b19269e89da818a06a4a2997",
+        "actions": [{
+            "contract": "baz",
+            "action": "unk.action"
+          },{
+            "contract": "foo",
+            "action": "unk.action"
+          },{
+            "contract": "baz",
+            "action": "another"
+          },{
+            "contract": "foo",
+            "action": "whoa"
+          },{
+            "contract": "bar",
+            "action": "unk.action"
+          }
+        ],
+        "abi_hashes": [
+          "d6878c7fc285a65df6cf02cad9e11532321e6c5a3dc48f6f9fd150bc1b90c378",
+          "1231231231231231231231231231231231231231231231231231231231231233",
+          "b82da7015d860512403b6fec2188ffb8b1803d07df654bb79986465f2d5895c6"
+        ]
+      }
+    }
+  ]
+}
+Exception: assertion failure with message: baz abi hash is 58e2dec1abd4dcbf8121736b39b07f5db4a1dd29025c44023c7a37d305e40b14 but user expected 1231231231231231231231231231231231231231231231231231231231231233
+
+hash: wrong number of hashes
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "require",
+      "authorization": [{
+          "actor": "user",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "chain_params_hash": "a5e2578a54c35885716a63d70d4b51b227d8aa47ad9a3163c733b79160bb513c",
+        "manifest_id": "4fc817b2e2d537b4a7311df3faeaafcbdfe35b25b19269e89da818a06a4a2997",
+        "actions": [{
+            "contract": "baz",
+            "action": "unk.action"
+          },{
+            "contract": "foo",
+            "action": "unk.action"
+          },{
+            "contract": "baz",
+            "action": "another"
+          },{
+            "contract": "foo",
+            "action": "whoa"
+          },{
+            "contract": "bar",
+            "action": "unk.action"
+          }
+        ],
+        "abi_hashes": [
+          "d6878c7fc285a65df6cf02cad9e11532321e6c5a3dc48f6f9fd150bc1b90c378",
+          "b82da7015d860512403b6fec2188ffb8b1803d07df654bb79986465f2d5895c6"
+        ]
+      }
+    }
+  ]
+}
+Exception: assertion failure with message: incorrect number of abi hashes

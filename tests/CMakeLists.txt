@@ -31,3 +31,5 @@ include_directories(${CMAKE_BINARY_DIR})
 file(GLOB UNIT_TESTS "*.cpp" "*.hpp")
 
 add_eosio_test( unit_test ${UNIT_TESTS} )
+
+target_compile_options(unit_test PUBLIC -DASSERT_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assert-data/")

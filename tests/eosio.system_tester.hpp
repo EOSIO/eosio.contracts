@@ -26,6 +26,7 @@ using mvo = fc::mutable_variant_object;
 #endif
 #endif
 
+extern bool write_mode;
 
 namespace eosio_system {
 

@@ -1,0 +1,11 @@
+{
+   "version": "eosio::abi/1.0",
+   "types": [{
+      "new_type_name": "baz",
+      "type": "name"
+   }],
+   "structs": [],
+   "tables": [],
+   "ricardian_clauses": [],
+   "abi_extensions": []
+}

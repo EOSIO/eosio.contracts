@@ -1,0 +1,82 @@
+
+setchain: missing authority
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "setchain",
+      "authorization": [{
+          "actor": "someone",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "chain_id": "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF",
+        "chain_name": "My Mega Sidechain",
+        "icon": "BEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEF"
+      }
+    }
+  ]
+}
+Exception: missing authority of eosio
+table: eosio.assert eosio.assert chain.params
+
+setchain
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "setchain",
+      "authorization": [{
+          "actor": "eosio",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "chain_id": "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF",
+        "chain_name": "My Mega Sidechain",
+        "icon": "BEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEF"
+      }
+    }
+  ]
+}
+transaction pushed
+table: eosio.assert eosio.assert chain.params
+    add row:
+        {
+          "chain_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "chain_name": "My Mega Sidechain",
+          "icon": "beefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeefbeef",
+          "hash": "a5e2578a54c35885716a63d70d4b51b227d8aa47ad9a3163c733b79160bb513c",
+          "next_unique_id": 1
+        }
+
+setchain: update
+=========================
+push_transaction {
+  "actions": [{
+      "account": "eosio.assert",
+      "name": "setchain",
+      "authorization": [{
+          "actor": "eosio",
+          "permission": "active"
+        }
+      ],
+      "data": {
+        "chain_id": "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF",
+        "chain_name": "Renamed",
+        "icon": "123412341234123412341234123412341234123412341234123412341234FEED"
+      }
+    }
+  ]
+}
+transaction pushed
+table: eosio.assert eosio.assert chain.params
+    change row:
+        {
+          "chain_id": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "chain_name": "Renamed",
+          "icon": "123412341234123412341234123412341234123412341234123412341234feed",
+          "hash": "069bae993de6821d0f311f73589486e17178473fa2e75052c7a9b7885775f06d",
+          "next_unique_id": 1
+        }
