@@ -196,7 +196,12 @@ void arbitration::endelection(name candidate) {
 
       // add current arbitrators to permission list
       for(const auto &a : arbitrators) {
-        if(a.arb_status != uint16_t(SEAT_EXPIRED)) {
+        // making sure that the arbitrator is unique on the list
+        auto current_arb =  std::find_if(arbs_perms.begin(), arbs_perms.end(), [&](const auto &ap){
+            return ap.permission.actor == a.arb; 
+        });
+        
+        if(a.arb_status != uint16_t(SEAT_EXPIRED) && current_arb == arbs_perms.end()) {
           arbs_perms.emplace_back( permission_level_weight { permission_level{  a.arb,  "active"_n }, 1 });
         }
       }

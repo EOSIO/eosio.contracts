@@ -111,14 +111,13 @@ BOOST_FIXTURE_TEST_CASE( full_election, eosio_arb_tester ) try {
    name dropout_candidate = test_voters[3];
    name noncandidate = test_voters[4];
 
-	symbol vote_symbol = symbol(4, "VOTE");
+   symbol vote_symbol = symbol(4, "VOTE");
    register_voters(test_voters, 5, 30, vote_symbol);
 
    // verify they aren't registered yet
    BOOST_REQUIRE_EQUAL(true, get_candidate(candidate1.value).is_null());
    BOOST_REQUIRE_EQUAL(true, get_candidate(candidate2.value).is_null());
    BOOST_REQUIRE_EQUAL(true, get_candidate(candidate3.value).is_null());
-
 
    for(int i = 0; i <= 3; i++){
       // register 
@@ -166,10 +165,19 @@ BOOST_FIXTURE_TEST_CASE( full_election, eosio_arb_tester ) try {
    produce_block(fc::seconds(start_election));
    produce_blocks(1);
    
+   for(int i = 5; i < 30; i++) {
+      mirrorcast(test_voters[i].value, symbol(4, "TLOS"));
+  
 
-   // todo : voting
-   
+      uint16_t vote_direction_0 = 0;      
+      uint16_t vote_direction_1 = ( i % 3 == 0 ) ? uint16_t(2) : uint16_t(1);
+      
+      castvote(test_voters[i].value, config["ballot_id"].as_uint64(), vote_direction_0);
+      castvote(test_voters[i].value, config["ballot_id"].as_uint64(), vote_direction_1);
 
+      
+      produce_blocks(1);
+   }
 
    // re-registerd dropout during election => he will be part of next election
    regarb(dropout_candidate, std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition1/"));
@@ -223,23 +231,6 @@ BOOST_FIXTURE_TEST_CASE( full_election, eosio_arb_tester ) try {
    c = get_candidate(dropout_candidate.value);
    BOOST_REQUIRE_EQUAL( c["cand_name"].as<name>(), dropout_candidate );
    BOOST_REQUIRE_EQUAL( c["credential_link"],  std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition1/") );
-
-
-   /*
-      - People with 0 votes can pass [4 seats, 3 candidates, 0 votes, all pass]
-
-      Weird case : 
-      - candidates call regarb after all elections are over 
-      - bps start new election 
-         => existing candidates are completely ignored until the end of the new election
-         => because candidates are added tot the election in endelection
-         => and if tehere's no remaining candidates, there will be no automatic election to add them
-      - UNLESS they unregarb , and then regarb again 
-
-      Weird case part 2:
-      - all candidates tie => a new election starts => cyclic, forever
-   */
-
 
 } FC_LOG_AND_RETHROW()
 
