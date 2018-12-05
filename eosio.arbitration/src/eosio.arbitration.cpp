@@ -74,6 +74,8 @@ void arbitration::regarb(name candidate, string creds_ipfs_url) {
     });
   }
 
+  // todo : assert if ballot ended 
+
   ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
   auto b = ballots.get(_config.ballot_id, "ballot doesn't exist");
 
@@ -148,13 +150,13 @@ void arbitration::endelection(name candidate) {
       auto first_cand_out = board_candidates[board_candidates.size() - 1];
 
       // remove candidates that are tied with first_cand_out
-      uint8_t tied_cands = 0;
+      uint8_t tied_cands = 1;
       for(auto i = board_candidates.size() - 2; i >= 0; i--) {
          auto cand = board_candidates[i];
          if(cand.votes == first_cand_out.votes) tied_cands++;
       }
 
-      if(tied_cands > 0) board_candidates.resize(board_candidates.size() - tied_cands - 1);
+      if(tied_cands > 0) board_candidates.resize(board_candidates.size() - tied_cands);
    
    }
 
@@ -180,10 +182,10 @@ void arbitration::endelection(name candidate) {
             
             // add candidates to arbitration table / arbitration contract
             arbitrators.emplace(_self, [&](auto &a) {
-            a.arb = cand_name;
-            a.arb_status = uint16_t(UNAVAILABLE);
-            a.open_case_ids = vector<uint64_t>();
-            a.closed_case_ids = vector<uint64_t>();
+               a.arb = cand_name;
+               a.arb_status = uint16_t(UNAVAILABLE);
+               a.open_case_ids = vector<uint64_t>();
+               a.closed_case_ids = vector<uint64_t>();
             });
             
             // add ard to list of permissions  
@@ -223,15 +225,16 @@ void arbitration::endelection(name candidate) {
                   )
             ).send();
 
-      // close ballot action.
-      action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "closeballot"_n, 
-               make_tuple(
-                  get_self(), 
-                  _config.ballot_id, 
-                  uint8_t(CLOSED)
-                  )
-            ).send(); 
    }
+
+   // close ballot action.
+   action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "closeballot"_n, 
+            make_tuple(
+               get_self(), 
+               _config.ballot_id, 
+               uint8_t(CLOSED)
+               )
+         ).send(); 
 
    // start new election with remaining candidates 
    // and new candidates that registered after past election had started.

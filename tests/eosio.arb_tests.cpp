@@ -111,6 +111,9 @@ BOOST_FIXTURE_TEST_CASE( full_election, eosio_arb_tester ) try {
    name dropout_candidate = test_voters[3];
    name noncandidate = test_voters[4];
 
+	symbol vote_symbol = symbol(4, "VOTE");
+   register_voters(test_voters, 5, 30, vote_symbol);
+
    // verify they aren't registered yet
    BOOST_REQUIRE_EQUAL(true, get_candidate(candidate1.value).is_null());
    BOOST_REQUIRE_EQUAL(true, get_candidate(candidate2.value).is_null());
@@ -223,6 +226,8 @@ BOOST_FIXTURE_TEST_CASE( full_election, eosio_arb_tester ) try {
 
 
    /*
+      - People with 0 votes can pass [4 seats, 3 candidates, 0 votes, all pass]
+
       Weird case : 
       - candidates call regarb after all elections are over 
       - bps start new election 
