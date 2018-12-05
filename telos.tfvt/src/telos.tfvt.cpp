@@ -26,16 +26,16 @@ tfvt::config tfvt::get_default_config() {
 void tfvt::inittfvt(string initial_info_link) {
     require_auth(_self);
     
-    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regtoken"_n, make_tuple(
-		INITIAL_TFVT_MAX_SUPPLY, 		//max_supply
-		_self, 							//publisher
-		initial_info_link 				//info_url
+    action(permission_level{_self, name("active")}, name("eosio.trail"), name("regtoken"), make_tuple(
+		INITIAL_TFVT_MAX_SUPPLY, //max_supply
+		_self, //publisher
+		initial_info_link //info_url
 	)).send();
 
-    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "initsettings"_n, make_tuple(
-		_self, 								//publisher
-		INITIAL_TFVT_MAX_SUPPLY.symbol, 	//token_symbol
-		INITIAL_TFVT_SETTINGS 				//new_settings
+    action(permission_level{_self, name("active")}, name("eosio.trail"), name("initsettings"), make_tuple(
+		_self, //publisher
+		INITIAL_TFVT_MAX_SUPPLY.symbol, //token_symbol
+		INITIAL_TFVT_SETTINGS //new_settings
 	)).send();
 
     print("\nTFVT Registration and Initialization Actions Sent...");
@@ -44,16 +44,16 @@ void tfvt::inittfvt(string initial_info_link) {
 void tfvt::inittfboard(string initial_info_link) {
     require_auth(_self);
     
-    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regtoken"_n, make_tuple(
+    action(permission_level{_self, name("active")}, name("eosio.trail"), name("regtoken"), make_tuple(
 		INITIAL_TFBOARD_MAX_SUPPLY, //max_supply
 		_self, 						//publisher
 		initial_info_link 			//info_url
 	)).send();
 
-    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "initsettings"_n, make_tuple(
-		_self, 								//publisher
-		INITIAL_TFBOARD_MAX_SUPPLY.symbol, 	//token_symbol
-		INITIAL_TFBOARD_SETTINGS 			//new_settings
+    action(permission_level{_self, name("active")}, name("eosio.trail"), name("initsettings"), make_tuple(
+		_self, //publisher
+		INITIAL_TFBOARD_MAX_SUPPLY.symbol, //token_symbol
+		INITIAL_TFBOARD_SETTINGS //new_settings
 	)).send();
 
     print("\nTFBOARD Registration and Initialization Actions Sent...");
@@ -138,7 +138,7 @@ void tfvt::makeelection(name holder, uint32_t begin_time, uint32_t end_time, str
     require_auth(holder);
     eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller must be a TFVT or TFBOARD holder");
     
-    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regballot"_n, make_tuple(
+    action(permission_level{_self, name("active")}, name("eosio.trail"), name("regballot"), make_tuple(
 		_self,
 		uint8_t(2), 			//NOTE: makes a leaderboard on Trail
 		symbol("TFVT", 0),
@@ -157,10 +157,10 @@ void tfvt::addallcands(name holder, uint64_t ballot_id, vector<candidate> new_ca
     }
 
     //NOTE: requires {_self}@eosio.code to send
-    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "setallcands"_n, make_tuple(
-		_self, 		//publisher
-		ballot_id, 	//ballot_id
-		new_cands 	//new_candidates
+    action(permission_level{_self, name("active")}, name("eosio.trail"), name("setallcands"), make_tuple(
+		_self, //publisher
+		ballot_id, //ballot_id
+		new_cands //new_candidates
 	)).send();
 }
 
@@ -214,7 +214,7 @@ void tfvt::endelection(name holder, uint64_t ballot_id) {
 	).send();
 
 
-    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "closeballot"_n, make_tuple(
+    action(permission_level{_self, name("active")}, name("eosio.trail"), name("closeballot"), make_tuple(
 		_self,
 		ballot_id,
 		status
