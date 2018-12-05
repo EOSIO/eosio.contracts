@@ -2,10 +2,24 @@
 #include <eosiolib/symbol.hpp>
 //#include <eosiolib/print.hpp>
 
-tfvt::tfvt(name self, name code, datastream<const char*> ds) : contract(self, code, ds) {}
+tfvt::tfvt(name self, name code, datastream<const char*> ds)
+: contract(self, code, ds), configs(get_self(), get_self().value) {
+	_config = configs.exists() ? configs.get() : get_default_config();
+}
 
-tfvt::~tfvt() {}
+tfvt::~tfvt() {
+	if(configs.exists()) configs.set(_config, get_self());
+}
 
+tfvt::config tfvt::get_default_config() {
+	auto c = config {
+		get_self(),		//publisher
+		uint8_t(12),	//max seats
+		uint8_t(0)		//open seats
+	};
+	configs.set(c, get_self());
+	return c;
+}
 
 #pragma region Actions
 
@@ -67,9 +81,26 @@ void tfvt::nominate(name nominee, name nominator) {
     });
 }
 
-void tfvt::makeissue(name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
-    require_auth(holder);
+void tfvt::makeissue(ignore<name> holder, 
+		ignore<uint32_t> begin_time, 
+		ignore<uint32_t> end_time, 
+		ignore<string> info_url, 
+		ignore<transaction> transaction) {
 
+	name 	_holder;
+	uint32_t _begin_time;
+	uint32_t _end_time;
+	string _info_url;
+	transaction_header _trx_header;
+
+	_ds >> _holder >> _begin_time >> _end_time >> _info_url;
+
+	const char* trx_pos = _ds.pos();
+	size_t size    = _ds.remaining();
+	_ds >> _trx_header;
+
+    require_auth(_holder);
+	//TODO: take in a packed_transaction for storage.
     action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regballot"_n, make_tuple(
 		_self,
 		uint8_t(0), 			//NOTE: makes a proposal on Trail
@@ -78,13 +109,24 @@ void tfvt::makeissue(name holder, uint32_t begin_time, uint32_t end_time, string
         end_time,
         info_url
 	)).send();
+
+	std::vector<char> pkd_trans;
+	pkd_trans.resize(size);
+	memcpy((char*)pkd_trans.data(), trx_pos, size);
+
+	issues_table issues(get_self(), get_self().value);
+	issues.emplace(_holder, [&](auto& issue) {
+		issue.id = issues.available_primary_key();
+		issue.packed_transaction = pkd_trans;
+	});
 }
 
 void tfvt::closeissue(name holder, uint64_t ballot_id) {
     require_auth(holder);
-
     uint8_t status = 1;
-
+	//TODO: tiebreaker logic here
+	//TODO: if issue passes send pack_trx to msig then erase trx
+			//if issue fails then erase trx
     action(permission_level{_self, "active"_n}, "eosio.trail"_n, "closeballot"_n, make_tuple(
 		_self,
 		ballot_id,
@@ -135,21 +177,50 @@ void tfvt::endelection(name holder, uint64_t ballot_id) {
     auto board = leaderboards.get(bal.reference_id);
 
     auto board_candidates = board.candidates;
-    //TODO: does >= resolve ties?
+
     sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes >= c2.votes; });
 
+	std::vector<permission_level_weight> board_perms;
     //add first n candidates after sorting by votes, where n is available seats on leaderboard
     for (uint8_t n = 0; n < board.available_seats; n++) {
         add_to_tfboard(board.candidates[n].member);
+		
+		//tie checking logic here
+
+		board_perms.emplace_back(
+			permission_level_weight{ permission_level{
+				board.candidates[n].member,
+				"active"_n
+			}, 1}
+		);
     }
     
     //TODO: send setallstats() inline to trail
+	//TODO: update tf@active permission
+			//set threhold to low 1/4 or 1/5 of total board members
+	uint16_t weight = _config.max_board_seats / 4;
+	action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
+		std::make_tuple(
+			get_self(), 
+			name("active"), 
+			name("owner"),
+			authority {
+				weight, 
+				std::vector<key_weight>{},
+				board_perms,
+				std::vector<wait_weight>{}
+			}
+		)
+	).send();
+
 
     action(permission_level{_self, "active"_n}, "eosio.trail"_n, "closeballot"_n, make_tuple(
 		_self,
 		ballot_id,
 		status
 	)).send();
+
+	//TODO: start run off if needed.
 }
 
 #pragma endregion Actions

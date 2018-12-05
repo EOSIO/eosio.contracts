@@ -13,6 +13,7 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/action.hpp>
 #include <eosiolib/singleton.hpp>
+#include <eosiolib/transaction.hpp>
 
 using namespace std;
 using namespace eosio;
@@ -24,6 +25,43 @@ public:
     tfvt(name self, name code, datastream<const char*> ds);
 
     ~tfvt();
+	#pragma region native
+
+	struct permission_level_weight {
+      permission_level  permission;
+      uint16_t          weight;
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( permission_level_weight, (permission)(weight) )
+   };
+
+   struct key_weight {
+      eosio::public_key  key;
+      uint16_t           weight;
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( key_weight, (key)(weight) )
+   };
+
+   struct wait_weight {
+      uint32_t           wait_sec;
+      uint16_t           weight;
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( wait_weight, (wait_sec)(weight) )
+   };
+
+   struct authority {
+      uint32_t                              threshold = 0;
+      std::vector<key_weight>               keys;
+      std::vector<permission_level_weight>  accounts;
+      std::vector<wait_weight>              waits;
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts)(waits) )
+   };
+
+	#pragma endregion native
 
     #pragma region Constants
 
@@ -82,12 +120,25 @@ public:
         EOSLIB_SERIALIZE(config, (publisher)(max_board_seats)(open_seats))
     };
 
+	struct [[eosio::table]] issue {
+		uint64_t id;
+		std::vector<char> packed_transaction;
+		//QUESTION: should we store the ipfs link
+
+		uint64_t primary_key() const { return id; }
+	};
+
+	//TODO: create multisig compatible packed_trx table for proposals.
     
     typedef multi_index<name("nominees"), board_nominee> nominees_table;
 
     typedef multi_index<name("boardmembers"), board_member> members_table;
 
+	typedef multi_index<name("issues"), issue> issues_table;
+
     typedef singleton<name("configs"), config> config_table;
+	config_table configs;
+  	config _config;
 
 
     [[eosio::action]] //NOTE: sends inline actions to register and initialize TFVT token registry
@@ -103,7 +154,11 @@ public:
     void nominate(name nominee, name nominator);
 
     [[eosio::action]]
-    void makeissue(name holder, uint32_t begin_time, uint32_t end_time, string info_url);
+    void makeissue(ignore<name> holder, 
+		ignore<uint32_t> begin_time, 
+		ignore<uint32_t> end_time, 
+		ignore<string> info_url, 
+		ignore<transaction> transaction);
 
     [[eosio::action]]
     void closeissue(name holder, uint64_t ballot_id);
@@ -117,9 +172,13 @@ public:
     [[eosio::action]]
     void endelection(name holder, uint64_t ballot_id);
 
+	//TODO: board member multisig kick action
+			//Starts run off leaderboard at start/end
 
+	//TODO: the ability to create and manage new positions
 
     #pragma region Helper_Functions
+	config get_default_config();
 
     void add_to_tfboard(name nominee);
 
