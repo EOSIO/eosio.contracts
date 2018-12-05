@@ -42,6 +42,7 @@ void arbitration::initelection() {
   ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
   
   _config.ballot_id = ballots.available_primary_key();
+  
   _config.auto_start_election = true;
 
   arbitrators_table arbitrators(_self, _self.value);
@@ -51,7 +52,7 @@ void arbitration::initelection() {
     start_new_election(available_seats);
   }
 
-  print("\Election started: SUCCESS");
+  print("\nElection started: SUCCESS");
 }
 
 void arbitration::regarb(name candidate, string creds_ipfs_url) {

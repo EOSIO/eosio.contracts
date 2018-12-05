@@ -123,7 +123,7 @@ class eosio_arb_tester : public eosio_trail_tester
         signed_transaction trx;
         trx.actions.emplace_back(
             get_action(
-                N(eosio.arb), N(initelection), vector<permission_level>{{N(eosio), config::active_name}},mvo()));
+            N(eosio.arb), N(initelection), vector<permission_level>{{N(eosio), config::active_name}},mvo()));
         set_transaction_headers(trx);
         trx.sign(get_private_key(N(eosio), "active"), control->get_chain_id());
         return push_transaction(trx);
@@ -142,14 +142,14 @@ class eosio_arb_tester : public eosio_trail_tester
     transaction_trace_ptr unregarb(name candidate )
     {
         signed_transaction trx;
-        trx.actions.emplace_back(get_action(N(eosio.arb), N(cancelarbapp), vector<permission_level>{{candidate, config::active_name}},
+        trx.actions.emplace_back(get_action(N(eosio.arb), N(unregarb), vector<permission_level>{{candidate, config::active_name}},
                                             mvo()("candidate", candidate)));
         set_transaction_headers(trx);
         trx.sign(get_private_key(candidate, "active"), control->get_chain_id());
         return push_transaction(trx);
     }
 
-    transaction_trace_ptr endelection(name candidate, uint64_t ballot_id)
+    transaction_trace_ptr endelection(name candidate)
     {
         signed_transaction trx;
         trx.actions.emplace_back(get_action(N(eosio.arb), N(endelection), vector<permission_level>{{candidate, config::active_name}},
