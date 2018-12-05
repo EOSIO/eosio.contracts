@@ -293,4 +293,6 @@ protected:
   
   bool has_available_seats(arbitrators_table &arbitrators, uint8_t &available_seats);
 
+  void add_arbitrator(arbitrators_table &arbitrators, name arb_name);
+
 };

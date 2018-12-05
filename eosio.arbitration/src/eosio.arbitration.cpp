@@ -58,6 +58,14 @@ void arbitration::initelection() {
 void arbitration::regarb(name candidate, string creds_ipfs_url) {
   require_auth(candidate);
   
+  ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
+  auto b = ballots.get(_config.ballot_id, "ballot doesn't exist");
+
+  leaderboards_table leaderboards("eosio.trail"_n, "eosio.trail"_n.value);
+  auto board = leaderboards.get(b.reference_id, "leaderboard doesn't exist");
+
+  eosio_assert(board.status != uint8_t(CLOSED), "A new hasn't started. Use initelection action to start a new election.");
+
   candidates_table candidates(_self, _self.value);
 
   auto c = candidates.find(candidate.value);
@@ -74,14 +82,6 @@ void arbitration::regarb(name candidate, string creds_ipfs_url) {
     });
   }
 
-  // todo : assert if ballot ended 
-
-  ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
-  auto b = ballots.get(_config.ballot_id, "ballot doesn't exist");
-
-  leaderboards_table leaderboards("eosio.trail"_n, "eosio.trail"_n.value);
-  auto board = leaderboards.get(b.reference_id, "leaderboard doesn't exist");
-  
   if(now() < board.begin_time) {
     action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "addcandidate"_n,
          make_tuple(get_self(), 
@@ -171,8 +171,11 @@ void arbitration::endelection(name candidate) {
    // get available seats (up to 21)
   
    // in case there are still candidates (not all tied)
-   if(board_candidates.size() > 0){
+   if(board_candidates.size() > 0) {
       for (int i = 0; i < board.available_seats && i < board_candidates.size(); i++) {
+         auto cand_votes = board_candidates[i].votes.amount;
+         if(cand_votes == 0) continue;
+
          name cand_name = board_candidates[i].member;  
          auto c = candidates.find(cand_name.value);
          
@@ -181,12 +184,7 @@ void arbitration::endelection(name candidate) {
             candidates.erase(c);
             
             // add candidates to arbitration table / arbitration contract
-            arbitrators.emplace(_self, [&](auto &a) {
-               a.arb = cand_name;
-               a.arb_status = uint16_t(UNAVAILABLE);
-               a.open_case_ids = vector<uint64_t>();
-               a.closed_case_ids = vector<uint64_t>();
-            });
+            add_arbitrator(arbitrators, cand_name);
             
             // add ard to list of permissions  
             arbs_perms.emplace_back( permission_level_weight { permission_level{  cand_name,  "active"_n }, 1 });
@@ -196,18 +194,15 @@ void arbitration::endelection(name candidate) {
          }
       }
 
+      // add current arbitrators to permission list
+      for(const auto &a : arbitrators) {
+        if(a.arb_status != uint16_t(SEAT_EXPIRED)) {
+          arbs_perms.emplace_back( permission_level_weight { permission_level{  a.arb,  "active"_n }, 1 });
+        }
+      }
+
       // permissions need to be sorted 
       sort(arbs_perms.begin(), arbs_perms.end(), [](const auto &first, const auto &second) { return first.permission.actor.value < second.permission.actor.value; });
-
-      // i don't know how things are supposed to work so : case : 
-      /*
-         bellow, the permissions will be set for the currently accepted candidates 
-         BUT it will REMOVE all the permissions of the previous arbitrators (that's what update auth does, just SET , not ADD)
-
-         solution : 
-         add to arbs_perms all the arbitrators that should STILL have permission 
-         - i don't know what status affects permissions in which way ... so i'm just leaving this comment here
-      */
 
       // review update auth permissions and weights.
       uint32_t weight = arbs_perms.size() > 0 ? ( 2 * arbs_perms.size() ) / 3 + 1 : 0;
@@ -224,7 +219,6 @@ void arbitration::endelection(name candidate) {
                      }
                   )
             ).send();
-
    }
 
    // close ballot action.
@@ -240,6 +234,7 @@ void arbitration::endelection(name candidate) {
    // and new candidates that registered after past election had started.
    uint8_t available_seats = 0;
    auto remaining_candidates = distance(candidates.begin(), candidates.end());
+
    if ( remaining_candidates > 0 && has_available_seats(arbitrators, available_seats) ) {
       _config.ballot_id = ballots.available_primary_key();
       
@@ -252,11 +247,14 @@ void arbitration::endelection(name candidate) {
                c, 
                c.credential_link
             )
-         ).send();
+         ).send(); 
       }
       
       print("\nA new election has started.");
    } else {
+      for(const auto &cand : candidates) {
+        candidates.erase(c);
+      }
       _config.auto_start_election = false;
       print("\nThere aren't enough seats available or candidates to start a new election.\nUse init action to start a new election.");
    }
@@ -647,6 +645,23 @@ bool arbitration::has_available_seats(arbitrators_table &arbitrators, uint8_t &a
   available_seats = uint8_t(_config.max_elected_arbs - occupied_seats);
   
   return available_seats > 0;
+}
+
+void arbitration::add_arbitrator(arbitrators_table &arbitrators, name arb_name) {
+  auto arb = arbitrators.find(arb_name.value);
+ 
+  if (arb == arbitrators.end()) {
+    arbitrators.emplace(_self, [&](auto &a) {
+      a.arb = arb_name;
+      a.arb_status = uint16_t(UNAVAILABLE);
+      a.open_case_ids = vector<uint64_t>();
+      a.closed_case_ids = vector<uint64_t>();
+    });
+  } else {
+    arbitrators.modify(arb, same_payer, [&](auto &a){
+      a.arb_status = uint16_t(UNAVAILABLE);
+    });
+  }
 }
 
 #pragma endregion Helper_Functions
