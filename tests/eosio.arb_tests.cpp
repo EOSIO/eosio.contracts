@@ -40,7 +40,7 @@ test matching full object :  warning , if the objects don't match, the error wil
 
 */
 
-BOOST_FIXTURE_TEST_CASE( set_env, eosio_arb_tester ) try {
+BOOST_FIXTURE_TEST_CASE( init_election, eosio_arb_tester ) try {
    auto one_day = 86400;
    
    setconfig (
@@ -53,10 +53,10 @@ BOOST_FIXTURE_TEST_CASE( set_env, eosio_arb_tester ) try {
 
    produce_blocks(1);
 
-   auto env = get_config();
-   BOOST_REQUIRE_EQUAL(false, env.is_null());
+   auto config = get_config();
+   BOOST_REQUIRE_EQUAL(false, config.is_null());
    REQUIRE_MATCHING_OBJECT(
-      env, 
+      config, 
       mvo()
          ("publisher", eosio::chain::name("eosio.arb"))
          ("max_elected_arbs", uint16_t(20))
@@ -65,33 +65,51 @@ BOOST_FIXTURE_TEST_CASE( set_env, eosio_arb_tester ) try {
          ("fee_structure", vector<int64_t>({int64_t(1), int64_t(2), int64_t(3), int64_t(4)}))
          ("arbitrator_term_length", uint32_t(now() + (one_day * 10)))
          ("last_time_edited", now())
-         ("ballot_id", 0)
+         ("ballot_id", 500)
          ("auto_start_election", false)
    );
+
+   init_election();
+   
+   auto cbid = config["ballot_id"].as_uint64();   
+//    BOOST_REQUIRE_EQUAL(cbid, 1); 
+   
+   auto ballot = get_ballot(cbid);
+   auto bid = ballot["reference_id"].as_uint64();
+
+   auto leaderboard = get_leaderboard(bid);
+   auto lid = leaderboard["board_id"].as_uint64();
+
+   BOOST_REQUIRE_EQUAL(bid, lid);
+
+   BOOST_REQUIRE_EQUAL(cbid, lid);
+
+
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( apply_cancel_for_arb, eosio_arb_tester ) try {
+
+BOOST_FIXTURE_TEST_CASE( regarb, eosio_arb_tester ) try {
    name candidate1 = test_voters[0];
    wdump((get_candidate(candidate1.value)));
    wdump((candidate1));
 
-   applyforarb(candidate1, std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition0/"));
-   auto candidate = get_candidate(candidate1.value);
-   BOOST_REQUIRE_EQUAL( candidate["cand_name"].as<name>(), candidate1 );
-   BOOST_REQUIRE_EQUAL( candidate["credential_link"],  std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition0/") );
+//    regarb(candidate1, std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition0/"));
+//    auto candidate = get_candidate(candidate1.value);
+//    BOOST_REQUIRE_EQUAL( candidate["cand_name"].as<name>(), candidate1 );
+//    BOOST_REQUIRE_EQUAL( candidate["credential_link"],  std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition0/") );
 
-   BOOST_REQUIRE_EXCEPTION( 
-      applyforarb(candidate1, "/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition1/"), 
-      eosio_assert_message_exception, 
-      eosio_assert_message_is( "Candidate is already an applicant" )
-   );
+//    BOOST_REQUIRE_EXCEPTION( 
+//       applyforarb(candidate1, "/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition1/"), 
+//       eosio_assert_message_exception, 
+//       eosio_assert_message_is( "Candidate is already an applicant" )
+//    );
 
-   cancelarbapp(candidate1);
+//    cancelarbapp(candidate1);
    
-   applyforarb(candidate1, std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition1/"));
-   candidate = get_candidate(candidate1.value);
-   BOOST_REQUIRE_EQUAL( candidate["cand_name"].as<name>(), candidate1 );
-   BOOST_REQUIRE_EQUAL( candidate["credential_link"],  std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition1/") );
+//    applyforarb(candidate1, std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition1/"));
+//    candidate = get_candidate(candidate1.value);
+//    BOOST_REQUIRE_EQUAL( candidate["cand_name"].as<name>(), candidate1 );
+//    BOOST_REQUIRE_EQUAL( candidate["credential_link"],  std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition1/") );
 } FC_LOG_AND_RETHROW()
 
 

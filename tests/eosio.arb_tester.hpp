@@ -86,8 +86,7 @@ class eosio_arb_tester : public eosio_trail_tester
 
     // #pragma region actions
 
-    transaction_trace_ptr setconfig(uint16_t max_elected_arbs, uint32_t election_duration, 
-  uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees)
+    transaction_trace_ptr setconfig(uint16_t max_elected_arbs, uint32_t election_duration, uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees)
     {
         signed_transaction trx;
         trx.actions.emplace_back(get_action(
@@ -107,18 +106,40 @@ class eosio_arb_tester : public eosio_trail_tester
     }
 
     // #pragma region actions_Arb_Elections
+    // fc::variant get_ballot(uint64_t ballot_id)
+    // {
+    //     vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(ballots), ballot_id);
+    //     return data.empty() ? fc::variant() : abi_ser.binary_to_variant("ballot", data, abi_serializer_max_time);
+    // } 
+    
+    // fc::variant get_leaderboard(uint64_t reference_id)
+    // {
+    //     vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(leaderboards), reference_id);
+    //     return data.empty() ? fc::variant() : abi_ser.binary_to_variant("leaderboard", data, abi_serializer_max_time);
+    // } 
 
-    transaction_trace_ptr applyforarb(name candidate, string creds_ipfs_url)
+     transaction_trace_ptr init_election()
     {
         signed_transaction trx;
-        trx.actions.emplace_back(get_action(N(eosio.arb), N(applyforarb), vector<permission_level>{{candidate, config::active_name}},
+        trx.actions.emplace_back(
+            get_action(
+                N(eosio.arb), N(initelection), vector<permission_level>{{N(eosio), config::active_name}},mvo()));
+        set_transaction_headers(trx);
+        trx.sign(get_private_key(N(eosio), "active"), control->get_chain_id());
+        return push_transaction(trx);
+    }
+
+    transaction_trace_ptr regarb(name candidate, string creds_ipfs_url)
+    {
+        signed_transaction trx;
+        trx.actions.emplace_back(get_action(N(eosio.arb), N(regarb), vector<permission_level>{{candidate, config::active_name}},
                                             mvo()("candidate", candidate)("creds_ipfs_url", creds_ipfs_url)));
         set_transaction_headers(trx);
         trx.sign(get_private_key(candidate, "active"), control->get_chain_id());
         return push_transaction(trx);
     }
 
-    transaction_trace_ptr cancelarbapp(name candidate )
+    transaction_trace_ptr unregarb(name candidate )
     {
         signed_transaction trx;
         trx.actions.emplace_back(get_action(N(eosio.arb), N(cancelarbapp), vector<permission_level>{{candidate, config::active_name}},
@@ -193,16 +214,6 @@ class eosio_arb_tester : public eosio_trail_tester
 
     // #pragma endregion actions_Case_Setup
     // #pragma region actions_Member_Only
-
-    transaction_trace_ptr vetoarb(uint64_t case_id, name arb, name selector)
-    {   
-        signed_transaction trx;
-        trx.actions.emplace_back(get_action(N(eosio.arb), N(fname), vector<permission_level>{{arb, config::active_name}},
-                                            mvo()("case_id", case_id)("arb", arb)("selector", selector) ));
-        set_transaction_headers(trx);
-        trx.sign(get_private_key(arb, "active"), control->get_chain_id());
-        return push_transaction(trx);
-    }
 
     #pragma endregion actions_Member_Only
     #pragma region actions_Arb_Only

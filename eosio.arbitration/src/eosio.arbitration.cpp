@@ -192,7 +192,7 @@ void arbitration::endelection(name candidate) {
   }
 
   // review update auth permissions and weights.
-  uint32_t weight = ( 2 * arbs_perms.size() ) / 3 + 1;
+  uint32_t weight = arbs_perms.size() > 0 ? ( 2 * arbs_perms.size() ) / 3 + 1 : 0;
   action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
          std::make_tuple(
              get_self(), 
