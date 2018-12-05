@@ -516,7 +516,7 @@ void trail::mirrorcast(name voter, symbol token_symbol) {
     
     if (cb != counterbals.end()) { //NOTE: if no cb found, give cb of 0
         auto counter_bal = *cb;
-        eosio_assert(now() - counter_bal.last_decay >= MIN_LOCK_PERIOD, "cannot get more votes until min lock period is over");
+        //eosio_assert(now() - counter_bal.last_decay >= MIN_LOCK_PERIOD, "cannot get more votes until min lock period is over");
         asset new_cb = (counter_bal.decayable_cb - decay_amount); //subtracting total cb
 
 		//TODO: should mirrorcasting add new_votes to counterbalance? same logically as adding when calling issuetokens
