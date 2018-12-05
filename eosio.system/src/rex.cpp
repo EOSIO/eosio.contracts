@@ -6,6 +6,12 @@
 
 namespace eosiosystem {
 
+   /**
+    * @brief Deposits SYS tokens to user REX fund
+    *
+    * @param owner - REX fund owner
+    * @param amount - amount of tokens to be deposited
+    */
    void system_contract::deposit( const name& owner, const asset& amount )
    {
       require_auth( owner );
@@ -17,7 +23,12 @@ namespace eosiosystem {
       transfer_to_fund( owner, amount );
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
-
+   /**
+    * @brief Withdraws SYS tokens from user REX fund
+    *
+    * @param owner - REX fund owner
+    * @param amount - amount of tokens to be withdrawn
+    */
    void system_contract::withdraw( const name& owner, const asset& amount )
    {
       require_auth( owner );
@@ -31,7 +42,10 @@ namespace eosiosystem {
    }
 
    /**
-    * Transfers SYS tokens from user balance and credits converts them to REX stake.
+    * @brief Buys REX in exchange for SYS tokens taken out of user REX fund
+    *
+    * @param from - owner account name
+    * @param amount - amount of SYS tokens to be used for purchase
     */
    void system_contract::buyrex( const name& from, const asset& amount )
    {
@@ -757,7 +771,8 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Calculates maturity time of purchased REX tokens
+    * @brief Calculates maturity time of purchased REX tokens which is 4 days from end
+    * of the day UTC
     *
     * @return time_point_sec
     */
@@ -765,7 +780,7 @@ namespace eosiosystem {
    {
       const uint32_t num_of_maturity_buckets = 4;
       static const uint32_t now = current_time_point_sec().utc_seconds;
-      static const uint32_t r = (current_time_point_sec().utc_seconds + 1) % seconds_per_day;
+      static const uint32_t r = now % seconds_per_day;
       static const time_point_sec rms{ now - r + (num_of_maturity_buckets + 1) * seconds_per_day };
       return rms;
    }
@@ -787,10 +802,10 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief 
+    * @brief Consolidate REX maturity buckets into one.
     *
-    * @param bitr - 
-    * @param rex_in_sell_order - 
+    * @param bitr - iterator pointing to rex_balance object
+    * @param rex_in_sell_order - REX tokens in owner unfilled sell order, if one exists 
     */
    void system_contract::consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
                                                   const asset& rex_in_sell_order ) 
