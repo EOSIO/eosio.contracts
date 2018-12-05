@@ -57,7 +57,7 @@ namespace eosio {
             return ac.balance;
          }
 
-         static account_name_t get_issuer( name token_contract_account, symbol_code sym_code )
+         static name get_issuer( name token_contract_account, symbol_code sym_code )
          {
             stats statstable( token_contract_account, sym_code.raw() );
             const auto& st = statstable.get( sym_code.raw() );
