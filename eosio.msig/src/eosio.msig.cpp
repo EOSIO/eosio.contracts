@@ -1,6 +1,7 @@
 #include <eosio.msig/eosio.msig.hpp>
 #include <eosiolib/action.hpp>
 #include <eosiolib/permission.hpp>
+#include <eosiolib/crypto.hpp>
 
 namespace eosio {
 
@@ -57,8 +58,16 @@ void multisig::propose( ignore<name> proposer,
    });
 }
 
-void multisig::approve( name proposer, name proposal_name, permission_level level ) {
+void multisig::approve( name proposer, name proposal_name, permission_level level,
+                        const eosio::binary_extension<eosio::checksum256>& proposal_hash )
+{
    require_auth( level );
+
+   if( proposal_hash ) {
+      proposals proptable( _self, proposer.value );
+      auto& prop = proptable.get( proposal_name.value, "proposal not found" );
+      assert_sha256( prop.packed_transaction.data(), prop.packed_transaction.size(), *proposal_hash );
+   }
 
    approvals apptable(  _self, proposer.value );
    auto apps_it = apptable.find( proposal_name.value );

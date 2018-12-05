@@ -248,8 +248,8 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 	symbol vote_symbol = symbol(4, "VOTE");
    register_voters(test_voters, 0, total_voters - 1, vote_symbol);
    
-   auto registry_info = get_registry(vote_symbol);
-   BOOST_REQUIRE_EQUAL(registry_info["total_voters"], total_voters - 1);
+   auto registry_info = get_registry(symbol(4, "VOTE"));
+		BOOST_REQUIRE_EQUAL(registry_info["total_voters"], total_voters - 1);
 
    name proposer = test_voters[total_voters - 1];
    transfer(N(eosio), proposer.value, asset::from_string("1800.0000 TLOS"), "Blood Money");
@@ -343,7 +343,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // voting window (#0) started
    // not enough voters in first cycle
-   for(int i = 0; i < quorum_voters_size_fail; i++){
+   for(int i = 0; i < quorum_voters_size_fail; i++) {
       mirrorcast(quorum[i].value, symbol(4, "TLOS"));
 
       // fail vote from lack of voters, but get fee
@@ -363,10 +363,6 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    produce_block(fc::seconds(2500000)); // end the cycle
    produce_blocks(1);
-
-   wdump((get_proposal(0)));
-   wdump((get_proposal(1)));
-   wdump((now()));
 
    // CLAIM: get fee back
    claim_proposal_funds(0, proposer.value);
@@ -416,9 +412,10 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    claim_proposal_funds(1, proposer.value);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
 
-   // // CLAIM: fee from proposal 0 should be added to account
+   // // CLAIM: nothing to claim
    claim_proposal_funds(0, proposer.value);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("200.0000"), get_balance( test_voters[0] ) );
 
    produce_blocks(2);
 
