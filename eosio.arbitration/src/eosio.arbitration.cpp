@@ -64,7 +64,7 @@ void arbitration::regarb(name candidate, string creds_ipfs_url) {
   leaderboards_table leaderboards("eosio.trail"_n, "eosio.trail"_n.value);
   auto board = leaderboards.get(b.reference_id, "leaderboard doesn't exist");
 
-  eosio_assert(board.status != uint8_t(CLOSED), "A new hasn't started. Use initelection action to start a new election.");
+  eosio_assert(board.status != uint8_t(CLOSED), "A new election hasn't started. Use initelection action to start a new election.");
 
   candidates_table candidates(_self, _self.value);
 
@@ -143,21 +143,27 @@ void arbitration::endelection(name candidate) {
    auto board_candidates = board.candidates;
 
    sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes >= c2.votes; });
-   
+   auto size = uint32_t(std::distance(board_candidates.begin(), board_candidates.end()));
    //resolve tie clonficts.
    if(board_candidates.size() > board.available_seats) {
-      board_candidates.resize(board.available_seats + 1);
+      // print("\nboard_candidates.size: ", size);
+      // print("\nboard.available_seats: ", board.available_seats);
+      
+      board_candidates.resize(board.available_seats);
       auto first_cand_out = board_candidates[board_candidates.size() - 1];
-
+      // print("\nfirst_cand_out: ", name{first_cand_out.member});
+      // print("\nfirst_cand_out.votes: ", first_cand_out.votes);
       // remove candidates that are tied with first_cand_out
       uint8_t tied_cands = 1;
-      for(auto i = board_candidates.size() - 2; i >= 0; i--) {
+      for(auto i = board_candidates.size() - 2; i > 0; i--) {
          auto cand = board_candidates[i];
+         
+         print("\n name: ", name{cand.member});
+         print("\n votes: ", cand.votes);
          if(cand.votes == first_cand_out.votes) tied_cands++;
       }
 
-      if(tied_cands > 0) board_candidates.resize(board_candidates.size() - tied_cands);
-   
+      board_candidates.resize(board_candidates.size() - tied_cands);
    }
 
    candidates_table candidates(_self, _self.value);
@@ -168,18 +174,23 @@ void arbitration::endelection(name candidate) {
    arbitrators_table arbitrators(_self, _self.value);
    
    std::vector<permission_level_weight> arbs_perms;  
+   arbs_perms.emplace_back( permission_level_weight { permission_level{  "eosio.arb"_n,  "eosio.code"_n }, 1 });
    // get available seats (up to 21)
   
    // in case there are still candidates (not all tied)
    if(board_candidates.size() > 0) {
-      for (int i = 0; i < board.available_seats && i < board_candidates.size(); i++) {
-         auto cand_votes = board_candidates[i].votes.amount;
-         if(cand_votes == 0) continue;
-
+      for (int i = 0; i < board.available_seats; i++) {
          name cand_name = board_candidates[i].member;  
          auto c = candidates.find(cand_name.value);
          
          if (c != candidates.end()) {
+            print("\nindex: ", i);
+            print("\ncand: ", name{cand_name});
+            auto cand_votes = board_candidates[i].votes;
+            // print("\ncand_votes: ", cand_votes);
+            print("\nsymbol: ", cand_votes.symbol);
+            print("\nvalue: ", cand_votes.amount);
+            if(cand_votes == asset(0, cand_votes.symbol)) continue;
             // remove candidates from candidates table / arbitration contract
             candidates.erase(c);
             
@@ -209,22 +220,25 @@ void arbitration::endelection(name candidate) {
       // permissions need to be sorted 
       sort(arbs_perms.begin(), arbs_perms.end(), [](const auto &first, const auto &second) { return first.permission.actor.value < second.permission.actor.value; });
 
+   } 
+
       // review update auth permissions and weights.
-      uint32_t weight = arbs_perms.size() > 0 ? ( 2 * arbs_perms.size() ) / 3 + 1 : 0;
+      uint32_t weight = arbs_perms.size() > 3 ? ( 2 * arbs_perms.size() ) / 3 + 1 : 1;
+    
+      
       action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
-               std::make_tuple(
-                  get_self(), 
-                  name("active"), 
-                  name("owner"),
-                  authority {
-                     weight, 
-                     std::vector<key_weight>{},
-                     arbs_perms,
-                     std::vector<wait_weight>{}
-                     }
-                  )
-            ).send();
-   }
+              std::make_tuple(
+                get_self(), 
+                name("active"), 
+                name("owner"),
+                authority {
+                    weight, 
+                    std::vector<key_weight>{},
+                    arbs_perms,
+                    std::vector<wait_weight>{}
+                    }
+                )
+          ).send();
 
    // close ballot action.
    action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "closeballot"_n, 
@@ -242,7 +256,8 @@ void arbitration::endelection(name candidate) {
 
    if ( remaining_candidates > 0 && has_available_seats(arbitrators, available_seats) ) {
       _config.ballot_id = ballots.available_primary_key();
-      
+      print("\nremaining_candidates: ", remaining_candidates);
+      print("\navailable_seats: ",uint32_t(available_seats));
       start_new_election(available_seats);
 
       for (const auto &c : candidates) {
@@ -257,9 +272,9 @@ void arbitration::endelection(name candidate) {
       
       print("\nA new election has started.");
    } else {
-      for(const auto &cand : candidates) {
-        candidates.erase(cand);
-      }
+      // for(auto i = candidates.begin(); i != candidates.end(); i++) {
+      //   candidates.erase(i);
+      // }
       _config.auto_start_election = false;
       print("\nThere aren't enough seats available or candidates to start a new election.\nUse init action to start a new election.");
    }
@@ -638,6 +653,9 @@ bool arbitration::has_available_seats(arbitrators_table &arbitrators, uint8_t &a
   
   for (auto &arb : arbitrators) {
     // check if arb seat is expired
+    print("\n now: ", now());
+    print("\n term_length: ", arb.term_length);
+    print("\n arb_status: ", uint32_t(arb.arb_status));
     if (now() > arb.term_length && arb.arb_status != uint16_t(SEAT_EXPIRED)) {
       arbitrators.modify(arb, same_payer, [&](auto &a) {
         a.arb_status = uint16_t(SEAT_EXPIRED);
@@ -646,7 +664,8 @@ bool arbitration::has_available_seats(arbitrators_table &arbitrators, uint8_t &a
 
     if(arb.arb_status != uint16_t(SEAT_EXPIRED)) occupied_seats++;
   }
-
+  print("\n occupied_seats: ", uint32_t(occupied_seats));
+  print("\n max_elected_arbs: ", uint32_t(_config.max_elected_arbs ));
   available_seats = uint8_t(_config.max_elected_arbs - occupied_seats);
   
   return available_seats > 0;
@@ -659,8 +678,10 @@ void arbitration::add_arbitrator(arbitrators_table &arbitrators, name arb_name) 
     arbitrators.emplace(_self, [&](auto &a) {
       a.arb = arb_name;
       a.arb_status = uint16_t(UNAVAILABLE);
+      a.term_length = now() + _config.arbitrator_term_length;
       a.open_case_ids = vector<uint64_t>();
       a.closed_case_ids = vector<uint64_t>();
+
     });
   } else {
     arbitrators.modify(arb, same_payer, [&](auto &a){
