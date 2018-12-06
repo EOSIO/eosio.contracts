@@ -28,6 +28,8 @@ The following steps outline how to initialize the arbitration contract and elect
 
     The regcand action will create an arbitrator candidate application for the given candidate. Arbitrator candidates must then be elected through the regular arbitraotr election process in order to begin accepting cases.
 
+    Note that this action only submits a candidate's application. In order to be elected as an arbitrator, the candidate must be explicitly added to an election through the `candaddlead` action.
+
     `candidate` is the account name of the candidate applying for an arbitrator position.
 
     `creds_ipfs_url` is a link (ideally an IPFS hash) to the candidate's credentials. Candidates that fail to supply or supply false credentials will not be considered for election.
