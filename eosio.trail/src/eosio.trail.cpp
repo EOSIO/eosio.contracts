@@ -294,6 +294,44 @@ void trail::seizeairgrab(name publisher, name recipient, asset amount) {
     print("\nAirgrab Seizure: SUCCESS");
 }
 
+void trail::seizebygroup(name publisher, vector<name> group, asset tokens) {
+    require_auth(publisher);
+    //eosio_assert(publisher != owner, "cannot seize your own tokens");
+    eosio_assert(tokens > asset(0, tokens.symbol), "must seize greater than 0 tokens");
+
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(tokens.symbol.code().raw());
+    eosio_assert(r != registries.end(), "registry doesn't exist for given token");
+    auto reg = *r;
+
+    eosio_assert(reg.publisher == publisher, "only publisher can seize tokens");
+    eosio_assert(reg.settings.is_seizable == true, "token registry doesn't allow seizing");
+
+    for (name n : group) {
+
+        balances_table ownerbals(_self, tokens.symbol.code().raw());
+        auto ob = ownerbals.find(n.value);
+        eosio_assert(ob != ownerbals.end(), "user has no balance to seize");
+        auto obal = *ob;
+        eosio_assert(obal.tokens - tokens >= asset(0, obal.tokens.symbol), "cannot seize more tokens than user owns");
+
+        ownerbals.modify(ob, same_payer, [&]( auto& a ) { //NOTE: subtract amount from balance
+            a.tokens -= tokens;
+        });
+
+        balances_table publisherbal(_self, tokens.symbol.code().raw());
+        auto pb = publisherbal.find(publisher.value);
+        eosio_assert(pb != publisherbal.end(), "publisher has no balance to hold seized tokens");
+        auto pbal = *pb;
+
+        publisherbal.modify(pb, same_payer, [&]( auto& a ) { //NOTE: add seized tokens to publisher balance
+            a.tokens += tokens;
+        });
+    } 
+
+    print("\nToken Seizure: SUCCESS");
+}
+
 void trail::raisemax(name publisher, asset amount) {
     require_auth(publisher);
     eosio_assert(amount > asset(0, amount.symbol), "amount must be greater than 0");
@@ -794,14 +832,18 @@ void trail::rmvcandidate(name publisher, uint64_t ballot_id, name candidate) {
     eosio_assert(now() < board.begin_time, "cannot remove candidates once voting has begun");
 
     auto new_candidates = board.candidates;
+    bool found = false;
 
     for (auto itr = new_candidates.begin(); itr != new_candidates.end(); itr++) {
         auto cand = *itr;
         if (cand.member == candidate) {
             new_candidates.erase(itr);
+            found = true;
             break;
         }
     }
+
+    eosio_assert(found == true, "candidate not found in leaderboard list");
 
     leaderboards.modify(*l, same_payer, [&]( auto& a ) {
         a.candidates = new_candidates;
