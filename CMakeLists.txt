@@ -39,7 +39,7 @@ add_subdirectory(eosio.arbitration)
 add_subdirectory(eosio.amend)
 add_subdirectory(eosio.trail)
 add_subdirectory(eosio.saving)
-
+add_subdirectory(telos.free)
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")
@@ -48,4 +48,4 @@ elseif (UNIX)
 endif()
 set(SECP256K1_ROOT "/usr/local")
 
-include(UnitTestsExternalProject.txt)
+#include(UnitTestsExternalProject.txt)
