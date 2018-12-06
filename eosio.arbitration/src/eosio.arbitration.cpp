@@ -669,6 +669,7 @@ void arbitration::add_arbitrator(arbitrators_table &arbitrators, name arb_name) 
   } else {
     arbitrators.modify(arb, same_payer, [&](auto &a){
       a.arb_status = uint16_t(UNAVAILABLE);
+      a.term_length = now() + _config.arbitrator_term_length;
     });
   }
 }
