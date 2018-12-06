@@ -48,12 +48,10 @@ The following steps outline how to initialize the arbitration contract and elect
 
     The initelection action will register an election by sending an inline action to the `regballot()` action on Trail.
 
-Note that adding candidates 
+Note that adding candidates is done through the 
 
 * `endelection(name candidate)`
 
-    The endlection action will close an existing election that is no longer open for voting.
+    The endelection action will close an existing election that is no longer open for voting.
 
     `candidate` is the account calling the endelection action.
-
-

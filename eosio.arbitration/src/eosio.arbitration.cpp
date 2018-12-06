@@ -114,6 +114,8 @@ void arbitration::unregarb(name candidate) {
 
   leaderboards_table leaderboards("eosio.trail"_n, "eosio.trail"_n.value);
   auto board = leaderboards.get(b.reference_id, "leaderboard doesn't exist");
+
+  //TODO: assert candidate is on leaderboard
   
   if(now() < board.begin_time) {
     action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "rmvcandidate"_n,
@@ -122,6 +124,7 @@ void arbitration::unregarb(name candidate) {
         candidate
       )
     ).send();
+
     candidates.erase(c);
   }
 
