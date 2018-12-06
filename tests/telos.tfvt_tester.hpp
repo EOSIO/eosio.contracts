@@ -15,11 +15,65 @@ class telos_tfvt_tester : public eosio_trail_tester {
   public:
 	abi_serializer abi_ser;
 	abi_serializer token_ser;
+	abi_serializer msig_ser;
 
+	vector<account_name> board_members {
+		N(boardmem1a), 
+		N(boardmem1b), 
+		N(boardmem1c), 
+		N(boardmem1d), 
+		N(boardmem1e), 
+		N(boardmem1f), 
+		N(boardmem1g),
+		N(boardmem1h),
+		N(boardmem1i),
+		N(boardmem1j),
+		N(boardmem1k),
+		N(boardmem1l)
+	};
 	telos_tfvt_tester() {
-		create_accounts({N(tf)});
+		create_accounts({
+			N(tf),
+			N(boardmem1a), 
+			N(boardmem1b), 
+			N(boardmem1c), 
+			N(boardmem1d), 
+			N(boardmem1e), 
+			N(boardmem1f), 
+			N(boardmem1g),
+			N(boardmem1h),
+			N(boardmem1i),
+			N(boardmem1j),
+			N(boardmem1k),
+			N(boardmem1l)
+		});
 		deploy_contract();
-		produce_blocks(1);
+		produce_blocks();
+		deploy_msig();
+		produce_blocks();
+		transfer(N(eosio), N(tf), asset::from_string("10000.0000 TLOS"), "Monopoly Money");
+
+		string initial_info_link = "3a1db1cf0b4344b59a1ddeb4bc317548";
+
+		symbol tfvt_sym = symbol(0, "TFVT");
+		symbol_code tfvt_code = tfvt_sym.to_symbol_code();
+
+		symbol board_sym = symbol(0, "TFBOARD");
+		symbol_code board_code = board_sym.to_symbol_code();
+
+		inittfvt(initial_info_link);
+		inittfboard(initial_info_link);
+
+		mvo token_settings = mvo()("is_destructible", 0)("is_proxyable", 0)("is_burnable", 0)("is_seizable", 0)("is_max_mutable", 1)("is_transferable", 0)("is_recastable", 1)("is_initialized", 1)("counterbal_decay_rate", 500)("lock_after_initialize", 1);
+
+		auto token_registry = get_registry(tfvt_sym);
+
+		REQUIRE_MATCHING_OBJECT(token_registry["settings"], token_settings);
+
+		token_registry = get_registry(board_sym);
+		token_settings["is_recastable"] = 0;
+		REQUIRE_MATCHING_OBJECT(token_registry["settings"], token_settings);
+		std::cout << time_point_sec(now()).to_iso_string() << std::endl;
 	}
 
 	void deploy_contract()
@@ -33,6 +87,26 @@ class telos_tfvt_tester : public eosio_trail_tester {
             abi_ser.set_abi(abi, abi_serializer_max_time);
         }
     }
+
+	void deploy_msig() {
+		create_accounts( { N(eosio.msig), N(alice), N(bob), N(carol) } );
+		produce_block();
+
+		auto trace = base_tester::push_action(config::system_account_name, N(setpriv),
+												config::system_account_name,  mutable_variant_object()
+												("account", "eosio.msig")
+												("is_priv", 1)
+		);
+
+		set_code( N(eosio.msig), contracts::msig_wasm() );
+		set_abi( N(eosio.msig), contracts::msig_abi().data() );
+
+		produce_blocks();
+		const auto& accnt = control->db().get<account_object,by_name>( N(eosio.msig) );
+		abi_def abi;
+		BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
+		msig_ser.set_abi(abi, abi_serializer_max_time);
+	}
 
 	void set_contract_authority()
 	{
@@ -84,7 +158,7 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr makeissue(account_name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
+	transaction_trace_ptr makeissue(account_name holder, account_name issue_name, uint32_t begin_time, uint32_t end_time, string info_url, transaction trans) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(tf), N(makeissue), vector<permission_level>{{holder, config::active_name}},
 			mvo()
@@ -92,6 +166,8 @@ class telos_tfvt_tester : public eosio_trail_tester {
 			("begin_time", begin_time)
 			("end_time", end_time)
 			("info_url", info_url)
+			("issue_name", issue_name)
+			("transaction", trans)
 		));
 		set_transaction_headers(trx);
 		trx.sign(get_private_key(holder, "active"), control->get_chain_id());
@@ -147,6 +223,17 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		trx.sign(get_private_key(holder, "active"), control->get_chain_id());
 		return push_transaction( trx );
 	}
+
+	transaction_trace_ptr setboard(vector<account_name> members) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(tf), N(setboard), vector<permission_level>{{N(tf), config::active_name}},
+			mvo()
+			("members", members)
+		));
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(N(tf), "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
 #pragma endregion trx_funcs
 
 #pragma region get_funcs
@@ -163,6 +250,11 @@ class telos_tfvt_tester : public eosio_trail_tester {
 	fc::variant get_config(account_name publisher) {
 		vector<char> data = get_row_by_account(N(tf), N(tf), N(configs), publisher);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("config", data, abi_serializer_max_time);
+	}
+
+	fc::variant get_issue(uint64_t issue_id) {
+		vector<char> data = get_row_by_account(N(tf), N(tf), N(issues), issue_id);
+		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("issue", data, abi_serializer_max_time);
 	}
 #pragma endregion get_funcs
 

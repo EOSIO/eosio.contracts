@@ -115,15 +115,23 @@ public:
         name publisher;
         uint8_t max_board_seats = 12; //NOTE: adjustable by board members
         uint8_t open_seats = 0;
+		uint32_t holder_quorum_divisor = 5;
+		uint32_t board_quorum_divisor = 2;
+		uint32_t issue_duration = 2000000;
+		uint32_t start_delay = 1200;
+		uint32_t leaderboard_duration = 2000000;
+		uint32_t election_frequency = 14515200;
+		block_timestamp last_board_election_time;
 
         uint64_t primary_key() const { return publisher.value; }
-        EOSLIB_SERIALIZE(config, (publisher)(max_board_seats)(open_seats))
+        EOSLIB_SERIALIZE(config, (publisher)(max_board_seats)(open_seats)(holder_quorum_divisor)
+			(board_quorum_divisor)(issue_duration)(start_delay)(leaderboard_duration)(election_frequency)(last_board_election_time))
     };
 
 	struct [[eosio::table]] issue {
 		uint64_t id;
-		std::vector<char> packed_transaction;
-		//QUESTION: should we store the ipfs link
+		eosio::transaction transaction;
+		name issue_name;
 
 		uint64_t primary_key() const { return id; }
 	};
@@ -148,29 +156,31 @@ public:
     void inittfboard(string initial_info_link);
 
     [[eosio::action]]
-    void setconfig(name publisher, config new_configs);
+    void setconfig(name publisher, config new_config);
 
     [[eosio::action]]
     void nominate(name nominee, name nominator);
 
     [[eosio::action]]
-    void makeissue(ignore<name> holder, 
-		ignore<uint32_t> begin_time, 
-		ignore<uint32_t> end_time, 
-		ignore<string> info_url, 
+    void makeissue(ignore<name> holder,
+		ignore<string> info_url,
+		ignore<name> issue_name,
 		ignore<transaction> transaction);
 
     [[eosio::action]]
     void closeissue(name holder, uint64_t ballot_id);
 
     [[eosio::action]]
-    void makeelection(name holder, uint32_t begin_time, uint32_t end_time, string info_url);
+    void makeelection(name holder, string info_url);
 
     [[eosio::action]]
     void addallcands(name holder, uint64_t ballot_id, vector<candidate> new_cands);
 
     [[eosio::action]]
     void endelection(name holder, uint64_t ballot_id);
+
+	[[eosio::action]]
+	void setboard(vector<name> members);
 
 	//TODO: board member multisig kick action
 			//Starts run off leaderboard at start/end

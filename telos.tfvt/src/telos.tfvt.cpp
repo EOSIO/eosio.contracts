@@ -13,9 +13,15 @@ tfvt::~tfvt() {
 
 tfvt::config tfvt::get_default_config() {
 	auto c = config {
-		get_self(),		//publisher
-		uint8_t(12),	//max seats
-		uint8_t(0)		//open seats
+		get_self(),			//publisher
+		uint8_t(12),		//max seats
+		uint8_t(0)			//open seats
+		uint32_t(5) 		//holder_quorum_divisor
+		uint32_t(2) 		//board_quorum_divisor
+		uint32_t(2000000)	//issue_duration
+		uint32_t(1200)  	//start_delay
+		uint32_t(2000000)   //leaderboard_duration
+		uint32_t(14515200) 	//election_frequency
 	};
 	configs.set(c, get_self());
 	return c;
@@ -59,13 +65,18 @@ void tfvt::inittfboard(string initial_info_link) {
     print("\nTFBOARD Registration and Initialization Actions Sent...");
 }
 
-void tfvt::setconfig(name member, config new_configs) {
-    require_auth(member);
-    eosio_assert(new_configs.max_board_seats >= new_configs.open_seats, "can't have more open seats than max seats");
-    //eosio_assert(is_board_member(member), "member is not on the board"); //NOTE: restrict to board members?
+void tfvt::setconfig(name member, config new_config) {
+    require_auth("tf"_n);
+    eosio_assert(new_config.max_board_seats >= new_config.open_seats, "can't have more open seats than max seats");
+	eosio_assert(new_config.holder_quorum_divisor > 0, "holder_quorum_divisor must be a non-zero number");
+	eosio_assert(new_config.board_quorum_divisor > 0, "board_quorum_divisor must be a non-zero number");
+	eosio_assert(new_config.issue_duration > 0, "issue_duration must be a non-zero number");
+	eosio_assert(new_config.start_delay > 0, "start_delay must be a non-zero number");
 
+	new_config.publisher = _config.publisher;
+	new_config.open_seats = _config.open_seats;
     config_table configs(_self, _self.value);
-    configs.set(new_configs, _self);
+    configs.set(new_config, _self);
 }
 
 void tfvt::nominate(name nominee, name nominator) {
@@ -82,51 +93,113 @@ void tfvt::nominate(name nominee, name nominator) {
 }
 
 void tfvt::makeissue(ignore<name> holder, 
-		ignore<uint32_t> begin_time, 
-		ignore<uint32_t> end_time, 
-		ignore<string> info_url, 
+		ignore<string> info_url,
+		ignore<name> issue_name,
 		ignore<transaction> transaction) {
 
 	name 	_holder;
-	uint32_t _begin_time;
-	uint32_t _end_time;
+	name	_issue_name;
 	string _info_url;
-	transaction_header _trx_header;
+	eosio::transaction _trx;
 
-	_ds >> _holder >> _begin_time >> _end_time >> _info_url;
-
-	const char* trx_pos = _ds.pos();
-	size_t size    = _ds.remaining();
-	_ds >> _trx_header;
+	_ds >> _holder >> _info_url >> _issue_name >> _trx;
 
     require_auth(_holder);
-	//TODO: take in a packed_transaction for storage.
-    action(permission_level{_self, "active"_n}, "eosio.trail"_n, "regballot"_n, make_tuple(
-		_self,
+
+	eosio_assert(is_holder(_holder) || is_board_member(_holder), "proposer must be TFVT holder");
+
+	ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
+	uint64_t next_ballot_id = ballots.available_primary_key();
+	uint32_t begin_time = now() + _config.start_delay;
+	uint32_t end_time = begin_time + _config.issue_duration;
+
+    action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "regballot"_n, make_tuple(
+		get_self(),
 		uint8_t(0), 			//NOTE: makes a proposal on Trail
-		symbol("TFVT", 0),
+		symbol("TFBOARD", 0),
 		begin_time,
         end_time,
-        info_url
+        _info_url
 	)).send();
-
-	std::vector<char> pkd_trans;
-	pkd_trans.resize(size);
-	memcpy((char*)pkd_trans.data(), trx_pos, size);
 
 	issues_table issues(get_self(), get_self().value);
 	issues.emplace(_holder, [&](auto& issue) {
-		issue.id = issues.available_primary_key();
-		issue.packed_transaction = pkd_trans;
+		issue.id = next_ballot_id;
+		issue.transaction = _trx;
+		issue.issue_name = _issue_name;
 	});
 }
 
 void tfvt::closeissue(name holder, uint64_t ballot_id) {
     require_auth(holder);
     uint8_t status = 1;
+	//TODO: check quorum values
 	//TODO: tiebreaker logic here
 	//TODO: if issue passes send pack_trx to msig then erase trx
 			//if issue fails then erase trx
+
+	registries_table registries("eosio.trail"_n, "eosio.trail"_n.value);
+	auto r = registries.get(symbol("TFVT", 0).code().raw(), "TFVT registry not found, this shouldn't happen");
+	uint32_t total_voters = r.settings.total_voters;
+
+	ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
+	auto b = ballots.get(ballot_id, "ballot does not exist");
+
+	proposals_table proposals("eosio.trail"_n, "eosio.trail"_n.value);
+	auto p = proposals.get(b.reference_id, "proposal not found");
+	
+	uint32_t unique_voters = p.unique_voters;
+
+	uint32_t quorum_threshold = total_voters / _config.board_quorum_divisor;
+
+	//IF: unique_voters > quorum_t
+		//then count
+	//ELSE: fail
+
+	//if count
+		//IF: yes votes simple majority
+			//then pass
+		//ELIF: tie
+			//then tie
+		//ELSE:
+			//then fail
+
+
+	//IF: pass
+		//then send inline to create msig
+			//erase issue
+
+	//IF: fail
+		//then erase issue
+
+	//IF: tie
+		//then send inline for new TFVT ballot
+		//then update issue with new ballot_id
+
+
+	issues_table issues(get_self(), get_self().value);
+	auto issue = issues.get(ballot_id, "issue not found");
+
+	members_table members(get_self(), get_self().value);
+
+	std::vector<permission_level> requested;
+
+	auto itr = members.begin();
+
+    while (itr != members.end()) {
+		print("adding permission_level: ", name{itr->member});
+		requested.emplace_back(permission_level(itr->member, "active"_n));
+		itr++;
+    }
+
+	print("sending inline");
+	action(permission_level{_self, name("active")}, name("eosio.msig"), name("propose"), make_tuple(
+		get_self(),
+		issue.issue_name,
+		requested,
+		issue.transaction
+	)).send();
+
     action(permission_level{_self, "active"_n}, "eosio.trail"_n, "closeballot"_n, make_tuple(
 		_self,
 		ballot_id,
@@ -134,10 +207,15 @@ void tfvt::closeissue(name holder, uint64_t ballot_id) {
 	)).send();
 }
 
-void tfvt::makeelection(name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
+void tfvt::makeelection(name holder, string info_url) {
     require_auth(holder);
     eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller must be a TFVT or TFBOARD holder");
-    
+	eosio_assert(now() - _config.last_board_election_time.slot > _config.election_frequency, "it isn't time for the next election");
+
+
+	uint32_t begin_time = now() + _config.start_delay;
+	uint32_t end_time = begin_time + _config.leaderboard_duration;
+
     action(permission_level{_self, name("active")}, name("eosio.trail"), name("regballot"), make_tuple(
 		_self,
 		uint8_t(2), 			//NOTE: makes a leaderboard on Trail
@@ -146,6 +224,46 @@ void tfvt::makeelection(name holder, uint32_t begin_time, uint32_t end_time, str
         end_time,
         info_url
 	)).send();
+}
+
+void tfvt::setboard(vector<name> members) {
+	require_auth(get_self());
+
+	members_table mems(get_self(), get_self().value);
+	std::vector<permission_level_weight> board_perms;
+	for(name member : members) {
+		print("emplace board member: ", name{member});
+		mems.emplace(get_self(), [&](auto& m) {
+			m.member = member;
+		});
+
+		board_perms.emplace_back(
+			permission_level_weight{ permission_level{
+				member,
+				"active"_n
+			}, 1}
+		);
+	}
+	uint16_t weight = _config.max_board_seats / 4;
+	board_perms.emplace_back(
+		permission_level_weight{ permission_level{
+				get_self(),
+				"eosio.code"_n
+			}, weight}
+	);
+	action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
+		std::make_tuple(
+			get_self(),    						//account to update
+			name("active"), 					//authority name to update
+			name("owner"),						//parent authority
+			authority {							//authority update object 
+				weight, 
+				std::vector<key_weight>{},
+				board_perms,
+				std::vector<wait_weight>{}
+			}
+		)
+	).send();
 }
 
 void tfvt::addallcands(name holder, uint64_t ballot_id, vector<candidate> new_cands) {
@@ -199,6 +317,12 @@ void tfvt::endelection(name holder, uint64_t ballot_id) {
 	//TODO: update tf@active permission
 			//set threhold to low 1/4 or 1/5 of total board members
 	uint16_t weight = _config.max_board_seats / 4;
+	board_perms.emplace_back(
+		permission_level_weight{ permission_level{
+				get_self(),
+				"eosio.code"_n
+			}, weight}
+	);
 	action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
 		std::make_tuple(
 			get_self(), 
@@ -314,4 +438,4 @@ bool tfvt::is_tfboard_holder(name user) {
 
 #pragma endregion Helper_Functions
 
-EOSIO_DISPATCH(tfvt, (inittfvt)(inittfboard)(setconfig)(nominate)(makeissue)(closeissue)(makeelection)(endelection))
+EOSIO_DISPATCH(tfvt, (inittfvt)(inittfboard)(setconfig)(setboard)(nominate)(makeissue)(closeissue)(makeelection)(endelection))
