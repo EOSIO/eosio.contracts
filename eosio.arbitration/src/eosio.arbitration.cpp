@@ -17,8 +17,7 @@ arbitration::~arbitration() {
   if (configs.exists()) configs.set(_config, get_self());
 }
 
-void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duration, 
-uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees) {
+void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duration, uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees) {
   require_auth("eosio"_n);
 
   eosio_assert(max_elected_arbs < uint16_t(21), "Maximum elected arbitrators must be less than 22."); 
@@ -55,9 +54,13 @@ void arbitration::initelection() {
   print("\nElection started: SUCCESS");
 }
 
-void arbitration::regarb(name candidate, string creds_ipfs_url) {
+void arbitration::candaddlead( name candidate, string creds_ipfs_url )  {
   require_auth(candidate);
   
+  pending_candidates_table candidates(_self, _self.value);
+  auto c = candidates.find(candidate.value);
+  eosio_assert(c != candidates.end(), "Candidate isn't an applicant. Use regcand action to register candidate");
+
   ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
   auto b = ballots.get(_config.ballot_id, "ballot doesn't exist");
 
@@ -65,47 +68,67 @@ void arbitration::regarb(name candidate, string creds_ipfs_url) {
   auto board = leaderboards.get(b.reference_id, "leaderboard doesn't exist");
 
   eosio_assert(board.status != uint8_t(CLOSED), "A new election hasn't started. Use initelection action to start a new election.");
+  
+  action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "addcandidate"_n,
+        make_tuple(get_self(), 
+          _config.ballot_id, 
+          candidate, 
+          creds_ipfs_url
+        )
+      ).send();
+  
+  print("\nArb Application: SUCCESS");
+}
 
-  candidates_table candidates(_self, _self.value);
+void arbitration::regcand( name candidate, string creds_ipfs_url ) {
+  require_auth(candidate);
+
+  pending_candidates_table candidates(_self, _self.value);
 
   auto c = candidates.find(candidate.value);
   eosio_assert(c == candidates.end(), "Candidate is already an applicant");
-
+  
   arbitrators_table arbitrators(_self, _self.value);
   auto arb = arbitrators.find(candidate.value);
 
   if (arb != arbitrators.end()) {
-    eosio_assert(now() > arb->term_length, "Arbitrator seat didn't expire");
+    eosio_assert(now() > arb->term_length, "Candidate is already an Arbitrator and the seat isn't expired");
 
     arbitrators.modify(arb, same_payer, [&](auto &a) {
       a.arb_status = SEAT_EXPIRED;
     });
   }
 
-  if(now() < board.begin_time) {
-    action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "addcandidate"_n,
-         make_tuple(get_self(), 
-           _config.ballot_id, 
-           candidate, 
-           creds_ipfs_url
-          )
-        ).send();
-  }
-  
   candidates.emplace(_self, [&](auto &c) {
     c.cand_name = candidate;
     c.credential_link = creds_ipfs_url;
     c.applied_time = now();
   });
-
-  print("\nArb Application: SUCCESS");
 }
 
-void arbitration::unregarb(name candidate) {
+void arbitration::candrmvlead( name candidate ) {
   require_auth(candidate);
   
-  candidates_table candidates(_self, _self.value);
+  pending_candidates_table candidates(_self, _self.value);
   auto c = candidates.find(candidate.value);  
+
+  eosio_assert(c != candidates.end(), "Candidate isn't an applicant.");
+
+  action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "rmvcandidate"_n,
+    make_tuple(get_self(), 
+      _config.ballot_id, 
+      candidate
+    )
+  ).send();
+  
+  print("\nCancel Application: SUCCESS");
+}
+
+void arbitration::unregcand( name candidate ) {
+  require_auth(candidate);
+
+  pending_candidates_table candidates(_self, _self.value);
+  auto c = candidates.find(candidate.value);
 
   eosio_assert(c != candidates.end(), "Candidate isn't an applicant");
 
@@ -116,21 +139,12 @@ void arbitration::unregarb(name candidate) {
   auto board = leaderboards.get(b.reference_id, "leaderboard doesn't exist");
 
   //TODO: assert candidate is on leaderboard
-  
   eosio_assert(now() < board.begin_time, "Cannot unregister while election is in progress");
-  
-  action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "rmvcandidate"_n,
-    make_tuple(get_self(), 
-      _config.ballot_id, 
-      candidate
-    )
-  ).send();
-  candidates.erase(c);
 
-  print("\nCancel Application: SUCCESS");
+  candidates.erase(c);
 }
 
-void arbitration::endelection(name candidate) {
+void arbitration::endelection( name candidate ) {
    require_auth(candidate);
    
    ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
@@ -162,7 +176,7 @@ void arbitration::endelection(name candidate) {
       if(tied_cands > 0) board_candidates.resize(board_candidates.size() - tied_cands);
    }
 
-   candidates_table candidates(_self, _self.value);
+   pending_candidates_table candidates(_self, _self.value);
    
    auto cand = candidates.find(candidate.value);
    eosio_assert(cand != candidates.end(), "Candidate isn't an applicant.");
@@ -258,6 +272,7 @@ void arbitration::endelection(name candidate) {
    }
 }
 
+/*
 void arbitration::filecase(name claimant, uint16_t class_suggestion, string ev_ipfs_url) {
   require_auth(claimant);
 	eosio_assert(class_suggestion >= UNDECIDED && class_suggestion <= MISC, "class suggestion must be between 0 and 14"); //TODO: improve this message to include directions
@@ -577,7 +592,7 @@ void arbitration::dismissarb(name arb) {
 
   print("\nArbitrator Dismissed!");
 }
-
+*/
 #pragma region Helper_Functions
 
 void arbitration::validate_ipfs_url(string ipfs_url) {
@@ -667,7 +682,8 @@ void arbitration::add_arbitrator(arbitrators_table &arbitrators, name arb_name, 
 
 #pragma endregion Helper_Functions
 
-EOSIO_DISPATCH( arbitration, (setconfig)(initelection)(regarb)(unregarb)(endelection)
-                             (filecase)(addclaim)(removeclaim)(shredcase)(readycase)
+EOSIO_DISPATCH( arbitration, (setconfig)(initelection)(candaddlead)(regcand)
+                             (unregcand)(candrmvlead)(endelection)
+                             /*(filecase)(addclaim)(removeclaim)(shredcase)(readycase)
                              (dismisscase)(closecase)(dismissev)(acceptev)
-                             (arbstatus)(casestatus)(changeclass)(recuse)(dismissarb) )
+                             (arbstatus)(casestatus)(changeclass)(recuse)(dismissarb)*/ )
