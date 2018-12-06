@@ -145,21 +145,14 @@ void arbitration::endelection(name candidate) {
    sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes >= c2.votes; });
    auto size = uint32_t(std::distance(board_candidates.begin(), board_candidates.end()));
    //resolve tie clonficts.
-   if(board_candidates.size() > board.available_seats) {
-      // print("\nboard_candidates.size: ", size);
-      // print("\nboard.available_seats: ", board.available_seats);
-      
+   if(board_candidates.size() > board.available_seats) {      
       board_candidates.resize(board.available_seats);
       auto first_cand_out = board_candidates[board_candidates.size() - 1];
-      // print("\nfirst_cand_out: ", name{first_cand_out.member});
-      // print("\nfirst_cand_out.votes: ", first_cand_out.votes);
       // remove candidates that are tied with first_cand_out
       uint8_t tied_cands = 1;
       for(auto i = board_candidates.size() - 2; i > 0; i--) {
          auto cand = board_candidates[i];
          
-         print("\n name: ", name{cand.member});
-         print("\n votes: ", cand.votes);
          if(cand.votes == first_cand_out.votes) tied_cands++;
       }
 
@@ -184,12 +177,8 @@ void arbitration::endelection(name candidate) {
          auto c = candidates.find(cand_name.value);
          
          if (c != candidates.end()) {
-            print("\nindex: ", i);
-            print("\ncand: ", name{cand_name});
             auto cand_votes = board_candidates[i].votes;
-            // print("\ncand_votes: ", cand_votes);
-            print("\nsymbol: ", cand_votes.symbol);
-            print("\nvalue: ", cand_votes.amount);
+            
             if(cand_votes == asset(0, cand_votes.symbol)) continue;
             // remove candidates from candidates table / arbitration contract
             candidates.erase(c);
@@ -256,8 +245,7 @@ void arbitration::endelection(name candidate) {
 
    if ( remaining_candidates > 0 && has_available_seats(arbitrators, available_seats) ) {
       _config.ballot_id = ballots.available_primary_key();
-      print("\nremaining_candidates: ", remaining_candidates);
-      print("\navailable_seats: ",uint32_t(available_seats));
+      
       start_new_election(available_seats);
 
       for (const auto &c : candidates) {
@@ -653,9 +641,6 @@ bool arbitration::has_available_seats(arbitrators_table &arbitrators, uint8_t &a
   
   for (auto &arb : arbitrators) {
     // check if arb seat is expired
-    print("\n now: ", now());
-    print("\n term_length: ", arb.term_length);
-    print("\n arb_status: ", uint32_t(arb.arb_status));
     if (now() > arb.term_length && arb.arb_status != uint16_t(SEAT_EXPIRED)) {
       arbitrators.modify(arb, same_payer, [&](auto &a) {
         a.arb_status = uint16_t(SEAT_EXPIRED);
@@ -664,8 +649,6 @@ bool arbitration::has_available_seats(arbitrators_table &arbitrators, uint8_t &a
 
     if(arb.arb_status != uint16_t(SEAT_EXPIRED)) occupied_seats++;
   }
-  print("\n occupied_seats: ", uint32_t(occupied_seats));
-  print("\n max_elected_arbs: ", uint32_t(_config.max_elected_arbs ));
   available_seats = uint8_t(_config.max_elected_arbs - occupied_seats);
   
   return available_seats > 0;
