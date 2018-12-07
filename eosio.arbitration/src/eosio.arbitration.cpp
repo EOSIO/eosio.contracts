@@ -193,14 +193,16 @@ void arbitration::endelection( name candidate ) {
          auto c = candidates.find(cand_name.value);
          
          if (c != candidates.end()) {
+            auto cand_credential = board_candidates[i].info_link;
             auto cand_votes = board_candidates[i].votes;
           
             if(cand_votes == asset(0, cand_votes.symbol)) continue;
+            
             // remove candidates from candidates table / arbitration contract
             candidates.erase(c);
             
             // add candidates to arbitration table / arbitration contract
-            add_arbitrator(arbitrators, cand_name, board_candidates[i].info_link);
+            add_arbitrator(arbitrators, cand_name, cand_credential);
          } else {
             print("\ncandidate: ", name{cand_name}, " was not found.");
          }
@@ -595,9 +597,7 @@ void arbitration::dismissarb(name arb) {
 #pragma region Helper_Functions
 
 void arbitration::validate_ipfs_url(string ipfs_url) {
-	//TODO: Base58 character checker 
-	eosio_assert(!ipfs_url.empty(), "ev_ipfs_url cannot be empty, evidence for claims must be submitted.");
-	eosio_assert(ipfs_url.length() == 53 && ipfs_url.substr(0, 5) == "/ipfs/", "invalid ipfs string, valid schema: /ipfs/<hash>/");
+	eosio_assert(ipfs_url.length() == 53, "invalid ipfs string, valid schema: /ipfs/<hash>/");
 }
 
 arbitration::config arbitration::get_default_config() {
