@@ -48,31 +48,31 @@
 
     `nominator` is the account nominating. This account must be a TFVT or TFBOARD holder to nominate.
 
-* `makeissue(name holder, uint32_t begin_time, uint32_t end_time, string info_url)`
+* `makeissue(name holder, string info_url, name issue_name, transaction transaction)`
 
     The makeissue action will set up a proposal on Trail that is votable on by TFVT holders.
 
     `holder` is the account making the issue.
 
-    `begin_time` and `end_time` are the time points (in seconds) when the ballot will begin.
-
     `info_url` is the info link for the campaign.
 
-* `closeissue(name holder, uint64_t ballot_id)`
+    `issue_name` is the name of the issue as an account name.
+
+    `transaction` is the transaction to send if the issue proposal passes.
+
+* `closeissue(name holder, name proposer)`
 
     The closeissue action will close an ended ballot that was set up through the `makeissue()` action.
 
     `holder` is the account calling closeissue.
 
-    ` ballot_id` is the ballot id to close.
+    `proposer` is the name of the account that proposed the issue.
 
-* `makeelection(name holder, uint32_t begin_time, uint32_t end_time, string info_url)`
+* `makeelection(name holder, string info_url)`
 
     The makeelection action will set up a leaderboard on Trail to elect new members to the Telos Foundation Board that is votable on by TFVT holders.
 
     `holder` is the account making the leaderboard.
-
-    `begin_time` and `end_time` are the time points (in seconds) when the ballot will begin.
 
     `info_url` is the info link for the campaign.
 
