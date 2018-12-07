@@ -357,8 +357,7 @@ namespace eosiosystem {
                                       from
             );
             out.delay_sec = refund_delay_sec;
-            cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
-            out.send( from.value, from, true );
+            out.send( from.value + current_time_point().sec_since_epoch(), from, true );
          } else {
             cancel_deferred( from.value );
          }
