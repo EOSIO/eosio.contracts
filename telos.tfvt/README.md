@@ -99,3 +99,11 @@
     Note that because elections are ran on leaderboard logic (as multiple seats must be able to run at the same time) ties will only trigger a runoff election when a chain of ties (of any length) reaches the final available seat or beyond. Should this occur, this contract will drop each account in the tie chain and initiate a runoff election for the unfilled board seats.
 
     For example, suppose an election is held with 5 available seats, and 9 candidates. After voting has ended and candidates have been ranked based on total votes, a tie chain occurs from ranks 3 - 7. Ranks 1 and 2 would be placed in the board, and ranks 8 and 9 would be ignored. Then, a runoff election would be triggered for the remaining 3 board seats (as seats 3 - 5 were not assigned due to a tie chain reaching the final seat) and candidate ranks 3 -7 would enter the election and proceed as normal. Note that runoff elections are decided by `TFVT` token holders, not `TFBOARD` members.
+
+## Board Actions
+
+* `void removemember(name member_to_remove)`
+
+    This action is an administrative-level kick from the Telos Foundation Board. This action is only callable by a multi-sig from a number of board members that satisfy the `major` permission of the `tf` account.
+
+    `member_to_remove` is the account name of the board member to remove.
