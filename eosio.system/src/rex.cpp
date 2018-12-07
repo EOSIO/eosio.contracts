@@ -118,8 +118,6 @@ namespace eosiosystem {
 
       require_auth( from );
 
-      eosio_assert( rex_system_initialized(), "rex system not initialized yet" );
-
       auto bitr = _rexbalance.require_find( from.value, "user must first buyrex" );
       eosio_assert( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol,
                     "asset must be a positive amount of (REX, 4)" );
@@ -293,7 +291,7 @@ namespace eosiosystem {
          rb.vote_stake = current_stake;
       });
 
-      update_rex_account( owner, asset( 0, core_symbol() ), current_stake - init_stake );
+      update_rex_account( owner, asset( 0, core_symbol() ), current_stake - init_stake, true );
       process_rex_maturities( itr );
    }
 
@@ -454,7 +452,7 @@ namespace eosiosystem {
          _rexpool.modify( rexi, same_payer, [&]( auto& rt ) {
             bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, itr->total_staked.amount );
             rt.total_lent.amount    -= itr->total_staked.amount;
-            rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+            //            rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
          });
 
          bool    delete_loan = false;
@@ -531,13 +529,13 @@ namespace eosiosystem {
 
       /// process sellrex orders
       {
-         auto idx = _rexorders.get_index<"bytime"_n>();
+         auto idx  = _rexorders.get_index<"bytime"_n>();
          auto oitr = idx.begin();
          for ( uint16_t i = 0; i < max; ++i ) {
-            if( oitr == idx.end() || !oitr->is_open ) break;
-            auto bitr   = _rexbalance.find( oitr->owner.value );
-            auto next   = oitr;
+            if ( oitr == idx.end() || !oitr->is_open ) break;
+            auto next = oitr;
             ++next;
+            auto bitr = _rexbalance.find( oitr->owner.value );
             if ( bitr != _rexbalance.end() ) { // should always be true
                auto result = fill_rex_order( bitr, oitr->rex_requested );
                if ( result.success ) {
@@ -561,7 +559,8 @@ namespace eosiosystem {
 
       eosio_assert( rex_loans_available(), "rex loans are not currently available" );
       eosio_assert( payment.symbol == core_symbol() && fund.symbol == core_symbol(), "must use core token" );
-      
+      eosio_assert( 0 < payment.amount && 0 <= fund.amount, "must use positive asset amount" );
+
       update_rex_account( from, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( from, payment + fund );
 
@@ -599,12 +598,12 @@ namespace eosiosystem {
    rex_order_outcome system_contract::fill_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex )
    {
       auto rexitr = _rexpool.begin();
-      const auto S0 = rexitr->total_lendable.amount;
-      const auto R0 = rexitr->total_rex.amount;
-      const auto R1 = R0 - rex.amount;
-      const auto S1 = (uint128_t(R1) * S0) / R0;
+      const int64_t S0 = rexitr->total_lendable.amount;
+      const int64_t R0 = rexitr->total_rex.amount;
+      const int64_t R1 = R0 - rex.amount;
+      const int64_t S1 = (uint128_t(R1) * S0) / R0;
       asset proceeds( S0 - S1, core_symbol() );
-      asset stake_change( 0, core_symbol() );      
+      asset stake_change( 0, core_symbol() );
       bool success = false;
 
       const int64_t unlent_lower_bound = ( uint128_t(2) * rexitr->total_lent.amount ) / 10;
@@ -738,7 +737,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Channels system fees to REX pool 
+    * @brief Channels system fees to REX pool
     *
     * @param from - account from which asset is transfered to REX pool 
     * @param amount - amount of tokens to be transfered
@@ -802,7 +801,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Consolidate REX maturity buckets into one.
+    * @brief Consolidates REX maturity buckets into one
     *
     * @param bitr - iterator pointing to rex_balance object
     * @param rex_in_sell_order - REX tokens in owner unfilled sell order, if one exists 
@@ -831,7 +830,7 @@ namespace eosiosystem {
    asset system_contract::add_to_rex_pool( const asset& payment )
    {
       const int64_t rex_ratio       = 10000;
-      const int64_t init_total_rent = 100'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() are made available
+      const int64_t init_total_rent = 100'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() is made available
       asset rex_received( 0, rex_symbol );
       auto itr = _rexpool.begin();
       if ( !rex_system_initialized() ) {
@@ -859,10 +858,10 @@ namespace eosiosystem {
       } else {
          /// total_lendable > 0 if total_rex > 0 except in a rare case and due to rounding errors
          eosio_assert( itr->total_lendable.amount > 0, "lendable REX pool is empty" );
-         const auto S0 = itr->total_lendable.amount;
-         const auto S1 = S0 + payment.amount;
-         const auto R0 = itr->total_rex.amount;
-         const auto R1 = (uint128_t(S1) * R0) / S0;
+         const int64_t S0 = itr->total_lendable.amount;
+         const int64_t S1 = S0 + payment.amount;
+         const int64_t R0 = itr->total_rex.amount;
+         const int64_t R1 = (uint128_t(S1) * R0) / S0;
 
          rex_received.amount = R1 - R0;
 
