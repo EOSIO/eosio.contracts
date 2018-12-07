@@ -184,9 +184,7 @@ void arbitration::endelection( name candidate ) {
    arbitrators_table arbitrators(_self, _self.value);
    
    std::vector<permission_level_weight> arbs_perms;  
-   arbs_perms.emplace_back( permission_level_weight { permission_level{  "eosio.arb"_n,  "eosio.code"_n }, 1 });
-   // get available seats (up to 21)
-  
+
    // in case there are still candidates (not all tied)
    if(board_candidates.size() > 0) {
       for (int i = 0; i < board_candidates.size(); i++) {
@@ -221,11 +219,11 @@ void arbitration::endelection( name candidate ) {
 
       // review update auth permissions and weights.
       uint32_t weight = arbs_perms.size() > 3 ? ((( 2 * arbs_perms.size() ) / uint32_t(3)) + 1) : 1;
-    
+      
       action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
               std::make_tuple(
                 get_self(), 
-                name("active"), 
+                name("major"), 
                 name("owner"),
                 authority {
                     weight, 
