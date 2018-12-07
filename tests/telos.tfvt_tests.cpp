@@ -32,6 +32,7 @@ FC_LOG_AND_RETHROW()
 BOOST_FIXTURE_TEST_CASE(board_issue, telos_tfvt_tester)
 try
 {
+	std::cout << "setboard" << std::endl;
 	setboard(board_members);
 	produce_blocks(2);
 	//TODO: verify permissions
@@ -68,9 +69,10 @@ try
 	uint32_t start_time = now();
 	uint32_t end_time = now() + issue_duration;
 	uint64_t current_ballot_id = 0;
-	makeissue(N(alice), N(test1), start_time, end_time, "08276642d5084cd8bc0cc10c62f782f5", trx);
+	std::cout << "makeissue" << std::endl;
+	makeissue(test_voters[0].value, N(test1), "08276642d5084cd8bc0cc10c62f782f5", trx);
 
-	auto issue_info = get_issue(current_ballot_id);
+	auto issue_info = get_issue(test_voters[0].value);
 	BOOST_REQUIRE_EQUAL(false, issue_info.is_null());
 	BOOST_REQUIRE_EQUAL(issue_info["transaction"]["expiration"], pretty_trx["expiration"]);
 
@@ -79,9 +81,10 @@ try
 	produce_block(fc::seconds(issue_duration));
 	produce_blocks();
 
-	issue_info = get_issue(current_ballot_id);
+	issue_info = get_issue(test_voters[0].value);
 	BOOST_REQUIRE_EQUAL(issue_info["transaction"]["expiration"], pretty_trx["expiration"]);
-	closeissue(N(alice), current_ballot_id);
+	std::cout << "closeissue" << std::endl;
+	dump_trace(closeissue(test_voters[0].value, test_voters[0].value));
 }
 FC_LOG_AND_RETHROW()
 

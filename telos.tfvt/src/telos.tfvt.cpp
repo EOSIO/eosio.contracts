@@ -111,7 +111,7 @@ void tfvt::makeissue(ignore<name> holder,
         end_time,
         _info_url
 	)).send();
-
+	
 	issues_table issues(get_self(), get_self().value);
 	issues.emplace(get_self(), [&](auto& issue) {
 		issue.proposer = _holder;
@@ -126,7 +126,9 @@ void tfvt::closeissue(name holder, name proposer) {
 	eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller must be a TFVT or TFBOARD holder");
 
 	issues_table issues(get_self(), get_self().value);
-	auto issue = issues.get(proposer.value, "issue not found");
+	auto i_iter = issues.find(proposer.value);
+	eosio_assert(i_iter != issues.end(), "issue not found");
+	auto issue = *i_iter;
 
 	ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
 	auto ballot = ballots.get(issue.ballot_id, "ballot does not exist");
@@ -139,11 +141,10 @@ void tfvt::closeissue(name holder, name proposer) {
 	uint32_t total_voters = registry.total_voters;
 	
 	uint32_t unique_voters = prop.unique_voters;
-
-	uint32_t quorum_threshold = total_voters / _config.board_quorum_divisor;
+     
+	uint32_t quorum_threshold = total_voters / (_config.board_quorum_divisor - 1);
 	ISSUE_STATE state = FAIL;
-
-	if(unique_voters >= quorum_threshold)
+	if(unique_voters > quorum_threshold)
 		state = COUNT;
 	
 	if(state == COUNT) {
@@ -164,22 +165,23 @@ void tfvt::closeissue(name holder, name proposer) {
 			// print("adding permission_level: ", name{itr->member});
 			requested.emplace_back(permission_level(itr->member, "active"_n));
 			itr++;
-		}
-
+		}	
+		
 		action(permission_level{get_self(), name("active")}, name("eosio.msig"), name("propose"), make_tuple(
 			get_self(),
 			issue.issue_name,
 			requested,
 			issue.transaction
 		)).send();
-	}
+	} 
 
 	if(state == FAIL || state == PASS) {
-		issues.erase(issue);
+		
+		issues.erase(i_iter);
 	}
 
 	if(state == TIE) {
-		uint32_t next_ballot_id = ballots.available_primary_key();
+		uint64_t next_ballot_id = ballots.available_primary_key();
 		uint32_t begin_time = now() + _config.start_delay;
 		uint32_t end_time = begin_time + _config.issue_duration;
 		action(permission_level{get_self(), "active"_n}, "eosio.trail"_n, "regballot"_n, make_tuple(
@@ -355,26 +357,7 @@ void tfvt::setboard(vector<name> members) {
 			}, 1}
 		);
 	}
-	uint16_t weight = _config.max_board_seats / 4;
-	board_perms.emplace_back(
-		permission_level_weight{ permission_level{
-				get_self(),
-				"eosio.code"_n
-			}, weight}
-	);
-	action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
-		std::make_tuple(
-			get_self(),    						//account to update
-			name("active"), 					//authority name to update
-			name("owner"),						//parent authority
-			authority {							//authority update object 
-				weight, 
-				std::vector<key_weight>{},
-				board_perms,
-				std::vector<wait_weight>{}
-			}
-		)
-	).send();
+	set_permissions(board_perms);
 }
 
 void tfvt::removemember(name member_to_remove) {
@@ -471,7 +454,7 @@ bool tfvt::is_tfboard_holder(name user) {
 }
 
 bool tfvt::is_term_expired() {
-	return now() - _config.last_board_election_time.slot > _config.election_frequency;
+	return now() - _config.last_board_election_time.slot / 2 > _config.election_frequency;
 }
 
 void tfvt::remove_and_seize_all() {
@@ -514,7 +497,8 @@ void tfvt::remove_and_seize(name member) {
 }
 
 void tfvt::set_permissions(vector<permission_level_weight> perms) {
-	uint16_t active_weight = _config.max_board_seats / 4;
+	sort(perms.begin(), perms.end(), [](const auto &first, const auto &second) { return first.permission.actor.value < second.permission.actor.value; });
+	uint16_t active_weight = perms.size() / 4;
 	perms.emplace_back(
 		permission_level_weight{ permission_level{
 				get_self(),
@@ -536,8 +520,8 @@ void tfvt::set_permissions(vector<permission_level_weight> perms) {
 		)
 	).send();
 
-	perms.erase(perms.end()--);
-	uint16_t major_weight = (_config.max_board_seats / 3) * 2;
+	perms.erase(--perms.end());
+	uint16_t major_weight = (perms.size() / 3) * 2;
 	action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
 		std::make_tuple(
 			get_self(), 

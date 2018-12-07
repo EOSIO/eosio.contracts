@@ -64,6 +64,12 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		inittfvt(initial_info_link);
 		inittfboard(initial_info_link);
 
+		voter_map(0, test_voters.size(), [&](auto& voter) {
+			issuetoken(N(tf), voter.value, asset(1, tfvt_sym), false);
+			produce_blocks();
+			//TODO: check if they got a balance for this shiZ
+		});
+
 		mvo token_settings = mvo()("is_destructible", 0)("is_proxyable", 0)("is_burnable", 0)("is_seizable", 0)("is_max_mutable", 1)("is_transferable", 0)("is_recastable", 1)("is_initialized", 1)("counterbal_decay_rate", 500)("lock_after_initialize", 1);
 
 		auto token_registry = get_registry(tfvt_sym);
@@ -158,13 +164,11 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr makeissue(account_name holder, account_name issue_name, uint32_t begin_time, uint32_t end_time, string info_url, transaction trans) {
+	transaction_trace_ptr makeissue(account_name holder, account_name issue_name, string info_url, transaction trans) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(tf), N(makeissue), vector<permission_level>{{holder, config::active_name}},
 			mvo()
 			("holder", holder)
-			("begin_time", begin_time)
-			("end_time", end_time)
 			("info_url", info_url)
 			("issue_name", issue_name)
 			("transaction", trans)
@@ -174,12 +178,12 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr closeissue(account_name holder, uint64_t ballot_id) {
+	transaction_trace_ptr closeissue(account_name holder, account_name proposer) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(tf), N(closeissue), vector<permission_level>{{holder, config::active_name}},
 			mvo()
 			("holder", holder)
-			("ballot_id", ballot_id)
+			("proposer", proposer)
 		));
 		set_transaction_headers(trx);
 		trx.sign(get_private_key(holder, "active"), control->get_chain_id());
@@ -252,8 +256,8 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("config", data, abi_serializer_max_time);
 	}
 
-	fc::variant get_issue(uint64_t issue_id) {
-		vector<char> data = get_row_by_account(N(tf), N(tf), N(issues), issue_id);
+	fc::variant get_issue(account_name proposer) {
+		vector<char> data = get_row_by_account(N(tf), N(tf), N(issues), proposer);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("issue", data, abi_serializer_max_time);
 	}
 #pragma endregion get_funcs
