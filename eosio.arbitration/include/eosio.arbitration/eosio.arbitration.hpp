@@ -61,7 +61,8 @@ public:
   enum arb_status {
     AVAILABLE,   // 0
     UNAVAILABLE, // 1
-    INACTIVE     // 2
+    INACTIVE,    // 2
+    SEAT_EXPIRED // 3
   };
 
   enum election_status {
@@ -106,13 +107,13 @@ public:
     EOSLIB_SERIALIZE(authority, (threshold)(keys)(accounts)(waits))
   };
 
-  struct[[eosio::table]] candidate {
+  struct[[eosio::table]] pending_candidate {
     name cand_name;
     string credential_link;
     uint32_t applied_time;
 
     uint64_t primary_key() const { return cand_name.value; }
-    EOSLIB_SERIALIZE(candidate, (cand_name)(credential_link)(applied_time))
+    EOSLIB_SERIALIZE(pending_candidate, (cand_name)(credential_link)(applied_time))
   };
 
   // NOTE: diminishing subsequent response (default) times
@@ -120,14 +121,18 @@ public:
   // NOTE: class of claim where neither party can pay fees, TF pays instead
   struct[[eosio::table]] config {
     name publisher;
-    uint16_t max_arbs;
-    uint32_t default_time;         // TODO: double check time_point units
-    vector<int64_t> fee_structure; // NOTE: int64_t is pre-precision value
-    // TODO: Arbitrator schedule field based on class
-    // CLARIFY: usage of "schedule" in requirements doc
+    uint16_t max_elected_arbs;
+    uint32_t election_duration;
+    uint32_t start_election;
+    vector<int64_t> fee_structure; 
+    uint32_t arbitrator_term_length;
+    uint32_t last_time_edited;
+    uint64_t ballot_id = 0;
+    bool auto_start_election = false;     
 
     uint64_t primary_key() const { return publisher.value; }
-    EOSLIB_SERIALIZE(config, (publisher)(max_arbs)(default_time))
+    EOSLIB_SERIALIZE(config, (publisher)(max_elected_arbs)(election_duration)(start_election)
+    (fee_structure)(arbitrator_term_length)(last_time_edited)(ballot_id)(auto_start_election))
   };
 
   struct[[eosio::table]] arbitrator {
@@ -136,13 +141,15 @@ public:
     vector<uint64_t> open_case_ids;
     vector<uint64_t> closed_case_ids;
     string credential_link; //ipfs_url of credentials
+    uint32_t elected_time;
+    uint32_t term_length;
     vector<string> languages; //NOTE: language codes for space
 
     uint64_t primary_key() const { return arb.value; }
-    EOSLIB_SERIALIZE(arbitrator,
-                     (arb)(arb_status)(open_case_ids)(closed_case_ids)(credential_link)(languages))
+    EOSLIB_SERIALIZE(arbitrator,(arb)(arb_status)(open_case_ids)(closed_case_ids)
+                                (credential_link)(elected_time)(term_length)(languages))
   };
-
+/*
   struct[[eosio::table]] claim {
     uint16_t class_suggestion;
     vector<string> submitted_pending_evidence; // submitted by claimant
@@ -182,24 +189,31 @@ public:
     EOSLIB_SERIALIZE(casefile, (case_id)(claimant)(claims)(arbitrators)(
                                    case_status)(last_edit)(findings_ipfs))
   };
-
+*/
 #pragma endregion Structs
 
   arbitration(name s, name code, datastream<const char *> ds);
   ~arbitration();
 
-  [[eosio::action]] void setconfig(uint16_t max_arbs, uint32_t default_time, vector<int64_t> fees);
+  [[eosio::action]] void setconfig(uint16_t max_elected_arbs, uint32_t election_duration, 
+  uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees);
 
 #pragma region Arb_Elections
 
-  [[eosio::action]] void applyforarb( name candidate, string creds_ipfs_url);
+  [[eosio::action]] void initelection();
 
-  [[eosio::action]] void cancelarbapp( name candidate);
+  [[eosio::action]] void candaddlead( name candidate, string creds_ipfs_url);
 
-  [[eosio::action]] void endelection(name candidate, uint64_t ballot_id); 
+  [[eosio::action]] void regcand( name candidate, string creds_ipfs_url);
+
+  [[eosio::action]] void unregcand( name candidate);
+  
+  [[eosio::action]] void candrmvlead( name candidate);
+
+  [[eosio::action]] void endelection(name candidate); 
                                                       
 #pragma endregion Arb_Elections
-
+/*
 #pragma region Case_Setup
 
   [[eosio::action]] void filecase(name claimant, uint16_t class_suggestion, string ev_ipfs_url); // NOTE: filing a case doesn't require a respondent
@@ -220,35 +234,24 @@ public:
 
 #pragma endregion Case_Setup
 
-#pragma region Member_Only
-  [[eosio::action]] void vetoarb(uint64_t case_id, name arb, name selector);
-
-#pragma endregion Member_Only
-
 #pragma region Arb_Only
 
   // TODO: Set case respondant action
   [[eosio::action]] void dismisscase(
       uint64_t case_id, name arb, string ipfs_url); // TODO: require rationale?
 
-  [[eosio::action]] void closecase(uint64_t case_id, name arb,
-                                   string ipfs_url); // TODO: require decision?
+  [[eosio::action]] void closecase(uint64_t case_id, name arb, string ipfs_url); // TODO: require decision?
 
-  [[eosio::action]] void dismissev(
-      uint64_t case_id, uint16_t claim_index, uint16_t ev_index, name arb,
-      string ipfs_url); // NOTE: moves to dismissed_evidence table
+  [[eosio::action]] void dismissev( uint64_t case_id, uint16_t claim_index, uint16_t ev_index, name arb, string ipfs_url); // NOTE: moves to dismissed_evidence table
 
   [[eosio::action]] void acceptev(
-      uint64_t case_id, uint16_t claim_index, uint16_t ev_index, name arb,
-      string ipfs_url); // NOTE: moves to evidence_table and assigns ID
+      uint64_t case_id, uint16_t claim_index, uint16_t ev_index, name arb, string ipfs_url); // NOTE: moves to evidence_table and assigns ID
 
   [[eosio::action]] void arbstatus(uint16_t new_status, name arb);
 
-  [[eosio::action]] void casestatus(uint64_t case_id, uint16_t new_status,
-                                    name arb);
+  [[eosio::action]] void casestatus(uint64_t case_id, uint16_t new_status, name arb);
 
-  [[eosio::action]] void changeclass(uint64_t case_id, uint16_t claim_index,
-                                     uint16_t new_class, name arb);
+  [[eosio::action]] void changeclass(uint64_t case_id, uint16_t claim_index, uint16_t new_class, name arb);
 
   // [[eosio::action]]
   // void joincases(vector<uint64_t> case_ids, name arb); //CLARIFY: joined case
@@ -267,24 +270,34 @@ public:
   [[eosio::action]] void dismissarb(name arb);
 
 #pragma endregion BP_Multisig_Actions
-
+*/
 protected:
-  void validate_ipfs_url(string ipfs_url);
-
 #pragma region Tables
 
   typedef singleton<"configs"_n, config> config_singleton;
   config_singleton configs;
   config _config;
 
-  typedef multi_index<"candidates"_n, candidate> candidates_table;
+  typedef multi_index<"pendingcands"_n, pending_candidate> pending_candidates_table;
+
   typedef multi_index<"arbitrators"_n, arbitrator> arbitrators_table;
 
-  typedef multi_index<"casefiles"_n, casefile> casefiles_table;
-  typedef multi_index<"dismisscases"_n, casefile> dismissed_cases_table;
+  // typedef multi_index<"casefiles"_n, casefile> casefiles_table;
+  // typedef multi_index<"dismisscases"_n, casefile> dismissed_cases_table;
 
-  typedef multi_index<"evidence"_n, evidence> evidence_table;
-  typedef multi_index<"dismissedev"_n, evidence> dismissed_evidence_table;
+  // typedef multi_index<"evidence"_n, evidence> evidence_table;
+  // typedef multi_index<"dismissedev"_n, evidence> dismissed_evidence_table;
 
 #pragma endregion Tables
+
+  void validate_ipfs_url(string ipfs_url);
+  
+  config get_default_config();
+  
+  void start_new_election(uint8_t available_seats);
+  
+  bool has_available_seats(arbitrators_table &arbitrators, uint8_t &available_seats);
+
+  void add_arbitrator(arbitrators_table &arbitrators, name arb_name, std::string credential_link);
+
 };

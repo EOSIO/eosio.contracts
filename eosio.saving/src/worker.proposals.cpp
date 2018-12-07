@@ -185,19 +185,19 @@ void workerproposal::claim(uint64_t sub_id) {
     
     eosio_assert(prop.status == uint8_t(0), "Proposal is closed");
 
-    environment_singleton environment("eosio.trail"_n, "eosio.trail"_n.value);
-    auto e = environment.get();
+    registries_table registries("eosio.trail"_n, "eosio.trail"_n.value);
+    auto e = registries.find(symbol("VOTE", 4).code().raw());
 
     asset outstanding = asset(0, symbol("TLOS", 4));
     asset total_votes = (prop.yes_count + prop.no_count + prop.abstain_count); //total votes cast on proposal
     asset non_abstain_votes = (prop.yes_count + prop.no_count); 
 
     //pass thresholds
-    uint64_t voters_pass_thresh = (e.totals[1] * wp_env_struct.threshold_pass_voters) / 100;
+    uint64_t voters_pass_thresh = (e->total_voters * wp_env_struct.threshold_pass_voters) / 100;
     asset votes_pass_thresh = (non_abstain_votes * wp_env_struct.threshold_pass_votes) / 100;
 
     //fee refund thresholds
-    uint64_t voters_fee_thresh = (e.totals[1] * wp_env_struct.threshold_fee_voters) / 100; 
+    uint64_t voters_fee_thresh = (e->total_voters * wp_env_struct.threshold_fee_voters) / 100; 
     asset votes_fee_thresh = (total_votes * wp_env_struct.threshold_fee_votes) / 100; 
 
     auto updated_fee = sub.fee;
@@ -223,7 +223,7 @@ void workerproposal::claim(uint64_t sub_id) {
         outstanding += asset(int64_t(sub.amount), symbol("TLOS", 4));
     }
     
-    // print("\n numbers : ", e.totals[1], " * ", wp_env_struct.threshold_pass_voters, " | ", wp_env_struct.threshold_fee_voters, " ---- ", total_votes, " ", prop.yes_count, " ", prop.no_count);
+    // print("\n numbers : ", e->total_voters, " * ", wp_env_struct.threshold_pass_voters, " | ", wp_env_struct.threshold_fee_voters, " ---- ", total_votes, " ", prop.yes_count, " ", prop.no_count);
     if(outstanding.amount > 0) {
         action(permission_level{ _self, "active"_n }, "eosio.token"_n, "transfer"_n, make_tuple(
             _self,

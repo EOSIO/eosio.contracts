@@ -29,6 +29,9 @@ struct contracts {
    static std::vector<uint8_t> eosio_saving_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.saving/eosio.saving.wasm"); }
    static std::string          eosio_saving_wast() { return read_wast("${CMAKE_BINARY_DIR}/../eosio.saving/eosio.saving.wast"); }
    static std::vector<char>    eosio_saving_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.saving/eosio.saving.abi"); }
+   static std::vector<uint8_t> eosio_arb_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.arbitration/eosio.arbitration.wasm"); }
+   static std::string          eosio_arb_wast() { return read_wast("${CMAKE_BINARY_DIR}/../eosio.arbitration/eosio.arbitration.wast"); }
+   static std::vector<char>    eosio_arb_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.arbitration/eosio.arbitration.abi"); }
 
    struct util {
       static std::vector<uint8_t> test_api_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/test_api.wasm"); }
