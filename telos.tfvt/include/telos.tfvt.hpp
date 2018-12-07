@@ -113,10 +113,9 @@ public:
 
     struct [[eosio::table]] board_member {
         name member;
-		bool is_retiring;
 
         uint64_t primary_key() const { return member.value; }
-        EOSLIB_SERIALIZE(board_member, (member)(is_retiring))
+        EOSLIB_SERIALIZE(board_member, (member))
     };
 
     struct [[eosio::table]] config {
@@ -130,7 +129,7 @@ public:
 		uint32_t start_delay = 1200;
 		uint32_t leaderboard_duration = 2000000;
 		uint32_t election_frequency = 14515200;
-		block_timestamp last_board_election_time;
+		uint32_t last_board_election_time;
 
         uint64_t primary_key() const { return publisher.value; }
         EOSLIB_SERIALIZE(config, (publisher)(max_board_seats)(open_seats)(open_election_id)(holder_quorum_divisor)
@@ -188,7 +187,7 @@ public:
     //void addallcands(name holder, vector<candidate> new_cands);
 
 	[[eosio::action]]
-	void addcand(name candidate, string info_link);
+	void addcand(name nominee, string info_link);
 
 	[[eosio::action]]
 	void removecand(name candidate);
@@ -196,8 +195,8 @@ public:
     [[eosio::action]]
     void endelection(name holder);
 
-	[[eosio::action]]
-	void setboard(vector<name> members);
+	// [[eosio::action]]
+	// void setboard(vector<name> members);
 
 	[[eosio::action]]
 	void removemember(name member_to_remove);
@@ -234,7 +233,7 @@ public:
 
 	uint8_t get_occupied_seats();
 
-	vector<permission_level_weight> filter_perms_from_members(name filter_out);
+	vector<permission_level_weight> perms_from_members();
 
     #pragma endregion Helper_Functions
 

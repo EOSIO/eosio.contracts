@@ -748,6 +748,12 @@ void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate,
     eosio_assert(board.publisher == publisher, "cannot add candidate to another account's leaderboard");
     eosio_assert(now() < board.begin_time , "cannot add candidates once voting has begun");
 
+    auto existing_candidate = std::find_if(board.candidates.begin(), board.candidates.end(), [&new_candidate](const candidate &c) {
+        return c.member == new_candidate; 
+    });
+
+    eosio_assert(existing_candidate == board.candidates.end(), "candidate already in leaderboard");
+
     candidate new_candidate_struct = candidate{
         new_candidate,
         info_link,

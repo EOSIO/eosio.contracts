@@ -15,15 +15,15 @@ tfvt::config tfvt::get_default_config() {
 	auto c = config {
 		get_self(),			//publisher
 		uint8_t(12),		//max seats
-		uint8_t(0),			//open seats
+		uint8_t(12),        //open seats
 		uint64_t(0),		//open_election_id
 		uint32_t(5), 		//holder_quorum_divisor
 		uint32_t(2), 		//board_quorum_divisor
 		uint32_t(2000000),	//issue_duration
 		uint32_t(1200),  	//start_delay
-		uint32_t(2000000),   //leaderboard_duration
+		uint32_t(2000000),  //leaderboard_duration
 		uint32_t(14515200),	//election_frequency
-		block_timestamp(0)
+		uint32_t(0)
 	};
 	configs.set(c, get_self());
 	return c;
@@ -67,19 +67,31 @@ void tfvt::inittfboard(string initial_info_link) {
     print("\nTFBOARD Registration and Initialization Actions Sent...");
 }
 
-void tfvt::setconfig(name member, config new_config) {
+void tfvt::setconfig(name member, config new_config) { 
     require_auth("tf"_n);
     eosio_assert(new_config.max_board_seats >= new_config.open_seats, "can't have more open seats than max seats");
 	eosio_assert(new_config.holder_quorum_divisor > 0, "holder_quorum_divisor must be a non-zero number");
 	eosio_assert(new_config.board_quorum_divisor > 0, "board_quorum_divisor must be a non-zero number");
 	eosio_assert(new_config.issue_duration > 0, "issue_duration must be a non-zero number");
 	eosio_assert(new_config.start_delay > 0, "start_delay must be a non-zero number");
+	eosio_assert(new_config.leaderboard_duration > 0, "leaderboard_duration must be a non-zero number");
+	eosio_assert(new_config.election_frequency > 0, "election_frequency must be a non-zero number");
+
+	// NOTE : this will break an ongoing election check for makeelection 
+	if(new_config.max_board_seats >= _config.max_board_seats){
+		new_config.open_seats = new_config.max_board_seats - _config.max_board_seats + _config.open_seats;
+	
+	}else if(new_config.max_board_seats > _config.max_board_seats - _config.open_seats){
+		new_config.open_seats = new_config.max_board_seats - (_config.max_board_seats - _config.open_seats);
+	}else{
+		new_config.open_seats = 0;
+	}
 
 	new_config.publisher = _config.publisher;
-	new_config.open_seats = _config.open_seats;
 	new_config.open_election_id = _config.open_election_id;
-    config_table configs(get_self(), get_self().value);
-    configs.set(new_config, get_self());
+	new_config.last_board_election_time = _config.last_board_election_time;
+	
+	_config = new_config;
 }
 
 void tfvt::makeissue(ignore<name> holder, 
@@ -223,25 +235,12 @@ void tfvt::makeelection(name holder, string info_url) {
     eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller must be a TFVT or TFBOARD holder");
 	eosio_assert(_config.open_seats > 0 || is_term_expired(), "it isn't time for the next election");
 
-	if(is_term_expired()) {
-		members_table members(get_self(), get_self().value);
-		auto itr = members.begin();
-
-		while(itr != members.end()) {
-			members.modify(itr, same_payer, [&](auto& m) {
-				m.is_retiring = true;
-			});
-			itr++;
-		}
-	}
-
 	ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
 	_config.open_election_id = ballots.available_primary_key(); 
 
 	uint32_t begin_time = now() + _config.start_delay;
 	uint32_t end_time = begin_time + _config.leaderboard_duration;
 
-	_config.open_seats = 0; //NOTE: this prevents makeelection from being called multiple times.
     action(permission_level{get_self(), name("active")}, name("eosio.trail"), name("regballot"), make_tuple(
 		get_self(),
 		uint8_t(2), 			//NOTE: makes a leaderboard on Trail
@@ -250,6 +249,21 @@ void tfvt::makeelection(name holder, string info_url) {
         end_time,
         info_url
 	)).send();
+
+	uint8_t available_seats = _config.open_seats;
+	if(is_term_expired()){
+		available_seats = _config.max_board_seats;
+	}
+
+    action(permission_level{get_self(), name("active")}, name("eosio.trail"), name("setseats"), make_tuple(
+		get_self(),
+		_config.open_election_id, 			//NOTE: adds available seats to a leaderboard on Trail
+		available_seats
+	)).send();
+
+	//NOTE: this prevents makeelection from being called multiple times.
+	//NOTE2 : this gets overwritten by setconfig
+	_config.open_seats = 0; 
 }
 
 void tfvt::addcand(name nominee, string info_link) {
@@ -264,14 +278,14 @@ void tfvt::addcand(name nominee, string info_link) {
 	)).send();
 }
 
-void tfvt::removecand(name nominee) {
-	require_auth(nominee);
-	eosio_assert(is_nominee(nominee), "only nominees can be added to the election");
+void tfvt::removecand(name candidate) {
+	require_auth(candidate);
+	eosio_assert(is_nominee(candidate), "candidate is not a nominee");
 
-    action(permission_level{get_self(), name("active")}, name("eosio.trail"), name("addcandidate"), make_tuple(
+    action(permission_level{get_self(), name("active")}, name("eosio.trail"), name("rmvcandidate"), make_tuple(
 		get_self(), 				//publisher
 		_config.open_election_id, 	//ballot_id
-		nominee 					//new_candidate
+		candidate 					//new_candidate
 	)).send();
 }
 
@@ -287,10 +301,8 @@ void tfvt::endelection(name holder) {
     auto board = leaderboards.get(bal.reference_id);
     auto board_candidates = board.candidates;
 
-    sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes >= c2.votes; });
+    sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes > c2.votes; });
 	
-	std::vector<permission_level_weight> board_perms;
-
 	if(board_candidates.size() > board.available_seats) {
 		auto first_cand_out = board_candidates[board.available_seats];
 		board_candidates.resize(board.available_seats);
@@ -306,30 +318,23 @@ void tfvt::endelection(name holder) {
 		if(tied_cands > 0) board_candidates.resize(board_candidates.size() - tied_cands);
 	}
 
-	remove_and_seize_all();
+	if(board_candidates.size() > 0 && is_term_expired()) {
+		remove_and_seize_all();
+		_config.last_board_election_time = now();
+	}
 
     for (int n = 0; n < board_candidates.size(); n++) {
         add_to_tfboard(board.candidates[n].member);
-
-		board_perms.emplace_back(
-			permission_level_weight{ permission_level{
-				board.candidates[n].member,
-				"active"_n
-			}, 1}
-		);
     }
     
-	vector<permission_level_weight> currently_elected = filter_perms_from_members(name(0)); //NOTE: needs testing
-	vector<permission_level_weight> combined;
+	vector<permission_level_weight> currently_elected = perms_from_members(); //NOTE: needs testing
 
-	combined.reserve( currently_elected.size() + board_perms.size() );
-	combined.insert( combined.end(), board_perms.begin(), board_perms.end() );
-	combined.insert( combined.end(), currently_elected.begin(), currently_elected.end() );
-
-	set_permissions(combined);
+	if(currently_elected.size() > 0)
+		set_permissions(currently_elected);
 	
-	_config.last_board_election_time = block_timestamp(now());
-	_config.open_seats = _config.max_board_seats - get_occupied_seats() - board_perms.size();
+	members_table members(_self, _self.value);
+
+	_config.open_seats = _config.max_board_seats - uint8_t(std::distance(members.begin(), members.end()));
 
 	action(permission_level{get_self(), name("active")}, name("eosio.trail"), name("closeballot"), make_tuple(
 		get_self(),
@@ -338,33 +343,11 @@ void tfvt::endelection(name holder) {
 	)).send();
 }
 
-//TODO: DEBUG ONLY
-void tfvt::setboard(vector<name> members) {
-	require_auth(get_self());
-
-	members_table mems(get_self(), get_self().value);
-	std::vector<permission_level_weight> board_perms;
-	for(name member : members) {
-		print("emplace board member: ", name{member});
-		mems.emplace(get_self(), [&](auto& m) {
-			m.member = member;
-		});
-
-		board_perms.emplace_back(
-			permission_level_weight{ permission_level{
-				member,
-				"active"_n
-			}, 1}
-		);
-	}
-	set_permissions(board_perms);
-}
-
 void tfvt::removemember(name member_to_remove) {
 	require_auth2(get_self().value, "major"_n.value);
 	remove_and_seize(member_to_remove);
 	
-	auto perms = filter_perms_from_members(member_to_remove);
+	auto perms = perms_from_members();
 	set_permissions(perms);
 }
 
@@ -454,7 +437,10 @@ bool tfvt::is_tfboard_holder(name user) {
 }
 
 bool tfvt::is_term_expired() {
-	return now() - _config.last_board_election_time.slot / 2 > _config.election_frequency;
+	print("\n now : ", now());
+	print("\n last_board_election_time : ", _config.last_board_election_time);
+	print("\n diff : ", (now() - _config.last_board_election_time));
+	return now() - _config.last_board_election_time > _config.election_frequency;
 }
 
 void tfvt::remove_and_seize_all() {
@@ -464,11 +450,8 @@ void tfvt::remove_and_seize_all() {
 	auto itr = members.begin();
 	vector<name> to_seize;
 	while(itr != members.end()) {
-		if(itr->is_retiring) {
-			to_seize.emplace_back(itr->member);
-			members.erase(itr);
-		}
-		itr++;
+		to_seize.emplace_back(itr->member);
+		itr = members.erase(itr);
 	}
 	
 	action(permission_level{get_self(), "active"_n }, "eosio.trail"_n, "seizebygroup"_n,
@@ -497,14 +480,16 @@ void tfvt::remove_and_seize(name member) {
 }
 
 void tfvt::set_permissions(vector<permission_level_weight> perms) {
-	sort(perms.begin(), perms.end(), [](const auto &first, const auto &second) { return first.permission.actor.value < second.permission.actor.value; });
-	uint16_t active_weight = perms.size() / 4;
+	auto self = get_self();
+	uint16_t active_weight = perms.size() < 4 ? 1 : (perms.size() / 4);
+
 	perms.emplace_back(
 		permission_level_weight{ permission_level{
-				get_self(),
+				self,
 				"eosio.code"_n
 			}, active_weight}
 	);
+	sort(perms.begin(), perms.end(), [](const auto &first, const auto &second) { return first.permission.actor.value < second.permission.actor.value; });
 	
 	action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
 		std::make_tuple(
@@ -520,8 +505,12 @@ void tfvt::set_permissions(vector<permission_level_weight> perms) {
 		)
 	).send();
 
-	perms.erase(--perms.end());
-	uint16_t major_weight = (perms.size() / 3) * 2;
+	auto tf_it = std::find_if(perms.begin(), perms.end(), [&self](const permission_level_weight &lvlw) {
+        return lvlw.permission.actor == self; 
+    });
+	perms.erase(tf_it);
+
+	uint16_t major_weight = perms.size() < 3 ? 1 : ((perms.size() / 3) * 2);
 	action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
 		std::make_tuple(
 			get_self(), 
@@ -537,13 +526,12 @@ void tfvt::set_permissions(vector<permission_level_weight> perms) {
 	).send();
 }
 
-vector<tfvt::permission_level_weight> tfvt::filter_perms_from_members(name filter_out) {
+vector<tfvt::permission_level_weight> tfvt::perms_from_members() {
 	members_table members(get_self(), get_self().value);
 	auto itr = members.begin();
 	
 	vector<permission_level_weight> perms;
 	while(itr != members.end()) {
-		if(!itr->is_retiring && itr->member != filter_out)
 			perms.emplace_back(permission_level_weight{ permission_level{
 				itr->member,
 				"active"_n
@@ -554,19 +542,8 @@ vector<tfvt::permission_level_weight> tfvt::filter_perms_from_members(name filte
 	return perms;
 }
 
-uint8_t tfvt::get_occupied_seats() {
-	members_table members(get_self(), get_self().value);
-	auto itr = members.begin();
-	uint8_t count = 0;
-	while(itr != members.end()) {
-		if(!itr->is_retiring)
-			count++;
-		itr++;
-	}
-	return count;
-}
-
 #pragma endregion Helper_Functions
 
+//(setboard)
 EOSIO_DISPATCH(tfvt, (inittfvt)(inittfboard)(setconfig)(nominate)(makeissue)
-	(closeissue)(makeelection)(addcand)(removecand)(endelection)(setboard)(removemember))
+	(closeissue)(makeelection)(addcand)(removecand)(endelection)(removemember))

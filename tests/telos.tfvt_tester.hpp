@@ -32,23 +32,13 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		N(boardmem1l)
 	};
 	telos_tfvt_tester() {
-		create_accounts({
-			N(tf),
-			N(boardmem1a), 
-			N(boardmem1b), 
-			N(boardmem1c), 
-			N(boardmem1d), 
-			N(boardmem1e), 
-			N(boardmem1f), 
-			N(boardmem1g),
-			N(boardmem1h),
-			N(boardmem1i),
-			N(boardmem1j),
-			N(boardmem1k),
-			N(boardmem1l)
-		});
+		create_accounts({N(tf)});
+		create_accounts(board_members);
+		produce_blocks();
+
 		deploy_contract();
 		produce_blocks();
+		
 		deploy_msig();
 		produce_blocks();
 		transfer(N(eosio), N(tf), asset::from_string("10000.0000 TLOS"), "Monopoly Money");
@@ -119,6 +109,60 @@ class telos_tfvt_tester : public eosio_trail_tester {
 
 	}
 
+	void prepare_election(int candidate_count, uint32_t start_delay = 100, uint8_t max_board_seats = 12, name publisher = name("tf") ){
+		auto holder = test_voters[0];
+		std::string info_link = "some_info_is_here/believe_it/i_m_not_joking";
+
+		uint8_t open_seats = max_board_seats;
+		uint64_t open_election_id = 0;
+		uint32_t holder_quorum_divisor = 3;
+		uint32_t board_quorum_divisor = 4;
+		uint32_t issue_duration = start_delay * 10;
+		uint32_t leaderboard_duration = start_delay * 10;
+		uint32_t election_frequency = (start_delay + leaderboard_duration) * 3;
+		uint32_t last_election = 0;
+		auto expected_config = mvo()
+			("publisher", publisher)
+			("new_config", mvo()
+				("publisher", publisher)
+				("max_board_seats", max_board_seats)
+				("open_seats", open_seats)
+				("holder_quorum_divisor", holder_quorum_divisor)
+				("board_quorum_divisor", board_quorum_divisor)
+				("issue_duration", issue_duration)
+				("start_delay", start_delay)
+				("leaderboard_duration", leaderboard_duration)
+				("election_frequency", election_frequency)
+				("last_board_election_time", last_election)
+				("open_election_id", open_election_id)
+			);
+
+		setconfig(publisher, expected_config);
+		makeelection(holder, info_link);
+		produce_blocks();
+
+		for(auto &bm : board_members){
+			if(candidate_count-- == 0) break;
+
+			nominate(bm, holder);
+			addcand(bm, info_link);
+			produce_blocks();
+		}
+	}
+
+	void cast_votes(int voters_start, int voters_end, int candidate_start, int candidate_end){
+		auto config = get_config();
+		uint64_t bid = config["open_election_id"].as<uint64_t>();
+
+		for(int i = voters_start ; i < voters_end ; i++){
+			for(uint16_t j = candidate_start ; j < candidate_end ; j++){
+				castvote(test_voters[i], bid, j);
+			}
+			produce_blocks();
+		}
+	}
+
+
 #pragma region trx
 	transaction_trace_ptr inittfvt(string initial_info_link) {
 		signed_transaction trx;
@@ -144,7 +188,7 @@ class telos_tfvt_tester : public eosio_trail_tester {
 
 	transaction_trace_ptr setconfig(account_name member, mvo config) {
 		signed_transaction trx;
-		trx.actions.emplace_back( get_action(N(tf), N(setconfig), vector<permission_level>{{member, config::active_name}},
+		trx.actions.emplace_back( get_action(N(tf), N(setconfig), vector<permission_level>{{N(tf), config::active_name}},
 			config
 		));
 		set_transaction_headers(trx);
@@ -190,13 +234,11 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr makeelection(account_name holder, uint32_t begin_time, uint32_t end_time, string info_url) {
+	transaction_trace_ptr makeelection(account_name holder, string info_url) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(tf), N(makeelection), vector<permission_level>{{holder, config::active_name}},
 			mvo()
 			("holder", holder)
-			("begin_time", begin_time)
-			("end_time", end_time)
 			("info_url", info_url)
 		));
 		set_transaction_headers(trx);
@@ -204,27 +246,37 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr endelection(account_name holder, uint64_t ballot_id) {
+	transaction_trace_ptr endelection(account_name holder) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(tf), N(endelection), vector<permission_level>{{holder, config::active_name}},
 			mvo()
 			("holder", holder)
-			("ballot_id", ballot_id)
 		));
 		set_transaction_headers(trx);
 		trx.sign(get_private_key(holder, "active"), control->get_chain_id());
 		return push_transaction( trx );
 	}
 
-	transaction_trace_ptr addallcands(account_name holder, uint64_t ballot_id, vector<mvo> new_cands) {
+	transaction_trace_ptr addcand(account_name nominee, std::string info_link) {
 		signed_transaction trx;
-		trx.actions.emplace_back( get_action(N(tf), N(addallcands), vector<permission_level>{{holder, config::active_name}},
+		trx.actions.emplace_back( get_action(N(tf), N(addcand), vector<permission_level>{{nominee, config::active_name}},
 			mvo()
-			("holder", holder)
-			("ballot_id", ballot_id)
+			("nominee", nominee)
+			("info_link", info_link)
 		));
 		set_transaction_headers(trx);
-		trx.sign(get_private_key(holder, "active"), control->get_chain_id());
+		trx.sign(get_private_key(nominee, "active"), control->get_chain_id());
+		return push_transaction( trx );
+	}
+
+	transaction_trace_ptr removecand(account_name candidate) {
+		signed_transaction trx;
+		trx.actions.emplace_back( get_action(N(tf), N(removecand), vector<permission_level>{{candidate, config::active_name}},
+			mvo()
+			("candidate", candidate)
+		));
+		set_transaction_headers(trx);
+		trx.sign(get_private_key(candidate, "active"), control->get_chain_id());
 		return push_transaction( trx );
 	}
 
@@ -247,12 +299,12 @@ class telos_tfvt_tester : public eosio_trail_tester {
 	}
 
 	fc::variant get_board_member(account_name member) {
-		vector<char> data = get_row_by_account(N(tf), N(tf), N(nominees), member);
+		vector<char> data = get_row_by_account(N(tf), N(tf), N(boardmembers), member);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("board_member", data, abi_serializer_max_time);
 	}
 
-	fc::variant get_config(account_name publisher) {
-		vector<char> data = get_row_by_account(N(tf), N(tf), N(configs), publisher);
+	fc::variant get_config() {
+		vector<char> data = get_row_by_account(N(tf), N(tf), N(configs), N(configs));
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("config", data, abi_serializer_max_time);
 	}
 
