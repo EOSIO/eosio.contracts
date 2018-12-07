@@ -42,8 +42,8 @@ class eosio_arb_tester : public eosio_trail_tester
 
     fc::variant get_candidate(uint64_t candidate_id)
     {
-        vector<char> data = get_row_by_account(N(eosio.arb), N(eosio.arb), N(candidates), candidate_id);
-        return data.empty() ? fc::variant() : abi_ser.binary_to_variant("candidate", data, abi_serializer_max_time);
+        vector<char> data = get_row_by_account(N(eosio.arb), N(eosio.arb), N(pendingcands), candidate_id);
+        return data.empty() ? fc::variant() : abi_ser.binary_to_variant("pending_candidate", data, abi_serializer_max_time);
     }
     
     fc::variant get_arbitrator(uint64_t arbitrator_id)
@@ -106,17 +106,6 @@ class eosio_arb_tester : public eosio_trail_tester
     }
 
     // #pragma region actions_Arb_Elections
-    // fc::variant get_ballot(uint64_t ballot_id)
-    // {
-    //     vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(ballots), ballot_id);
-    //     return data.empty() ? fc::variant() : abi_ser.binary_to_variant("ballot", data, abi_serializer_max_time);
-    // } 
-    
-    // fc::variant get_leaderboard(uint64_t reference_id)
-    // {
-    //     vector<char> data = get_row_by_account(N(eosio.trail), N(eosio.trail), N(leaderboards), reference_id);
-    //     return data.empty() ? fc::variant() : abi_ser.binary_to_variant("leaderboard", data, abi_serializer_max_time);
-    // } 
 
      transaction_trace_ptr init_election()
     {
@@ -129,27 +118,47 @@ class eosio_arb_tester : public eosio_trail_tester
         return push_transaction(trx);
     }
 
-    transaction_trace_ptr regarb(name candidate, string creds_ipfs_url)
+    transaction_trace_ptr candaddlead(name candidate, string creds_ipfs_url)
     {
         signed_transaction trx;
-        trx.actions.emplace_back(get_action(N(eosio.arb), N(regarb), vector<permission_level>{{candidate, config::active_name}},
+        trx.actions.emplace_back(get_action(N(eosio.arb), N(candaddlead), vector<permission_level>{{candidate, config::active_name}},
                                             mvo()("candidate", candidate)("creds_ipfs_url", creds_ipfs_url)));
         set_transaction_headers(trx);
         trx.sign(get_private_key(candidate, "active"), control->get_chain_id());
         return push_transaction(trx);
     }
 
-    transaction_trace_ptr unregarb(name candidate )
+    transaction_trace_ptr candrmvlead( name candidate )
     {
         signed_transaction trx;
-        trx.actions.emplace_back(get_action(N(eosio.arb), N(unregarb), vector<permission_level>{{candidate, config::active_name}},
+        trx.actions.emplace_back(get_action(N(eosio.arb), N(candrmvlead), vector<permission_level>{{candidate, config::active_name}},
                                             mvo()("candidate", candidate)));
         set_transaction_headers(trx);
         trx.sign(get_private_key(candidate, "active"), control->get_chain_id());
         return push_transaction(trx);
     }
 
-    transaction_trace_ptr endelection(name candidate)
+    transaction_trace_ptr regcand(name candidate, string creds_ipfs_url)
+    {
+        signed_transaction trx;
+        trx.actions.emplace_back(get_action(N(eosio.arb), N(regcand), vector<permission_level>{{candidate, config::active_name}},
+                                            mvo()("candidate", candidate)("creds_ipfs_url", creds_ipfs_url)));
+        set_transaction_headers(trx);
+        trx.sign(get_private_key(candidate, "active"), control->get_chain_id());
+        return push_transaction(trx);
+    }
+
+    transaction_trace_ptr unregcand( name candidate )
+    {
+        signed_transaction trx;
+        trx.actions.emplace_back(get_action(N(eosio.arb), N(unregcand), vector<permission_level>{{candidate, config::active_name}},
+                                            mvo()("candidate", candidate)));
+        set_transaction_headers(trx);
+        trx.sign(get_private_key(candidate, "active"), control->get_chain_id());
+        return push_transaction(trx);
+    }
+
+    transaction_trace_ptr endelection( name candidate)
     {
         signed_transaction trx;
         trx.actions.emplace_back(get_action(N(eosio.arb), N(endelection), vector<permission_level>{{candidate, config::active_name}},

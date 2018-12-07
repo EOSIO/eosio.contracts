@@ -118,8 +118,9 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    std::string credentials = std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition1/");
 
    // candidates cannot register without an election
+   regcand(candidate, credentials);
    BOOST_REQUIRE_EXCEPTION( 
-      regarb(candidate, credentials), 
+      candaddlead(candidate, credentials), 
       eosio_assert_message_exception, 
       eosio_assert_message_is( "ballot doesn't exist" )
    );
@@ -135,8 +136,9 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    BOOST_REQUIRE_EQUAL(true, config["auto_start_election"]);
 
    // register 
-   regarb( candidate, credentials );
-   regarb( dropout, credentials );
+   candaddlead( candidate, credentials );
+   regcand( dropout, credentials );
+   candaddlead( dropout, credentials );
    produce_blocks(1);
 
    // check integrity
@@ -149,9 +151,11 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    BOOST_REQUIRE_EQUAL( c["credential_link"],  credentials );
 
    // dropout unregisters
-   unregarb(dropout);
+   candrmvlead( dropout );
+   unregcand( dropout );
    // candidate unregisters
-   unregarb(candidate);
+   candrmvlead( candidate );
+   unregcand( candidate );
    produce_blocks(1);
 
    // check dropout is not a candidate anymore
@@ -161,7 +165,8 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    BOOST_REQUIRE_EQUAL(true, c.is_null());
    
    // candidate registers back
-   regarb( candidate, credentials );
+   regcand( candidate, credentials );
+   candaddlead( candidate, credentials );
    c = get_candidate(candidate.value);
    BOOST_REQUIRE_EQUAL( c["cand_name"].as<name>(), candidate );
    BOOST_REQUIRE_EQUAL( c["credential_link"],  credentials );
@@ -169,14 +174,14 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
 
    // candidates cannot register multiple times
    BOOST_REQUIRE_EXCEPTION( 
-      regarb(candidate, credentials), 
+      regcand(candidate, credentials), 
       eosio_assert_message_exception, 
       eosio_assert_message_is( "Candidate is already an applicant" )
    );
 
    // dropout cannot unregister multiple times
    BOOST_REQUIRE_EXCEPTION( 
-      unregarb(dropout), 
+      unregcand(dropout), 
       eosio_assert_message_exception, 
       eosio_assert_message_is( "Candidate isn't an applicant" )
    );
@@ -187,16 +192,17 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    
    // candidates cannot unregister during election
    BOOST_REQUIRE_EXCEPTION( 
-      unregarb(candidate), 
+      unregcand(candidate), 
       eosio_assert_message_exception, 
       eosio_assert_message_is( "Cannot unregister while election is in progress" )
    );
 
    // new candidates can register while an election is ongoing
-   regarb(dropout, credentials);
+   regcand(dropout, credentials);
+
    // but they cannot unregister during election even if they are not part of it
    BOOST_REQUIRE_EXCEPTION( 
-      unregarb(dropout), 
+      unregcand(dropout), 
       eosio_assert_message_exception, 
       eosio_assert_message_is( "Cannot unregister while election is in progress" )
    );
@@ -242,11 +248,15 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    uint32_t expected_term_length = now() + arbitrator_term_length;
 
    // candidates that have NOT participated in the election CAN end it
-   endelection(dropout); 
+   endelection(candidate); 
    produce_blocks(1);
 
    // the single candidate passes
    // so, candidate should be an arbitrator
+   // and candidate is removed from the pending_candidates_table
+   c = get_candidate(candidate.value);
+   BOOST_REQUIRE_EQUAL(true, c.is_null());
+
    auto arb = get_arbitrator(candidate.value);
    uint16_t UNAVAILABLE_STATUS = 1;
    BOOST_REQUIRE_EQUAL(false, arb.is_null());
@@ -312,9 +322,9 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
 
    // arbitrators with a valid seat cannot register for election
    BOOST_REQUIRE_EXCEPTION( 
-      regarb(candidate, credentials), 
+      regcand(candidate, credentials), 
       eosio_assert_message_exception, 
-      eosio_assert_message_is( "Arbitrator seat didn't expire" )
+      eosio_assert_message_is( "Candidate is already an Arbitrator and the seat isn't expired" )
    );
 
    // let the term expire
@@ -322,7 +332,8 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    produce_blocks(1);
 
    // arbitrators with expired terms can join the election
-   regarb(candidate, credentials);
+   regcand(candidate, credentials);
+   candaddlead(candidate, credentials);
    produce_blocks(1);
 
    arb = get_arbitrator(candidate);
@@ -342,7 +353,6 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    // dropout and the expired arbitrator are part of the new election
    BOOST_REQUIRE_EQUAL(get_leaderboard(lid)["candidates"].size(), 2);
 } FC_LOG_AND_RETHROW()
-
 
 BOOST_FIXTURE_TEST_CASE( full_election, eosio_arb_tester ) try {
    auto one_day = 86400;
@@ -377,16 +387,19 @@ BOOST_FIXTURE_TEST_CASE( full_election, eosio_arb_tester ) try {
    // register and verifiy integrity of candidate info
    for(int i = 0; i <= 2; i++){
       // register 
-      regarb( test_voters[i], credentials);
+      regcand( test_voters[i], credentials);
+      candaddlead( test_voters[i], credentials);
       produce_blocks(1);
    }
 
    // ensure candidates that unreg + reg after initelection will be votable
    // note for the continuation of the test :
-      // unreg + rereg will put the candidate at the end of the leaderboard queue 
-   unregarb(candidate3);
+   // unreg + rereg will put the candidate at the end of the leaderboard queue 
+   candrmvlead(candidate3);
+   unregcand(candidate3);
    produce_blocks(1);
-   regarb(candidate3, credentials);
+   regcand(candidate3, credentials);
+   candaddlead(candidate3, credentials);
    produce_blocks(1);
 
    // start the election period
@@ -497,7 +510,6 @@ BOOST_FIXTURE_TEST_CASE( full_election, eosio_arb_tester ) try {
    BOOST_REQUIRE_EQUAL(false, config["auto_start_election"]);
 } FC_LOG_AND_RETHROW()
 
-
 BOOST_FIXTURE_TEST_CASE( tiebreaker, eosio_arb_tester ) try {
    auto one_day = 86400;
    uint32_t 
@@ -531,16 +543,19 @@ BOOST_FIXTURE_TEST_CASE( tiebreaker, eosio_arb_tester ) try {
    // register and verifiy integrity of candidate info
    for(int i = 0; i <= 2; i++){
       // register 
-      regarb( test_voters[i], credentials);
+      regcand( test_voters[i], credentials);
+      candaddlead( test_voters[i], credentials);
       produce_blocks(1);
    }
 
    // ensure candidates that unreg + reg after initelection will be votable
    // note for the continuation of the test :
-      // unreg + rereg will put the candidate at the end of the leaderboard queue 
-   unregarb(candidate3);
+   // unreg + rereg will put the candidate at the end of the leaderboard queue 
+   candrmvlead(candidate3);
+   unregcand(candidate3);
    produce_blocks(1);
-   regarb(candidate3, credentials);
+   regcand(candidate3, credentials);
+   candaddlead(candidate3, credentials);
    produce_blocks(1);
 
    // start the election period
@@ -565,8 +580,6 @@ BOOST_FIXTURE_TEST_CASE( tiebreaker, eosio_arb_tester ) try {
       uint16_t vote_for_candidate = 0;      
       castvote(test_voters[i].value, config["ballot_id"].as_uint64(), vote_for_candidate);
       expected_weights[vote_for_candidate] += weight;
-
-      // todo : recast vote test ??
 
       // other vote : 1 for candidate2 and 1 for candidate3 to get a tie
       vote_for_candidate = ( i % 2 == 0 ) ? uint16_t(2) : uint16_t(1);
