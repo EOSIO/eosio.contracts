@@ -65,6 +65,13 @@ public:
 
     #pragma region Constants
 
+	enum ISSUE_STATE {
+		FAIL = 2,
+		COUNT = 0,
+		TIE = 3,
+		PASS = 1
+	};
+
     asset const INITIAL_TFVT_MAX_SUPPLY = asset(500, symbol("TFVT", 0)); //TODO: finalize initial supply
     
     asset const INITIAL_TFBOARD_MAX_SUPPLY = asset(12, symbol("TFBOARD", 0)); //TODO: finalize initial supply
@@ -106,15 +113,17 @@ public:
 
     struct [[eosio::table]] board_member {
         name member;
+		bool is_retiring;
 
         uint64_t primary_key() const { return member.value; }
-        EOSLIB_SERIALIZE(board_member, (member))
+        EOSLIB_SERIALIZE(board_member, (member)(is_retiring))
     };
 
     struct [[eosio::table]] config {
         name publisher;
         uint8_t max_board_seats = 12; //NOTE: adjustable by board members
-        uint8_t open_seats = 0;
+        uint8_t open_seats = 12;
+		uint64_t open_election_id = 0;
 		uint32_t holder_quorum_divisor = 5;
 		uint32_t board_quorum_divisor = 2;
 		uint32_t issue_duration = 2000000;
@@ -124,16 +133,18 @@ public:
 		block_timestamp last_board_election_time;
 
         uint64_t primary_key() const { return publisher.value; }
-        EOSLIB_SERIALIZE(config, (publisher)(max_board_seats)(open_seats)(holder_quorum_divisor)
+        EOSLIB_SERIALIZE(config, (publisher)(max_board_seats)(open_seats)(open_election_id)(holder_quorum_divisor)
 			(board_quorum_divisor)(issue_duration)(start_delay)(leaderboard_duration)(election_frequency)(last_board_election_time))
     };
 
 	struct [[eosio::table]] issue {
-		uint64_t id;
-		eosio::transaction transaction;
+		name proposer;
 		name issue_name;
+		uint64_t ballot_id;
+		eosio::transaction transaction;
 
-		uint64_t primary_key() const { return id; }
+		uint64_t primary_key() const { return proposer.value; }
+		EOSLIB_SERIALIZE(issue, (proposer)(issue_name)(ballot_id)(transaction))
 	};
 
 	//TODO: create multisig compatible packed_trx table for proposals.
@@ -168,19 +179,28 @@ public:
 		ignore<transaction> transaction);
 
     [[eosio::action]]
-    void closeissue(name holder, uint64_t ballot_id);
+    void closeissue(name holder, name proposer);
 
     [[eosio::action]]
     void makeelection(name holder, string info_url);
 
-    [[eosio::action]]
-    void addallcands(name holder, uint64_t ballot_id, vector<candidate> new_cands);
+    //[[eosio::action]]
+    //void addallcands(name holder, vector<candidate> new_cands);
+
+	[[eosio::action]]
+	void addcand(name candidate, string info_link);
+
+	[[eosio::action]]
+	void removecand(name candidate);
 
     [[eosio::action]]
-    void endelection(name holder, uint64_t ballot_id);
+    void endelection(name holder);
 
 	[[eosio::action]]
 	void setboard(vector<name> members);
+
+	[[eosio::action]]
+	void removemember(name member_to_remove);
 
 	//TODO: board member multisig kick action
 			//Starts run off leaderboard at start/end
@@ -203,6 +223,18 @@ public:
     bool is_tfvt_holder(name user);
 
     bool is_tfboard_holder(name user);
+
+	bool is_term_expired();
+
+	void remove_and_seize_all();
+
+	void remove_and_seize(name member);
+
+	void set_permissions(vector<permission_level_weight> perms);
+
+	uint8_t get_occupied_seats();
+
+	vector<permission_level_weight> filter_perms_from_members(name filter_out);
 
     #pragma endregion Helper_Functions
 
