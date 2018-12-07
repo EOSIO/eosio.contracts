@@ -138,6 +138,7 @@ void arbitration::unregcand( name candidate ) {
   leaderboards_table leaderboards("eosio.trail"_n, "eosio.trail"_n.value);
   auto board = leaderboards.get(b.reference_id, "leaderboard doesn't exist");
 
+  //TODO: assert candidate is on leaderboard
   eosio_assert(now() < board.begin_time, "Cannot unregister while election is in progress");
 
   candidates.erase(c);
