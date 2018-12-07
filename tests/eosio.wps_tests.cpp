@@ -245,7 +245,8 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    uint32_t wp_cycle_duration = 2500000; // 2.5 mil seconds = 5 mil blocks
 
    int total_voters = test_voters.size();
-   register_voters(test_voters, 0, total_voters - 1, symbol(4, "VOTE"));
+	symbol vote_symbol = symbol(4, "VOTE");
+   register_voters(test_voters, 0, total_voters - 1, vote_symbol);
    
    auto registry_info = get_registry(symbol(4, "VOTE"));
 		BOOST_REQUIRE_EQUAL(registry_info["total_voters"], total_voters - 1);
@@ -363,13 +364,9 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    produce_block(fc::seconds(2500000)); // end the cycle
    produce_blocks(1);
 
-   wdump((get_proposal(0)));
-   wdump((get_proposal(1)));
-   wdump((now()));
-
    // CLAIM: get fee back
    claim_proposal_funds(0, proposer.value);
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("1200.0000"), get_balance( test_voters[0] ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("200.0000"), get_balance( test_voters[0] ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
 
    // CLAIM: nothing to claim
@@ -392,7 +389,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // voting window (#1) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
-      //mirrorcast(quorum[i].value, symbol(4, "TLOS"));
+      mirrorcast(quorum[i].value, symbol(4, "TLOS"));
 
       // fail vote, fee already claimed but would pass
       uint16_t vote_direction_0 = ( i < vote_tipping_point - 1 ) ? uint16_t(1) : uint16_t(0);
@@ -415,9 +412,10 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    claim_proposal_funds(1, proposer.value);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
 
-   // // CLAIM: fee from proposal 0 should be added to account
+   // // CLAIM: nothing to claim
    claim_proposal_funds(0, proposer.value);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("200.0000"), get_balance( test_voters[0] ) );
 
    produce_blocks(2);
 
@@ -435,7 +433,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // voting window (#2) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
-      //mirrorcast(quorum[i].value, symbol(4, "TLOS"));
+      mirrorcast(quorum[i].value, symbol(4, "TLOS"));
       
       // pass vote, fee already claimed
       uint16_t vote_direction_0 = ( i < vote_tipping_point ) ? uint16_t(1) : uint16_t(0);

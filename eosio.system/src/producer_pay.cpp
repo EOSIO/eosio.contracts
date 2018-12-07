@@ -6,7 +6,6 @@ namespace eosiosystem {
 
    const int64_t  min_pervote_daily_pay = 100'0000;
    const int64_t  min_activated_stake   = 150'000'000'0000;
-   const double   continuous_rate       = 0.04879;          // 5% annual rate
    const double   perblock_rate         = 0.0025;           // 0.25%
    const double   standby_rate          = 0.0075;           // 0.75%
    const uint32_t blocks_per_year       = 52*7*24*2*3600;   // half seconds per year
@@ -25,9 +24,8 @@ namespace eosiosystem {
       name producer;
       _ds >> timestamp >> producer;
 
+      _gstate.block_num++;
       if (_gstate.thresh_activated_stake_time == time_point()) {
-        _gstate.block_num++;
-        
         if(_gstate.block_num >= block_num_network_activation && _gstate.total_producer_vote_weight > 0) _gstate.thresh_activated_stake_time = current_time_point();
         
         return;
@@ -119,10 +117,28 @@ namespace eosiosystem {
 
     if (usecs_since_last_fill > 0 && _gstate.last_pervote_bucket_fill > time_point())
     {
-        auto new_tokens = static_cast<int64_t>((continuous_rate * double(token_supply.amount) * double(usecs_since_last_fill)) / double(useconds_per_year));
+        /* 
+        TIP 0023 Implementation
+        Title: Increase block producer inflation on a one year schedule
+        Ref: https://github.com/Telos-Foundation/tips/blob/master/tip-0023.md
+        */
+        double          continuous_rate     = 0.025;    // default annual inflation
+        const double    worker_rate         = 0.015;    // fixed 1.5% annual rate for WPS
+        const int64_t   rate_block_interval = 20000000; // decrease bp pay interval up to 1st yr
 
-        auto to_producers = (new_tokens / 5) * 2; //40% to producers
-        auto to_workers = new_tokens - to_producers; //60% to WP's
+        if (_gstate.block_num >= 0 && (_gstate.block_num < rate_block_interval)) { // months 1-4 rate
+            continuous_rate = 0.055;
+        }
+        else if (_gstate.block_num >= rate_block_interval && _gstate.block_num < (rate_block_interval * 2)) { // months 5-8 rate
+            continuous_rate = 0.045;
+        }
+        else if (_gstate.block_num >= (rate_block_interval * 2) && _gstate.block_num < (rate_block_interval * 3)) { // months 9-12 rate
+            continuous_rate = 0.035;
+        }
+
+        auto new_tokens = static_cast<int64_t>((continuous_rate * double(token_supply.amount) * double(usecs_since_last_fill)) / double(useconds_per_year));
+        auto to_workers = (worker_rate / continuous_rate) * new_tokens;
+        auto to_producers = new_tokens - to_workers;
 
         INLINE_ACTION_SENDER(eosio::token, issue)
         ("eosio.token"_n, {{"eosio"_n, "active"_n}}, {"eosio"_n, asset(new_tokens, core_symbol()), std::string("Issue new TLOS tokens")});
