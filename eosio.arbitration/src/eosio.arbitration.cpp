@@ -158,7 +158,7 @@ void arbitration::endelection( name candidate ) {
    // sort board candidates by votes
    auto board_candidates = board.candidates;
 
-   sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes >= c2.votes; });
+   sort(board_candidates.begin(), board_candidates.end(), [](const auto &c1, const auto &c2) { return c1.votes > c2.votes; });
    
    //resolve tie clonficts.
    if(board_candidates.size() > board.available_seats) {      
