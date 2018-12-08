@@ -370,6 +370,16 @@ void tfvt::add_to_tfboard(name nominee) {
     mems.emplace(get_self(), [&](auto& m) { //NOTE: emplace in boardmembers table
         m.member = nominee;
     });
+	print("\nsending issuetokens inline");
+	asset board_token = asset(1, symbol("TFBOARD", 0));
+	action(permission_level{get_self(), "active"_n }, "eosio.trail"_n, "issuetoken"_n,
+		std::make_tuple(
+			get_self(),		//account to update
+			nominee,
+			board_token,
+			false
+		)
+	).send();
 }
 
 void tfvt::rmv_from_tfboard(name member) {
@@ -437,9 +447,6 @@ bool tfvt::is_tfboard_holder(name user) {
 }
 
 bool tfvt::is_term_expired() {
-	print("\n now : ", now());
-	print("\n last_board_election_time : ", _config.last_board_election_time);
-	print("\n diff : ", (now() - _config.last_board_election_time));
 	return now() - _config.last_board_election_time > _config.election_frequency;
 }
 

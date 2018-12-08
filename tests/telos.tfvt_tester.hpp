@@ -57,7 +57,8 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		voter_map(0, test_voters.size(), [&](auto& voter) {
 			issuetoken(N(tf), voter.value, asset(1, tfvt_sym), false);
 			produce_blocks();
-			//TODO: check if they got a balance for this shiZ
+			auto voter_info = get_voter(voter.value, tfvt_code);
+			BOOST_REQUIRE_EQUAL(false, voter_info.is_null());
 		});
 
 		mvo token_settings = mvo()("is_destructible", 0)("is_proxyable", 0)("is_burnable", 0)("is_seizable", 0)("is_max_mutable", 1)("is_transferable", 0)("is_recastable", 1)("is_initialized", 1)("counterbal_decay_rate", 500)("lock_after_initialize", 1);

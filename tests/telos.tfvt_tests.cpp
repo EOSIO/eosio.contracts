@@ -412,7 +412,7 @@ try
 	cbid = config["open_election_id"].as_uint64();   
 
 	// end the election
-	endelection(holder);
+	dump_trace(endelection(holder));
 	uint32_t expected_last_board_election_time = now();
 	produce_blocks(1);
 
@@ -427,6 +427,9 @@ try
 	BOOST_REQUIRE_EQUAL(bm["member"].as<name>(), candidate1);
 	auto c = get_nominee(candidate1.value);
 	BOOST_REQUIRE_EQUAL(c.is_null(), true);
+
+	auto voter_info = get_voter(candidate1.value, symbol(0, "TFBOARD").to_symbol_code());
+	BOOST_REQUIRE_EQUAL(false, voter_info.is_null());
 	
 	// candidate2 should be board member and not a nominee anymore
 	bm = get_board_member(candidate2.value);
