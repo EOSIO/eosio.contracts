@@ -1442,6 +1442,10 @@ extern "C" {
             execute_action(name(self), name(code), &trail::seizetoken);
         } else if (code == self && action == name("seizeairgrab").value) {
             execute_action(name(self), name(code), &trail::seizeairgrab);
+        } else if (code == self && action == name("seizebygroup").value) {
+            execute_action(name(self), name(code), &trail::seizebygroup);
+        } else if (code == self && action == name("setallstats").value) {
+            execute_action(name(self), name(code), &trail::setallstats);
         } else if (code == self && action == name("raisemax").value) {
             execute_action(name(self), name(code), &trail::raisemax);
         } else if (code == self && action == name("lowermax").value) {
