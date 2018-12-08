@@ -2,7 +2,13 @@
 
 ## Contract Setup
 
+### Permissions Setup
 
+`owner` : multisig accounts, tf@eosio.code (weight of eosio.code should be enough to sign by itself)
+
+`active` : multisig accounts, tf@eosio.code (weight of eosio.code should be enough to sign by itself)
+
+### Config Setup
 
 * `setconfig(name publisher, config new_configs)`
 
@@ -24,7 +30,7 @@
     * `uint32_t start_delay` is the wait time in seconds before an issue or election will begin voting, from when the `makeelection()` or `makeissue()` actions were successfully sent.
     * `uint32_t leaderboard_duration` is the length in seconds of an election created by the `makeelection()` action.
     * `uint32_t election_frequency` is the amount of time in seconds that must pass before a new election (excluding runoff elections) can begin.
-    * `block_timestamp last_board_election_time` is the last time a board election was concluded.
+    * `uint32_t last_board_election_time` is the last time a board election was concluded.
 
 * `inittfvt(string initial_info_link)`
 
