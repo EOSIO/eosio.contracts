@@ -10,7 +10,7 @@
 
 ### Config Setup
 
-* `setconfig(name publisher, config new_configs)`
+* `setconfig(name publisher, config new_config)`
 
     The setconfig action will overwrite the old config settings with new a new config.
 

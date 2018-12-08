@@ -93,7 +93,7 @@ public:
         false, //is_destructible
         false, //is_proxyable
         false, //is_burnable
-        false, //is_seizable
+        true, //is_seizable
         true, //is_max_mutable
         false, //is_transferable
         false, //is_recastable
