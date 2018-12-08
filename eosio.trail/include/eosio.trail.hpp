@@ -68,6 +68,8 @@ public:
 
     [[eosio::action]] void seizeairgrab(name publisher, name recipient, asset amount); //TODO: add string memo?
 
+    [[eosio::action]] void seizebygroup(name publisher, vector<name> group, asset amount);
+
     [[eosio::action]] void raisemax(name publisher, asset amount);
 
     [[eosio::action]] void lowermax(name publisher, asset amount);

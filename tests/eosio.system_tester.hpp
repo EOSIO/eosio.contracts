@@ -79,8 +79,8 @@ public:
          abi_ser.set_abi(abi, abi_serializer_max_time);
       }
       
-      set_code( N(eosio.trail), contracts::trail_service_wasm() );
-      set_abi( N(eosio.trail),  contracts::trail_service_abi().data() );
+      set_code( N(eosio.trail), contracts::trail_wasm() );
+      set_abi( N(eosio.trail),  contracts::trail_abi().data() );
 
       {
          const auto& accnt = control->db().get<account_object,by_name>( N(eosio.trail) );

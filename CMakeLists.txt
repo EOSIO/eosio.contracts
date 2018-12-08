@@ -39,7 +39,9 @@ add_subdirectory(eosio.arbitration)
 add_subdirectory(eosio.amend)
 add_subdirectory(eosio.trail)
 add_subdirectory(eosio.saving)
+add_subdirectory(telos.tfvt)
 add_subdirectory(telos.free)
+
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")
