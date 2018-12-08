@@ -182,7 +182,7 @@ try
 			("issue_duration", 6)
 			("start_delay", 100)
 			("leaderboard_duration", 1000)
-			("election_frequency", 30000000000000)
+			("election_frequency", 10000)
 			("last_board_election_time", last_election)
 			("open_election_id", 0)
 		);
