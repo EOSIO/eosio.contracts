@@ -63,6 +63,16 @@ void tfvt::inittfboard(string initial_info_link) {
 		INITIAL_TFBOARD_MAX_SUPPLY.symbol, //token_symbol
 		INITIAL_TFBOARD_SETTINGS //new_settings
 	)).send();
+	
+	asset board_token = asset(1, symbol("TFBOARD", 0));
+	action(permission_level{get_self(), "active"_n }, "eosio.trail"_n, "issuetoken"_n,
+		std::make_tuple(
+			get_self(),		//account to update
+			get_self(),
+			board_token,
+			false
+		)
+	).send();
 
     print("\nTFBOARD Registration and Initialization Actions Sent...");
 }
@@ -80,7 +90,17 @@ void tfvt::setconfig(name member, config new_config) {
 	// NOTE : this will break an ongoing election check for makeelection 
 	if(new_config.max_board_seats >= _config.max_board_seats){
 		new_config.open_seats = new_config.max_board_seats - _config.max_board_seats + _config.open_seats;
-	
+
+		auto extra_seats = new_config.max_board_seats - _config.max_board_seats;
+		if(extra_seats > 0){
+			asset board_token = asset(extra_seats, symbol("TFBOARD", 0));
+			action(permission_level{"tf"_n, "active"_n }, "eosio.trail"_n, "raisemax"_n,
+				std::make_tuple(
+					get_self(),
+					board_token
+				)
+			).send();
+		}
 	}else if(new_config.max_board_seats > _config.max_board_seats - _config.open_seats){
 		new_config.open_seats = new_config.max_board_seats - (_config.max_board_seats - _config.open_seats);
 	}else{
@@ -90,7 +110,7 @@ void tfvt::setconfig(name member, config new_config) {
 	new_config.publisher = _config.publisher;
 	new_config.open_election_id = _config.open_election_id;
 	new_config.last_board_election_time = _config.last_board_election_time;
-	
+
 	_config = new_config;
 }
 
@@ -324,7 +344,8 @@ void tfvt::endelection(name holder) {
 	}
 
     for (int n = 0; n < board_candidates.size(); n++) {
-        add_to_tfboard(board.candidates[n].member);
+		if(board_candidates[n].votes > asset(0, board_candidates[n].votes.symbol))
+        	add_to_tfboard(board_candidates[n].member);
     }
     
 	vector<permission_level_weight> currently_elected = perms_from_members(); //NOTE: needs testing
@@ -370,7 +391,7 @@ void tfvt::add_to_tfboard(name nominee) {
     mems.emplace(get_self(), [&](auto& m) { //NOTE: emplace in boardmembers table
         m.member = nominee;
     });
-	print("\nsending issuetokens inline");
+	print("\nsending issuetokens inline to ", nominee);
 	asset board_token = asset(1, symbol("TFBOARD", 0));
 	action(permission_level{get_self(), "active"_n }, "eosio.trail"_n, "issuetoken"_n,
 		std::make_tuple(
@@ -461,13 +482,23 @@ void tfvt::remove_and_seize_all() {
 		itr = members.erase(itr);
 	}
 	
-	action(permission_level{get_self(), "active"_n }, "eosio.trail"_n, "seizebygroup"_n,
-		std::make_tuple(
-			get_self(),		//account to update
-			to_seize,
-			amount_to_seize
-		)
-	).send();
+	if(to_seize.size() > 0){
+		action(permission_level{get_self(), "active"_n }, "eosio.trail"_n, "seizebygroup"_n,
+			std::make_tuple(
+				get_self(),		//account to update
+				to_seize,
+				amount_to_seize
+			)
+		).send();
+
+		asset amount_to_burn = asset(to_seize.size(), symbol("TFBOARD", 0));
+		action(permission_level{get_self(), "active"_n }, "eosio.trail"_n, "burntoken"_n,
+			std::make_tuple(
+				get_self(),
+				amount_to_burn
+			)
+		).send();
+	}
 }
 
 void tfvt::remove_and_seize(name member) {

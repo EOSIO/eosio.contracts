@@ -74,7 +74,7 @@ public:
 
     asset const INITIAL_TFVT_MAX_SUPPLY = asset(500, symbol("TFVT", 0)); //TODO: finalize initial supply
     
-    asset const INITIAL_TFBOARD_MAX_SUPPLY = asset(12, symbol("TFBOARD", 0)); //TODO: finalize initial supply
+    asset const INITIAL_TFBOARD_MAX_SUPPLY = asset(13, symbol("TFBOARD", 0)); //TODO: finalize initial supply
     
     token_settings const INITIAL_TFVT_SETTINGS = token_settings { //TODO: finalize initial tfvt settings
         false, //is_destructible
@@ -92,7 +92,7 @@ public:
     token_settings const INITIAL_TFBOARD_SETTINGS = token_settings { //TODO: finalize initial tfboard settings
         false, //is_destructible
         false, //is_proxyable
-        false, //is_burnable
+        true, //is_burnable
         true, //is_seizable
         true, //is_max_mutable
         false, //is_transferable

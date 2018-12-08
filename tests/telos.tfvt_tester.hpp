@@ -72,6 +72,7 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		// is_seizable = 0 => TFVT
 		// is_seizable = 1 => TFBOARD
 		token_settings["is_seizable"] = 1;
+		token_settings["is_burnable"] = 1;
 		REQUIRE_MATCHING_OBJECT(token_registry["settings"], token_settings);
 		std::cout << time_point_sec(now()).to_iso_string() << std::endl;
 	}

@@ -26,8 +26,8 @@ BOOST_FIXTURE_TEST_CASE(config_test, telos_tfvt_tester)
 try
 {
 	name publisher = name("tf");
-	uint8_t max_board_seats = 1; 
-	uint8_t open_seats = 1;
+	uint8_t max_board_seats = 13; 
+	uint8_t open_seats = 13;
 	uint64_t open_election_id = 2;
 	uint32_t holder_quorum_divisor = 3;
 	uint32_t board_quorum_divisor = 4;
@@ -67,6 +67,9 @@ try
 	BOOST_REQUIRE_EQUAL(config["election_frequency"], election_frequency);
 
 	BOOST_REQUIRE_EQUAL(config["open_election_id"].as<uint64_t>(), 0);
+
+	auto token_registry = get_registry(symbol(0, "TFBOARD"));
+	BOOST_REQUIRE_EQUAL(token_registry["max_supply"].as<asset>(), asset::from_string("14 TFBOARD"));
 }
 FC_LOG_AND_RETHROW()
 
@@ -203,7 +206,9 @@ try
 	produce_block(fc::seconds(100));
 	produce_blocks();
 
-	// todo : vote for nontfvt
+	auto config = get_config();
+	castvote(holder, config["open_election_id"].as<uint32_t>(), 0);
+	produce_blocks();
 
 	BOOST_REQUIRE_EXCEPTION(
 		endelection(nontfvt),
@@ -211,7 +216,7 @@ try
 		eosio_assert_message_is( "caller must be a TFVT or TFBOARD holder" ) 
 	);
 
-	produce_block(fc::seconds(999));
+	produce_block(fc::seconds(998));
 	// produce_blocks();
 
 	BOOST_REQUIRE_EXCEPTION(
@@ -220,7 +225,7 @@ try
 		eosio_assert_message_is( "cannot close leaderboard while voting is still open" ) 
 	);
 
-	produce_blocks();
+	produce_blocks(2);
 
 	endelection(holder);
 	produce_blocks();
@@ -338,7 +343,7 @@ try
 	BOOST_REQUIRE_EXCEPTION(
 		removecand(candidate1),
 		eosio_assert_message_exception, 
-		eosio_assert_message_is( "candidate is not a nominee" ) 
+		eosio_assert_message_is( "cannot remove candidates once voting has begun" ) 
    	);
 }
 FC_LOG_AND_RETHROW()
@@ -429,14 +434,17 @@ try
 	BOOST_REQUIRE_EQUAL(c.is_null(), true);
 
 	auto voter_info = get_voter(candidate1.value, symbol(0, "TFBOARD").to_symbol_code());
-	BOOST_REQUIRE_EQUAL(false, voter_info.is_null());
-	
+	BOOST_REQUIRE_EQUAL(voter_info["tokens"].as<asset>(), asset::from_string("1 TFBOARD"));
+
 	// candidate2 should be board member and not a nominee anymore
 	bm = get_board_member(candidate2.value);
 	BOOST_REQUIRE_EQUAL(false, bm.is_null());
 	BOOST_REQUIRE_EQUAL(bm["member"].as<name>(), candidate2);
 	c = get_nominee(candidate2.value);
 	BOOST_REQUIRE_EQUAL(c.is_null(), true);
+
+	voter_info = get_voter(candidate2.value, symbol(0, "TFBOARD").to_symbol_code());
+	BOOST_REQUIRE_EQUAL(voter_info["tokens"].as<asset>(), asset::from_string("1 TFBOARD"));
 	
 	// candidate2 should be board member and not a nominee anymore
 	bm = get_board_member(candidate3.value);
@@ -447,6 +455,9 @@ try
 	BOOST_REQUIRE_EQUAL(c.is_null(), false);
 	BOOST_REQUIRE_EQUAL(c["nominee"].as<name>(), candidate3);
 	
+	voter_info = get_voter(candidate3.value, symbol(0, "TFBOARD").to_symbol_code());
+	BOOST_REQUIRE_EQUAL(voter_info.is_null(), true);
+
 	// there is no new election in progress since no seats are left
 	config = get_config();
 	BOOST_REQUIRE_EQUAL(config["last_board_election_time"].as<uint32_t>(), expected_last_board_election_time);
@@ -467,16 +478,18 @@ try
 	
 	produce_block(fc::seconds(100));
 	produce_blocks();
-	cast_votes(0, 1, 0, 3);
+	cast_votes(0, 1, 1, 3);
 	produce_block(fc::seconds(1000));
 	produce_blocks();
 	endelection(holder);	
 	
 	bm = get_board_member(candidate1.value);
-	BOOST_REQUIRE_EQUAL(false, bm.is_null());
-	BOOST_REQUIRE_EQUAL(bm["member"].as<name>(), candidate1);
+	BOOST_REQUIRE_EQUAL(true, bm.is_null());
 	c = get_nominee(candidate1.value);
-	BOOST_REQUIRE_EQUAL(c.is_null(), true);
+	BOOST_REQUIRE_EQUAL(c.is_null(), false);
+
+	voter_info = get_voter(candidate1.value, symbol(0, "TFBOARD").to_symbol_code());
+	BOOST_REQUIRE_EQUAL(voter_info["tokens"].as<asset>(), asset::from_string("0 TFBOARD"));
 
 	bm = get_board_member(candidate2.value);
 	BOOST_REQUIRE_EQUAL(false, bm.is_null());
@@ -484,11 +497,17 @@ try
 	c = get_nominee(candidate2.value);
 	BOOST_REQUIRE_EQUAL(c.is_null(), true);
 	
+	voter_info = get_voter(candidate2.value, symbol(0, "TFBOARD").to_symbol_code());
+	BOOST_REQUIRE_EQUAL(voter_info["tokens"].as<asset>(), asset::from_string("1 TFBOARD"));
+
 	bm = get_board_member(candidate3.value);
 	BOOST_REQUIRE_EQUAL(false, bm.is_null());
 	BOOST_REQUIRE_EQUAL(bm["member"].as<name>(), candidate3);
 	c = get_nominee(candidate3.value);
 	BOOST_REQUIRE_EQUAL(c.is_null(), true);
+
+	voter_info = get_voter(candidate3.value, symbol(0, "TFBOARD").to_symbol_code());
+	BOOST_REQUIRE_EQUAL(voter_info["tokens"].as<asset>(), asset::from_string("1 TFBOARD"));
 }
 FC_LOG_AND_RETHROW()
 
