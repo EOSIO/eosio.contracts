@@ -36,7 +36,7 @@ class eosio_arb_tester : public eosio_trail_tester
     
     fc::variant get_config()
     {
-        vector<char> data = get_row_by_account(N(eosio.arb), N(eosio.arb), N(configs), N(configs));
+        vector<char> data = get_row_by_account(N(eosio.arb), N(eosio.arb), N(config), N(config));
         return data.empty() ? fc::variant() : abi_ser.binary_to_variant("config", data, abi_serializer_max_time);
     }
 

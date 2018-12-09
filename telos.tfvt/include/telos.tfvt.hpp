@@ -154,7 +154,7 @@ public:
 
 	typedef multi_index<name("issues"), issue> issues_table;
 
-    typedef singleton<name("configs"), config> config_table;
+    typedef singleton<name("config"), config> config_table;
 	config_table configs;
   	config _config;
 

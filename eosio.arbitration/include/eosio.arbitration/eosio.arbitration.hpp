@@ -119,7 +119,7 @@ public:
   // NOTE: diminishing subsequent response (default) times
   // NOTE: initial deposit saved
   // NOTE: class of claim where neither party can pay fees, TF pays instead
-  struct[[eosio::table]] config {
+  struct[[ eosio::table ]] config {
     name publisher;
     uint16_t max_elected_arbs;
     uint32_t election_duration;
@@ -274,7 +274,7 @@ public:
 protected:
 #pragma region Tables
 
-  typedef singleton<"configs"_n, config> config_singleton;
+  typedef singleton<"config"_n, config> config_singleton;
   config_singleton configs;
   config _config;
 
