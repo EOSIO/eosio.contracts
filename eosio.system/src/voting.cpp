@@ -80,6 +80,17 @@ namespace eosiosystem {
          info.deactivate();
       });
    }
+   
+   void system_contract::unregreason( name producer, std::string reason ) {
+      eosio_assert( reason.size() < 255, "The reason is too long. Reason should not have more than 255 characters.");
+      require_auth( producer );
+
+      const auto& prod = _producers.get( producer.value, "producer not found" );
+      _producers.modify( prod, same_payer, [&]( producer_info& info ){
+         info.deactivate();
+         info.unreg_reason = reason;
+      });
+   }
 
    void system_contract::update_elected_producers( block_timestamp block_time ) {
       _gstate.last_producer_schedule_update = block_time;
