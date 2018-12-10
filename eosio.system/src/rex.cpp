@@ -65,7 +65,7 @@ namespace eosiosystem {
     *
     * @param owner - owner of staked tokens account name
     * @param receiver - account name that tokens have previously been staked to
-    * @param from_net - amount of tokens to be unstaked from Net bandwidth and used for REX purchase
+    * @param from_net - amount of tokens to be unstaked from NET bandwidth and used for REX purchase
     * @param from_cpu - amount of tokens to be unstaked from CPU bandwidth and used for REX purchase
     */
    void system_contract::unstaketorex( const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu )
@@ -151,6 +151,11 @@ namespace eosiosystem {
       }
    }
 
+   /**
+    * @brief Cancels unfilled REX sell order by owner if one exists
+    *
+    * @param owner - owner account name
+    */
    void system_contract::cnclrexorder( const name& owner )
    {
       require_auth( owner );
@@ -376,7 +381,7 @@ namespace eosiosystem {
     * @param conin - the input connector balance
     * @param conout - the output connector balance
     *
-    * @return int64_t - conversion result output amount
+    * @return int64_t - conversion output amount
     */
    int64_t bancor_convert( int64_t& conin, int64_t& conout, int64_t in )
    {
@@ -395,12 +400,12 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Updates account Net and CPU resource limits
+    * @brief Updates account NET and CPU resource limits
     *
     * @param from - account charged for RAM if there is a need
     * @param receiver - account whose resource limits are updated
-    * @param delta_net - change in Net bandwidth limit
-    * @param delta_cpu - change in CPU limit
+    * @param delta_net - change in NET bandwidth limit
+    * @param delta_cpu - change in CPU bandwidth limit
     */
    void system_contract::update_resource_limits( const name& from, const name& receiver, int64_t delta_net, int64_t delta_cpu )
    {
@@ -438,7 +443,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Performs maintenance operations on expired Net and CPU loans and sellrex oders
+    * @brief Performs maintenance operations on expired NET and CPU loans and sellrex oders
     *
     * @param max - maximum number of each of the three categories to be processed
     */
@@ -452,12 +457,12 @@ namespace eosiosystem {
          _rexpool.modify( rexi, same_payer, [&]( auto& rt ) {
             bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, itr->total_staked.amount );
             rt.total_lent.amount    -= itr->total_staked.amount;
-            //            rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+            rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
          });
 
          bool    delete_loan = false;
          int64_t delta_stake = 0;
-         if( itr->payment <= itr->balance && rex_loans_available() ) {
+         if ( itr->payment <= itr->balance && rex_loans_available() ) {
             int64_t rented_tokens = 0;
             _rexpool.modify( rexi, same_payer, [&]( auto& rt ) {
                rented_tokens = bancor_convert( rt.total_rent.amount,
@@ -486,7 +491,7 @@ namespace eosiosystem {
       };
 
       /// transfer from eosio.names to eosio.rex
-      if( rexi->namebid_proceeds.amount > 0 ) {
+      if ( rexi->namebid_proceeds.amount > 0 ) {
          channel_to_rex( names_account, rexi->namebid_proceeds );
          _rexpool.modify( rexi, same_payer, [&]( auto& rt ) {
             rt.namebid_proceeds.amount = 0;
@@ -497,7 +502,7 @@ namespace eosiosystem {
       {
          rex_cpu_loan_table cpu_loans( _self, _self.value );
          auto cpu_idx = cpu_loans.get_index<"byexpr"_n>();
-         for( uint16_t i = 0; i < max; ++i ) {
+         for ( uint16_t i = 0; i < max; ++i ) {
             auto itr = cpu_idx.begin();                                                                                                                                                                                                                                        
             if ( itr == cpu_idx.end() || itr->expiration > current_time_point() ) break;
       
@@ -516,7 +521,7 @@ namespace eosiosystem {
          auto net_idx = net_loans.get_index<"byexpr"_n>();
          for ( uint16_t i = 0; i < max; ++i ) {
             auto itr = net_idx.begin();
-            if( itr == net_idx.end() || itr->expiration > current_time_point() ) break;
+            if ( itr == net_idx.end() || itr->expiration > current_time_point() ) break;
 
             auto result = process_expired_loan( net_idx, itr );
             if ( result.second != 0 )
@@ -589,11 +594,12 @@ namespace eosiosystem {
    }
 
    /**
-    * fill_rex_order processes an incoming of already scheduled sellrex order. If REX pool has enough core
-    * tokens (not frozen in loans), order can be filled. In this case, REX pool totals, user rex_balance
-    * and user vote_stake are updated. However, user voting power is not updated inside this function. The
-    * function returns success flag, order proceeds, and vote stake change. These are used later to finish
-    * order processing, which includes transfering proceeds and updating user vote weight.
+    * Processes an incoming or already scheduled sellrex order. If REX pool has enough core
+    * tokens not frozen in loans, order is filled. In this case, REX pool totals, user rex_balance
+    * and user vote_stake are updated. However, this function does not update user voting power. The
+    * function returns success flag, order proceeds, and vote stake delta. These are used later in a
+    * different function to complete order processing, i.e. transfer proceeds to user REX fund and
+    * update user vote weight.
     */
    rex_order_outcome system_contract::fill_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex )
    {
@@ -663,7 +669,7 @@ namespace eosiosystem {
     * @pre - owner REX fund has sufficient balance
     *
     * @param owner - owner account name
-    * @param amount - asset to be taken out of REX fund
+    * @param amount - tokens to be transfered out of REX fund
     */
    void system_contract::transfer_from_fund( const name& owner, const asset& amount )
    {
@@ -679,7 +685,7 @@ namespace eosiosystem {
     * @brief Transfers tokens to owner REX fund
     *
     * @param owner - owner account name
-    * @param amount - asset to be transfered to REX fund
+    * @param amount - tokens to be transfered to REX fund
     */
    void system_contract::transfer_to_fund( const name& owner, const asset& amount )
    {
@@ -698,7 +704,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Processes owner filled sellrex orders and updates vote weight
+    * @brief Processes owner filled sellrex order and updates vote weight
     *
     * Checks if user has a scheduled sellrex order that has been filled, completes its processing,
     * and deletes it. Processing entails transfering proceeds to user REX fund and updating user
@@ -880,7 +886,7 @@ namespace eosiosystem {
     * @brief Updates owner REX balance upon buying REX tokens
     *
     * @param owner - account name of REX owner
-    * @param payment - amount core tokens paid for buying REX
+    * @param payment - amount core tokens paid to buy REX
     * @param rex_received - amount of purchased REX tokens 
     *
     * @return asset - change in owner REX vote stake
