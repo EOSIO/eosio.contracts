@@ -57,6 +57,7 @@ namespace eosiosystem {
           info.url = url;
           info.location = location;
           info.is_active = true;
+          info.unreg_reason = "";
          });
       } else {
          _producers.emplace( producer, [&]( producer_info& info ){
