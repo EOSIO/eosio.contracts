@@ -1,6 +1,6 @@
 ## Action - `{{ telos.free.create }}`
 
-This human-language contract for the telos.free action CREATE is legally binding and can be used in the event of a dispute. Disputes shall be settled through arbitration by Telos Elected Arbitrators as described in the Telos Blockchain Network Operating Agreement and the Telos Blockchain Network Arbitration Rules and Procedures.
+This human-language contract for the `telos.free` action `create()` is legally binding and can be used in the event of a dispute. Disputes shall be settled through arbitration by Telos Elected Arbitrators as described in the Telos Blockchain Network Operating Agreement and the Telos Blockchain Network Arbitration Rules and Procedures.
 
 ### Parameters
 
