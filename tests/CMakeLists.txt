@@ -1,17 +1,10 @@
 cmake_minimum_required( VERSION 3.5 )
 
-set(EOSIO_VERSION_MIN "1.3")
-set(EOSIO_VERSION_SOFT_MAX "1.3")
+set(EOSIO_VERSION_MIN "1.4")
+set(EOSIO_VERSION_SOFT_MAX "1.4")
 #set(EOSIO_VERSION_HARD_MAX "")
 
-include(../CheckVersion.txt)
-
-if(EOSIO_ROOT STREQUAL "" OR NOT EOSIO_ROOT)
-   set(EOSIO_ROOT "/usr/local/eosio")
-endif()
-
-list(APPEND CMAKE_MODULE_PATH ${EOSIO_ROOT}/lib/cmake)
-include(EosioTester)
+find_package(eosio)
 
 ### Check the version of eosio
 set(VERSION_MATCH_ERROR_MSG "")

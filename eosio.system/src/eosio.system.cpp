@@ -299,21 +299,20 @@ namespace eosiosystem {
       auto system_token_supply   = eosio::token::get_supply(token_account, core.code() );
       eosio_assert( system_token_supply.symbol == core, "specified core symbol does not exist (precision mismatch)" );
 
-      if( system_token_supply.amount > 0 ) {
-         _rammarket.emplace( _self, [&]( auto& m ) {
-            m.supply.amount = 100000000000000ll;
-            m.supply.symbol = ramcore_symbol;
-            m.base.balance.amount = int64_t(_gstate.free_ram());
-            m.base.balance.symbol = ram_symbol;
-            m.quote.balance.amount = system_token_supply.amount / 1000;
-            m.quote.balance.symbol = core;
-         });
-      }
-
+      eosio_assert( system_token_supply.amount > 0, "system token supply must be greater than 0" );
+      _rammarket.emplace( _self, [&]( auto& m ) {
+         m.supply.amount = 100000000000000ll;
+         m.supply.symbol = ramcore_symbol;
+         m.base.balance.amount = int64_t(_gstate.free_ram());
+         m.base.balance.symbol = ram_symbol;
+         m.quote.balance.amount = system_token_supply.amount / 1000;
+         m.quote.balance.symbol = core;
+      });
+      
       INLINE_ACTION_SENDER(eosio::token, open)( token_account, { _self, active_permission },
                                                 { rex_account, core, _self } );
-
    }
+
 } /// eosio.system
 
 
