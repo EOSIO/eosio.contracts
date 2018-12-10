@@ -54,9 +54,9 @@ namespace eosiosystem {
             + " seconds").c_str());
             
           info.producer_key = producer_key;
-          info.url = url;
-          info.location = location;
-          info.is_active = true;
+          info.url          = url;
+          info.location     = location;
+          info.is_active    = true;
           info.unreg_reason = "";
          });
       } else {
@@ -68,6 +68,7 @@ namespace eosiosystem {
             info.url             = url;
             info.location        = location;
             info.last_claim_time = ct;
+            info.unreg_reason    = "";
          });
       }
 

@@ -56,6 +56,7 @@ void arbitration::initelection() {
 
 void arbitration::candaddlead( name candidate, string creds_ipfs_url )  {
   require_auth(candidate);
+  validate_ipfs_url(ev_ipfs_url);
   
   pending_candidates_table candidates(_self, _self.value);
   auto c = candidates.find(candidate.value);
@@ -82,6 +83,7 @@ void arbitration::candaddlead( name candidate, string creds_ipfs_url )  {
 
 void arbitration::regcand( name candidate, string creds_ipfs_url ) {
   require_auth(candidate);
+  validate_ipfs_url(ev_ipfs_url);
 
   pending_candidates_table candidates(_self, _self.value);
 
