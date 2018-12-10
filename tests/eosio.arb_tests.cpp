@@ -33,6 +33,7 @@ BOOST_FIXTURE_TEST_CASE( check_config_setter, eosio_arb_tester ) try {
    uint16_t 
       max_elected_arbs = 20;
 
+   produce_blocks(1);
    // setup config
    setconfig ( max_elected_arbs, start_election, election_duration, arbitrator_term_length, fees);
    produce_blocks(1);

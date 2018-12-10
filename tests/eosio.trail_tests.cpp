@@ -285,9 +285,15 @@ BOOST_FIXTURE_TEST_CASE( reg_proposal_ballot, eosio_trail_tester ) try {
 		("cycle_count", 0)
 		("status", uint8_t(0))
 	);
-
-	produce_blocks( 2401 );
+	produce_blocks();
 	
+	BOOST_REQUIRE_EXCEPTION(closeballot(non_publisher, current_ballot_id, 1),
+		eosio_assert_message_exception, eosio_assert_message_is( "can't close proposal while voting is still open" ) 
+   	);
+	
+	produce_block(fc::seconds(1200));
+	produce_blocks();
+
 	BOOST_REQUIRE_EXCEPTION(closeballot(non_publisher, current_ballot_id, 1),
 		eosio_assert_message_exception, eosio_assert_message_is( "cannot close another account's proposal" ) 
    	);
@@ -554,7 +560,7 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 
 	produce_blocks();
 	produce_block(fc::seconds(end_time - now()));
-	produce_blocks();
+	produce_blocks(2);
 
 	std::cout << "proposal cycle 1: " << std::endl;
 	begin_time = now() + 20;
