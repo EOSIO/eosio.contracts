@@ -199,10 +199,26 @@ BOOST_FIXTURE_TEST_CASE( create_proposal_and_cancel, eosio_wps_tester ) try {
       (uint16_t)3,
       std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B99"),
       core_sym::from_string("1000.0000"),
-      proposer.value
+      test_voters[0].value
    );
+   produce_blocks();
+
    // check if 50TLOS (3% < 50) fee was used
    BOOST_REQUIRE_EQUAL( core_sym::from_string("450.0000"), get_balance( proposer ) );
+   auto submission = get_wps_submission(0);
+   REQUIRE_MATCHING_OBJECT(
+      submission, 
+      mvo()
+         ("id", uint64_t(0))
+		   ("ballot_id", uint64_t(0))
+		   ("proposer", proposer)
+		   ("receiver", test_voters[0])
+		   ("title", std::string("test proposal 1"))
+         ("ipfs_location", std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B99"))
+         ("cycles", uint16_t(3 + 1))
+         ("amount", uint64_t(10000000))
+         ("fee", uint64_t(500000))
+   );
    
 	BOOST_REQUIRE_EXCEPTION( 
       submit_worker_proposal(
@@ -234,6 +250,10 @@ BOOST_FIXTURE_TEST_CASE( create_proposal_and_cancel, eosio_wps_tester ) try {
 
    cancelsub(proposer, 0);
    cancelsub(proposer, 1);
+   produce_blocks();
+   
+   BOOST_REQUIRE_EXCEPTION( openvoting(proposer.value, 0), eosio_assert_message_exception, 
+      eosio_assert_message_is( "Submission not found" ));
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("390.0000"), get_balance( proposer ) );
    
@@ -310,7 +330,11 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
 	openvoting(proposer.value, 0);
 	openvoting(proposer.value, 1);
+   produce_blocks(1);
    
+   BOOST_REQUIRE_EXCEPTION( openvoting(proposer.value, 0), eosio_assert_message_exception, 
+      eosio_assert_message_is( "proposal is no longer in building stage" ));
+
    // validate vote integrity
 	BOOST_REQUIRE_EXCEPTION( castvote(test_voters[0].value, 0, 3), eosio_assert_message_exception, 
       eosio_assert_message_is( "Invalid Vote. [0 = NO, 1 = YES, 2 = ABSTAIN]" ));
@@ -469,6 +493,9 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "Proposal is closed" ), claim_proposal_funds(0, proposer.value));
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "Proposal is closed" ), claim_proposal_funds(1, proposer.value));
+
+   BOOST_REQUIRE_EXCEPTION( openvoting(proposer.value, 0), eosio_assert_message_exception, 
+      eosio_assert_message_is( "proposal is no longer in building stage" ));
 
    // CHECK IF BOTH PROPOSALS ENDED 
    BOOST_REQUIRE_EQUAL(get_proposal(0)["status"].as<uint8_t>(), uint8_t(1));

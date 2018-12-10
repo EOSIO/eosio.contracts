@@ -32,7 +32,7 @@ void trail::regtoken(asset max_supply, name publisher, string info_url) {
     auto sym = max_supply.symbol;
 
     registries_table registries(_self, _self.value);
-    auto r = registries.find(sym.raw());
+    auto r = registries.find(sym.code().raw());
     eosio_assert(r == registries.end(), "Token Registry with that symbol already exists in Trail");
 
     token_settings default_settings;
