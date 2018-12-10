@@ -1,6 +1,6 @@
-## Action - `{{ telos.free.configure_rc }}`
+## Action - `{{ telos.free.configure }}`
 
-This human-language contract for the telos.free action CONFIGURE is legally binding and can be used in the event of a dispute. Disputes shall be settled through arbitration by Telos Elected Arbitrators as described in the Telos Blockchain Network Operating Agreement and the Telos Blockchain Network Arbitration Rules and Procedures.
+This human-language contract for the `telos.free` action `configure()` is legally binding and can be used in the event of a dispute. Disputes shall be settled through arbitration by Telos Elected Arbitrators as described in the Telos Blockchain Network Operating Agreement and the Telos Blockchain Network Arbitration Rules and Procedures.
 
 ### Parameters
 
@@ -18,7 +18,7 @@ _**signer**_ is the account name of the account signing this contract.
 
 ### Intent
 
-INTENT. The intention of the authors and the invoker of this contract is to configure the number of new accounts that the `{{telos.free }}` account can create every 60 minutes as well as the number of TLOS tokens allocated to CPU and NET resources for each account. It shall have no other effect.
+The intention of the authors and the invoker of this contract is to configure the number of new accounts that the `{{telos.free }}` account can create every 60 minutes as well as the number of TLOS tokens allocated to CPU and NET resources for each account. It shall have no other effect.
 
 ### Contract Text
 
