@@ -8,11 +8,11 @@ This smart contract was designed to be used in streamlining the creation of a fi
 
 ### Actions and Inputs
 
-This smart contract has two actions: `configure` and `create`. 
+This smart contract has two actions: `configure()` and `create()`. 
 
 #### Action: `configure` 
 
-Purpose: To configure the number of new accounts that the `{{telos.free }}` account can create every 60 minutes as well as the number of TLOS tokens allocated to CPU and NET resources for each account.
+Purpose: To configure the number of new accounts that the `{{ telos.free }}` account can create every 60 minutes as well as the number of TLOS tokens allocated to CPU and NET resources for each account.
 
 Input | Input Type | Description
 ------|------------|------------
