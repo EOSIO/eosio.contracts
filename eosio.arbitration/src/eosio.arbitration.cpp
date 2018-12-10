@@ -28,7 +28,10 @@ void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duratio
                    start_election,
                    fees,
                    arbitrator_term_length,
-                   now()};
+                   now(),
+                   _config.ballot_id,
+                   _config.auto_start_election
+                   };
 
   print("\nSettings Configured: SUCCESS");
 }
