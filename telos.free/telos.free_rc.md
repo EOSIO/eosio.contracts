@@ -10,7 +10,7 @@ This smart contract was designed to be used in streamlining the creation of a fi
 
 This smart contract has two actions: `configure()` and `create()`. 
 
-#### Action: `configure` 
+#### Action: `configure()` 
 
 Purpose: To configure the number of new accounts that the `{{ telos.free }}` account can create every 60 minutes as well as the number of TLOS tokens allocated to CPU and NET resources for each account.
 
@@ -20,7 +20,7 @@ _**max_accounts_per_hour**_ | int16_t | the maximum number of accounts that the 
 _**stake_cpu_tlos_amount**_ | int64_t | the amount of TLOS tokens to stake to each new account for CPU resources.
 _**stake_net_tlos_amount**_ | int64_t | is the amount of TLOS tokens to stake to each new account for NET resources.
 
-#### Action: `create`
+#### Action: `create()`
 
 Purpose: To create a new user account and set the owner and active public keys.
 
