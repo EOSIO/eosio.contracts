@@ -27,7 +27,7 @@ namespace eosiosystem {
    using eosio::microseconds;
    using eosio::datastream;
 
-   const uint32_t block_num_network_activation = 1000; 
+   const uint32_t block_num_network_activation = 1000000; 
 
    struct[[ eosio::table, eosio::contract("eosio.system") ]] payment_info {
      name bp;
