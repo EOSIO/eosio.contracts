@@ -155,7 +155,10 @@ void arbitration::endelection( name candidate ) {
    leaderboards_table leaderboards("eosio.trail"_n, "eosio.trail"_n.value);
    auto board = leaderboards.get(b.reference_id, "leaderboard doesn't exist");
    
-   eosio_assert(now() > board.end_time, "election isn't ended.");
+   eosio_assert(now() > board.end_time, 
+   std::string("election isn't ended. Please check again in "
+   + std::to_string( uint32_t( board.end_time - now() ))
+   + " seconds").c_str() );
    
    // sort board candidates by votes
    auto board_candidates = board.candidates;
