@@ -130,10 +130,11 @@ public:
 		uint32_t leaderboard_duration = 2000000;
 		uint32_t election_frequency = 14515200;
 		uint32_t last_board_election_time;
+		bool is_active_election = false;
 
         uint64_t primary_key() const { return publisher.value; }
         EOSLIB_SERIALIZE(config, (publisher)(max_board_seats)(open_seats)(open_election_id)(holder_quorum_divisor)
-			(board_quorum_divisor)(issue_duration)(start_delay)(leaderboard_duration)(election_frequency)(last_board_election_time))
+			(board_quorum_divisor)(issue_duration)(start_delay)(leaderboard_duration)(election_frequency)(last_board_election_time)(is_active_election))
     };
 
 	struct [[eosio::table]] issue {

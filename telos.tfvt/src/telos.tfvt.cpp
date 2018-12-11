@@ -4,6 +4,7 @@
 
 tfvt::tfvt(name self, name code, datastream<const char*> ds)
 : contract(self, code, ds), configs(get_self(), get_self().value) {
+	print("\n exists?: ", configs.exists());
 	_config = configs.exists() ? configs.get() : get_default_config();
 }
 
@@ -23,7 +24,8 @@ tfvt::config tfvt::get_default_config() {
 		uint32_t(1200),  	//start_delay
 		uint32_t(2000000),  //leaderboard_duration
 		uint32_t(14515200),	//election_frequency
-		uint32_t(0)
+		uint32_t(0),
+		false
 	};
 	configs.set(c, get_self());
 	return c;
@@ -79,6 +81,7 @@ void tfvt::inittfboard(string initial_info_link) {
 
 void tfvt::setconfig(name member, config new_config) { 
     require_auth("tf"_n);
+	configs.remove();
     eosio_assert(new_config.max_board_seats >= new_config.open_seats, "can't have more open seats than max seats");
 	eosio_assert(new_config.holder_quorum_divisor > 0, "holder_quorum_divisor must be a non-zero number");
 	eosio_assert(new_config.board_quorum_divisor > 0, "board_quorum_divisor must be a non-zero number");
@@ -110,8 +113,10 @@ void tfvt::setconfig(name member, config new_config) {
 	new_config.publisher = _config.publisher;
 	new_config.open_election_id = _config.open_election_id;
 	new_config.last_board_election_time = _config.last_board_election_time;
+	new_config.is_active_election = _config.is_active_election;
 
 	_config = new_config;
+	configs.set(_config, get_self());
 }
 
 void tfvt::makeissue(ignore<name> holder, 
@@ -252,6 +257,7 @@ void tfvt::nominate(name nominee, name nominator) {
 
 void tfvt::makeelection(name holder, string info_url) {
     require_auth(holder);
+	eosio_assert(!_config.is_active_election, "there is already an election is progress");
     eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller must be a TFVT or TFBOARD holder");
 	eosio_assert(_config.open_seats > 0 || is_term_expired(), "it isn't time for the next election");
 
@@ -283,7 +289,8 @@ void tfvt::makeelection(name holder, string info_url) {
 
 	//NOTE: this prevents makeelection from being called multiple times.
 	//NOTE2 : this gets overwritten by setconfig
-	_config.open_seats = 0; 
+	_config.open_seats = 0;
+	_config.is_active_election = true;
 }
 
 void tfvt::addcand(name nominee, string info_link) {
@@ -312,6 +319,7 @@ void tfvt::removecand(name candidate) {
 void tfvt::endelection(name holder) {
     require_auth(holder);
     eosio_assert(is_tfvt_holder(holder) || is_tfboard_holder(holder), "caller must be a TFVT or TFBOARD holder");
+	eosio_assert(_config.is_active_election, "there is no active election to end");
 	uint8_t status = 1;
 
     ballots_table ballots(name("eosio.trail"), name("eosio.trail").value);
@@ -362,6 +370,7 @@ void tfvt::endelection(name holder) {
 		_config.open_election_id,
 		status
 	)).send();
+	_config.is_active_election = false;
 }
 
 void tfvt::removemember(name member_to_remove) {
@@ -456,7 +465,7 @@ bool tfvt::is_tfvt_holder(name user) {
     return false;
 }
 
-bool tfvt::is_tfboard_holder(name user) {
+bool tfvt:: is_tfboard_holder(name user) {
     balances_table balances(name("eosio.trail"), symbol("TFBOARD", 0).code().raw());
     auto b = balances.find(user.value);
 
