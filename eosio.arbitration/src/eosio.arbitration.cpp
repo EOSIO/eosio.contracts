@@ -226,9 +226,10 @@ void arbitration::endelection( name candidate ) {
       sort(arbs_perms.begin(), arbs_perms.end(), [](const auto &first, const auto &second) { return first.permission.actor.value < second.permission.actor.value; });
 
       // review update auth permissions and weights.
-      uint32_t weight = arbs_perms.size() > 3 ? ((( 2 * arbs_perms.size() ) / uint32_t(3)) + 1) : 1;
+      if(arbs_perms.size() > 0) {
+         uint32_t weight = arbs_perms.size() > 3 ? ((( 2 * arbs_perms.size() ) / uint32_t(3)) + 1) : 1;
       
-      action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
+         action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
               std::make_tuple(
                 get_self(), 
                 name("major"), 
@@ -240,7 +241,8 @@ void arbitration::endelection( name candidate ) {
                     std::vector<wait_weight>{}
                     }
                 )
-          ).send();
+          ).send(); 
+      } 
    } 
 
    // close ballot action.
