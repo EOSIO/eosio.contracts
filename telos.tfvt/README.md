@@ -113,3 +113,46 @@
     This action is an administrative-level kick from the Telos Foundation Board. This action is only callable by a multi-sig from a number of board members that satisfy the `major` permission of the `tf` account.
 
     `member_to_remove` is the account name of the board member to remove.
+
+## Contract Flow
+
+The TFVT contract allows `TFVT` tokens holders to nominate candidates for board member elections, start/end elections, and start/end issues. `TFVT` holders are the first class citizen of the Telos Foundation contract. Holders can elect their own representatives and help guide the destiny of the Telos Foundation.
+
+### Election Flow
+
+`TFBOARD` member terms occur every `14515200` seconds or `(0 yr 5 mon. 2 w 4 day)`. The below list of actions is how a `TFVT` holder could guide the election. This list is written in chronological order.
+
+* `nominate`, this action is called by a `TFVT` holder called the Nominator. The Nominator would then nominate an account called the Nominee. Once a nominee has been nominated. They are now elegible to add themselves to any future `TFBOARD` election. If they win in an election, they are removed from the `nominees` table and must be nominated again in the future.
+
+* `makeelection`, this action is called by a `TFVT` holder in order to start a new election cycle. This action will fail if it isn't time for another election. Once this action is executed a coupled `ballot` and `leaderboard` are created in trail which allows `TFVT` holders to vote for the `nominees` that add themselves to the election.
+
+* `addcand`, this action is called by a previously nominated `nominee` to add themselves to the `leaderboard` object in trail. Once added they eligible to receive votes from `TFVT` holders.
+
+Once the `leaderboard`'s `begin_time` has been exceeded, then voting can begin. `TFVT` holders only need cast their vote through trail. In order to cast their vote, they first will need to know what `ballot_id` to vote on. In the case of `telos.tfvt` this can be found in the `config` table of the contract (example below). 
+
+* `eosio.trail::castvote` (see `eosio.trail` [README](...) for more information), once you know the `ballot_id`, a holder can start casting their votes. In this system a holder can cast their vote for as many candidates as they choose, but they can never vote for the same candidate twice. `eosio.trail` is an abstract voting contract, meaning the what you are voting on could be a proposal or an election. The meaning of these proposals and election are interpreted by their publisher. In the case of `telos.tfvt` the election is an election for board members. So the example below has been explained with that context in mind. 
+
+`eosio.trail::castvote(voter, ballot_id, direction)`, in this case the `ballot_id` argument is the `open_election_id` value found in the `config` table on the `telos.tfvt` contract. The `direction` argument is the candidate you wish to vote for, this number ranges from `0 to N - 1` where N is the total number of candidates. The voter is of course, who ever is doing the voting.
+
+How do I know who I'm voting for? Well the easiest way would be to use a tool that is designed to make this easy, but if you are stubborn here is how you find out.
+
+The candidates for a leaderboard election are stored in `eosio.trail`, so we need to first look there. A `ballot` represents two (currently) forms of election, `proposals` and `leaderboards`. A proposal is a `yes/no` voting system, `leaderboards` are more of an election where there can be multiple seats and multiple candidates. In our case, `TFVT` is setting up a leaderboard election. In order to find the leaderboard follow the steps below.
+
+* Look up the `open_election_id` in the `tf` `config` table.
+	* `teclos --url {endpoint} get table tf tf config`
+
+* Look up the `board_id` from the `reference_id` in the ballot.
+	* `teclos --url {endpoint} get table eosio.trail eosio.trail ballots --lower {open_election_id}`
+
+* Look up the `leaderboard` using the `board_id` from the last step. 
+	* `teclos --url {endpoint} get table eosio.trail eosio.trail leaderboards --lower {board_id}`
+
+* Now you should see the `leaderboard` object. The `candidates[]` will show reveal to you who you want to vote for and what their `direction` value should be.
+
+* `eosio.trail::castvote(voter, open_election_id, direction)` done!
+
+* Once the `end_time` of the `leaderboard` is exceeded, voting end. A `TFVT` holder can now end the election.
+
+* `endelection` a `TFVT` holder can now call endelection to end this current round. The `candidates` we have votes will be added to the board. Those new boardmemebers will have signature in the `tf` account authorities, and can now vote on issues.
+
+* If the number of winner isn't equal to `config.max_seats` a run off election can be started by calling `makeelection` again.

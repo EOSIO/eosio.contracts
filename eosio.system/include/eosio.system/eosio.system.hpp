@@ -27,7 +27,13 @@ namespace eosiosystem {
    using eosio::microseconds;
    using eosio::datastream;
 
-   const uint32_t block_num_network_activation = 1000000; 
+   /*
+    * NOTE: 1000 is used only to make the unit tests pass.
+    * the number that is set on the main net is 1,000,000.
+	* This value should be changed by ABPs before launching.
+    */
+   const uint32_t block_num_network_activation = 1000;
+
 
    struct[[ eosio::table, eosio::contract("eosio.system") ]] payment_info {
      name bp;
