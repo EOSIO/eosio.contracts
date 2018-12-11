@@ -126,6 +126,7 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		uint32_t leaderboard_duration = start_delay * 10;
 		uint32_t election_frequency = (start_delay + leaderboard_duration) * 3;
 		uint32_t last_election = 0;
+		bool is_active_election = false;
 		auto expected_config = mvo()
 			("publisher", publisher)
 			("new_config", mvo()
@@ -140,6 +141,7 @@ class telos_tfvt_tester : public eosio_trail_tester {
 				("election_frequency", election_frequency)
 				("last_board_election_time", last_election)
 				("open_election_id", open_election_id)
+				("is_active_election", is_active_election)
 			);
 
 		setconfig(publisher, expected_config);

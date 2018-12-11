@@ -218,16 +218,19 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    castvote(voter.value, config["ballot_id"].as_uint64(), 0);
    produce_blocks(1);
 
+   auto ballot = get_ballot(cbid);
+   auto bid = ballot["reference_id"].as_uint64();
+
+   auto leaderboard = get_leaderboard(bid);
+   auto lid = leaderboard["board_id"].as_uint64();
+
    // election cannot end while in progress
-   //error message needs to check the remaining time.
-   //"election isn't ended. Please check again in "
-   //+ std::to_string( uint32_t( board.end_time - now() ))
-   //+ " seconds"
-//    BOOST_REQUIRE_EXCEPTION( 
-//       endelection(candidate), 
-//       eosio_assert_message_exception, 
-//       eosio_assert_message_is( "election isn't ended." )
-//    );
+   uint32_t remaining_seconds = uint32_t( leaderboard["end_time"].as<uint32_t>() - now() );
+   BOOST_REQUIRE_EXCEPTION( 
+      endelection(candidate), 
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "election isn't ended. Please check again in " + std::to_string( remaining_seconds ) + " seconds" )
+   );
 
    // election period is over
    produce_block(fc::seconds(election_duration));
@@ -243,12 +246,6 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
 
    config = get_config();
    cbid = config["ballot_id"].as_uint64();   
-
-   auto ballot = get_ballot(cbid);
-   auto bid = ballot["reference_id"].as_uint64();
-
-   auto leaderboard = get_leaderboard(bid);
-   auto lid = leaderboard["board_id"].as_uint64();
 
    uint32_t expected_term_length = now() + arbitrator_term_length;
 
