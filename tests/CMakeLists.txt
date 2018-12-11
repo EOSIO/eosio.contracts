@@ -27,7 +27,6 @@ enable_testing()
 configure_file(${CMAKE_SOURCE_DIR}/contracts.hpp.in ${CMAKE_BINARY_DIR}/contracts.hpp)
 
 include_directories(${CMAKE_BINARY_DIR})
-include_directories(/mnt/h/SharedProjects/telos/libraries/softfloat/source/include)
 
 file(GLOB UNIT_TESTS "*.cpp" "*.hpp")
 
