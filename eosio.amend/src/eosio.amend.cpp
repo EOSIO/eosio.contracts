@@ -105,7 +105,7 @@ void ratifyamend::makeproposal(string sub_title, uint64_t doc_id, uint8_t new_cl
 	eosio_assert(d_itr != deposits.end(), "Deposit not found, please transfer your TLOS fee");
     
 	auto dep = *d_itr;
-    asset fee = asset(int64_t(1000000), symbol("TLOS", 4));
+    asset fee = asset(configs_struct.fee, symbol("TLOS", 4));
 	eosio_assert(dep.escrow >= fee, "Deposit amount is less than fee, please transfer more TLOS");
 
 	if(dep.escrow > fee) {

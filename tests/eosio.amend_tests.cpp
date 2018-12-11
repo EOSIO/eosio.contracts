@@ -154,6 +154,33 @@ BOOST_FIXTURE_TEST_CASE( set_environment, eosio_amend_tester ) try {
          ("threshold_fee_voters", 1.2)
          ("threshold_fee_votes", 11.2)
    );
+
+   insert_default_docs();
+   name proposer = test_voters[0];
+   transfer(proposer, eosio::chain::name("eosio.amend"), core_sym::from_string("0.2221"), "ratify 1 fee");
+   produce_blocks();
+
+	BOOST_REQUIRE_EXCEPTION( 
+      makeproposal(
+         std::string("test ratify 1"), 
+         uint64_t(0), 
+         uint8_t(0), 
+         std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B99"), 
+         proposer
+      ), 
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "Deposit amount is less than fee, please transfer more TLOS" )
+   );
+
+   transfer(proposer, eosio::chain::name("eosio.amend"), core_sym::from_string("0.0001"), "ratify 1 fee diff"); 
+   makeproposal(
+      std::string("test ratify 1"), 
+      uint64_t(0), 
+      uint8_t(0), 
+      std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B99"), 
+      proposer
+   );
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( create_proposal_and_cancel, eosio_amend_tester ) try {
