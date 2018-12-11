@@ -3499,7 +3499,7 @@ BOOST_FIXTURE_TEST_CASE( unstake_buy_rex, eosio_system_tester, * boost::unit_tes
       BOOST_REQUIRE_EQUAL( get_net_limit( alice ),                  init_net_limit + net_stake.get_amount() );
       BOOST_REQUIRE_EQUAL( success(),
                            vote( alice, std::vector<account_name>(producer_names.begin(), producer_names.begin() + 20) ) );
-      BOOST_REQUIRE_EQUAL( wasm_assert_msg("must vote for proxy or at least 21 producers before buying REX"),
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("must vote for at least 21 producers or for a proxy before buying REX"),
                            unstaketorex( alice, alice, net_stake, cpu_stake ) );
       BOOST_REQUIRE_EQUAL( success(),
                            vote( alice, std::vector<account_name>(producer_names.begin(), producer_names.begin() + 21) ) );
@@ -4184,6 +4184,8 @@ BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::to
    BOOST_REQUIRE_EQUAL( success(), sellrex( alice, get_rex_balance( alice ) ) );
    BOOST_REQUIRE_EQUAL( 0,         get_rex_balance( alice ).get_amount() );
    BOOST_REQUIRE_EQUAL( success(), vote( alice, { producer_names[0], producer_names[4] } ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("must vote for at least 21 producers or for a proxy before buying REX"),
+                        buyrex( alice, core_sym::from_string("1.0000") ) );
 
 } FC_LOG_AND_RETHROW()
 

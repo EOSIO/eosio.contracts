@@ -52,7 +52,8 @@ namespace eosiosystem {
       require_auth( from );
 
       eosio_assert( amount.symbol == core_symbol(), "asset must be core token" );
-      eosio_assert( amount.amount > 0, "must use positive amount" );
+      eosio_assert( 0 < amount.amount, "must use positive amount" );
+      check_voting_requirement( from );
       transfer_from_fund( from, amount );
       const asset rex_received    = add_to_rex_pool( amount );
       const asset delta_rex_stake = add_to_rex_balance( from, amount, rex_received );
@@ -75,11 +76,7 @@ namespace eosiosystem {
       eosio_assert( from_net.symbol == core_symbol() && from_cpu.symbol == core_symbol(), "asset must be core token" );
       eosio_assert( (0 <= from_net.amount) && (0 <= from_cpu.amount) && (0 < from_net.amount || 0 < from_cpu.amount),
                     "must unstake a positive amount to buy rex" );
-      {
-         auto vitr = _voters.find( owner.value );
-         eosio_assert( vitr != _voters.end() && ( vitr->proxy || vitr->producers.size() >= 21 ),
-                       "must vote for proxy or at least 21 producers before buying REX" );
-      }
+      check_voting_requirement( owner );
 
       {
          del_bandwidth_table dbw_table( _self, owner.value );
@@ -114,9 +111,9 @@ namespace eosiosystem {
     */
    void system_contract::sellrex( const name& from, const asset& rex )
    {
-      runrex(2);
-
       require_auth( from );
+
+      runrex(2);
 
       auto bitr = _rexbalance.require_find( from.value, "user must first buyrex" );
       eosio_assert( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol,
@@ -442,6 +439,13 @@ namespace eosiosystem {
       set_resource_limits( receiver.value, ram_bytes, net + delta_net, cpu + delta_cpu );
    }
 
+   void system_contract::check_voting_requirement( const name& owner )const
+   {
+      auto vitr = _voters.find( owner.value );
+      eosio_assert( vitr != _voters.end() && ( vitr->proxy || 21 <= vitr->producers.size() ),
+                    "must vote for at least 21 producers or for a proxy before buying REX" );
+   }
+
    /**
     * @brief Performs maintenance operations on expired NET and CPU loans and sellrex oders
     *
@@ -673,7 +677,8 @@ namespace eosiosystem {
     */
    void system_contract::transfer_from_fund( const name& owner, const asset& amount )
    {
-      eosio_assert( 0 < amount.amount, "must transfer positive amount from REX fund" );
+      eosio_assert( 0 < amount.amount && amount.symbol == core_symbol(),
+                    "must transfer positive amount from REX fund" );
       auto itr = _rexfunds.require_find( owner.value, "must deposit to REX fund first" );
       eosio_assert( amount <= itr->balance, "insufficient funds");
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
@@ -689,7 +694,8 @@ namespace eosiosystem {
     */
    void system_contract::transfer_to_fund( const name& owner, const asset& amount )
    {
-      eosio_assert( 0 < amount.amount, "must transfer positive amount to REX fund" );
+      eosio_assert( 0 < amount.amount && amount.symbol == core_symbol(),
+                    "must transfer positive amount to REX fund" );
       auto itr = _rexfunds.find( owner.value );
       if ( itr == _rexfunds.end() ) {
          _rexfunds.emplace( owner, [&]( auto& fund ) {
