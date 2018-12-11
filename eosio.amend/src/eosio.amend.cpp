@@ -264,18 +264,18 @@ void ratifyamend::closeprop(uint64_t sub_id) {
     eosio_assert(prop.end_time < now(), "Proposal is still open");
     eosio_assert(prop.status == uint8_t(0), "Proposal is already closed");
 
-    environment_singleton environment("eosio.trail"_n, "eosio.trail"_n.value);
-    auto e = environment.get();
+    registries_table registries("eosio.trail"_n, "eosio.trail"_n.value);
+    auto e = registries.find(symbol("VOTE", 4).code().raw());
 
     asset total_votes = (prop.yes_count + prop.no_count + prop.abstain_count); //total votes cast on proposal
     asset non_abstain_votes = (prop.yes_count + prop.no_count); 
 
     //pass thresholds
-    uint64_t voters_pass_thresh = (e.totals[1] * configs_struct.threshold_pass_voters) / 100;
+    uint64_t voters_pass_thresh = (e->total_voters * configs_struct.threshold_pass_voters) / 100;
     asset votes_pass_thresh = (non_abstain_votes * configs_struct.threshold_pass_votes) / 100;
 
     //fee refund thresholds
-    uint64_t voters_fee_thresh = (e.totals[1] * configs_struct.threshold_fee_voters) / 100; 
+    uint64_t voters_fee_thresh = (e->total_voters * configs_struct.threshold_fee_voters) / 100; 
     asset votes_fee_thresh = (total_votes * configs_struct.threshold_fee_votes) / 100; 
 
     if( prop.yes_count >= votes_fee_thresh && prop.unique_voters >= voters_fee_thresh) {
