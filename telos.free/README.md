@@ -2,17 +2,27 @@
 
 One of the promises of the Telos Blockchain Network is to provide the first 1,000,000 accounts for free. To help make this promise a reality, this smart contract was designed to support the creation of free Telos accounts for users taking advantage of tools such as Sqrl. In this document, we briefly describe how the Free Account Creation smart contract works.
 
-There are two actions allowed in this contract:
+There are four actions allowed in this contract:
 * `configure( int16_t max_accounts_per_hour, int64_t stake_cpu_tlos_amount, int64_t stake_net_tlos_amount )`
-* `create( name new_account, string owner_key, string active_key, string key_prefix )`
+* `addwhitelist( name account_name )`
+* `removewlist( name account_name )`
+* `create( name account_creator, name account_name, string owner_key, string active_key, string key_prefix )`
 
 ## Configuring Account Creation Limits
 To minimize the creation of spam accounts on the Telos Network, the `configure` action accepts a `max_accounts_per_hour` value to limit the number of free accounts that can be created every 60 minutes. This defaults to 50 accounts. It also allows you to specified the amount of TLOS to delegate to new accounts for CPU and NET via `stake_cpu_tlos_amount` and `stake_net_tlos_amount`, respectively. These default to `0.90 TLOS` for CPU and `0.10 TLOS` for NET. Please note that these values must be in the correct format (e.g. 10000 = 1.000 TLOS, 1000 = 0.1000 TLOS, 100 = 0.0100 TLOS, etc)
 
+## Whitelist
+To prevent abuse, this Free Account Creation smart contract requires the authority of the `account_creator` supplied in `create` and also requires the `account_creator` account to be in the whitelist of approved accounts. The following two actions allows you to add or remove approved accounts to the whitelist:
+
+* `addwhitelist( name account_name )` - gives `account_name` access to create accounts using this smart contract
+* `removewlist( name account_name )` - removes `account_name`'s access to create accounts using this smart contract
+
 ## Creating Accounts
 The `create` action requires four (4) parameters before an account can be successfully created.
 
-`new_account` - this is the 12-character name of the new account
+`account_creator` - this is the 12-character name of the account with permission create accounts
+
+`account_name` - this is the 12-character name of the new account
 
 `owner_key` - this is the owner public key used to associate with the account
 

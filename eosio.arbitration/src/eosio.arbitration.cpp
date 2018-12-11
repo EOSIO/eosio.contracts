@@ -28,7 +28,10 @@ void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duratio
                    start_election,
                    fees,
                    arbitrator_term_length,
-                   now()};
+                   now(),
+                   _config.ballot_id,
+                   _config.auto_start_election
+                   };
 
   print("\nSettings Configured: SUCCESS");
 }
@@ -56,6 +59,7 @@ void arbitration::initelection() {
 
 void arbitration::candaddlead( name candidate, string creds_ipfs_url )  {
   require_auth(candidate);
+  validate_ipfs_url(creds_ipfs_url);
   
   pending_candidates_table candidates(_self, _self.value);
   auto c = candidates.find(candidate.value);
@@ -82,6 +86,7 @@ void arbitration::candaddlead( name candidate, string creds_ipfs_url )  {
 
 void arbitration::regcand( name candidate, string creds_ipfs_url ) {
   require_auth(candidate);
+  validate_ipfs_url(creds_ipfs_url);
 
   pending_candidates_table candidates(_self, _self.value);
 
@@ -153,7 +158,10 @@ void arbitration::endelection( name candidate ) {
    leaderboards_table leaderboards("eosio.trail"_n, "eosio.trail"_n.value);
    auto board = leaderboards.get(b.reference_id, "leaderboard doesn't exist");
    
-   eosio_assert(now() > board.end_time, "election isn't ended.");
+   eosio_assert(now() > board.end_time, 
+   std::string("election isn't ended. Please check again in "
+   + std::to_string( uint32_t( board.end_time - now() ))
+   + " seconds").c_str() );
    
    // sort board candidates by votes
    auto board_candidates = board.candidates;

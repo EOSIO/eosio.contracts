@@ -54,9 +54,10 @@ namespace eosiosystem {
             + " seconds").c_str());
             
           info.producer_key = producer_key;
-          info.url = url;
-          info.location = location;
-          info.is_active = true;
+          info.url          = url;
+          info.location     = location;
+          info.is_active    = true;
+          info.unreg_reason = "";
          });
       } else {
          _producers.emplace( producer, [&]( producer_info& info ){
@@ -67,6 +68,7 @@ namespace eosiosystem {
             info.url             = url;
             info.location        = location;
             info.last_claim_time = ct;
+            info.unreg_reason    = "";
          });
       }
 
@@ -78,6 +80,17 @@ namespace eosiosystem {
       const auto& prod = _producers.get( producer.value, "producer not found" );
       _producers.modify( prod, same_payer, [&]( producer_info& info ){
          info.deactivate();
+      });
+   }
+   
+   void system_contract::unregreason( name producer, std::string reason ) {
+      eosio_assert( reason.size() < 255, "The reason is too long. Reason should not have more than 255 characters.");
+      require_auth( producer );
+
+      const auto& prod = _producers.get( producer.value, "producer not found" );
+      _producers.modify( prod, same_payer, [&]( producer_info& info ){
+         info.deactivate();
+         info.unreg_reason = reason;
       });
    }
 

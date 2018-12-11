@@ -27,7 +27,7 @@ namespace eosiosystem {
    using eosio::microseconds;
    using eosio::datastream;
 
-   const uint32_t block_num_network_activation = 1000; 
+   const uint32_t block_num_network_activation = 1000000; 
 
    struct[[ eosio::table, eosio::contract("eosio.system") ]] payment_info {
      name bp;
@@ -142,6 +142,7 @@ namespace eosiosystem {
       double                total_votes = 0;
       eosio::public_key     producer_key; /// a packed public key object
       bool                  is_active = true;
+      std::string           unreg_reason;
       std::string           url;
       uint32_t              unpaid_blocks = 0;
       uint32_t              lifetime_produced_blocks = 0;
@@ -190,7 +191,7 @@ namespace eosiosystem {
       
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
+      EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(unreg_reason)(url)
                         (unpaid_blocks)(lifetime_produced_blocks)(missed_blocks_per_rotation)(lifetime_missed_blocks)(last_claim_time)
                         (location)(kick_reason_id)(kick_reason)(times_kicked)(kick_penalty_hours)(last_time_kicked) )
    };
@@ -314,7 +315,7 @@ namespace eosiosystem {
          void undelegatebw( name from, name receiver,
                             asset unstake_net_quantity, asset unstake_cpu_quantity );
 
-
+        
          /**
           * Increases receiver's ram quota based upon current price and quantity of
           * tokens provided. An inline transfer from receiver to system contract of
@@ -346,6 +347,9 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void unregprod( const name producer );
+
+         [[eosio::action]]
+         void unregreason( const name producer, std::string reason );
 
          [[eosio::action]]
          void setram( uint64_t max_ram_size );
