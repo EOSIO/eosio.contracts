@@ -68,6 +68,8 @@ public:
 
     [[eosio::action]] void seizeairgrab(name publisher, name recipient, asset amount); //TODO: add string memo?
 
+    [[eosio::action]] void seizebygroup(name publisher, vector<name> group, asset amount);
+
     [[eosio::action]] void raisemax(name publisher, asset amount);
 
     [[eosio::action]] void lowermax(name publisher, asset amount);
@@ -127,7 +129,11 @@ public:
 
     [[eosio::action]] void addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link);
 
-    //[[eosio::action]] void rmvcandidate(name publisher, uint64_t ballot_id, name candidate); //TODO: should candidates be allowed to remove themselves? or only publisher?
+    [[eosio::action]] void setallcands(name publisher, uint64_t ballot_id, vector<candidate> new_candidates);
+
+    [[eosio::action]] void setallstats(name publisher, uint64_t ballot_id, vector<uint8_t> new_cand_statuses);
+
+    [[eosio::action]] void rmvcandidate(name publisher, uint64_t ballot_id, name candidate); //TODO: should candidates be allowed to remove themselves? or only publisher?
 
     [[eosio::action]] void setseats(name publisher, uint64_t ballot_id, uint8_t num_seats);
 
@@ -170,6 +176,8 @@ public:
     asset get_vote_weight(name voter, symbol voting_token);
 
     bool has_direction(uint16_t direction, vector<uint16_t> direction_list);
+
+    vector<candidate> set_candidate_statuses(vector<candidate> candidate_list, vector<uint8_t> new_status_list);
 
     #pragma endregion Helper_Functions
 

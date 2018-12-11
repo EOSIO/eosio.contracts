@@ -199,10 +199,26 @@ BOOST_FIXTURE_TEST_CASE( create_proposal_and_cancel, eosio_wps_tester ) try {
       (uint16_t)3,
       std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B99"),
       core_sym::from_string("1000.0000"),
-      proposer.value
+      test_voters[0].value
    );
+   produce_blocks();
+
    // check if 50TLOS (3% < 50) fee was used
    BOOST_REQUIRE_EQUAL( core_sym::from_string("450.0000"), get_balance( proposer ) );
+   auto submission = get_wps_submission(0);
+   REQUIRE_MATCHING_OBJECT(
+      submission, 
+      mvo()
+         ("id", uint64_t(0))
+		   ("ballot_id", uint64_t(0))
+		   ("proposer", proposer)
+		   ("receiver", test_voters[0])
+		   ("title", std::string("test proposal 1"))
+         ("ipfs_location", std::string("32662273CFF99078EC3BFA5E7BBB1C369B1D3884DEDF2AF7D8748DEE080E4B99"))
+         ("cycles", uint16_t(3 + 1))
+         ("amount", uint64_t(10000000))
+         ("fee", uint64_t(500000))
+   );
    
 	BOOST_REQUIRE_EXCEPTION( 
       submit_worker_proposal(
@@ -234,6 +250,10 @@ BOOST_FIXTURE_TEST_CASE( create_proposal_and_cancel, eosio_wps_tester ) try {
 
    cancelsub(proposer, 0);
    cancelsub(proposer, 1);
+   produce_blocks();
+   
+   BOOST_REQUIRE_EXCEPTION( openvoting(proposer.value, 0), eosio_assert_message_exception, 
+      eosio_assert_message_is( "Submission not found" ));
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("390.0000"), get_balance( proposer ) );
    
@@ -245,7 +265,8 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    uint32_t wp_cycle_duration = 2500000; // 2.5 mil seconds = 5 mil blocks
 
    int total_voters = test_voters.size();
-   register_voters(test_voters, 0, total_voters - 1, symbol(4, "VOTE"));
+	symbol vote_symbol = symbol(4, "VOTE");
+   register_voters(test_voters, 0, total_voters - 1, vote_symbol);
    
    auto registry_info = get_registry(symbol(4, "VOTE"));
 		BOOST_REQUIRE_EQUAL(registry_info["total_voters"], total_voters - 1);
@@ -309,7 +330,11 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
 	openvoting(proposer.value, 0);
 	openvoting(proposer.value, 1);
+   produce_blocks(1);
    
+   BOOST_REQUIRE_EXCEPTION( openvoting(proposer.value, 0), eosio_assert_message_exception, 
+      eosio_assert_message_is( "proposal is no longer in building stage" ));
+
    // validate vote integrity
 	BOOST_REQUIRE_EXCEPTION( castvote(test_voters[0].value, 0, 3), eosio_assert_message_exception, 
       eosio_assert_message_is( "Invalid Vote. [0 = NO, 1 = YES, 2 = ABSTAIN]" ));
@@ -363,13 +388,9 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    produce_block(fc::seconds(2500000)); // end the cycle
    produce_blocks(1);
 
-   wdump((get_proposal(0)));
-   wdump((get_proposal(1)));
-   wdump((now()));
-
    // CLAIM: get fee back
    claim_proposal_funds(0, proposer.value);
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("1200.0000"), get_balance( test_voters[0] ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("200.0000"), get_balance( test_voters[0] ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
 
    // CLAIM: nothing to claim
@@ -392,7 +413,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // voting window (#1) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
-      //mirrorcast(quorum[i].value, symbol(4, "TLOS"));
+      mirrorcast(quorum[i].value, symbol(4, "TLOS"));
 
       // fail vote, fee already claimed but would pass
       uint16_t vote_direction_0 = ( i < vote_tipping_point - 1 ) ? uint16_t(1) : uint16_t(0);
@@ -415,9 +436,10 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
    claim_proposal_funds(1, proposer.value);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
 
-   // // CLAIM: fee from proposal 0 should be added to account
+   // // CLAIM: nothing to claim
    claim_proposal_funds(0, proposer.value);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1940.0000"), get_balance( proposer ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("200.0000"), get_balance( test_voters[0] ) );
 
    produce_blocks(2);
 
@@ -435,7 +457,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    // voting window (#2) started
    for(int i = 0; i < quorum_voters_size_pass; i++){
-      //mirrorcast(quorum[i].value, symbol(4, "TLOS"));
+      mirrorcast(quorum[i].value, symbol(4, "TLOS"));
       
       // pass vote, fee already claimed
       uint16_t vote_direction_0 = ( i < vote_tipping_point ) ? uint16_t(1) : uint16_t(0);
@@ -471,6 +493,9 @@ BOOST_FIXTURE_TEST_CASE( multiple_cycles_complete_flow, eosio_wps_tester ) try {
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "Proposal is closed" ), claim_proposal_funds(0, proposer.value));
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "Proposal is closed" ), claim_proposal_funds(1, proposer.value));
+
+   BOOST_REQUIRE_EXCEPTION( openvoting(proposer.value, 0), eosio_assert_message_exception, 
+      eosio_assert_message_is( "proposal is no longer in building stage" ));
 
    // CHECK IF BOTH PROPOSALS ENDED 
    BOOST_REQUIRE_EQUAL(get_proposal(0)["status"].as<uint8_t>(), uint8_t(1));

@@ -75,6 +75,11 @@ class eosio_trail_tester : public tester
 		asset max_supply = asset::from_string("10000000000.0000 VOTE");
 		string info_url = "Qmdsafkjhasdlfjh";
 		regtoken(max_supply, N(eosio.trail), info_url);
+		produce_blocks(1);
+		BOOST_REQUIRE_EXCEPTION(regtoken(max_supply, N(eosio.trail), info_url),
+			eosio_assert_message_exception, eosio_assert_message_is( "Token Registry with that symbol already exists in Trail" ) 
+		);
+		
 		mvo settings = mvo()
 			("is_destructible", 0)
 			("is_proxyable", 0)
@@ -85,7 +90,7 @@ class eosio_trail_tester : public tester
 			("is_recastable", 0) //TODO: should change once eosio.trial recasting logic is setup for leaderboard voting
 			("is_initialized", 1)
 			("counterbal_decay_rate", 300)
-			("lock_after_initialize", 1);
+			("lock_after_initialize", 0);
 		initsettings(N(eosio.trail), symbol(4, "VOTE"), settings);
 		auto token_registry = get_registry(symbol(4, "VOTE"));
 		BOOST_REQUIRE_EQUAL(settings["is_burnable"], token_registry["settings"].as<mvo>()["is_burnable"]);

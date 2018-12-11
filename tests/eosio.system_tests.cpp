@@ -2886,42 +2886,44 @@ BOOST_FIXTURE_TEST_CASE( elect_producers /*_and_parameters*/, eosio_system_teste
 } FC_LOG_AND_RETHROW()
 
 
-// BOOST_FIXTURE_TEST_CASE( buyname, eosio_system_tester ) try {
-//    create_accounts_with_resources( { N(dan), N(sam) } );
-//    transfer( config::system_account_name, "dan", core_sym::from_string( "10000.0000" ) );
-//    transfer( config::system_account_name, "sam", core_sym::from_string( "10000.0000" ) );
-//    stake_with_transfer( config::system_account_name, "sam", core_sym::from_string( "80000000.0000" ), core_sym::from_string( "80000000.0000" ) );
-//    stake_with_transfer( config::system_account_name, "dan", core_sym::from_string( "80000000.0000" ), core_sym::from_string( "80000000.0000" ) );
+BOOST_FIXTURE_TEST_CASE( buyname, eosio_system_tester ) try {
+   create_accounts_with_resources( { N(dan), N(sam) } );
+   transfer( config::system_account_name, "dan", core_sym::from_string( "10000.0000" ) );
+   transfer( config::system_account_name, "sam", core_sym::from_string( "10000.0000" ) );
+   stake_with_transfer( config::system_account_name, "sam", core_sym::from_string( "80000000.0000" ), core_sym::from_string( "80000000.0000" ) );
+   stake_with_transfer( config::system_account_name, "dan", core_sym::from_string( "80000000.0000" ), core_sym::from_string( "80000000.0000" ) );
 
-//    regproducer( config::system_account_name );
-//    BOOST_REQUIRE_EQUAL( success(), vote( N(sam), { config::system_account_name } ) );
-//    // wait 14 days after min required amount has been staked
-//    produce_block( fc::days(7) );
-//    BOOST_REQUIRE_EQUAL( success(), vote( N(dan), { config::system_account_name } ) );
-//    produce_block( fc::days(7) );
-//    produce_block();
+   regproducer( config::system_account_name );
+   BOOST_REQUIRE_EQUAL( success(), vote( N(sam), { config::system_account_name } ) );
 
-//    BOOST_REQUIRE_EXCEPTION( create_accounts_with_resources( { N(fail) }, N(dan) ), // dan shouldn't be able to create fail
-//                             eosio_assert_message_exception, eosio_assert_message_is( "no active bid for name" ) );
-//    bidname( "dan", "nofail", core_sym::from_string( "1.0000" ) );
-//    BOOST_REQUIRE_EQUAL( "assertion failure with message: must increase bid by 10%", bidname( "sam", "nofail", core_sym::from_string( "1.0000" ) )); // didn't increase bid by 10%
-//    BOOST_REQUIRE_EQUAL( success(), bidname( "sam", "nofail", core_sym::from_string( "2.0000" ) )); // didn't increase bid by 10%
-//    produce_block( fc::days(1) );
-//    produce_block();
+   activate_network();
+   // wait 14 days after min required amount has been staked
+   produce_block( fc::days(7) );
+   BOOST_REQUIRE_EQUAL( success(), vote( N(dan), { config::system_account_name } ) );
+   produce_block( fc::days(7) );
+   produce_block();
 
-//    BOOST_REQUIRE_EXCEPTION( create_accounts_with_resources( { N(nofail) }, N(dan) ), // dan shoudn't be able to do this, sam won
-//                             eosio_assert_message_exception, eosio_assert_message_is( "only highest bidder can claim" ) );
-//    //wlog( "verify sam can create nofail" );
-//    create_accounts_with_resources( { N(nofail) }, N(sam) ); // sam should be able to do this, he won the bid
-//    //wlog( "verify nofail can create test.nofail" );
-//    transfer( "eosio", "nofail", core_sym::from_string( "1000.0000" ) );
-//    create_accounts_with_resources( { N(test.nofail) }, N(nofail) ); // only nofail can create test.nofail
-//    //wlog( "verify dan cannot create test.fail" );
-//    BOOST_REQUIRE_EXCEPTION( create_accounts_with_resources( { N(test.fail) }, N(dan) ), // dan shouldn't be able to do this
-//                             eosio_assert_message_exception, eosio_assert_message_is( "only suffix may create this account" ) );
+   BOOST_REQUIRE_EXCEPTION( create_accounts_with_resources( { N(fail) }, N(dan) ), // dan shouldn't be able to create fail
+                            eosio_assert_message_exception, eosio_assert_message_is( "no active bid for name" ) );
+   bidname( "dan", "nofail", core_sym::from_string( "1.0000" ) );
+   BOOST_REQUIRE_EQUAL( "assertion failure with message: must increase bid by 10%", bidname( "sam", "nofail", core_sym::from_string( "1.0000" ) )); // didn't increase bid by 10%
+   BOOST_REQUIRE_EQUAL( success(), bidname( "sam", "nofail", core_sym::from_string( "2.0000" ) )); // didn't increase bid by 10%
+   produce_block( fc::days(1) );
+   produce_block();
 
-//    create_accounts_with_resources( { N(goodgoodgood) }, N(dan) ); /// 12 char names should succeed
-// } FC_LOG_AND_RETHROW()
+   BOOST_REQUIRE_EXCEPTION( create_accounts_with_resources( { N(nofail) }, N(dan) ), // dan shoudn't be able to do this, sam won
+                            eosio_assert_message_exception, eosio_assert_message_is( "only highest bidder can claim" ) );
+   //wlog( "verify sam can create nofail" );
+   create_accounts_with_resources( { N(nofail) }, N(sam) ); // sam should be able to do this, he won the bid
+   //wlog( "verify nofail can create test.nofail" );
+   transfer( "eosio", "nofail", core_sym::from_string( "1000.0000" ) );
+   create_accounts_with_resources( { N(test.nofail) }, N(nofail) ); // only nofail can create test.nofail
+   //wlog( "verify dan cannot create test.fail" );
+   BOOST_REQUIRE_EXCEPTION( create_accounts_with_resources( { N(test.fail) }, N(dan) ), // dan shouldn't be able to do this
+                            eosio_assert_message_exception, eosio_assert_message_is( "only suffix may create this account" ) );
+
+   create_accounts_with_resources( { N(goodgoodgood) }, N(dan) ); /// 12 char names should succeed
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( bid_invalid_names, eosio_system_tester ) try {
    create_accounts_with_resources( { N(dan) } );

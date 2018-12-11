@@ -1,18 +1,18 @@
 # Trail Service User/Developer Guide
 
-Trail offers a comprehensive suite of blockchain-based voting services available to any prospective voter or contract developer.
+Trail offers a comprehensive suite of blockchain-based voting services available to any prospective voter or contract developer on the Telos Blockchain Network.
 
 ## Understanding Trail's Role
 
 Trail was designed to allow maximum flexibility for smart contract developers, while at the same time consolidating many of the boilerplate functions of voting contracts into a single service. 
 
-This paradigm essentially means contract writers can leave the "vote counting" up to Trail and instead focus on how they want to interpret the results of their ballot. Through cross-contract table lookup, any contract can view the results of a ballot and then have their contracts make decisions based on those results.
+This paradigm essentially means contract writers can leave the "vote counting" up to Trail and instead focus on how they want to interpret the results of their ballot. Through cross-contract table lookup, any contract can view the results of a ballot and then have their contracts act based on those results.
 
 Trail ballots and elections are also stored indefinitely, allowing lookup throughout the entire history of the service. The only exception to this rule are ballots that operate on cycles. Ballots that operate this way will instead show the most recent cycle of the ballot.
 
 ## Ballot Lifecycle
 
-Building a ballot on Trail is simple and gives great flexibility to the developer to build their ballots in any structure they desire. An example ballot and voting contract will be used throughout this guide, and is recommended as an established model for current Trail interface best practices.
+Building a ballot on Trail is simple and gives great flexibility to the developer to build their ballots in a variety of ways. An example ballot and voting contract will be used throughout this guide, and is recommended as an established model for current Trail interface best practices.
 
 ### 1. Setting Up Your Contract (Optional)
 
@@ -30,11 +30,13 @@ For our contract example, we will be making a simple document updater where upda
 
 * `makeproposal(uint64_t doc_id, string new_text)`
 
-    The makeproposal action stores the new text retrievable by a proposal id, after first making sure the associated document exists. No vote counts are stored on this contract (remember, that's Trail's job).
+    The makeproposal action stores the new text retrievable by a proposal id, after first making sure the associated document exists. In a more complex example, this action could also send an inline action to Trail's `regballot()` action to make the whole process atomic.
 
 * `closeprop(uint64_t prop_id)`
 
     The closeprop action is important for performing custom logic on ballot results, and simply sends an inline action to Trail's `closeballot()` action upon completion. The `status` field of the ballot allows ballot closers the ability to assign any context to status codes they desire. For example, a voting contract could interpret a status code of `7` to mean `REFUNDED`. However, status codes `0`, `1`, and `2` are reserved for meaning `OPEN`, `PASS`, and `FAIL`, respectively.
+
+Note that no vote counts are stored on this contract (remember, that's Trail's job).
 
 ### 2. Ballot Registration
 
@@ -90,13 +92,33 @@ After ballot setup is complete, the only thing left to do is wait for the ballot
 
     The addcandidate action creates a new candidate for an election or leaderboard with the supplied information. Candidates can only be added before voting begins.
 
-    `publisher` is the publisher of the ballot. Currently, only the ballot publisher can add new candidates to a ballot.
+    `publisher` is the publisher of the ballot. Only the ballot publisher can add new candidates to a ballot.
 
     `ballot_id` is the ballot ID of the election or leaderboard receiving the candidate.
 
     `new_candidate` is the account of the new candidate.
 
     `info_link` is a url to the candidate's information or campaign page.
+
+* `setallcands(name publisher, uint64_t ballot_id, vector<candidate> new_candidates)`
+
+    The setallcands action is an action that allows a bulk add of new candidates. This action will replace the existing candidate set with the entire list of supplied candidates. This is mostly a convienience action for ballot operators.
+
+    `publisher` is the publisher of the ballot. Only the ballot publisher can bulk add candidates to a ballot.
+
+    `ballot_id` is the ballot ID of the election or leaderboard receiving the candidates.
+
+    `new_candidates` is the list of new candidates to set to the ballot. 
+
+* `rmvcandidate(name publisher, uint64_t ballot_id, name candidate)`
+
+    The rmvcandidate action removes an existing candidate from a ballot. Candidates can only be removed before voting begins.
+
+    `publisher` is the publisher of the ballot. Only the ballot publisher can remove a candidate from the ballot.
+
+    `ballot_id` is the ballot ID of the election or leaderboard receiving the candidate.
+
+    `candidate` is the account name of the candidate to remove from the ballot.
 
 * `setseats(name publisher, uint64_t ballot_id, uint8_t num_seats)`
 
@@ -108,11 +130,13 @@ After ballot setup is complete, the only thing left to do is wait for the ballot
 
     `num_seats` is the number of seats to set.
 
+In our custom contract example, none of these actions are used (just to keep it simple). 
+
 ### 4. Closing A Ballot
 
 After a ballot has reached it's end time, it will automatically stop accepting votes. The final tally can be seen by querying the respective table with the ballot's reference id.
 
-For instance, if a ballot was created and assigned a ballot_id of 5, you would query the ballots table for ballot_id 5. This will return a table_id and a reference_id. If the table_id were 0, and the reference_id were 17, you would query the proposals table (ballot_type maps to the table_id, so  table_id 0 is the proposals table) for proposal_id 17. 
+For instance, if a ballot was created and assigned a ballot_id of 5, you would query the ballots table for ballot_id 5. This will return a table_id and a reference_id. If the table_id were 0, and the reference_id were 17, you would query the proposals table (ballot_type maps to the table_id, so table_id 0 is the proposals table) for proposal_id 17. 
 
 * `closeballot(name publisher, uint64_t ballot_id, uint8_t pass)`
 
@@ -123,6 +147,8 @@ For instance, if a ballot was created and assigned a ballot_id of 5, you would q
     `ballot_id` is the ballot ID of the ballot to close.
 
     `pass` is the resultant ballot status after reaching a verdict on the votes. This number can represent any end state desired, but `0`, `1`, and `2` are reserved for `OPEN`, `PASS`, and `FAIL` respectively.
+
+In our custom contract example, the `closeprop()` action would be called by the ballot operator, where closeprop would perform a cross-contract table lookup to access the final ballot results. Then, based on the results of the ballot, the custom contract would determine whether the proposal passed or failed, and update it's own tables accordingly. Finally, the closeprop action would send an inline action to Trail's `closeballot()` action to close out the ballot and assign a final status code for the ballot. For ballots that also have a set of candidates each with their own status codes, the `setallstats()` action allows each candidate's final status code to be set.
 
 ## Voter Registration and Participation
 
@@ -150,7 +176,7 @@ All users on the Telos Blockchain Network can register their accounts and receiv
 
 * `mirrorcast(name voter, symbol token_symbol)`
 
-    The mirrorstake function is the fundamental action that operates the Trail voting system. Registered voters may call mirrorstake to receive a 1:10000 issuance of VOTE tokens for every TLOS they own in their account (both liquid and staked) for a period of time equal to the given lock period. Users cannot call mirrorstake again until the lock period has ended.
+    The mirrorcast function is the fundamental action that operates the Trail voting system. Registered voters may call mirrorcast to receive a 1:1 issuance of VOTE tokens for every TLOS they own in their account (both liquid and staked). Users cannot call mirrorcast again for the next 86400 seconds (1 day).
 
     `voter` is the name of the account attempting to mirror their TLOS for VOTES.
 
@@ -307,10 +333,16 @@ Trail offers a wide range of token features designed to offer maximum flexibilit
 
     `amount` is the amount of tokens to be sent.
 
-## Fraud Prevention
+## Fraud Prevention Tools
 
+Still writing this part...
 
+## In Development (in no particular order)
 
-## Wrapping Up
+* Proxy Registration, Proxy Voting, Proxy Management
 
+* Election Support
 
+* Live Leaderboard Support
+
+* Additional Token Settings

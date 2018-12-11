@@ -285,9 +285,15 @@ BOOST_FIXTURE_TEST_CASE( reg_proposal_ballot, eosio_trail_tester ) try {
 		("cycle_count", 0)
 		("status", uint8_t(0))
 	);
-
-	produce_blocks( 2401 );
+	produce_blocks();
 	
+	BOOST_REQUIRE_EXCEPTION(closeballot(non_publisher, current_ballot_id, 1),
+		eosio_assert_message_exception, eosio_assert_message_is( "can't close proposal while voting is still open" ) 
+   	);
+	
+	produce_block(fc::seconds(1200));
+	produce_blocks();
+
 	BOOST_REQUIRE_EXCEPTION(closeballot(non_publisher, current_ballot_id, 1),
 		eosio_assert_message_exception, eosio_assert_message_is( "cannot close another account's proposal" ) 
    	);
@@ -554,7 +560,7 @@ BOOST_FIXTURE_TEST_CASE( full_proposal_flow, eosio_trail_tester ) try {
 
 	produce_blocks();
 	produce_block(fc::seconds(end_time - now()));
-	produce_blocks();
+	produce_blocks(2);
 
 	std::cout << "proposal cycle 1: " << std::endl;
 	begin_time = now() + 20;
@@ -591,6 +597,13 @@ BOOST_FIXTURE_TEST_CASE( full_leaderboard_flow, eosio_trail_tester ) try {
 	setseats(publisher, current_ballot_id, 3);
 	string candidate1_info = "Qm1";
 	addcandidate(publisher, current_ballot_id, N(voteraaaaaab), candidate1_info);
+	produce_blocks();
+
+	BOOST_REQUIRE_EXCEPTION(
+		addcandidate(publisher, current_ballot_id, N(voteraaaaaab), candidate1_info),
+		eosio_assert_message_exception, 
+		eosio_assert_message_is( "candidate already in leaderboard" ) 
+   	);
 
 	string candidate2_info = "Qm2";
 	addcandidate(publisher, current_ballot_id, N(voteraaaaaac), candidate2_info);
@@ -728,7 +741,15 @@ BOOST_FIXTURE_TEST_CASE( custom_token_voting, eosio_trail_tester ) try {
 	);
 
 	initsettings(publisher, test_symbol, token_settings);
+	produce_blocks();
+
 	auto token_registry = get_registry(test_symbol);
+
+	BOOST_REQUIRE_EXCEPTION(
+		initsettings(publisher, test_symbol, token_settings),
+		eosio_assert_message_exception, 
+		eosio_assert_message_is( "settings have been locked" ) 
+   	);
 
 	// REQUIRE_MATCHING_OBJECT(token_registry, registration);
 

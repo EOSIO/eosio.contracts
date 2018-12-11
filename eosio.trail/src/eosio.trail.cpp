@@ -32,7 +32,7 @@ void trail::regtoken(asset max_supply, name publisher, string info_url) {
     auto sym = max_supply.symbol;
 
     registries_table registries(_self, _self.value);
-    auto r = registries.find(sym.raw());
+    auto r = registries.find(sym.code().raw());
     eosio_assert(r == registries.end(), "Token Registry with that symbol already exists in Trail");
 
     token_settings default_settings;
@@ -62,7 +62,7 @@ void trail::initsettings(name publisher, symbol token_symbol, token_settings new
     eosio_assert(new_settings.counterbal_decay_rate > 0, "cannot have a counterbalance with zero decay");
 
     if (reg.settings.is_initialized) {
-        eosio_assert(reg.settings.lock_after_initialize, "settings have been locked");
+        eosio_assert(!reg.settings.lock_after_initialize, "settings have been locked");
     } else {
         new_settings.is_initialized = true;
     }
@@ -294,6 +294,44 @@ void trail::seizeairgrab(name publisher, name recipient, asset amount) {
     print("\nAirgrab Seizure: SUCCESS");
 }
 
+void trail::seizebygroup(name publisher, vector<name> group, asset tokens) {
+    require_auth(publisher);
+    //eosio_assert(publisher != owner, "cannot seize your own tokens");
+    eosio_assert(tokens > asset(0, tokens.symbol), "must seize greater than 0 tokens");
+
+    registries_table registries(_self, _self.value);
+    auto r = registries.find(tokens.symbol.code().raw());
+    eosio_assert(r != registries.end(), "registry doesn't exist for given token");
+    auto reg = *r;
+
+    eosio_assert(reg.publisher == publisher, "only publisher can seize tokens");
+    eosio_assert(reg.settings.is_seizable == true, "token registry doesn't allow seizing");
+
+    for (name n : group) {
+
+        balances_table ownerbals(_self, tokens.symbol.code().raw());
+        auto ob = ownerbals.find(n.value);
+        eosio_assert(ob != ownerbals.end(), "user has no balance to seize");
+        auto obal = *ob;
+        eosio_assert(obal.tokens - tokens >= asset(0, obal.tokens.symbol), "cannot seize more tokens than user owns");
+
+        ownerbals.modify(ob, same_payer, [&]( auto& a ) { //NOTE: subtract amount from balance
+            a.tokens -= tokens;
+        });
+
+        balances_table publisherbal(_self, tokens.symbol.code().raw());
+        auto pb = publisherbal.find(publisher.value);
+        eosio_assert(pb != publisherbal.end(), "publisher has no balance to hold seized tokens");
+        auto pbal = *pb;
+
+        publisherbal.modify(pb, same_payer, [&]( auto& a ) { //NOTE: add seized tokens to publisher balance
+            a.tokens += tokens;
+        });
+    } 
+
+    print("\nToken Seizure: SUCCESS");
+}
+
 void trail::raisemax(name publisher, asset amount) {
     require_auth(publisher);
     eosio_assert(amount > asset(0, amount.symbol), "amount must be greater than 0");
@@ -516,7 +554,7 @@ void trail::mirrorcast(name voter, symbol token_symbol) {
     
     if (cb != counterbals.end()) { //NOTE: if no cb found, give cb of 0
         auto counter_bal = *cb;
-        eosio_assert(now() - counter_bal.last_decay >= MIN_LOCK_PERIOD, "cannot get more votes until min lock period is over");
+        //eosio_assert(now() - counter_bal.last_decay >= MIN_LOCK_PERIOD, "cannot get more votes until min lock period is over");
         asset new_cb = (counter_bal.decayable_cb - decay_amount); //subtracting total cb
 
 		//TODO: should mirrorcasting add new_votes to counterbalance? same logically as adding when calling issuetokens
@@ -691,6 +729,7 @@ void trail::unregballot(name publisher, uint64_t ballot_id) {
 
 #pragma region Ballot_Actions
 
+//TODO: refactor for elections when implemented
 void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate, string info_link) {
     require_auth(publisher);
     eosio_assert(is_account(new_candidate), "new candidate is not an account");
@@ -709,6 +748,12 @@ void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate,
     eosio_assert(board.publisher == publisher, "cannot add candidate to another account's leaderboard");
     eosio_assert(now() < board.begin_time , "cannot add candidates once voting has begun");
 
+    auto existing_candidate = std::find_if(board.candidates.begin(), board.candidates.end(), [&new_candidate](const candidate &c) {
+        return c.member == new_candidate; 
+    });
+
+    eosio_assert(existing_candidate == board.candidates.end(), "candidate already in leaderboard");
+
     candidate new_candidate_struct = candidate{
         new_candidate,
         info_link,
@@ -721,6 +766,96 @@ void trail::addcandidate(name publisher, uint64_t ballot_id, name new_candidate,
     });
 
     print("\nAdd Candidate: SUCCESS");
+}
+
+//TODO: refactor for elections when implemented
+void trail::setallcands(name publisher, uint64_t ballot_id, vector<candidate> new_candidates) {
+    require_auth(publisher);
+
+    //TODO: add validations
+
+    ballots_table ballots(_self, _self.value);
+    auto b = ballots.find(ballot_id);
+    eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
+    auto bal = *b;
+    eosio_assert(bal.table_id == 2, "ballot type doesn't support candidates");
+
+    leaderboards_table leaderboards(_self, _self.value);
+    auto l = leaderboards.find(bal.reference_id);
+    eosio_assert(l != leaderboards.end(), "leaderboard doesn't exist");
+    auto board = *l;
+    eosio_assert(board.publisher == publisher, "cannot change candidates on another account's leaderboard");
+    eosio_assert(now() < board.begin_time , "cannot change candidates once voting has begun");
+
+    leaderboards.modify(l, same_payer, [&]( auto& a ) {
+        a.candidates = new_candidates;
+    });
+
+    print("\nSet All Candidates: SUCCESS");
+}
+
+//TODO: refactor for elections when implemented
+void trail::setallstats(name publisher, uint64_t ballot_id, vector<uint8_t> new_cand_statuses) {
+    require_auth(publisher);
+
+    ballots_table ballots(_self, _self.value);
+    auto b = ballots.find(ballot_id);
+    eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
+    auto bal = *b;
+    eosio_assert(bal.table_id == 2, "ballot type doesn't support candidates");
+
+    leaderboards_table leaderboards(_self, _self.value);
+    auto l = leaderboards.find(bal.reference_id);
+    eosio_assert(l != leaderboards.end(), "leaderboard doesn't exist");
+    auto board = *l;
+    eosio_assert(board.publisher == publisher, "cannot change candidate statuses on another account's leaderboard");
+    eosio_assert(now() > board.end_time , "cannot change candidate statuses until voting has ended");
+
+    auto new_cands = set_candidate_statuses(board.candidates, new_cand_statuses);
+
+    leaderboards.modify(l, same_payer, [&]( auto& a ) {
+        a.candidates = new_cands;
+    });
+
+    print("\nSet All Candidate Statuses: SUCCESS");
+}
+
+//TODO: refactor for elections when implemented
+void trail::rmvcandidate(name publisher, uint64_t ballot_id, name candidate) {
+    require_auth(publisher);
+
+    ballots_table ballots(_self, _self.value);
+    auto b = ballots.find(ballot_id);
+    eosio_assert(b != ballots.end(), "ballot with given ballot_id doesn't exist");
+    auto bal = *b;
+    eosio_assert(bal.table_id == 2, "ballot type doesn't support candidates");
+
+    leaderboards_table leaderboards(_self, _self.value);
+    auto l = leaderboards.find(bal.reference_id);
+    eosio_assert(l != leaderboards.end(), "leaderboard doesn't exist");
+    auto board = *l;
+    eosio_assert(board.publisher == publisher, "cannot remove candidate from another account's leaderboard");
+    eosio_assert(now() < board.begin_time, "cannot remove candidates once voting has begun");
+
+    auto new_candidates = board.candidates;
+    bool found = false;
+
+    for (auto itr = new_candidates.begin(); itr != new_candidates.end(); itr++) {
+        auto cand = *itr;
+        if (cand.member == candidate) {
+            new_candidates.erase(itr);
+            found = true;
+            break;
+        }
+    }
+
+    eosio_assert(found == true, "candidate not found in leaderboard list");
+
+    leaderboards.modify(*l, same_payer, [&]( auto& a ) {
+        a.candidates = new_candidates;
+    });
+
+    print("\nRemove Candidate: SUCCESS");
 }
 
 void trail::setseats(name publisher, uint64_t ballot_id, uint8_t num_seats) {
@@ -1166,6 +1301,16 @@ bool trail::has_direction(uint16_t direction, vector<uint16_t> direction_list) {
     return false;
 }
 
+vector<candidate> trail::set_candidate_statuses(vector<candidate> candidate_list, vector<uint8_t> new_status_list) {
+    eosio_assert(candidate_list.size() == new_status_list.size(), "status list does not correctly map to candidate list");
+
+    for (int idx = 0; idx < candidate_list.size(); idx++) {
+        candidate_list[idx].status = new_status_list[idx];
+    }
+
+    return candidate_list;
+}
+
 #pragma endregion Helper_Functions
 
 
@@ -1281,6 +1426,10 @@ extern "C" {
             execute_action(name(self), name(code), &trail::deloldvotes);
         } else if (code == self && action == name("addcandidate").value) {
             execute_action(name(self), name(code), &trail::addcandidate);
+        } else if (code == self && action == name("setallcands").value) {
+            execute_action(name(self), name(code), &trail::setallcands);
+        } else if (code == self && action == name("rmvcandidate").value) {
+            execute_action(name(self), name(code), &trail::rmvcandidate);
         } else if (code == self && action == name("setseats").value) {
             execute_action(name(self), name(code), &trail::setseats);
         } else if (code == self && action == name("issuetoken").value) {
@@ -1293,6 +1442,10 @@ extern "C" {
             execute_action(name(self), name(code), &trail::seizetoken);
         } else if (code == self && action == name("seizeairgrab").value) {
             execute_action(name(self), name(code), &trail::seizeairgrab);
+        } else if (code == self && action == name("seizebygroup").value) {
+            execute_action(name(self), name(code), &trail::seizebygroup);
+        } else if (code == self && action == name("setallstats").value) {
+            execute_action(name(self), name(code), &trail::setallstats);
         } else if (code == self && action == name("raisemax").value) {
             execute_action(name(self), name(code), &trail::raisemax);
         } else if (code == self && action == name("lowermax").value) {

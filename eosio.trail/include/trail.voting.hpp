@@ -115,7 +115,7 @@ struct [[eosio::table, eosio::contract("eosio.trail")]] leaderboard {
  *     totals[1] => total elections
  *     totals[2] => total leaderboards
  */
-struct [[eosio::table, eosio::contract("eosio.trail")]] env {
+struct [[eosio::table("environment"), eosio::contract("eosio.trail")]] env {
     name publisher;
     vector<uint64_t> totals;
     uint32_t time_now;
