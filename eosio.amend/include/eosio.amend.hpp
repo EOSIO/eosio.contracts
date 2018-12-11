@@ -10,6 +10,7 @@
  */
 
 #include <trail.voting.hpp>
+#include <trail.tokens.hpp>
 #include <trail.system.hpp>
 
 #include <eosiolib/eosio.hpp>

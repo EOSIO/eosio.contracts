@@ -24,8 +24,8 @@ tfvt::config tfvt::get_default_config() {
 		uint32_t(1200),  	//start_delay
 		uint32_t(2000000),  //leaderboard_duration
 		uint32_t(14515200),	//election_frequency
-		uint32_t(0),
-		false
+		uint32_t(0),		//last_board_election_time
+		false				//is_active_election
 	};
 	configs.set(c, get_self());
 	return c;

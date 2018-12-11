@@ -36,6 +36,7 @@ try
 	uint32_t leaderboard_duration = 7;
 	uint32_t election_frequency = 8;
 	uint32_t last_election = 0;
+	bool is_active_election = false;
 	
 	auto expected_config = mvo()
 		("publisher", publisher)
@@ -51,6 +52,7 @@ try
 			("election_frequency", election_frequency)
 			("last_board_election_time", last_election)
 			("open_election_id", open_election_id)
+			("is_active_election", is_active_election)
 		);
 
 	setconfig(publisher, expected_config);
@@ -65,6 +67,7 @@ try
 	BOOST_REQUIRE_EQUAL(config["start_delay"], start_delay);
 	BOOST_REQUIRE_EQUAL(config["leaderboard_duration"], leaderboard_duration);
 	BOOST_REQUIRE_EQUAL(config["election_frequency"], election_frequency);
+	BOOST_REQUIRE_EQUAL(config["is_active_election"], is_active_election);
 
 	BOOST_REQUIRE_EQUAL(config["open_election_id"].as<uint64_t>(), 0);
 
@@ -159,6 +162,7 @@ try
 			("election_frequency", 3)
 			("last_board_election_time", last_election)
 			("open_election_id", 0)
+			("is_active_election", false)
 		);
 	setconfig(tf, new_config);
 	produce_blocks();
@@ -188,6 +192,7 @@ try
 			("election_frequency", 10000)
 			("last_board_election_time", last_election)
 			("open_election_id", 0)
+			("is_active_election", false)
 		);
 	setconfig(tf, new_config);
 	produce_blocks();
@@ -269,6 +274,7 @@ try
 			("election_frequency", 3)
 			("last_board_election_time", last_election)
 			("open_election_id", 0)
+			("is_active_election", false)
 		);
 	
 	setconfig(tf, expected_config);

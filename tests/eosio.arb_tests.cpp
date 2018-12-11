@@ -39,12 +39,11 @@ BOOST_FIXTURE_TEST_CASE( check_config_setter, eosio_arb_tester ) try {
    produce_blocks(1);
 
    auto config = get_config();
-   BOOST_REQUIRE_EQUAL(false, config.is_null());
    REQUIRE_MATCHING_OBJECT(
       config, 
       mvo()
          ("publisher", eosio::chain::name("eosio.arb"))
-         ("max_elected_arbs", uint16_t(20))
+         ("max_elected_arbs", max_elected_arbs)
          ("election_duration", election_duration)
          ("start_election", start_election)
          ("fee_structure", vector<int64_t>({int64_t(1), int64_t(2), int64_t(3), int64_t(4)}))
@@ -53,6 +52,45 @@ BOOST_FIXTURE_TEST_CASE( check_config_setter, eosio_arb_tester ) try {
          ("ballot_id", 0)
          ("auto_start_election", false)
    );
+
+   init_election();
+   produce_blocks(1);
+   produce_block(fc::seconds(start_election + election_duration));
+   produce_blocks(1);
+   regcand(test_voters[0], "12345678901234567890123456789012345678901234567890123");
+   endelection(test_voters[0]);
+   produce_blocks(1);
+
+   max_elected_arbs--;
+   start_election++;
+   election_duration++;
+   arbitrator_term_length++;
+   setconfig ( max_elected_arbs, start_election, election_duration, arbitrator_term_length, fees);
+   produce_blocks(1);
+
+   config = get_config();
+   REQUIRE_MATCHING_OBJECT(
+      config, 
+      mvo()
+         ("publisher", eosio::chain::name("eosio.arb"))
+         ("max_elected_arbs", max_elected_arbs)
+         ("election_duration", election_duration)
+         ("start_election", start_election)
+         ("fee_structure", vector<int64_t>({int64_t(1), int64_t(2), int64_t(3), int64_t(4)}))
+         ("arbitrator_term_length", uint32_t(one_day * 10 + 1))
+         ("last_time_edited", now())
+         ("ballot_id", 1)
+         ("auto_start_election", true)
+   );
+   produce_blocks(1);
+   
+   // cannot init another election while one is in progress
+   BOOST_REQUIRE_EXCEPTION( 
+      init_election(),
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "Election is on auto start mode." )
+   );
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( init_election_integrity, eosio_arb_tester ) try {
@@ -115,6 +153,7 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    name voter = test_voters[0];
    name candidate = test_voters[1];
    name dropout = test_voters[2];
+   name noncandidate = test_voters[3];
 
    std::string credentials = std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition1/");
 
@@ -133,8 +172,20 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    init_election();
    produce_blocks(1);
 
+   BOOST_REQUIRE_EXCEPTION( 
+      candrmvlead(candidate), 
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "candidate not found in leaderboard list" )
+   );
+
    config = get_config();
    BOOST_REQUIRE_EQUAL(true, config["auto_start_election"]);
+   
+   BOOST_REQUIRE_EXCEPTION( 
+      candaddlead( dropout, credentials ), 
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "Candidate isn't an applicant. Use regcand action to register candidate" )
+   );
 
    // register 
    candaddlead( candidate, credentials );
@@ -187,6 +238,12 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
       eosio_assert_message_is( "Candidate isn't an applicant" )
    );
 
+   BOOST_REQUIRE_EXCEPTION( 
+      candrmvlead(dropout), 
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "Candidate isn't an applicant." )
+   );
+   
    // start the election period
    produce_block(fc::seconds(start_election));
    produce_blocks(1);
@@ -197,7 +254,12 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
       eosio_assert_message_exception, 
       eosio_assert_message_is( "Cannot unregister while election is in progress" )
    );
-
+   BOOST_REQUIRE_EXCEPTION( 
+      candrmvlead(candidate), 
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "cannot remove candidates once voting has begun" )
+   );
+   
    // new candidates can register while an election is ongoing
    regcand(dropout, credentials);
 
@@ -218,16 +280,19 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
    castvote(voter.value, config["ballot_id"].as_uint64(), 0);
    produce_blocks(1);
 
+   auto ballot = get_ballot(cbid);
+   auto bid = ballot["reference_id"].as_uint64();
+
+   auto leaderboard = get_leaderboard(bid);
+   auto lid = leaderboard["board_id"].as_uint64();
+
    // election cannot end while in progress
-   //error message needs to check the remaining time.
-   //"election isn't ended. Please check again in "
-   //+ std::to_string( uint32_t( board.end_time - now() ))
-   //+ " seconds"
-//    BOOST_REQUIRE_EXCEPTION( 
-//       endelection(candidate), 
-//       eosio_assert_message_exception, 
-//       eosio_assert_message_is( "election isn't ended." )
-//    );
+   uint32_t remaining_seconds = uint32_t( leaderboard["end_time"].as<uint32_t>() - now() );
+   BOOST_REQUIRE_EXCEPTION( 
+      endelection(candidate), 
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "election isn't ended. Please check again in " + std::to_string( remaining_seconds ) + " seconds" )
+   );
 
    // election period is over
    produce_block(fc::seconds(election_duration));
@@ -243,12 +308,6 @@ BOOST_FIXTURE_TEST_CASE( register_unregister_endelection, eosio_arb_tester ) try
 
    config = get_config();
    cbid = config["ballot_id"].as_uint64();   
-
-   auto ballot = get_ballot(cbid);
-   auto bid = ballot["reference_id"].as_uint64();
-
-   auto leaderboard = get_leaderboard(bid);
-   auto lid = leaderboard["board_id"].as_uint64();
 
    uint32_t expected_term_length = now() + arbitrator_term_length;
 
@@ -386,6 +445,7 @@ BOOST_FIXTURE_TEST_CASE( full_election, eosio_arb_tester ) try {
    name candidate1 = test_voters[0];
    name candidate2 = test_voters[1];
    name candidate3 = test_voters[2];
+   name noncandidate = test_voters[3];
 
    std::string credentials = std::string("/ipfs/53CharacterLongHashToSatisfyIPFSHashCondition1/");
 
@@ -513,6 +573,23 @@ BOOST_FIXTURE_TEST_CASE( full_election, eosio_arb_tester ) try {
    // there is no new election in progress since no seats are left
    BOOST_REQUIRE_EQUAL(cbid, previous_cbid);
    BOOST_REQUIRE_EQUAL(false, config["auto_start_election"]);
+
+   produce_blocks(1);
+
+   BOOST_REQUIRE_EXCEPTION( 
+      candaddlead(noncandidate, credentials),
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "Candidate isn't an applicant. Use regcand action to register candidate" )
+   );
+
+   regcand(noncandidate, credentials);
+   produce_blocks(1);
+
+   BOOST_REQUIRE_EXCEPTION( 
+      candaddlead(noncandidate, credentials),
+      eosio_assert_message_exception, 
+      eosio_assert_message_is( "A new election hasn't started. Use initelection action to start a new election." )
+   );
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( tiebreaker, eosio_arb_tester ) try {
