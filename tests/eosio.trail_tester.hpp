@@ -90,7 +90,7 @@ class eosio_trail_tester : public tester
 			("is_recastable", 0) //TODO: should change once eosio.trial recasting logic is setup for leaderboard voting
 			("is_initialized", 1)
 			("counterbal_decay_rate", 300)
-			("lock_after_initialize", 1);
+			("lock_after_initialize", 0);
 		initsettings(N(eosio.trail), symbol(4, "VOTE"), settings);
 		auto token_registry = get_registry(symbol(4, "VOTE"));
 		BOOST_REQUIRE_EQUAL(settings["is_burnable"], token_registry["settings"].as<mvo>()["is_burnable"]);

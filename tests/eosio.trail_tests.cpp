@@ -741,7 +741,15 @@ BOOST_FIXTURE_TEST_CASE( custom_token_voting, eosio_trail_tester ) try {
 	);
 
 	initsettings(publisher, test_symbol, token_settings);
+	produce_blocks();
+
 	auto token_registry = get_registry(test_symbol);
+
+	BOOST_REQUIRE_EXCEPTION(
+		initsettings(publisher, test_symbol, token_settings),
+		eosio_assert_message_exception, 
+		eosio_assert_message_is( "settings have been locked" ) 
+   	);
 
 	// REQUIRE_MATCHING_OBJECT(token_registry, registration);
 

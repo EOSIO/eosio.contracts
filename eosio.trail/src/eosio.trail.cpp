@@ -62,7 +62,7 @@ void trail::initsettings(name publisher, symbol token_symbol, token_settings new
     eosio_assert(new_settings.counterbal_decay_rate > 0, "cannot have a counterbalance with zero decay");
 
     if (reg.settings.is_initialized) {
-        eosio_assert(reg.settings.lock_after_initialize, "settings have been locked");
+        eosio_assert(!reg.settings.lock_after_initialize, "settings have been locked");
     } else {
         new_settings.is_initialized = true;
     }
