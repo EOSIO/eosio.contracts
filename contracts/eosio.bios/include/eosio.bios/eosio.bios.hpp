@@ -1,9 +1,9 @@
 #pragma once
+#include <eosiolib/action.hpp>
 #include <eosiolib/crypto.h>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/privileged.hpp>
 #include <eosiolib/producer_schedule.hpp>
-#include <eosiolib/action.hpp>
 
 namespace eosio {
    using eosio::permission_level;
