@@ -244,7 +244,7 @@ namespace eosiosystem {
     * @param amount - tokens to be withdrawn from loan fund 
     */
    void system_contract::defcpuloan( const name& from, uint64_t loan_num, const asset& amount )
-   {     
+   {
       require_auth( from );
       
       rex_cpu_loan_table cpu_loans( _self, _self.value );
@@ -272,7 +272,7 @@ namespace eosiosystem {
     * @param owner - owner of REX tokens  
     */
    void system_contract::updaterex( const name& owner )
-   {   
+   {
       require_auth( owner );
 
       runrex(2);
@@ -789,10 +789,10 @@ namespace eosiosystem {
     */
    time_point_sec system_contract::get_rex_maturity()
    {
-      const uint32_t num_of_maturity_buckets = 4;
+      const uint32_t num_of_maturity_buckets = 5;
       static const uint32_t now = current_time_point_sec().utc_seconds;
       static const uint32_t r = now % seconds_per_day;
-      static const time_point_sec rms{ now - r + (num_of_maturity_buckets + 1) * seconds_per_day };
+      static const time_point_sec rms{ now - r + num_of_maturity_buckets * seconds_per_day };
       return rms;
    }
 
@@ -899,9 +899,9 @@ namespace eosiosystem {
     */
    asset system_contract::add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received )
    {
-      auto bitr = _rexbalance.find( owner.value );
       asset init_rex_stake( 0, core_symbol() );
       asset current_rex_stake( 0, core_symbol() );
+      auto bitr = _rexbalance.find( owner.value );
       if ( bitr == _rexbalance.end() ) {
          bitr = _rexbalance.emplace( owner, [&]( auto& rb ) {
             rb.owner       = owner;
