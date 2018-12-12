@@ -35,6 +35,7 @@ namespace eosiosystem {
    using eosio::time_point_sec;
    using eosio::microseconds;
    using eosio::datastream;
+   using eosio::check;
 
    struct [[eosio::table, eosio::contract("eosio.system")]] name_bid {
      name            newname;
@@ -522,7 +523,7 @@ namespace eosiosystem {
 
          static symbol get_core_symbol( const rammarket& rm ) {
             auto itr = rm.find(ramcore_symbol.raw());
-            eosio_assert(itr != rm.end(), "system contract must first be initialized");
+            check(itr != rm.end(), "system contract must first be initialized");
             return itr->quote.balance.symbol;
          }
 

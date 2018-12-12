@@ -16,8 +16,8 @@ namespace eosiosystem {
    {
       require_auth( owner );
 
-      eosio_assert( amount.symbol == core_symbol(), "must deposit core token" );
-      eosio_assert( 0 < amount.amount, "must deposit a positive amount" );
+      check( amount.symbol == core_symbol(), "must deposit core token" );
+      check( 0 < amount.amount, "must deposit a positive amount" );
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { owner, active_permission },
                                                     { owner, rex_account, amount, "deposit to REX fund" } );
       transfer_to_fund( owner, amount );
@@ -33,8 +33,8 @@ namespace eosiosystem {
    {
       require_auth( owner );
 
-      eosio_assert( amount.symbol == core_symbol(), "must withdraw core token" );
-      eosio_assert( 0 < amount.amount, "must withdraw a positive amount" );
+      check( amount.symbol == core_symbol(), "must withdraw core token" );
+      check( 0 < amount.amount, "must withdraw a positive amount" );
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( owner, amount );
       INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { rex_account, active_permission },
@@ -51,8 +51,8 @@ namespace eosiosystem {
    {
       require_auth( from );
 
-      eosio_assert( amount.symbol == core_symbol(), "asset must be core token" );
-      eosio_assert( 0 < amount.amount, "must use positive amount" );
+      check( amount.symbol == core_symbol(), "asset must be core token" );
+      check( 0 < amount.amount, "must use positive amount" );
       check_voting_requirement( from );
       transfer_from_fund( from, amount );
       const asset rex_received    = add_to_rex_pool( amount );
@@ -73,16 +73,16 @@ namespace eosiosystem {
    {
       require_auth( owner );
 
-      eosio_assert( from_net.symbol == core_symbol() && from_cpu.symbol == core_symbol(), "asset must be core token" );
-      eosio_assert( (0 <= from_net.amount) && (0 <= from_cpu.amount) && (0 < from_net.amount || 0 < from_cpu.amount),
+      check( from_net.symbol == core_symbol() && from_cpu.symbol == core_symbol(), "asset must be core token" );
+      check( (0 <= from_net.amount) && (0 <= from_cpu.amount) && (0 < from_net.amount || 0 < from_cpu.amount),
                     "must unstake a positive amount to buy rex" );
       check_voting_requirement( owner );
 
       {
          del_bandwidth_table dbw_table( _self, owner.value );
          auto del_itr = dbw_table.require_find( receiver.value, "delegated bandwidth record does not exist" );
-         eosio_assert( from_net.amount <= del_itr->net_weight.amount, "amount exceeds tokens staked for net");
-         eosio_assert( from_cpu.amount <= del_itr->cpu_weight.amount, "amount exceeds tokens staked for cpu");
+         check( from_net.amount <= del_itr->net_weight.amount, "amount exceeds tokens staked for net");
+         check( from_cpu.amount <= del_itr->cpu_weight.amount, "amount exceeds tokens staked for cpu");
          dbw_table.modify( del_itr, same_payer, [&]( delegated_bandwidth& dbw ) {
             dbw.net_weight.amount -= from_net.amount;
             dbw.cpu_weight.amount -= from_cpu.amount;
@@ -116,10 +116,10 @@ namespace eosiosystem {
       runrex(2);
 
       auto bitr = _rexbalance.require_find( from.value, "user must first buyrex" );
-      eosio_assert( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol,
+      check( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol,
                     "asset must be a positive amount of (REX, 4)" );
       process_rex_maturities( bitr );
-      eosio_assert( rex.amount <= bitr->matured_rex, "insufficient available rex" );
+      check( rex.amount <= bitr->matured_rex, "insufficient available rex" );
 
       auto current_order = fill_rex_order( bitr, rex );
       update_rex_account( from, current_order.proceeds, current_order.stake_change );
@@ -141,7 +141,7 @@ namespace eosiosystem {
          } else {
             _rexorders.modify( oitr, same_payer, [&]( auto& order ) {
                order.rex_requested.amount += rex.amount;
-               eosio_assert( order.rex_requested.amount <= bitr->matured_rex,
+               check( order.rex_requested.amount <= bitr->matured_rex,
                              "insufficient funds for current and scheduled orders");
             });
          }
@@ -158,7 +158,7 @@ namespace eosiosystem {
       require_auth( owner );
 
       auto itr = _rexorders.require_find( owner.value, "no sellrex order is scheduled" );
-      eosio_assert( itr->is_open, "sellrex order has been filled and cannot be canceled" );
+      check( itr->is_open, "sellrex order has been filled and cannot be canceled" );
       _rexorders.erase( itr );
    }
 
@@ -364,7 +364,7 @@ namespace eosiosystem {
       {
          auto rex_itr = _rexbalance.find( owner.value );
          if ( rex_itr != _rexbalance.end() ) {
-            eosio_assert( rex_itr->rex_balance.amount == 0, "account has remaining REX balance, must sell first");
+            check( rex_itr->rex_balance.amount == 0, "account has remaining REX balance, must sell first");
             _rexbalance.erase( rex_itr );
          }
       }
@@ -414,7 +414,7 @@ namespace eosiosystem {
          user_resources_table totals_tbl( _self, receiver.value );
          auto tot_itr = totals_tbl.find( receiver.value );
          if ( tot_itr == totals_tbl.end() ) {
-            eosio_assert( 0 <= delta_net && 0 <= delta_cpu, "logic error, should not occur");
+            check( 0 <= delta_net && 0 <= delta_cpu, "logic error, should not occur");
             tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
                tot.owner      = receiver;
                tot.net_weight = asset( delta_net, core_symbol() );
@@ -426,8 +426,8 @@ namespace eosiosystem {
                tot.cpu_weight.amount += delta_cpu;
             });
          }
-         eosio_assert( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
-         eosio_assert( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
+         check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
+         check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
          
          if ( tot_itr->is_empty() ) {
             totals_tbl.erase( tot_itr );
@@ -442,7 +442,7 @@ namespace eosiosystem {
    void system_contract::check_voting_requirement( const name& owner, const char* error_msg )const
    {
       auto vitr = _voters.find( owner.value );
-      eosio_assert( vitr != _voters.end() && ( vitr->proxy || 21 <= vitr->producers.size() ), error_msg );
+      check( vitr != _voters.end() && ( vitr->proxy || 21 <= vitr->producers.size() ), error_msg );
    }
 
    /**
@@ -452,7 +452,7 @@ namespace eosiosystem {
     */
    void system_contract::runrex( uint16_t max )
    {
-      eosio_assert( rex_system_initialized(), "rex system not initialized yet" );
+      check( rex_system_initialized(), "rex system not initialized yet" );
 
       auto rexi = _rexpool.begin();
 
@@ -565,9 +565,9 @@ namespace eosiosystem {
    {
       runrex(2);
 
-      eosio_assert( rex_loans_available(), "rex loans are not currently available" );
-      eosio_assert( payment.symbol == core_symbol() && fund.symbol == core_symbol(), "must use core token" );
-      eosio_assert( 0 < payment.amount && 0 <= fund.amount, "must use positive asset amount" );
+      check( rex_loans_available(), "rex loans are not currently available" );
+      check( payment.symbol == core_symbol() && fund.symbol == core_symbol(), "must use core token" );
+      check( 0 < payment.amount && 0 <= fund.amount, "must use positive asset amount" );
 
       update_rex_account( from, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( from, payment + fund );
@@ -642,11 +642,11 @@ namespace eosiosystem {
    template <typename T>
    void system_contract::fund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& payment  )
    {
-      eosio_assert( payment.symbol == core_symbol(), "must use core token" );
+      check( payment.symbol == core_symbol(), "must use core token" );
       transfer_from_fund( from, payment );
       auto itr = table.require_find( loan_num, "loan not found" );
-      eosio_assert( itr->from == from, "user must be loan creator" );
-      eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
+      check( itr->from == from, "user must be loan creator" );
+      check( itr->expiration > current_time_point(), "loan has already expired" );
       table.modify( itr, same_payer, [&]( auto& loan ) {
          loan.balance.amount += payment.amount;
       });
@@ -655,11 +655,11 @@ namespace eosiosystem {
    template <typename T>
    void system_contract::defund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& amount  )
    {
-      eosio_assert( amount.symbol == core_symbol(), "must use core token" );
+      check( amount.symbol == core_symbol(), "must use core token" );
       auto itr = table.require_find( loan_num, "loan not found" );
-      eosio_assert( itr->from == from, "user must be loan creator" );
-      eosio_assert( itr->expiration > current_time_point(), "loan has already expired" );
-      eosio_assert( itr->balance >= amount, "insufficent loan balance" );
+      check( itr->from == from, "user must be loan creator" );
+      check( itr->expiration > current_time_point(), "loan has already expired" );
+      check( itr->balance >= amount, "insufficent loan balance" );
       table.modify( itr, same_payer, [&]( auto& loan ) {
          loan.balance.amount -= amount.amount;
       });
@@ -676,10 +676,10 @@ namespace eosiosystem {
     */
    void system_contract::transfer_from_fund( const name& owner, const asset& amount )
    {
-      eosio_assert( 0 < amount.amount && amount.symbol == core_symbol(),
+      check( 0 < amount.amount && amount.symbol == core_symbol(),
                     "must transfer positive amount from REX fund" );
       auto itr = _rexfunds.require_find( owner.value, "must deposit to REX fund first" );
-      eosio_assert( amount <= itr->balance, "insufficient funds");
+      check( amount <= itr->balance, "insufficient funds");
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
          fund.balance.amount -= amount.amount;
       });
@@ -693,7 +693,7 @@ namespace eosiosystem {
     */
    void system_contract::transfer_to_fund( const name& owner, const asset& amount )
    {
-      eosio_assert( 0 < amount.amount && amount.symbol == core_symbol(),
+      check( 0 < amount.amount && amount.symbol == core_symbol(),
                     "must transfer positive amount to REX fund" );
       auto itr = _rexfunds.find( owner.value );
       if ( itr == _rexfunds.end() ) {
@@ -872,7 +872,7 @@ namespace eosiosystem {
          });
       } else {
          /// total_lendable > 0 if total_rex > 0 except in a rare case and due to rounding errors
-         eosio_assert( itr->total_lendable.amount > 0, "lendable REX pool is empty" );
+         check( itr->total_lendable.amount > 0, "lendable REX pool is empty" );
          const int64_t S0 = itr->total_lendable.amount;
          const int64_t S1 = S0 + payment.amount;
          const int64_t R0 = itr->total_rex.amount;
@@ -884,7 +884,7 @@ namespace eosiosystem {
             rp.total_lendable.amount = S1;
             rp.total_rex.amount      = R1;
             rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
-            eosio_assert( rp.total_unlent.amount >= 0, "programmer error, this should never go negative" );
+            check( rp.total_unlent.amount >= 0, "programmer error, this should never go negative" );
          });
       }
       
