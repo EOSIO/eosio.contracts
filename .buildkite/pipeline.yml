@@ -1,0 +1,39 @@
+steps:
+  - command: |
+        echo "AUTHENTICATING GOOGLE SERVICE ACCOUNT" && \
+        gcloud --quiet auth activate-service-account b1-automation-svc@b1-automation-dev.iam.gserviceaccount.com --key-file=/etc/gcp-service-account.json && \
+        docker-credential-gcr configure-docker && \
+        echo "BUILDING CONTRACTS-BUILDER IMAGE" && \
+        docker pull gcr.io/b1-automation-dev/eosio/builder:latest && \
+        cd Docker && \
+        docker build -t eosio/contracts-builder:latest -t eosio/contracts-builder:$BUILDKITE_COMMIT . --build-arg branch=$BUILDKITE_BRANCH && \
+        docker tag eosio/contracts-builder:$BUILDKITE_COMMIT gcr.io/b1-automation-dev/eosio/contracts-builder:$BUILDKITE_COMMIT && \
+        docker tag eosio/contracts-builder:latest gcr.io/b1-automation-dev/eosio/contracts-builder:latest && \
+        echo "PUSHING IMAGES" && \
+        docker push gcr.io/b1-automation-dev/eosio/contracts-builder:$BUILDKITE_COMMIT && \
+        docker push gcr.io/b1-automation-dev/eosio/contracts-builder:latest && \
+        echo "TRASHING OLD IMAGES" && \
+        docker rmi eosio/contracts-builder:$BUILDKITE_COMMIT && \
+        docker rmi eosio/contracts-builder:latest && \
+        docker rmi gcr.io/b1-automation-dev/eosio/contracts-builder:$BUILDKITE_COMMIT && \
+        docker rmi gcr.io/b1-automation-dev/eosio/contracts-builder:latest
+    label: "Docker build eosio/contracts-builder"
+    agents:
+      queue: "automation-docker-builder-fleet"
+    timeout: 300
+
+  - wait
+
+  - command: |
+        echo "AUTHENTICATING GOOGLE SERVICE ACCOUNT" && \
+        gcloud --quiet auth activate-service-account b1-automation-svc@b1-automation-dev.iam.gserviceaccount.com --key-file=/etc/gcp-service-account.json && \
+        docker-credential-gcr configure-docker && \
+        echo "PULLING CONTRACTS-BUILDER IMAGE" && \
+        docker pull gcr.io/b1-automation-dev/eosio/contracts-builder:$BUILDKITE_COMMIT && \
+        echo "BUILDING CONTRACTS" && \
+        docker run -v $(pwd):/eosio.contracts -it gcr.io/b1-automation-dev/eosio/contracts-builder:$BUILDKITE_COMMIT 
+    artifact_paths: "contracts.tar.gz"
+    label: "Build eosio.contracts"
+    agents:
+      queue: "automation-docker-builder-fleet"
+    timeout: 300
