@@ -187,6 +187,7 @@ namespace eosiosystem {
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_pool {
+      uint8_t    which = 0;
       asset      total_lent; /// total EOS in open rex_loans
       asset      total_unlent; /// total EOS available to be lent (connector)
       asset      total_rent; /// fees received in exchange for lent  (connector)
@@ -201,6 +202,7 @@ namespace eosiosystem {
    typedef eosio::multi_index< "rexpool"_n, rex_pool > rex_pool_table;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_fund {
+      uint8_t which = 0;
       name    owner;
       asset   balance;
 
@@ -210,6 +212,7 @@ namespace eosiosystem {
    typedef eosio::multi_index< "rexfund"_n, rex_fund > rex_fund_table;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_balance {
+      uint8_t which = 0;
       name    owner;
       asset   vote_stake; /// the amount of CORE_SYMBOL currently included in owner's vote
       asset   rex_balance; /// the amount of REX owned by owner
@@ -222,6 +225,7 @@ namespace eosiosystem {
    typedef eosio::multi_index< "rexbal"_n, rex_balance > rex_balance_table;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_loan {
+      uint8_t             which = 0;
       name                from;
       name                receiver;
       asset               payment;
@@ -246,6 +250,7 @@ namespace eosiosystem {
                              > rex_net_loan_table;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_order {
+      uint8_t             which = 0;
       name                owner;
       asset               rex_requested;
       asset               proceeds;
@@ -298,7 +303,7 @@ namespace eosiosystem {
          static constexpr eosio::name rex_account{"eosio.rex"_n};
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
          static constexpr symbol ram_symbol     = symbol(symbol_code("RAM"), 0);
-	 static constexpr symbol rex_symbol     = symbol(symbol_code("REX"), 4);
+         static constexpr symbol rex_symbol     = symbol(symbol_code("REX"), 4);
 
          system_contract( name s, name code, datastream<const char*> ds );
          ~system_contract();
