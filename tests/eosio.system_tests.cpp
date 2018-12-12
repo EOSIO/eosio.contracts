@@ -4149,7 +4149,7 @@ BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::to
       }
    }
 
-   BOOST_REQUIRE_EQUAL( wasm_assert_msg("voter holding REX must vote for a proxy or at least 21 producers"),
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("voter holding REX tokens must vote for at least 21 producers or for a proxy"),
                         vote( alice, std::vector<account_name>(producer_names.begin(), producer_names.begin() + 20) ) );
    BOOST_REQUIRE_EQUAL( success(),
                         vote( alice, std::vector<account_name>(producer_names.begin(), producer_names.begin() + 21) ) );

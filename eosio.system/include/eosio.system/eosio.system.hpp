@@ -14,6 +14,14 @@
 #include <string>
 #include <deque>
 
+#ifdef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
+#undef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
+#endif
+// CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX macro determines whether ramfee and namebid proceeds are
+// channeled to REX pool. In order to stop these proceeds from being channeled, the macro must
+// be set to 0.
+#define CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX 1
+
 namespace eosiosystem {
 
    using eosio::name;
@@ -529,7 +537,8 @@ namespace eosiosystem {
          // defined in rex.cpp
          void runrex( uint16_t max );
          void update_resource_limits( const name& from, const name& receiver, int64_t delta_net, int64_t delta_cpu );
-         void check_voting_requirement( const name& owner )const;
+         void check_voting_requirement( const name& owner,
+                                        const char* error_msg = "must vote for at least 21 producers or for a proxy before buying REX" )const;
          rex_order_outcome fill_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
          asset update_rex_account( const name& owner, const asset& proceeds, const asset& unstake_quant, bool force_vote_update = false );
          void channel_to_rex( const name& from, const asset& amount );

@@ -439,11 +439,10 @@ namespace eosiosystem {
       set_resource_limits( receiver.value, ram_bytes, net + delta_net, cpu + delta_cpu );
    }
 
-   void system_contract::check_voting_requirement( const name& owner )const
+   void system_contract::check_voting_requirement( const name& owner, const char* error_msg )const
    {
       auto vitr = _voters.find( owner.value );
-      eosio_assert( vitr != _voters.end() && ( vitr->proxy || 21 <= vitr->producers.size() ),
-                    "must vote for at least 21 producers or for a proxy before buying REX" );
+      eosio_assert( vitr != _voters.end() && ( vitr->proxy || 21 <= vitr->producers.size() ), error_msg );
    }
 
    /**
@@ -756,6 +755,7 @@ namespace eosiosystem {
     */
    void system_contract::channel_to_rex( const name& from, const asset& amount )
    {
+#if CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
       if ( rex_available() ) {
          _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
             rp.total_unlent.amount   += amount.amount;
@@ -765,6 +765,7 @@ namespace eosiosystem {
          INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { from, active_permission },
             { from, rex_account, amount, std::string("transfer from ") + name{from}.to_string() + " to eosio.rex"} );
       }
+#endif
    }
 
    /**
@@ -774,11 +775,13 @@ namespace eosiosystem {
     */
    void system_contract::channel_namebid_to_rex( const int64_t highest_bid )
    {
+#if CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
       if ( rex_available() ) {
          _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
             rp.namebid_proceeds.amount += highest_bid;
          });
       }
+#endif
    }
 
    /**
