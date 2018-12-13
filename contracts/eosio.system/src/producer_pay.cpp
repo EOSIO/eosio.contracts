@@ -65,6 +65,7 @@ namespace eosiosystem {
                 (current_time_point() - _gstate.thresh_activated_stake_time) > microseconds(14 * useconds_per_day)
             ) {
                _gstate.last_name_close = timestamp;
+               channel_namebid_to_rex( highest->high_bid );
                idx.modify( highest, same_payer, [&]( auto& b ){
                   b.high_bid = -b.high_bid;
                });
@@ -78,14 +79,14 @@ namespace eosiosystem {
       require_auth( owner );
 
       const auto& prod = _producers.get( owner.value );
-      eosio_assert( prod.active(), "producer does not have an active key" );
+      check( prod.active(), "producer does not have an active key" );
 
-      eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
+      check( _gstate.total_activated_stake >= min_activated_stake,
                     "cannot claim rewards until the chain is activated (at least 15% of all tokens participate in voting)" );
 
       const auto ct = current_time_point();
 
-      eosio_assert( ct - prod.last_claim_time > microseconds(useconds_per_day), "already claimed rewards within past day" );
+      check( ct - prod.last_claim_time > microseconds(useconds_per_day), "already claimed rewards within past day" );
 
       const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
       const auto usecs_since_last_fill = (ct - _gstate.last_pervote_bucket_fill).count();

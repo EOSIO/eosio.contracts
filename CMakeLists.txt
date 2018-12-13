@@ -5,7 +5,7 @@ project(eosio_contracts)
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 6)
 set(VERSION_PATCH 0)
-set(VERSION_SUFFIX develop)
+set(VERSION_SUFFIX rc1)
 
 if (VERSION_SUFFIX)
    set(VERSION_FULL "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}-${VERSION_SUFFIX}")
@@ -21,6 +21,7 @@ message(STATUS "Building eosio.contracts v${VERSION_FULL}")
 
 set(EOSIO_CDT_VERSION_MIN "1.5")
 set(EOSIO_CDT_VERSION_SOFT_MAX "1.5")
+#set(EOSIO_CDT_VERSION_HARD_MAX "")
 
 ### Check the version of eosio.cdt
 set(VERSION_MATCH_ERROR_MSG "")

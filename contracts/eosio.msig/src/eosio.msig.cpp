@@ -27,18 +27,18 @@ void multisig::propose( ignore<name> proposer,
    _ds >> _trx_header;
 
    require_auth( _proposer );
-   eosio_assert( _trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
-   //eosio_assert( trx_header.actions.size() > 0, "transaction must have at least one action" );
+   check( _trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
+   //check( trx_header.actions.size() > 0, "transaction must have at least one action" );
 
    proposals proptable( _self, _proposer.value );
-   eosio_assert( proptable.find( _proposal_name.value ) == proptable.end(), "proposal with the same name exists" );
+   check( proptable.find( _proposal_name.value ) == proptable.end(), "proposal with the same name exists" );
 
    auto packed_requested = pack(_requested);
    auto res = ::check_transaction_authorization( trx_pos, size,
                                                  (const char*)0, 0,
                                                  packed_requested.data(), packed_requested.size()
                                                );
-   eosio_assert( res > 0, "transaction authorization failed" );
+   check( res > 0, "transaction authorization failed" );
 
    std::vector<char> pkd_trans;
    pkd_trans.resize(size);
@@ -73,7 +73,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
    auto apps_it = apptable.find( proposal_name.value );
    if ( apps_it != apptable.end() ) {
       auto itr = std::find_if( apps_it->requested_approvals.begin(), apps_it->requested_approvals.end(), [&](const approval& a) { return a.level == level; } );
-      eosio_assert( itr != apps_it->requested_approvals.end(), "approval is not on the list of requested approvals" );
+      check( itr != apps_it->requested_approvals.end(), "approval is not on the list of requested approvals" );
 
       apptable.modify( apps_it, proposer, [&]( auto& a ) {
             a.provided_approvals.push_back( approval{ level, current_time_point() } );
@@ -84,7 +84,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
       auto& apps = old_apptable.get( proposal_name.value, "proposal not found" );
 
       auto itr = std::find( apps.requested_approvals.begin(), apps.requested_approvals.end(), level );
-      eosio_assert( itr != apps.requested_approvals.end(), "approval is not on the list of requested approvals" );
+      check( itr != apps.requested_approvals.end(), "approval is not on the list of requested approvals" );
 
       old_apptable.modify( apps, proposer, [&]( auto& a ) {
             a.provided_approvals.push_back( level );
@@ -100,7 +100,7 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
    auto apps_it = apptable.find( proposal_name.value );
    if ( apps_it != apptable.end() ) {
       auto itr = std::find_if( apps_it->provided_approvals.begin(), apps_it->provided_approvals.end(), [&](const approval& a) { return a.level == level; } );
-      eosio_assert( itr != apps_it->provided_approvals.end(), "no approval previously granted" );
+      check( itr != apps_it->provided_approvals.end(), "no approval previously granted" );
       apptable.modify( apps_it, proposer, [&]( auto& a ) {
             a.requested_approvals.push_back( approval{ level, current_time_point() } );
             a.provided_approvals.erase( itr );
@@ -109,7 +109,7 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
       old_approvals old_apptable(  _self, proposer.value );
       auto& apps = old_apptable.get( proposal_name.value, "proposal not found" );
       auto itr = std::find( apps.provided_approvals.begin(), apps.provided_approvals.end(), level );
-      eosio_assert( itr != apps.provided_approvals.end(), "no approval previously granted" );
+      check( itr != apps.provided_approvals.end(), "no approval previously granted" );
       old_apptable.modify( apps, proposer, [&]( auto& a ) {
             a.requested_approvals.push_back( level );
             a.provided_approvals.erase( itr );
@@ -124,7 +124,7 @@ void multisig::cancel( name proposer, name proposal_name, name canceler ) {
    auto& prop = proptable.get( proposal_name.value, "proposal not found" );
 
    if( canceler != proposer ) {
-      eosio_assert( unpack<transaction_header>( prop.packed_transaction ).expiration < eosio::time_point_sec(current_time_point()), "cannot cancel until expiration" );
+      check( unpack<transaction_header>( prop.packed_transaction ).expiration < eosio::time_point_sec(current_time_point()), "cannot cancel until expiration" );
    }
    proptable.erase(prop);
 
@@ -136,7 +136,7 @@ void multisig::cancel( name proposer, name proposal_name, name canceler ) {
    } else {
       old_approvals old_apptable(  _self, proposer.value );
       auto apps_it = old_apptable.find( proposal_name.value );
-      eosio_assert( apps_it != old_apptable.end(), "proposal not found" );
+      check( apps_it != old_apptable.end(), "proposal not found" );
       old_apptable.erase(apps_it);
    }
 }
@@ -149,7 +149,7 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    transaction_header trx_header;
    datastream<const char*> ds( prop.packed_transaction.data(), prop.packed_transaction.size() );
    ds >> trx_header;
-   eosio_assert( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
+   check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
 
    approvals apptable(  _self, proposer.value );
    auto apps_it = apptable.find( proposal_name.value );
@@ -180,7 +180,7 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
                                                  (const char*)0, 0,
                                                  packed_provided_approvals.data(), packed_provided_approvals.size()
                                                  );
-   eosio_assert( res > 0, "transaction authorization failed" );
+   check( res > 0, "transaction authorization failed" );
 
    send_deferred( (uint128_t(proposer.value) << 64) | proposal_name.value, executer.value,
                   prop.packed_transaction.data(), prop.packed_transaction.size() );

@@ -37,6 +37,7 @@ namespace eosiosystem {
       asset         cpu_weight;
       int64_t       ram_bytes = 0;
 
+      bool is_empty()const { return net_weight.amount == 0 && cpu_weight.amount == 0 && ram_bytes == 0; }
       uint64_t primary_key()const { return owner.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
@@ -53,6 +54,7 @@ namespace eosiosystem {
       asset         net_weight;
       asset         cpu_weight;
 
+      bool is_empty()const { return net_weight.amount == 0 && cpu_weight.amount == 0; }
       uint64_t  primary_key()const { return to.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
@@ -66,6 +68,7 @@ namespace eosiosystem {
       eosio::asset    net_amount;
       eosio::asset    cpu_amount;
 
+      bool is_empty()const { return net_amount.amount == 0 && cpu_amount.amount == 0; }
       uint64_t  primary_key()const { return owner.value; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
@@ -108,8 +111,8 @@ namespace eosiosystem {
       require_auth( payer );
       update_ram_supply();
 
-      eosio_assert( quant.symbol == core_symbol(), "must buy ram with core token" );
-      eosio_assert( quant.amount > 0, "must purchase a positive amount" );
+      check( quant.symbol == core_symbol(), "must buy ram with core token" );
+      check( quant.amount > 0, "must purchase a positive amount" );
 
       auto fee = quant;
       fee.amount = ( fee.amount + 199 ) / 200; /// .5% fee (round up)
@@ -131,8 +134,9 @@ namespace eosiosystem {
             token_account, { {payer, active_permission} },
             { payer, ramfee_account, fee, std::string("ram fee") }
          );
+         channel_to_rex( ramfee_account, fee );
       }
-
+      
       int64_t bytes_out;
 
       const auto& market = _rammarket.get(ramcore_symbol.raw(), "ram market does not exist");
@@ -140,7 +144,7 @@ namespace eosiosystem {
           bytes_out = es.convert( quant_after_fee,  ram_symbol ).amount;
       });
 
-      eosio_assert( bytes_out > 0, "must reserve a positive amount" );
+      check( bytes_out > 0, "must reserve a positive amount" );
 
       _gstate.total_ram_bytes_reserved += uint64_t(bytes_out);
       _gstate.total_ram_stake          += quant_after_fee.amount;
@@ -172,12 +176,12 @@ namespace eosiosystem {
       require_auth( account );
       update_ram_supply();
 
-      eosio_assert( bytes > 0, "cannot sell negative byte" );
+      check( bytes > 0, "cannot sell negative byte" );
 
       user_resources_table  userres( _self, account.value );
       auto res_itr = userres.find( account.value );
-      eosio_assert( res_itr != userres.end(), "no resource row" );
-      eosio_assert( res_itr->ram_bytes >= bytes, "insufficient quota" );
+      check( res_itr != userres.end(), "no resource row" );
+      check( res_itr->ram_bytes >= bytes, "insufficient quota" );
 
       asset tokens_out;
       auto itr = _rammarket.find(ramcore_symbol.raw());
@@ -186,13 +190,13 @@ namespace eosiosystem {
           tokens_out = es.convert( asset(bytes, ram_symbol), core_symbol());
       });
 
-      eosio_assert( tokens_out.amount > 1, "token amount received from selling ram is too low" );
+      check( tokens_out.amount > 1, "token amount received from selling ram is too low" );
 
       _gstate.total_ram_bytes_reserved -= static_cast<decltype(_gstate.total_ram_bytes_reserved)>(bytes); // bytes > 0 is asserted above
       _gstate.total_ram_stake          -= tokens_out.amount;
 
       //// this shouldn't happen, but just in case it does we should prevent it
-      eosio_assert( _gstate.total_ram_stake >= 0, "error, attempt to unstake more tokens than previously staked" );
+      check( _gstate.total_ram_stake >= 0, "error, attempt to unstake more tokens than previously staked" );
 
       userres.modify( res_itr, account, [&]( auto& res ) {
           res.ram_bytes -= bytes;
@@ -211,6 +215,7 @@ namespace eosiosystem {
             token_account, { {account, active_permission} },
             { account, ramfee_account, asset(fee, core_symbol()), std::string("sell ram fee") }
          );
+         channel_to_rex( ramfee_account, asset(fee, core_symbol() ));
       }
    }
 
@@ -219,15 +224,15 @@ namespace eosiosystem {
       const int64_t max_claimable = 100'000'000'0000ll;
       const int64_t claimable = int64_t(max_claimable * double(now()-base_time) / (10*seconds_per_year) );
 
-      eosio_assert( max_claimable - claimable <= stake, "b1 can only claim their tokens over 10 years" );
+      check( max_claimable - claimable <= stake, "b1 can only claim their tokens over 10 years" );
    }
 
    void system_contract::changebw( name from, name receiver,
                                    const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
    {
       require_auth( from );
-      eosio_assert( stake_net_delta.amount != 0 || stake_cpu_delta.amount != 0, "should stake non-zero amount" );
-      eosio_assert( std::abs( (stake_net_delta + stake_cpu_delta).amount )
+      check( stake_net_delta.amount != 0 || stake_cpu_delta.amount != 0, "should stake non-zero amount" );
+      check( std::abs( (stake_net_delta + stake_cpu_delta).amount )
                      >= std::max( std::abs( stake_net_delta.amount ), std::abs( stake_cpu_delta.amount ) ),
                     "net and cpu deltas cannot be opposite signs" );
 
@@ -254,9 +259,9 @@ namespace eosiosystem {
                   dbo.cpu_weight    += stake_cpu_delta;
                });
          }
-         eosio_assert( 0 <= itr->net_weight.amount, "insufficient staked net bandwidth" );
-         eosio_assert( 0 <= itr->cpu_weight.amount, "insufficient staked cpu bandwidth" );
-         if ( itr->net_weight.amount == 0 && itr->cpu_weight.amount == 0 ) {
+         check( 0 <= itr->net_weight.amount, "insufficient staked net bandwidth" );
+         check( 0 <= itr->cpu_weight.amount, "insufficient staked cpu bandwidth" );
+         if ( itr->is_empty() ) {
             del_tbl.erase( itr );
          }
       } // itr can be invalid, should go out of scope
@@ -277,15 +282,15 @@ namespace eosiosystem {
                   tot.cpu_weight    += stake_cpu_delta;
                });
          }
-         eosio_assert( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
-         eosio_assert( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
+         check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
+         check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
 
          int64_t ram_bytes, net, cpu;
          get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
 
          set_resource_limits( receiver.value, std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ), tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
 
-         if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0  && tot_itr->ram_bytes == 0 ) {
+         if ( tot_itr->is_empty() ) {
             totals_tbl.erase( tot_itr );
          }
       } // tot_itr can be invalid, should go out of scope
@@ -328,10 +333,10 @@ namespace eosiosystem {
                   }
                });
 
-               eosio_assert( 0 <= req->net_amount.amount, "negative net refund amount" ); //should never happen
-               eosio_assert( 0 <= req->cpu_amount.amount, "negative cpu refund amount" ); //should never happen
+               check( 0 <= req->net_amount.amount, "negative net refund amount" ); //should never happen
+               check( 0 <= req->cpu_amount.amount, "negative cpu refund amount" ); //should never happen
 
-               if ( req->net_amount.amount == 0 && req->cpu_amount.amount == 0 ) {
+               if ( req->is_empty() ) {
                   refunds_tbl.erase( req );
                   need_deferred_trx = false;
                } else {
@@ -380,28 +385,31 @@ namespace eosiosystem {
          }
       }
 
-      // update voting power
-      {
-         asset total_update = stake_net_delta + stake_cpu_delta;
-         auto from_voter = _voters.find( from.value );
-         if( from_voter == _voters.end() ) {
-            from_voter = _voters.emplace( from, [&]( auto& v ) {
-                  v.owner  = from;
-                  v.staked = total_update.amount;
-               });
-         } else {
-            _voters.modify( from_voter, same_payer, [&]( auto& v ) {
-                  v.staked += total_update.amount;
-               });
-         }
-         eosio_assert( 0 <= from_voter->staked, "stake for voting cannot be negative");
-         if( from == "b1"_n ) {
-            validate_b1_vesting( from_voter->staked );
-         }
+      update_voting_power( from, stake_net_delta + stake_cpu_delta );
+   }
 
-         if( from_voter->producers.size() || from_voter->proxy ) {
-            update_votes( from, from_voter->proxy, from_voter->producers, false );
-         }
+   void system_contract::update_voting_power( const name& voter, const asset& total_update )
+   {
+      auto voter_itr = _voters.find( voter.value );
+      if( voter_itr == _voters.end() ) {
+         voter_itr = _voters.emplace( voter, [&]( auto& v ) {
+            v.owner  = voter;
+            v.staked = total_update.amount;
+         });
+      } else {
+         _voters.modify( voter_itr, same_payer, [&]( auto& v ) {
+            v.staked += total_update.amount;
+         });
+      }
+
+      check( 0 <= voter_itr->staked, "stake for voting cannot be negative");
+
+      if( voter == "b1"_n ) {
+         validate_b1_vesting( voter_itr->staked );
+      }
+
+      if( voter_itr->producers.size() || voter_itr->proxy ) {
+         update_votes( voter, voter_itr->proxy, voter_itr->producers, false );
       }
    }
 
@@ -410,10 +418,10 @@ namespace eosiosystem {
                                      asset stake_cpu_quantity, bool transfer )
    {
       asset zero_asset( 0, core_symbol() );
-      eosio_assert( stake_cpu_quantity >= zero_asset, "must stake a positive amount" );
-      eosio_assert( stake_net_quantity >= zero_asset, "must stake a positive amount" );
-      eosio_assert( stake_net_quantity.amount + stake_cpu_quantity.amount > 0, "must stake a positive amount" );
-      eosio_assert( !transfer || from != receiver, "cannot use transfer flag if delegating to self" );
+      check( stake_cpu_quantity >= zero_asset, "must stake a positive amount" );
+      check( stake_net_quantity >= zero_asset, "must stake a positive amount" );
+      check( stake_net_quantity.amount + stake_cpu_quantity.amount > 0, "must stake a positive amount" );
+      check( !transfer || from != receiver, "cannot use transfer flag if delegating to self" );
 
       changebw( from, receiver, stake_net_quantity, stake_cpu_quantity, transfer);
    } // delegatebw
@@ -422,10 +430,10 @@ namespace eosiosystem {
                                        asset unstake_net_quantity, asset unstake_cpu_quantity )
    {
       asset zero_asset( 0, core_symbol() );
-      eosio_assert( unstake_cpu_quantity >= zero_asset, "must unstake a positive amount" );
-      eosio_assert( unstake_net_quantity >= zero_asset, "must unstake a positive amount" );
-      eosio_assert( unstake_cpu_quantity.amount + unstake_net_quantity.amount > 0, "must unstake a positive amount" );
-      eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
+      check( unstake_cpu_quantity >= zero_asset, "must unstake a positive amount" );
+      check( unstake_net_quantity >= zero_asset, "must unstake a positive amount" );
+      check( unstake_cpu_quantity.amount + unstake_net_quantity.amount > 0, "must unstake a positive amount" );
+      check( _gstate.total_activated_stake >= min_activated_stake,
                     "cannot undelegate bandwidth until the chain is activated (at least 15% of all tokens participate in voting)" );
 
       changebw( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
@@ -437,8 +445,8 @@ namespace eosiosystem {
 
       refunds_table refunds_tbl( _self, owner.value );
       auto req = refunds_tbl.find( owner.value );
-      eosio_assert( req != refunds_tbl.end(), "refund request not found" );
-      eosio_assert( req->request_time + seconds(refund_delay_sec) <= current_time_point(),
+      check( req != refunds_tbl.end(), "refund request not found" );
+      check( req->request_time + seconds(refund_delay_sec) <= current_time_point(),
                     "refund is not available yet" );
 
       INLINE_ACTION_SENDER(eosio::token, transfer)(
