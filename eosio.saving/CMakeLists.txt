@@ -1,4 +1,6 @@
 add_contract(eosio.saving eosio.saving ${CMAKE_CURRENT_SOURCE_DIR}/src/worker.proposals.cpp) #NOTE: this path needs to change
+
+target_compile_options(eosio.saving.wasm PUBLIC -R${CMAKE_CURRENT_SOURCE_DIR}/resources)
 target_include_directories(eosio.saving.wasm
    PUBLIC
    ${CMAKE_CURRENT_SOURCE_DIR}/include

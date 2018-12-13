@@ -96,8 +96,7 @@ class eosio_trail_tester : public tester
 		BOOST_REQUIRE_EQUAL(settings["is_burnable"], token_registry["settings"].as<mvo>()["is_burnable"]);
 		std::cout << "=======================END SETUP==============================" << std::endl;
 	}
-
-	#pragma region Setup_Actions
+	
 	void deploy_contract() {
       set_code( N(eosio.trail), contracts::trail_wasm() );
       set_abi( N(eosio.trail), contracts::trail_abi().data() );
@@ -183,10 +182,6 @@ class eosio_trail_tester : public tester
 		return base_tester::push_action(std::move(act), uint64_t(signer));
 	}
 
-	#pragma endregion Setup_Actions
-
-	#pragma region Get_Functions
-
 	fc::variant get_account(account_name acc, const string &symbolname)
 	{
 		auto symb = eosio::chain::symbol::from_string(symbolname);
@@ -243,10 +238,6 @@ class eosio_trail_tester : public tester
 		vector<char> data = get_row_by_account(N(eosio.trail), publisher, N(airgrabs), recipient);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("airgrab", data, abi_serializer_max_time);
 	}
-
-	#pragma endregion Get_Functions
-
-	#pragma region Voting_Actions
 
 	transaction_trace_ptr regvoter(account_name voter, symbol token_symbol) {
 		signed_transaction trx;
@@ -313,10 +304,6 @@ class eosio_trail_tester : public tester
 		trx.sign(get_private_key(voter, "active"), control->get_chain_id());
 		return push_transaction( trx );
 	}
-
-	#pragma endregion Voting_Actions
-
-	#pragma region Token_Action
 
 	transaction_trace_ptr issuetoken(account_name publisher, account_name recipient, asset tokens, bool airgrab) {
 		signed_transaction trx;
@@ -469,10 +456,6 @@ class eosio_trail_tester : public tester
 		return push_transaction( trx );
 	}
 
-	#pragma endregion Token_Actions
-
-	#pragma region Publisher_Actions
-
 	transaction_trace_ptr regballot(account_name publisher, uint8_t ballot_type, symbol voting_symbol, uint32_t begin_time, uint32_t end_time, string info_url) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(eosio.trail), N(regballot), vector<permission_level>{{publisher, config::active_name}},
@@ -561,10 +544,6 @@ class eosio_trail_tester : public tester
 		return push_transaction( trx );
 	}
 
-	#pragma endregion Publisher_Actions
-
-	#pragma region Common_Helpers
-
 	void register_voters(vector<name> test_voters, int start, int end, symbol smb){
 		for (int i = start; i < end; i++) {
 			regvoter(test_voters[i].value, smb);
@@ -590,8 +569,6 @@ class eosio_trail_tester : public tester
 	asset get_balance( const account_name& act, symbol balance_symbol = symbol{CORE_SYM}, const account_name& contract = N(eosio.token) ) {
 		return get_currency_balance(contract, balance_symbol, act);
 	}
-
-	#pragma endregion Common_Helpers
 
 	void dump_trace(transaction_trace_ptr trace_ptr) {
 		std::cout << std::endl << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;

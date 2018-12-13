@@ -1,6 +1,7 @@
 add_contract(telos.free telos.free ${CMAKE_CURRENT_SOURCE_DIR}/src/telos.free.cpp)
 
 target_compile_options(telos.free.wasm PUBLIC -R${CMAKE_CURRENT_SOURCE_DIR}/resources)
+target_compile_options(telos.free.wasm PUBLIC -Wunknown-pragmas)
 target_include_directories(telos.free.wasm
    PUBLIC
    ${CMAKE_CURRENT_SOURCE_DIR}/include)

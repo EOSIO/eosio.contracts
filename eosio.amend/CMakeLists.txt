@@ -1,6 +1,7 @@
 add_contract(eosio.amend eosio.amend ${CMAKE_CURRENT_SOURCE_DIR}/src/eosio.amend.cpp) #NOTE: this path needs to change
 
 target_compile_options(eosio.amend.wasm PUBLIC -R${CMAKE_CURRENT_SOURCE_DIR}/resources)
+target_compile_options(eosio.amend.wasm PUBLIC -Wunknown-pragmas)
 target_include_directories(eosio.amend.wasm
    PUBLIC
    ${CMAKE_CURRENT_SOURCE_DIR}/include
