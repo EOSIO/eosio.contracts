@@ -187,7 +187,7 @@ namespace eosiosystem {
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_pool {
-      uint8_t    which = 0;
+      uint8_t    version = 0;
       asset      total_lent; /// total EOS in open rex_loans
       asset      total_unlent; /// total EOS available to be lent (connector)
       asset      total_rent; /// fees received in exchange for lent  (connector)
@@ -202,7 +202,7 @@ namespace eosiosystem {
    typedef eosio::multi_index< "rexpool"_n, rex_pool > rex_pool_table;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_fund {
-      uint8_t which = 0;
+      uint8_t version = 0;
       name    owner;
       asset   balance;
 
@@ -212,7 +212,7 @@ namespace eosiosystem {
    typedef eosio::multi_index< "rexfund"_n, rex_fund > rex_fund_table;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_balance {
-      uint8_t which = 0;
+      uint8_t version = 0;
       name    owner;
       asset   vote_stake; /// the amount of CORE_SYMBOL currently included in owner's vote
       asset   rex_balance; /// the amount of REX owned by owner
@@ -225,14 +225,14 @@ namespace eosiosystem {
    typedef eosio::multi_index< "rexbal"_n, rex_balance > rex_balance_table;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_loan {
-      uint8_t             which = 0;
+      uint8_t             version = 0;
       name                from;
       name                receiver;
       asset               payment;
       asset               balance;
       asset               total_staked;
       uint64_t            loan_num;
-      eosio::time_point   expiration;      
+      eosio::time_point   expiration;
 
       uint64_t primary_key()const { return loan_num;                   }
       uint64_t by_expr()const     { return expiration.elapsed.count(); }
@@ -250,14 +250,14 @@ namespace eosiosystem {
                              > rex_net_loan_table;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_order {
-      uint8_t             which = 0;
+      uint8_t             version = 0;
       name                owner;
       asset               rex_requested;
       asset               proceeds;
       asset               stake_change;
       eosio::time_point   order_time;
       bool                is_open = true;
-      
+
       void close()                { is_open = false;    }
       uint64_t primary_key()const { return owner.value; }
       uint64_t by_time()const     { return is_open ? order_time.elapsed.count() : std::numeric_limits<uint64_t>::max(); }
@@ -273,7 +273,7 @@ namespace eosiosystem {
    };
 
    class [[eosio::contract("eosio.system")]] system_contract : public native {
-      
+
       private:
          voters_table            _voters;
          producers_table         _producers;
@@ -339,7 +339,7 @@ namespace eosiosystem {
           */
          [[eosio::action]]
          void deposit( const name& owner, const asset& amount );
-         
+
          /**
           * Withdraws core tokens from user REX fund. Inline token transfer to user balance is
           * executed.
@@ -364,13 +364,13 @@ namespace eosiosystem {
          void unstaketorex( const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu );
 
          /**
-          * Converts REX stake back into core tokens at current exchange rate. If order cannot be 
+          * Converts REX stake back into core tokens at current exchange rate. If order cannot be
           * processed, it gets queued until there is enough in REX pool to fill order.
           * If successful, user votes are updated.
           */
          [[eosio::action]]
          void sellrex( const name& from, const asset& rex );
-         
+
          /**
           * Cancels queued sellrex order. Order cannot be cancelled once it's been filled.
           */
@@ -378,7 +378,7 @@ namespace eosiosystem {
          void cnclrexorder( const name& owner );
 
          /**
-          * Use payment to rent as many SYS tokens as possible and stake them for either CPU or NET for the 
+          * Use payment to rent as many SYS tokens as possible and stake them for either CPU or NET for the
           * benefit of receiver, after 30 days the rented SYS delegation of CPU or NET will expire unless loan
           * balance is larger than or equal to payment.
           *
@@ -521,7 +521,7 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void bidrefund( name bidder, name newname );
-         
+
       private:
 
          // Implementation details:
