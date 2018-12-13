@@ -39,17 +39,6 @@ class registry : public contract {
         [[eosio::action]] void createwallet(name recipient);
 
         [[eosio::action]] void deletewallet(name owner);
-
-    //protected: //TODO: make public?
-
-        //TODO: change to inlines?
-        void sub_balance(name owner, asset tokens);
-
-        void add_balance(name recipient, asset tokens, name payer);
-
-        void sub_allot(name sender, name recipient, asset tokens);
-
-        void add_allot(name sender, name recipient, asset tokens, name payer);
         
         struct [[eosio::table]] tokenconfig {
             name publisher;
@@ -87,4 +76,13 @@ class registry : public contract {
         typedef eosio::singleton<name("tokenconfig"), tokenconfig> config_singleton;
         config_singleton _config;
         tokenconfig config;
+
+        //NOTE: Helper Functions
+        void add_balance(name recipient, asset tokens, name payer);
+
+        void sub_balance(name owner, asset tokens);
+
+        void add_allot(name sender, name recipient, asset tokens, name payer);
+
+        void sub_allot(name sender, name recipient, asset tokens);
 };
