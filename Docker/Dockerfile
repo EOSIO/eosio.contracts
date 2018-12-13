@@ -7,6 +7,7 @@ ARG cdt_release=latest
 RUN apt-get update && \
 DEBIAN_FRONTEND=noninteractive apt-get -y install openssl ca-certificates build-essential libbz2-dev zlib1g-dev libssl-dev libgmp3-dev libicu-dev cmake bc jq curl wget net-tools unzip gnupg git graphviz 
 
+# Get, build, and install EOS
 RUN git clone -b $eos_branch https://github.com/EOSIO/eos.git --recursive \
 && cd eos && echo "$branch:$(git rev-parse HEAD)" > /etc/eosio-version \
 && ./eosio_build.sh && ./eosio_install.sh

@@ -35,5 +35,5 @@ steps:
     artifact_paths: "contracts.tar.gz"
     label: "Build eosio.contracts"
     agents:
-      queue: "automation-docker-builder-fleet"
+      queue: "automation-large-builder-fleet"
     timeout: 300
