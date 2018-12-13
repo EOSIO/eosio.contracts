@@ -188,12 +188,12 @@ namespace eosiosystem {
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_pool {
       uint8_t    version = 0;
-      asset      total_lent; /// total EOS in open rex_loans
-      asset      total_unlent; /// total EOS available to be lent (connector)
+      asset      total_lent; /// total amount of CORE_SYMBOL in open rex_loans
+      asset      total_unlent; /// total amount of CORE_SYMBOL available to be lent (connector)
       asset      total_rent; /// fees received in exchange for lent  (connector)
-      asset      total_lendable; /// total EOS that have been lent (total_unlent + total_lent)
+      asset      total_lendable; /// total amount of CORE_SYMBOL that have been lent (total_unlent + total_lent)
       asset      total_rex; /// total number of REX shares allocated to contributors to total_lendable
-      asset      namebid_proceeds; /// EOS to be transferred from namebids to REX pool
+      asset      namebid_proceeds; /// the amount of CORE_SYMBOL to be transferred from namebids to REX pool
       uint64_t   loan_num = 0; /// increments with each new loan
 
       uint64_t primary_key()const { return 0; }
