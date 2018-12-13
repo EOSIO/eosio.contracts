@@ -844,6 +844,14 @@ namespace eosiosystem {
     */
    asset system_contract::add_to_rex_pool( const asset& payment )
    {
+      /**
+       * If CORE_SYMBOL is (EOS,4), maximum supply is 10^10 tokens (10 billion tokens), i.e., maximum amount 
+       * of indivisible units is 10^14. rex_ratio = 10^4 sets the upper bound on (REX,4) indivisible units to
+       * 10^18 and that is within the maximum allowable amount field of asset type which is set to 2^62 
+       * (approximately 4.6 * 10^18). For a different CORE_SYMBOL, and in order for maximum (REX,4) amount not
+       * to exceed that limit, maximum amount of indivisible units cannot be set to a value larger than 4 * 10^14.
+       * If precision of CORE_SYMBOL is 4, that corresponds to a maximum supply of 40 billion tokens. 
+       */
       const int64_t rex_ratio       = 10000;
       const int64_t init_total_rent = 100'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() is made available
       asset rex_received( 0, rex_symbol );
