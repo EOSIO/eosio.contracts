@@ -68,6 +68,8 @@ void arbitration::candaddlead( name candidate, string creds_ipfs_url )  {
   ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
   auto b = ballots.get(_config.ballot_id, "ballot doesn't exist");
 
+  // TODO check if election has started
+
   leaderboards_table leaderboards("eosio.trail"_n, "eosio.trail"_n.value);
   auto board = leaderboards.get(b.reference_id, "leaderboard doesn't exist");
 

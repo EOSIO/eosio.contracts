@@ -297,6 +297,8 @@ void tfvt::addcand(name nominee, string info_link) {
 	require_auth(nominee);
 	eosio_assert(is_nominee(nominee), "only nominees can be added to the election");
 
+	// TODO check if election has started
+
     action(permission_level{get_self(), name("active")}, name("eosio.trail"), name("addcandidate"), make_tuple(
 		get_self(), 				//publisher
 		_config.open_election_id, 	//ballot_id
