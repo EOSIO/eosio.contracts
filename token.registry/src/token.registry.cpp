@@ -4,7 +4,7 @@
  * @author Craig Branscom
  */
 
-#include "token.registry.hpp"
+#include <token.registry.hpp>
 
 registry::registry(name self, name code, datastream<const char*> ds) : contract(self, code, ds), _config(self, self.value) {
     if (!_config.exists()) {
