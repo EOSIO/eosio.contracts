@@ -1240,10 +1240,10 @@ bool trail::vote_for_leaderboard(name voter, uint64_t ballot_id, uint64_t board_
 
             print("\nVote Recast: SUCCESS");
 
-        } else if(vr.expiration == board.end_time && has_direction(direction, vr.directions)) { //NOTE: vote already exists for candidate (recasting)
+        } else if (vr.expiration == board.end_time && has_direction(direction, vr.directions)) { //NOTE: vote already exists for candidate (recasting)
 			eosio_assert(reg.settings.is_recastable, "token registry disallows vote recasting");
-
-			//TODO: implement recasting logic
+            eosio_assert(true == false, "Feature currently disabled"); //NOTE: temp fix
+            new_voter = 0;
 		}
         
     }
