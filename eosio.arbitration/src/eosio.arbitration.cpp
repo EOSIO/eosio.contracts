@@ -60,6 +60,7 @@ void arbitration::initelection() {
 void arbitration::candaddlead( name candidate, string creds_ipfs_url )  {
   require_auth(candidate);
   validate_ipfs_url(creds_ipfs_url);
+  eosio_assert(_config.auto_start_election, "there is no active election");
   
   pending_candidates_table candidates(_self, _self.value);
   auto c = candidates.find(candidate.value);
@@ -67,8 +68,6 @@ void arbitration::candaddlead( name candidate, string creds_ipfs_url )  {
 
   ballots_table ballots("eosio.trail"_n, "eosio.trail"_n.value);
   auto b = ballots.get(_config.ballot_id, "ballot doesn't exist");
-
-  // TODO check if election has started
 
   leaderboards_table leaderboards("eosio.trail"_n, "eosio.trail"_n.value);
   auto board = leaderboards.get(b.reference_id, "leaderboard doesn't exist");
