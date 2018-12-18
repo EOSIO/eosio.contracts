@@ -8,3 +8,6 @@ target_include_directories(eosio.system.wasm
 set_target_properties(eosio.system.wasm
    PROPERTIES
    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+install (TARGETS eosio.system.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/eosio.system/)
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/eosio.system.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/eosio.system/)

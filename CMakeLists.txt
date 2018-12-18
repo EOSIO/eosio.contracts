@@ -29,6 +29,12 @@ else()
    set(TEST_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
 
+macro(add_contract_with_abi TARGET ABIFILE)
+   add_executable( ${TARGET}.wasm ${ARGN} )
+   configure_file(${ABIFILE} ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi COPYONLY)
+   install (TARGETS ${TARGET}.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
+   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
+endmacro()
 
 add_subdirectory(eosio.bios)
 add_subdirectory(eosio.msig)
