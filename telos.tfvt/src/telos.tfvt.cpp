@@ -244,7 +244,9 @@ void tfvt::closeissue(name holder, name proposer) {
 
 void tfvt::nominate(name nominee, name nominator) {
     require_auth(nominator);
+	eosio_assert(is_account(nominee), "nominee account must exist");
 	eosio_assert(is_tfvt_holder(nominator), "caller must be a TFVT holder");
+	eosio_assert(!is_board_member(nominee) || is_term_expired(), "nominee is a board member, nominee's term must be expired");
 
     nominees_table noms(get_self(), get_self().value);
     auto n = noms.find(nominee.value);
@@ -296,6 +298,8 @@ void tfvt::makeelection(name holder, string info_url) {
 void tfvt::addcand(name nominee, string info_link) {
 	require_auth(nominee);
 	eosio_assert(is_nominee(nominee), "only nominees can be added to the election");
+	eosio_assert(_config.is_active_election, "no active election for board members at this time");
+	eosio_assert(!is_board_member(nominee) || is_term_expired(), "nominee can't already be a board member, or their term must be expired.");
 
     action(permission_level{get_self(), name("active")}, name("eosio.trail"), name("addcandidate"), make_tuple(
 		get_self(), 				//publisher
@@ -393,7 +397,7 @@ void tfvt::add_to_tfboard(name nominee) {
 
     members_table mems(get_self(), get_self().value);
     auto m = mems.find(nominee.value);
-    eosio_assert(m == mems.end(), "nominee is already a board member");
+    eosio_assert(m == mems.end(), "nominee is already a board member"); //NOTE: change if error occurs in live environment
 
     noms.erase(n); //NOTE remove from nominee table
 
@@ -528,7 +532,7 @@ void tfvt::remove_and_seize(name member) {
 
 void tfvt::set_permissions(vector<permission_level_weight> perms) {
 	auto self = get_self();
-	uint16_t active_weight = perms.size() < 4 ? 1 : (perms.size() / 4);
+	uint16_t active_weight = perms.size() < 3 ? 1 : ((perms.size() / 3) * 2);
 
 	perms.emplace_back(
 		permission_level_weight{ permission_level{
@@ -556,15 +560,14 @@ void tfvt::set_permissions(vector<permission_level_weight> perms) {
         return lvlw.permission.actor == self; 
     });
 	perms.erase(tf_it);
-
-	uint16_t major_weight = perms.size() < 3 ? 1 : ((perms.size() / 3) * 2);
+	uint16_t minor_weight = perms.size() < 4 ? 1 : (perms.size() / 4);
 	action(permission_level{get_self(), "owner"_n }, "eosio"_n, "updateauth"_n,
 		std::make_tuple(
 			get_self(), 
-			name("major"), 
+			name("minor"), 
 			name("owner"),
 			authority {
-				major_weight, 
+				minor_weight, 
 				std::vector<key_weight>{},
 				perms,
 				std::vector<wait_weight>{}

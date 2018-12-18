@@ -31,8 +31,6 @@ class eosio_arb_tester : public eosio_trail_tester
             abi_ser.set_abi(abi, abi_serializer_max_time);
         }
     }
-
-    // #pragma regions getters
     
     fc::variant get_config()
     {
@@ -82,10 +80,6 @@ class eosio_arb_tester : public eosio_trail_tester
         return data.empty() ? fc::variant() : abi_ser.binary_to_variant("evidence", data, abi_serializer_max_time);
     }
 
-    // #pragma endregion getters
-
-    // #pragma region actions
-
     transaction_trace_ptr setconfig(uint16_t max_elected_arbs, uint32_t election_duration, uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees)
     {
         signed_transaction trx;
@@ -104,8 +98,6 @@ class eosio_arb_tester : public eosio_trail_tester
         trx.sign(get_private_key(N(eosio), "active"), control->get_chain_id());
         return push_transaction(trx);
     }
-
-    // #pragma region actions_Arb_Elections
 
      transaction_trace_ptr init_election()
     {
@@ -166,10 +158,7 @@ class eosio_arb_tester : public eosio_trail_tester
         set_transaction_headers(trx);
         trx.sign(get_private_key(candidate, "active"), control->get_chain_id());
         return push_transaction(trx);
-    }            
-
-    // #pragma endregion actions_Arb_Elections
-    // #pragma region actions_Case_Setup
+    }
 
     transaction_trace_ptr filecase(name claimant, uint16_t class_suggestion, string ev_ipfs_url)
     {
@@ -220,12 +209,6 @@ class eosio_arb_tester : public eosio_trail_tester
         trx.sign(get_private_key(claimant, "active"), control->get_chain_id());
         return push_transaction(trx);
     }
-
-    // #pragma endregion actions_Case_Setup
-    // #pragma region actions_Member_Only
-
-    #pragma endregion actions_Member_Only
-    #pragma region actions_Arb_Only
 
     transaction_trace_ptr dismisscase(uint64_t case_id, name arb, string ipfs_url)
     {   
@@ -307,9 +290,6 @@ class eosio_arb_tester : public eosio_trail_tester
         return push_transaction(trx);
     }
 
-    // #pragma endregion actions_Arb_Only
-    // #pragma region actions_BP_Multisig_Actions
-
     // ! double check permissions on this ! 
     transaction_trace_ptr dismissarb(name arb)
     {   
@@ -320,12 +300,6 @@ class eosio_arb_tester : public eosio_trail_tester
         trx.sign(get_private_key(arb, "active"), control->get_chain_id());
         return push_transaction(trx);
     }
-
-    // #pragma endregion actions_BP_Multisig_Actions
-
-    // #pragma endregion actions
-
-    // #pragma region Enums
 
     enum case_state {
         CASE_SETUP,         // 0
@@ -372,6 +346,4 @@ class eosio_arb_tester : public eosio_trail_tester
     };
 
     // TODO: Evidence states
-
-    // #pragma endregion Enums
 };

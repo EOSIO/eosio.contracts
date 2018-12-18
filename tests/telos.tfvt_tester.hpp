@@ -169,8 +169,6 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		}
 	}
 
-
-#pragma region trx
 	transaction_trace_ptr inittfvt(string initial_info_link) {
 		signed_transaction trx;
 		trx.actions.emplace_back( get_action(N(tf), N(inittfvt), vector<permission_level>{{N(tf), config::active_name}},
@@ -297,9 +295,7 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		trx.sign(get_private_key(N(tf), "active"), control->get_chain_id());
 		return push_transaction( trx );
 	}
-#pragma endregion trx_funcs
 
-#pragma region get_funcs
 	fc::variant get_nominee(account_name nominee) {
 		vector<char> data = get_row_by_account(N(tf), N(tf), N(nominees), nominee);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("board_nominee", data, abi_serializer_max_time);
@@ -319,7 +315,6 @@ class telos_tfvt_tester : public eosio_trail_tester {
 		vector<char> data = get_row_by_account(N(tf), N(tf), N(issues), proposer);
 		return data.empty() ? fc::variant() : abi_ser.binary_to_variant("issue", data, abi_serializer_max_time);
 	}
-#pragma endregion get_funcs
 
 	void dump_trace(transaction_trace_ptr trace_ptr) {
 		std::cout << std::endl << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;

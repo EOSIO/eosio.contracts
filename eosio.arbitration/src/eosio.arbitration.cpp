@@ -19,8 +19,7 @@ arbitration::~arbitration() {
 
 void arbitration::setconfig(uint16_t max_elected_arbs, uint32_t election_duration, uint32_t start_election, uint32_t arbitrator_term_length, vector<int64_t> fees) {
   require_auth("eosio"_n);
-
-  eosio_assert(max_elected_arbs < uint16_t(21), "Maximum elected arbitrators must be less than 22."); 
+  
   eosio_assert(max_elected_arbs > uint16_t(0), "Arbitraitors must be greater than 0");
   _config = config{get_self(),       // publisher
                    max_elected_arbs,
@@ -60,7 +59,8 @@ void arbitration::initelection() {
 void arbitration::candaddlead( name candidate, string creds_ipfs_url )  {
   require_auth(candidate);
   validate_ipfs_url(creds_ipfs_url);
-  
+  eosio_assert(_config.auto_start_election, "there is no active election");
+
   pending_candidates_table candidates(_self, _self.value);
   auto c = candidates.find(candidate.value);
   eosio_assert(c != candidates.end(), "Candidate isn't an applicant. Use regcand action to register candidate");

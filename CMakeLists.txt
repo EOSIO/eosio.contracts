@@ -41,6 +41,7 @@ add_subdirectory(eosio.amend)
 add_subdirectory(eosio.saving)
 add_subdirectory(telos.tfvt)
 add_subdirectory(telos.free)
+add_subdirectory(token.registry)
 
 
 if (APPLE)
