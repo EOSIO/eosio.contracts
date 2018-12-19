@@ -1,4 +1,5 @@
 #!/bin/bash
 cd /eosio.contracts
 ./build.sh
-tar -pczf contracts.tar.gz build/*
+cd build
+tar -pczf contracts.tar.gz *
