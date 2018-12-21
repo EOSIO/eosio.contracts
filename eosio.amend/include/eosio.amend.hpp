@@ -137,5 +137,5 @@ class [[eosio::contract("eosio.amend")]] ratifyamend : public contract {
         [[eosio::action]]
 	    void setenv(config new_environment);
 
-	    void transfer_handler(name from, asset quantity);
+	    void transfer_handler(name from, name to, asset quantity);
 };

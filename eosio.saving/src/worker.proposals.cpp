@@ -262,7 +262,13 @@ void workerproposal::claim(uint64_t sub_id) {
 
 // note : this gets called when eosio.saving transfers OUT tokens too 
 // => deposits.owner eosio.saving will contain the entire sum of what was paid out , EVER (including fees and everything)
-void workerproposal::transfer_handler(name from, asset quantity) {
+void workerproposal::transfer_handler(name from, name to, asset quantity) {
+	require_auth(from);
+
+	if(to !== _self) {
+		return;
+	}
+
 	if(quantity.symbol == symbol("TLOS", 4)) {
 		deposits_table deposits(_self, _self.value);
 		auto d = deposits.find(from.value);
@@ -309,7 +315,7 @@ extern "C" {
         } else if (code == name("eosio.token").value && action == name("transfer").value) {
             workerproposal work(name(self), name(code), ds);
             auto args = unpack_action_data<transfer_args>();
-            work.transfer_handler(args.from, args.quantity);
+            work.transfer_handler(args.from, args.to, args.quantity);
         }
     } //end apply
 }; //end dispatcher
