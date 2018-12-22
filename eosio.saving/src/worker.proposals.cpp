@@ -265,7 +265,7 @@ void workerproposal::claim(uint64_t sub_id) {
 void workerproposal::transfer_handler(name from, name to, asset quantity) {
 	require_auth(from);
 
-	if(to !== _self) {
+	if(to != _self) {
 		return;
 	}
 
