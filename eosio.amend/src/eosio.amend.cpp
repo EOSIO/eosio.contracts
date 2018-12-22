@@ -53,7 +53,13 @@ void ratifyamend::getdeposit(name owner) {
 	deposits.erase(d_itr);
 }
 
-void ratifyamend::transfer_handler(name from, asset quantity) {
+void ratifyamend::transfer_handler(name from, name to, asset quantity) {
+	require_auth(from);
+
+	if(to !== _self) {
+		return;
+	}
+
 	if(quantity.symbol == symbol("TLOS", 4)) {
 		deposits_table deposits(_self, _self.value);
 		auto d = deposits.find(from.value);
@@ -355,7 +361,7 @@ extern "C" {
         } else if (code == name("eosio.token").value && action == name("transfer").value) {
 			ratifyamend ramend(name(self), name(code), ds);
             auto args = unpack_action_data<transfer_args>();
-            ramend.transfer_handler(args.from, args.quantity);
+            ramend.transfer_handler(args.from, args.to, args.quantity);
         }
     } //end apply
 };
