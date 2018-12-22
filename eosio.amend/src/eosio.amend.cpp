@@ -56,7 +56,7 @@ void ratifyamend::getdeposit(name owner) {
 void ratifyamend::transfer_handler(name from, name to, asset quantity) {
 	require_auth(from);
 
-	if(to !== _self) {
+	if(to != _self) {
 		return;
 	}
 
