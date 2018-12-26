@@ -1,0 +1,131 @@
+{
+    "version": "cyberway::abi/1.0",
+    "types": [
+        {"new_type_name": "domain_name", "type": "string"}
+    ]
+    "structs": [
+        {
+            "name": "newdomain",
+            "base": "",
+            "fields": [
+                {"type": "name",        "name": "creator"},
+                {"type": "domain_name", "name": "name"}
+            ]
+        },{
+            "name": "biddomain",
+            "base": "",
+            "fields": [
+                {"type": "name",        "name": "bidder"},
+                {"type": "domain_name", "name": "name"},
+                {"type": "asset",       "name": "bid"}
+            ]
+        },{
+            "name": "biddmrefund",
+            "base": "",
+            "fields": [
+                {"type": "name",        "name": "bidder"},
+                {"type": "domain_name", "name": "name"}
+            ]
+        },{
+            "name": "checkwin",
+            "base": "",
+            "fields": []
+        },{
+            "name": "domain_bid_state",
+            "base": "",
+            "fields": [
+                {"type": "uint64",         "name": "id"},
+                {"type": "time_point_sec", "name": "last_win"},
+                {"type": "time_point_sec", "name": "last_checkwin"}
+            ]
+        },{
+            "name": "domain_bid",
+            "base": "",
+            "fields": [
+                {"type": "uint64",          "name": "id"},
+                {"type": "domain_name",     "name": "name"},
+                {"type": "name",            "name": "high_bidder"},
+                {"type": "int64",           "name": "high_bid"},
+                {"type": "time_point_sec",  "name": "last_bid_time"}
+            ]
+        },{
+            "name": "domain_bid_refund",
+            "base": "",
+            "fields": [
+                {"type": "name",  "name": "bidder"},
+                {"type": "asset", "name": "amount"}
+            ]
+        }
+    ],
+    "types": [],
+    "actions": [
+        {
+            "name": "biddomain",
+            "type": "biddomain",
+            "ricardian_contract": ""
+        },{
+            "name": "biddmrefund",
+            "type": "biddmrefund",
+            "ricardian_contract": ""
+        },{
+            "name": "newdomain",
+            "type": "newdomain",
+            "ricardian_contract": ""
+        },{
+            "name": "checkwin",
+            "type": "checkwin",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "domainbid",
+            "type": "domain_bid",
+            "indexes": [
+                {
+                    "name": "primary",
+                    "unique": "true",
+                    "orders": [
+                        {"field": "id", "order": "asc"}
+                    ]
+                },{
+                    "name": "domain",
+                    "unique": "true",
+                    "orders": [
+                        {"field": "name", "order": "asc"}
+                    ]
+                },{
+                    "name": "highbid",
+                    "unique": "true",
+                    "orders": [
+                        {"field": "high_bid", "order": "desc"},
+                        {"field": "name", "order": "asc"}
+                    ]
+                }
+            ]
+        },{
+            "name": "dbidrefund",
+            "type": "domain_bid_refund",
+            "indexes": [{
+                "name": "primary",
+                "unique": "true",
+                "orders": [
+                    {"field": "bidder", "order": "asc"}
+                ]
+            }]
+        },{
+            "name": "dbidstate",
+            "type": "domain_bid_state",
+            "indexes": [{
+                "name": "primary",
+                "unique": "true",
+                "orders": [
+                    {"field": "id", "order": "asc"}
+                ]
+            }]
+        }
+    ],
+    "ricardian_clauses": [],
+    "variants": [],
+    "abi_extensions": []
+}

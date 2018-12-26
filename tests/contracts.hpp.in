@@ -12,6 +12,8 @@ static inline std::vector<char> read_abi(const std::string& filename) {return re
 struct contracts {
    static std::vector<uint8_t> system_wasm() { return read_wasm(cyberway_contracts + "/eosio.system/eosio.system.wasm"); }
    static std::vector<char>    system_abi() { return read_abi(cyberway_contracts + "/eosio.system/eosio.system.abi"); }
+   static std::vector<uint8_t> domain_wasm() { return read_wasm(cyberway_contracts + "/cyber.domain/cyber.domain.wasm"); }
+   static std::vector<char>    domain_abi() { return read_abi(cyberway_contracts + "/cyber.domain/cyber.domain.abi"); }
    static std::vector<uint8_t> token_wasm() { return read_wasm(cyberway_contracts + "/eosio.token/eosio.token.wasm"); }
    static std::vector<char>    token_abi() { return read_abi(cyberway_contracts + "/eosio.token/eosio.token.abi"); }
    static std::vector<uint8_t> msig_wasm() { return read_wasm(cyberway_contracts + "/eosio.msig/eosio.msig.wasm"); }
