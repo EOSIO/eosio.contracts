@@ -171,9 +171,29 @@ void domain_native::newdomain(name creator, const domain_name& name) {
     }
 }
 
+// TODO: std::map to ensure unique?
+void domain::declarenames(const std::vector<name_info>& domains) {
+    eosio_assert(domains.size(), "declarenames don't accept empty list");
+    std::vector<domain_name> prev;
+    for (const auto& info: domains) {
+        const auto& domain = info.domain;
+        const auto& dacc = info.account;
+        // TODO: it's handy to have domain name in assert messages
+        validate_domain_name(domain);
+        eosio_assert(std::find(prev.begin(), prev.end(), domain) == prev.end(), "same domain declared several times");
+        eosio_assert(is_domain(domain), "domain don't exists");
+        eosio_assert(dacc == resolve_domain(domain), "domain resolves to different account");
+        prev.push_back(domain);
+        for (const auto& u: info.users) {
+            validate_username(u);
+            eosio_assert(is_username(dacc, u), "username don't exists in domain");
+        }
+    }
+}
+
 } // eosiosystem
 
 
 EOSIO_DISPATCH(eosiosystem::domain,
-    (checkwin)(biddomain)(biddmrefund)(newdomain)
+    (newdomain)(checkwin)(biddomain)(biddmrefund)(declarenames)
 )

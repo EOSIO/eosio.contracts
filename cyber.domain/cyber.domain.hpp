@@ -16,6 +16,13 @@ using eosio::asset;
 using eosio::time_point_sec;
 
 
+// declares domain and linked account to ensure deferred tx applied for right account
+struct [[eosio::table, eosio::contract("cyber.domain")]] name_info {
+    domain_name domain;             // domain
+    name account;                   // account_name linked to given domain
+    std::vector<username> users;    // usernames of this domain used in tx
+};
+
 struct [[eosio::table, eosio::contract("cyber.domain")]] domain_bid {
     uint64_t        id;
     domain_name     domain;
@@ -63,6 +70,10 @@ public:
     [[eosio::action]] void checkwin();
     [[eosio::action]] void biddomain(name bidder, const domain_name& name, asset bid);
     [[eosio::action]] void biddmrefund(name bidder, const domain_name& name);
+
+    // Ensures that at execution time given domains linked to specified accounts and usernames exist.
+    // Also can be parsed by explorers to resolve account_names to full names.
+    [[eosio::action]] void declarenames(const std::vector<name_info>& domains);
 };
 
 } /// eosiosystem

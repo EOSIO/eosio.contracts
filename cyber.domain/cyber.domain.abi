@@ -1,7 +1,8 @@
 {
     "version": "cyberway::abi/1.0",
     "types": [
-        {"new_type_name": "domain_name", "type": "string"}
+        {"new_type_name": "domain_name", "type": "string"},
+        {"new_type_name": "username",    "type": "string"}
     ]
     "structs": [
         {
@@ -30,6 +31,20 @@
             "name": "checkwin",
             "base": "",
             "fields": []
+        },{
+            "name": "declarenames",
+            "base": "",
+            "fields": [
+                {"type": "name_info[]", "name": "domains"}
+            ]
+        },{
+            "name": "name_info",
+            "base": "",
+            "fields": [
+                {"type": "domain_name", "name": "domains"},
+                {"type": "name",        "name": "account"},
+                {"type": "username[]",  "name": "users"}
+            ]
         },{
             "name": "domain_bid_state",
             "base": "",
@@ -74,6 +89,10 @@
         },{
             "name": "checkwin",
             "type": "checkwin",
+            "ricardian_contract": ""
+        },{
+            "name": "declarenames",
+            "type": "declarenames",
             "ricardian_contract": ""
         }
     ],
