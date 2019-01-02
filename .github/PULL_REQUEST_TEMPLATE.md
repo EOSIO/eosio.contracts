@@ -6,7 +6,7 @@
 
 
 ## Deployment Changes
-<!-- If this PR introduces a change to the contracts that causes deploy,emt to change, please describe the impact. -->
+<!-- If this PR introduces a change to the contracts that causes deployment to change, please describe the impact. -->
 
 
 ## API Changes
