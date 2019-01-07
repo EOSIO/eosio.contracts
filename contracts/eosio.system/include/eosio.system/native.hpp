@@ -18,6 +18,16 @@ namespace eosiosystem {
    using eosio::public_key;
    using eosio::ignore;
 
+   /**
+    * @addtogroup eosiosystem
+    * @{
+    */
+   /**
+    * A weighted permission. 
+    * 
+    * @details Defines a weighted permission, that is a permission which has a weight associated. 
+    * A permission is defined by an account name plus a permission name.
+    */
    struct permission_level_weight {
       permission_level  permission;
       uint16_t          weight;
@@ -26,6 +36,11 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( permission_level_weight, (permission)(weight) )
    };
 
+   /**
+    * Weighted key.
+    * 
+    * @details A weigted key is defined by a public key and an associated weight.
+    */
    struct key_weight {
       eosio::public_key  key;
       uint16_t           weight;
@@ -34,6 +49,11 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( key_weight, (key)(weight) )
    };
 
+   /**
+    * Wait weight.
+    * 
+    * @details A wait weight is defined by a number of seconds to wait for and a weight.
+    */
    struct wait_weight {
       uint32_t           wait_sec;
       uint16_t           weight;
@@ -42,6 +62,15 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( wait_weight, (wait_sec)(weight) )
    };
 
+   /**
+    * Blockchain authority.
+    * 
+    * @details An authority is defined by:
+    * - a vector of key_weights (a key_weight is a public key plus a wieght),
+    * - a vector of permission_level_weights, (a permission_level is an account name plus a permission name)
+    * - a vector of wait_weights (a wait_weight is defined by a number of seconds to wait and a weight)
+    * - a threshold value
+    */
    struct authority {
       uint32_t                              threshold = 0;
       std::vector<key_weight>               keys;
@@ -52,6 +81,19 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts)(waits) )
    };
 
+   /**
+    * Blockchain block header.
+    * 
+    * @details A block header is defined by:
+    * - a timestamp,
+    * - the producer that created it,
+    * - a confirme flag default as zero,
+    * - a link to previous block,
+    * - a link to the transaction merkel root,
+    * - a link to action root,
+    * - a schedule version,
+    * - and a producers' schedule.
+    */
    struct block_header {
       uint32_t                                  timestamp;
       name                                      producer;
@@ -67,7 +109,13 @@ namespace eosiosystem {
                                      (schedule_version)(new_producers))
    };
 
-
+   /**
+    * abi_hash
+    * 
+    * @details abi_hash is the structure underlying the abihash table and consists of:
+    * - `owner`: the account owner of the contract's abi
+    * - `hash`: is the sha256 hash of the abi/binary
+    */
    struct [[eosio::table("abihash"), eosio::contract("eosio.system")]] abi_hash {
       name              owner;
       capi_checksum256  hash;
@@ -76,8 +124,11 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
    };
 
-   /*
-    * Method parameters commented out to prevent generation of code that parses input data.
+   // Method parameters commented out to prevent generation of code that parses input data.
+   /**
+    * The EOSIO core native contract that governs authorization and contracts' abi.
+    * 
+    * @details
     */
    class [[eosio::contract("eosio.system")]] native : public eosio::contract {
       public:
@@ -85,16 +136,18 @@ namespace eosiosystem {
          using eosio::contract::contract;
 
          /**
-          *  Called after a new account is created. This code enforces resource-limits rules
-          *  for new accounts as well as new account naming conventions.
+          * New account action 
+          * 
+          * @details Called after a new account is created. This code enforces resource-limits rules
+          * for new accounts as well as new account naming conventions.
           *
-          *  1. accounts cannot contain '.' symbols which forces all acccounts to be 12
-          *  characters long without '.' until a future account auction process is implemented
-          *  which prevents name squatting.
+          * 1. accounts cannot contain '.' symbols which forces all acccounts to be 12
+          * characters long without '.' until a future account auction process is implemented
+          * which prevents name squatting.
           *
-          *  2. new accounts must stake a minimal number of tokens (as set in system parameters)
-          *     therefore, this method will execute an inline buyram from receiver for newacnt in
-          *     an amount equal to the current new account creation fee.
+          * 2. new accounts must stake a minimal number of tokens (as set in system parameters)
+          * therefore, this method will execute an inline buyram from receiver for newacnt in
+          * an amount equal to the current new account creation fee.
           */
          [[eosio::action]]
          void newaccount( name             creator,
@@ -102,37 +155,63 @@ namespace eosiosystem {
                           ignore<authority> owner,
                           ignore<authority> active);
 
-
+         /**
+          * Update authorization action.
+          * TO DO: Ovi annotate the last 8 actions
+          */
          [[eosio::action]]
          void updateauth(  ignore<name>  account,
                            ignore<name>  permission,
                            ignore<name>  parent,
                            ignore<authority> auth ) {}
 
+         /**
+          * Delete authorization action.
+          */
          [[eosio::action]]
          void deleteauth( ignore<name>  account,
                           ignore<name>  permission ) {}
 
+         /**
+          * Link authorization action.
+          */
          [[eosio::action]]
          void linkauth(  ignore<name>    account,
                          ignore<name>    code,
                          ignore<name>    type,
                          ignore<name>    requirement  ) {}
 
+         /**
+          * Unlink authorization action.
+          */
          [[eosio::action]]
          void unlinkauth( ignore<name>  account,
                           ignore<name>  code,
                           ignore<name>  type ) {}
 
+         /**
+          * Cancel delay action.
+          */
          [[eosio::action]]
          void canceldelay( ignore<permission_level> canceling_auth, ignore<capi_checksum256> trx_id ) {}
 
+         /**
+          * On error action.
+          * 
+          * @details Called every time an error occurs while a transaction was processed.
+          */
          [[eosio::action]]
          void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {}
 
+         /**
+          * Set abi action.
+          */
          [[eosio::action]]
          void setabi( name account, const std::vector<char>& abi );
 
+         /**
+          * Set code action.
+          */
          [[eosio::action]]
          void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
 
@@ -145,4 +224,5 @@ namespace eosiosystem {
          using setcode_action = eosio::action_wrapper<"setcode"_n, &native::setcode>;
          using setabi_action = eosio::action_wrapper<"setabi"_n, &native::setabi>;
    };
+   /** @}*/ // @addtogroup eosiosystem
 }

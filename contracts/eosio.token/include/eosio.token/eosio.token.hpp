@@ -17,32 +17,116 @@ namespace eosio {
 
    using std::string;
 
+   /**
+    * @defgroup eosiotoken eosio.token
+    * @ingroup eosiocontracts
+    * 
+    * eosio.token contract
+    * 
+    * @details eosio.token contract defines the structures and actions allow users to create, issue, and manage 
+    * tokens on eosio based blockchains.
+    * @{
+    */
    class [[eosio::contract("eosio.token")]] token : public contract {
       public:
          using contract::contract;
 
+         /**
+          * Create action.
+          * 
+          * @details Allows `issuer` account to create a token in supply of `maximum_supply`.
+          * @param issuer - the account that creates the token,
+          * @param maximum_supply - the maximum supply set for the token created.
+          * 
+          * @pre Token symbol has to be valid,
+          * @pre Token symbol must not be already created,
+          * @pre maximum_supply has to be smaller than the maximum supply allowed by the system: 1^62 - 1.
+          * @pre Maximum supply must be positive; 
+          * 
+          * If validation is successful a new entry in statstable for token symbol scope gets created.
+          */
          [[eosio::action]]
          void create( name   issuer,
                       asset  maximum_supply);
-
+         /**
+          * Issue action.
+          * 
+          * @details This action issues to `to` account a `quantity` of tokens.
+          * 
+          * @param to - the account to issue tokens to,
+          * @param quntity - the amount of tokens to be issued,
+          * @memo - the memo string that accompanies the token issue transaction.
+          */
          [[eosio::action]]
          void issue( name to, asset quantity, string memo );
 
+         /**
+          * Retire action.
+          * 
+          * @details The opposite for create action, if all validations succeed, 
+          * it debits the statstable.supply amount.
+          * 
+          * @param quantity - the quantity of tokens to retire,
+          * @param memo - the memo string to accompany the transaction.
+          */
          [[eosio::action]]
          void retire( asset quantity, string memo );
 
+         /**
+          * Transfer action.
+          * 
+          * @details Allows `from` account to transfer to `to` account the `quantity` tokens.
+          * One account is debited and the other is credited with quantity tokens.
+          * 
+          * @param from - the account to transfer from,
+          * @param to - the account to be transfered to,
+          * @param quantity - the quantity of tokens to be transfered,
+          * @param memo - the memo string to acompany the transaction.
+          */
          [[eosio::action]]
          void transfer( name    from,
                         name    to,
                         asset   quantity,
                         string  memo );
-
+         /**
+          * Open action.
+          * 
+          * @details Allows `ram_payer` to create an account `owner` with zero balance for 
+          * token `symbol` at the expense of `ram_payer`.
+          * 
+          * @param owner - the account to be created,
+          * @param symbol - the token to be payed with by `ram_payer`,
+          * @param ram_payer - the account that supports the cost of this action.
+          * 
+          * More information can be read [here](https://github.com/EOSIO/eosio.contracts/issues/62) 
+          * and [here](https://github.com/EOSIO/eosio.contracts/issues/61).
+          */
          [[eosio::action]]
          void open( name owner, const symbol& symbol, name ram_payer );
 
+         /**
+          * Close action.
+          * 
+          * @details This action is the opposite for open, it closes the account `owner` 
+          * for token `symbol`.
+          * 
+          * @param owner - the owner account to execute the close action for,
+          * @param symbol - the symbol of the token to execute the close action for.
+          * 
+          * @pre The pair of owner plus symbol has to exist otherwise no action is executed,
+          * @pre If the pair of owner plus symbol exists, the balance has to be zero.
+          */
          [[eosio::action]]
          void close( name owner, const symbol& symbol );
 
+         /**
+          * Get supply action.
+          * 
+          * @details Gets the supply for token `sym_code`, created by `token_contract_account` account. 
+          * 
+          * @param token_contract_account - the account to get the supply for,
+          * @param sym_code - the symbol to get the supply for.
+          */
          static asset get_supply( name token_contract_account, symbol_code sym_code )
          {
             stats statstable( token_contract_account, sym_code.raw() );
@@ -50,6 +134,16 @@ namespace eosio {
             return st.supply;
          }
 
+         /**
+          * Get balance action.
+          * 
+          * @details Get the balance for a token `sym_code` created by `token_contract_account` account,
+          * for account `owner`.
+          * 
+          * @param token_contract_account - the token creator account,
+          * @param owner - the account for which the token balance is returned,
+          * @param sym_code - the token for which the balance is returned.
+          */
          static asset get_balance( name token_contract_account, name owner, symbol_code sym_code )
          {
             accounts accountstable( token_contract_account, owner.value );
@@ -84,5 +178,5 @@ namespace eosio {
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
    };
-
+   /** @}*/ // end of @defgroup eosiotoken eosio.token
 } /// namespace eosio

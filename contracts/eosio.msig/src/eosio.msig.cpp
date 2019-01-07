@@ -5,6 +5,14 @@
 
 namespace eosio {
 
+/**
+ * @ingroup eosiocontracts
+ * 
+ * Returns a high resolution time_point 
+ * 
+ * @details Returns a high resolution time_point which represents number of microseconds 
+ * from 1970 untill current time.
+ */
 time_point current_time_point() {
    const static time_point ct{ microseconds{ static_cast<int64_t>( current_time() ) } };
    return ct;
