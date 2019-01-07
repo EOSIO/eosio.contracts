@@ -23,14 +23,6 @@ namespace eosiosystem {
    using eosio::singleton;
    using eosio::transaction;
 
-   /**
-    *  This method will create a producer_config and producer_info object for 'producer'
-    *
-    *  @pre producer is not already registered
-    *  @pre producer to register is an account
-    *  @pre authority of producer to register
-    *
-    */
    void system_contract::regproducer( const name producer, const eosio::public_key& producer_key, const std::string& url, uint16_t location ) {
       check( url.size() < 512, "url too long" );
       check( producer_key != eosio::public_key(), "public key should not be the default value" );
@@ -174,22 +166,6 @@ namespace eosiosystem {
       return new_votepay_share;
    }
 
-   /**
-    *  @pre producers must be sorted from lowest to highest and must be registered and active
-    *  @pre if proxy is set then no producers can be voted for
-    *  @pre if proxy is set then proxy account must exist and be registered as a proxy
-    *  @pre every listed producer or proxy must have been previously registered
-    *  @pre voter must authorize this action
-    *  @pre voter must have previously staked some amount of CORE_SYMBOL for voting
-    *  @pre voter->staked must be up to date
-    *
-    *  @post every producer previously voted for will have vote reduced by previous vote weight
-    *  @post every producer newly voted for will have vote increased by new vote amount
-    *  @post prior proxy will proxied_vote_weight decremented by previous vote weight
-    *  @post new proxy will proxied_vote_weight incremented by new vote weight
-    *
-    *  If voting for a proxy, the producer votes will not change until the proxy updates their own vote.
-    */
    void system_contract::voteproducer( const name voter_name, const name proxy, const std::vector<name>& producers ) {
       require_auth( voter_name );
       vote_stake_updater( voter_name );
@@ -321,15 +297,6 @@ namespace eosiosystem {
       });
    }
 
-   /**
-    *  An account marked as a proxy can vote with the weight of other accounts which
-    *  have selected it as a proxy. Other accounts must refresh their voteproducer to
-    *  update the proxy's weight.
-    *
-    *  @param isproxy - true if proxy wishes to vote on behalf of others, false otherwise
-    *  @pre proxy must have something staked (existing row in voters table)
-    *  @pre new state must be different than current state
-    */
    void system_contract::regproxy( const name proxy, bool isproxy ) {
       require_auth( proxy );
 
