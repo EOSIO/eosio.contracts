@@ -83,6 +83,8 @@ namespace eosiosystem {
       eosio_assert( _gstate.total_activated_stake >= min_activated_stake,
                     "cannot claim rewards until the chain is activated (at least 15% of all tokens participate in voting)" );
 
+      const auto ct = current_time_point();
+
       _producers.modify( prod, same_payer, [&](auto& p) {
          p.last_claim_time = ct;
          p.unpaid_blocks   = 0;
