@@ -59,6 +59,10 @@ namespace eosiosystem {
       const asset delta_rex_stake = add_to_rex_balance( from, amount, rex_received );
       runrex(2);
       update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
+      // dummy action added so that amount of REX tokens purchased shows up in action trace 
+      dispatch_inline( null_account, "buyresult"_n,
+                       std::vector<permission_level>{ { from, active_permission } },
+                       std::make_tuple( rex_received ) );      
    }
 
    /**
@@ -75,7 +79,7 @@ namespace eosiosystem {
 
       check( from_net.symbol == core_symbol() && from_cpu.symbol == core_symbol(), "asset must be core token" );
       check( (0 <= from_net.amount) && (0 <= from_cpu.amount) && (0 < from_net.amount || 0 < from_cpu.amount),
-                    "must unstake a positive amount to buy rex" );
+             "must unstake a positive amount to buy rex" );
       check_voting_requirement( owner );
 
       {
@@ -101,6 +105,10 @@ namespace eosiosystem {
       add_to_rex_balance( owner, payment, rex_received );
       runrex(2);
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ), true );
+      // dummy action added so that amount of REX tokens purchased shows up in action trace
+      dispatch_inline( null_account, "buyresult"_n,
+                       std::vector<permission_level>{ { owner, active_permission } },
+                       std::make_tuple( rex_received ) );
    }
 
    /**
@@ -117,7 +125,7 @@ namespace eosiosystem {
 
       auto bitr = _rexbalance.require_find( from.value, "user must first buyrex" );
       check( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol,
-                    "asset must be a positive amount of (REX, 4)" );
+             "asset must be a positive amount of (REX, 4)" );
       process_rex_maturities( bitr );
       check( rex.amount <= bitr->matured_rex, "insufficient available rex" );
 
@@ -142,9 +150,15 @@ namespace eosiosystem {
             _rexorders.modify( oitr, same_payer, [&]( auto& order ) {
                order.rex_requested.amount += rex.amount;
                check( order.rex_requested.amount <= bitr->matured_rex,
-                             "insufficient funds for current and scheduled orders");
+                      "insufficient funds for current and scheduled orders");
             });
          }
+      }
+      // dummy action added so that sell order proceeds show up in action trace
+      if ( current_order.success ) {
+         dispatch_inline( null_account, "sellresult"_n,
+                          std::vector<permission_level>{ { from, active_permission } },
+                          std::make_tuple( current_order.proceeds ) );
       }
    }
 
@@ -462,7 +476,6 @@ namespace eosiosystem {
             rt.total_lent.amount    -= itr->total_staked.amount;
             rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
          });
-
          bool    delete_loan = false;
          int64_t delta_stake = 0;
          if ( itr->payment <= itr->balance && rex_loans_available() ) {
@@ -547,11 +560,16 @@ namespace eosiosystem {
             if ( bitr != _rexbalance.end() ) { // should always be true
                auto result = fill_rex_order( bitr, oitr->rex_requested );
                if ( result.success ) {
+                  const name order_owner = oitr->owner;
                   idx.modify( oitr, same_payer, [&]( auto& order ) {
                      order.proceeds.amount     = result.proceeds.amount;
                      order.stake_change.amount = result.stake_change.amount;
                      order.close();
                   });
+                  /// send dummy action to show and owner and proceeds of filled sellrex order
+                  dispatch_inline( null_account, "orderresult"_n,
+                                   std::vector<permission_level>{ { null_account, active_permission } },
+                                   std::make_tuple( order_owner, result.proceeds ) );
                }
             }
             oitr = next;
@@ -676,8 +694,7 @@ namespace eosiosystem {
     */
    void system_contract::transfer_from_fund( const name& owner, const asset& amount )
    {
-      check( 0 < amount.amount && amount.symbol == core_symbol(),
-                    "must transfer positive amount from REX fund" );
+      check( 0 < amount.amount && amount.symbol == core_symbol(), "must transfer positive amount from REX fund" );
       auto itr = _rexfunds.require_find( owner.value, "must deposit to REX fund first" );
       check( amount <= itr->balance, "insufficient funds");
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
@@ -693,8 +710,7 @@ namespace eosiosystem {
     */
    void system_contract::transfer_to_fund( const name& owner, const asset& amount )
    {
-      check( 0 < amount.amount && amount.symbol == core_symbol(),
-                    "must transfer positive amount to REX fund" );
+      check( 0 < amount.amount && amount.symbol == core_symbol(), "must transfer positive amount to REX fund" );
       auto itr = _rexfunds.find( owner.value );
       if ( itr == _rexfunds.end() ) {
          _rexfunds.emplace( owner, [&]( auto& fund ) {
@@ -860,7 +876,6 @@ namespace eosiosystem {
          /// initialize REX pool
          _rexpool.emplace( _self, [&]( auto& rp ) {
             rex_received.amount = payment.amount * rex_ratio;
-
             rp.total_lendable   = payment;
             rp.total_lent       = asset( 0, core_symbol() );
             rp.total_unlent     = rp.total_lendable - rp.total_lent;
@@ -870,8 +885,7 @@ namespace eosiosystem {
          });
       } else if ( !rex_available() ) { /// should be a rare corner case, REX pool is initialized but empty
          _rexpool.modify( itr, same_payer, [&]( auto& rp ) {
-            rex_received.amount = payment.amount * rex_ratio;
-
+            rex_received.amount      = payment.amount * rex_ratio;
             rp.total_lendable.amount = payment.amount;
             rp.total_lent.amount     = 0;
             rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;

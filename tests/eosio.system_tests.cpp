@@ -3398,6 +3398,11 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_rex, eosio_system_tester ) try {
    account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3], frank = accounts[4];
    setup_rex_accounts( accounts, init_balance );
 
+   BOOST_REQUIRE_EQUAL( asset::from_string("25000.0000 REX"), get_buyrex_result( alice, core_sym::from_string("2.5000") ) );
+   produce_blocks(2);
+   produce_block(fc::days(5));
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("2.5000"),      get_sellrex_result( alice, asset::from_string("25000.0000 REX") ) );
+
    BOOST_REQUIRE_EQUAL( success(),                           buyrex( alice, core_sym::from_string("13.0000") ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("13.0000"),    get_rex_vote_stake( alice ) );
    BOOST_REQUIRE_EQUAL( success(),                           buyrex( alice, core_sym::from_string("17.0000") ) );
@@ -3447,17 +3452,6 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_rex, eosio_system_tester ) try {
 
 
 BOOST_FIXTURE_TEST_CASE( unstake_buy_rex, eosio_system_tester, * boost::unit_test::tolerance(1e-10) ) try {
-
-   auto get_net_limit = [&](account_name a) -> int64_t {
-      int64_t ram_bytes = 0, net = 0, cpu = 0;
-      control->get_resource_limits_manager().get_account_limits( a, ram_bytes, net, cpu );
-      return net;
-   };
-   auto get_cpu_limit = [&](account_name a) -> int64_t {
-      int64_t ram_bytes = 0, net = 0, cpu = 0;
-      control->get_resource_limits_manager().get_account_limits( a, ram_bytes, net, cpu );
-      return cpu;
-   };
 
    const int64_t ratio        = 10000;
    const asset   zero_asset   = core_sym::from_string("0.0000");
@@ -3509,7 +3503,7 @@ BOOST_FIXTURE_TEST_CASE( unstake_buy_rex, eosio_system_tester, * boost::unit_tes
       BOOST_TEST_REQUIRE( init_prod_info["total_votes"].as_double() ==
                           stake2votes( asset( init_voter_info["staked"].as<int64_t>(), symbol{CORE_SYM} ) ) );
       produce_block( fc::days(4) );
-      BOOST_REQUIRE_EQUAL( success(),                               unstaketorex( alice, alice, net_stake, cpu_stake ) );
+      BOOST_REQUIRE_EQUAL( ratio * tot_stake.get_amount(),          get_unstaketorex_result( alice, alice, net_stake, cpu_stake ).get_amount() );
       BOOST_REQUIRE_EQUAL( get_cpu_limit( alice ),                  init_cpu_limit );
       BOOST_REQUIRE_EQUAL( get_net_limit( alice ),                  init_net_limit );
       BOOST_REQUIRE_EQUAL( ratio * tot_stake.get_amount(),          get_rex_balance( alice ).get_amount() );
@@ -3574,18 +3568,6 @@ BOOST_FIXTURE_TEST_CASE( unstake_buy_rex, eosio_system_tester, * boost::unit_tes
 
 
 BOOST_FIXTURE_TEST_CASE( buy_rent_rex, eosio_system_tester ) try {
-
-   auto bancor_convert = [](int64_t S, int64_t R, int64_t T) -> int64_t { return int64_t( double(R * T)  / double(S + T) ); };
-   auto get_net_limit  = [&](account_name a) -> int64_t {
-      int64_t ram_bytes = 0, net = 0, cpu = 0;
-      control->get_resource_limits_manager().get_account_limits( a, ram_bytes, net, cpu );
-      return net;
-   };
-   auto get_cpu_limit  = [&](account_name a) -> int64_t {
-      int64_t ram_bytes = 0, net = 0, cpu = 0;
-      control->get_resource_limits_manager().get_account_limits( a, ram_bytes, net, cpu );
-      return cpu;
-   };
 
    const int64_t ratio        = 10000;
    const asset   init_balance = core_sym::from_string("10000.0000");
@@ -3673,7 +3655,6 @@ BOOST_FIXTURE_TEST_CASE( buy_rent_rex, eosio_system_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
 
-   auto bancor_convert = [](int64_t S, int64_t R, int64_t T) -> int64_t { return int64_t( double(R * T)  / double(S + T) ); };
    auto within_one = [](int64_t a, int64_t b) -> bool { return std::abs( a - b ) <= 1; };
 
    const asset init_balance = core_sym::from_string("3000000.0000");
@@ -3751,8 +3732,16 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
    produce_block( fc::hours(2) );
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex loans are not currently available"),
                         rentcpu( frank, frank, core_sym::from_string("0.0001") ) );
-
-   BOOST_REQUIRE_EQUAL( success(),      buyrex( frank, core_sym::from_string("0.0001") ) );
+   {
+      auto trace = base_tester::push_action( N(eosio), N(buyrex), frank,
+                                             mvo()("from", frank)("amount", core_sym::from_string("0.0001")) );
+      auto output = get_rexorder_result( trace );
+      BOOST_REQUIRE_EQUAL( output.size(),    2 );
+      BOOST_REQUIRE_EQUAL( output[0].first,  bob );
+      BOOST_REQUIRE_EQUAL( output[0].second, get_rex_order(bob)["proceeds"].as<asset>() );
+      BOOST_REQUIRE_EQUAL( output[1].first,  carol );
+      BOOST_REQUIRE_EQUAL( output[1].second, get_rex_order(carol)["proceeds"].as<asset>() );
+   }
 
    BOOST_REQUIRE_EQUAL( true,           get_rex_order(alice)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( init_alice_rex, get_rex_order(alice)["rex_requested"].as<asset>() );
@@ -3773,22 +3762,17 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( 0,              get_rex_vote_stake( carol ).get_amount() );
    BOOST_REQUIRE_EQUAL( init_stake,     get_voter_info( carol )["staked"].as<int64_t>() );
 
+   {
+      auto trace = base_tester::push_action( N(eosio), N(buyrex), frank,
+                                             mvo()("from", frank)("amount", core_sym::from_string("0.0001")) );
+      auto output = get_rexorder_result( trace );
+      BOOST_REQUIRE_EQUAL( output.size(), 0 );
+   }
+   
 } FC_LOG_AND_RETHROW()
 
 
 BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
-
-   auto bancor_convert = [](int64_t S, int64_t R, int64_t T) -> int64_t { return int64_t( double(R * T)  / double(S + T) ); };
-   auto get_net_limit  = [&](account_name a) -> int64_t {
-      int64_t ram_bytes = 0, net = 0, cpu = 0;
-      control->get_resource_limits_manager().get_account_limits( a, ram_bytes, net, cpu );
-      return net;
-   };
-   auto get_cpu_limit  = [&](account_name a) -> int64_t {
-      int64_t ram_bytes = 0, net = 0, cpu = 0;
-      control->get_resource_limits_manager().get_account_limits( a, ram_bytes, net, cpu );
-      return cpu;
-   };
 
    const int64_t ratio        = 10000;
    const asset   init_balance = core_sym::from_string("10000.0000");
