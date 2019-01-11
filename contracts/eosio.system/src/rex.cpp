@@ -60,9 +60,7 @@ namespace eosiosystem {
       runrex(2);
       update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
       // dummy action added so that amount of REX tokens purchased shows up in action trace 
-      dispatch_inline( null_account, "buyresult"_n,
-                       std::vector<permission_level>{ { from, active_permission } },
-                       std::make_tuple( rex_received ) );      
+      dispatch_inline( null_account, "buyresult"_n, { }, std::make_tuple( rex_received ) );      
    }
 
    /**
@@ -106,9 +104,7 @@ namespace eosiosystem {
       runrex(2);
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ), true );
       // dummy action added so that amount of REX tokens purchased shows up in action trace
-      dispatch_inline( null_account, "buyresult"_n,
-                       std::vector<permission_level>{ { owner, active_permission } },
-                       std::make_tuple( rex_received ) );
+      dispatch_inline( null_account, "buyresult"_n, { }, std::make_tuple( rex_received ) );
    }
 
    /**
@@ -156,9 +152,7 @@ namespace eosiosystem {
       }
       // dummy action added so that sell order proceeds show up in action trace
       if ( current_order.success ) {
-         dispatch_inline( null_account, "sellresult"_n,
-                          std::vector<permission_level>{ { from, active_permission } },
-                          std::make_tuple( current_order.proceeds ) );
+         dispatch_inline( null_account, "sellresult"_n, { }, std::make_tuple( current_order.proceeds ) );
       }
    }
 
@@ -567,9 +561,7 @@ namespace eosiosystem {
                      order.close();
                   });
                   /// send dummy action to show and owner and proceeds of filled sellrex order
-                  dispatch_inline( null_account, "orderresult"_n,
-                                   std::vector<permission_level>{ { null_account, active_permission } },
-                                   std::make_tuple( order_owner, result.proceeds ) );
+                  dispatch_inline( null_account, "orderresult"_n, { }, std::make_tuple( order_owner, result.proceeds ) );
                }
             }
             oitr = next;
