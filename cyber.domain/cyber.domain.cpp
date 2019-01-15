@@ -1,6 +1,6 @@
 #include "cyber.domain.hpp"
-#include <eosio.system/eosio.system.hpp>
-#include <eosio.token/eosio.token.hpp>
+#include <cyber.system/cyber.system.hpp>
+#include <cyber.token/cyber.token.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/dispatcher.hpp>
