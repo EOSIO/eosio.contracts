@@ -10,26 +10,26 @@ static inline std::vector<uint8_t> read_wasm(const std::string& filename) {retur
 static inline std::vector<char> read_abi(const std::string& filename) {return read_abi(filename.c_str());}
 
 struct contracts {
-   static std::vector<uint8_t> system_wasm() { return read_wasm(cyberway_contracts + "/eosio.system/eosio.system.wasm"); }
-   static std::vector<char>    system_abi() { return read_abi(cyberway_contracts + "/eosio.system/eosio.system.abi"); }
+   static std::vector<uint8_t> system_wasm() { return read_wasm(cyberway_contracts + "/cyber.system/cyber.system.wasm"); }
+   static std::vector<char>    system_abi() { return read_abi(cyberway_contracts + "/cyber.system/cyber.system.abi"); }
    static std::vector<uint8_t> domain_wasm() { return read_wasm(cyberway_contracts + "/cyber.domain/cyber.domain.wasm"); }
    static std::vector<char>    domain_abi() { return read_abi(cyberway_contracts + "/cyber.domain/cyber.domain.abi"); }
-   static std::vector<uint8_t> token_wasm() { return read_wasm(cyberway_contracts + "/eosio.token/eosio.token.wasm"); }
-   static std::vector<char>    token_abi() { return read_abi(cyberway_contracts + "/eosio.token/eosio.token.abi"); }
-   static std::vector<uint8_t> msig_wasm() { return read_wasm(cyberway_contracts + "/eosio.msig/eosio.msig.wasm"); }
-   static std::vector<char>    msig_abi() { return read_abi(cyberway_contracts + "/eosio.msig/eosio.msig.abi"); }
-   static std::vector<uint8_t> wrap_wasm() { return read_wasm(cyberway_contracts + "/eosio.wrap/eosio.wrap.wasm"); }
-   static std::vector<char>    wrap_abi() { return read_abi(cyberway_contracts + "/eosio.wrap/eosio.wrap.abi"); }
-   static std::vector<uint8_t> bios_wasm() { return read_wasm(cyberway_contracts + "/eosio.bios/eosio.bios.wasm"); }
-   static std::vector<char>    bios_abi() { return read_abi(cyberway_contracts + "/eosio.bios/eosio.bios.abi"); }
+   static std::vector<uint8_t> token_wasm() { return read_wasm(cyberway_contracts + "/cyber.token/cyber.token.wasm"); }
+   static std::vector<char>    token_abi() { return read_abi(cyberway_contracts + "/cyber.token/cyber.token.abi"); }
+   static std::vector<uint8_t> msig_wasm() { return read_wasm(cyberway_contracts + "/cyber.msig/cyber.msig.wasm"); }
+   static std::vector<char>    msig_abi() { return read_abi(cyberway_contracts + "/cyber.msig/cyber.msig.abi"); }
+   static std::vector<uint8_t> wrap_wasm() { return read_wasm(cyberway_contracts + "/cyber.wrap/cyber.wrap.wasm"); }
+   static std::vector<char>    wrap_abi() { return read_abi(cyberway_contracts + "/cyber.wrap/cyber.wrap.abi"); }
+   static std::vector<uint8_t> bios_wasm() { return read_wasm(cyberway_contracts + "/cyber.bios/cyber.bios.wasm"); }
+   static std::vector<char>    bios_abi() { return read_abi(cyberway_contracts + "/cyber.bios/cyber.bios.abi"); }
 
    struct util {
       static std::vector<uint8_t> test_api_wasm() { return read_wasm(cyberway_test_contracts + "/test_api.wasm"); }
       static std::vector<uint8_t> exchange_wasm() { return read_wasm(cyberway_test_contracts + "/exchange.wasm"); }
-      static std::vector<uint8_t> system_wasm_old() { return read_wasm(cyberway_test_contracts + "/eosio.system.old/eosio.system.wasm"); }
-      static std::vector<char>    system_abi_old() { return read_abi(cyberway_test_contracts + "/eosio.system.old/eosio.system.abi"); }
-      static std::vector<uint8_t> msig_wasm_old() { return read_wasm(cyberway_test_contracts + "/eosio.msig.old/eosio.msig.wasm"); }
-      static std::vector<char>    msig_abi_old() { return read_abi(cyberway_test_contracts + "/eosio.msig.old/eosio.msig.abi"); }
+      static std::vector<uint8_t> system_wasm_old() { return read_wasm(cyberway_test_contracts + "/cyber.system.old/cyber.system.wasm"); }
+      static std::vector<char>    system_abi_old() { return read_abi(cyberway_test_contracts + "/cyber.system.old/cyber.system.abi"); }
+      static std::vector<uint8_t> msig_wasm_old() { return read_wasm(cyberway_test_contracts + "/cyber.msig.old/cyber.msig.wasm"); }
+      static std::vector<char>    msig_abi_old() { return read_abi(cyberway_test_contracts + "/cyber.msig.old/cyber.msig.abi"); }
    };
 };
 }} //ns eosio::testing

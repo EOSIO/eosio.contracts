@@ -14,17 +14,17 @@ args = None
 logFile = None
 
 unlockTimeout = 999999999
-fastUnstakeSystem = './fast.refund/eosio.system/eosio.system.wasm'
+fastUnstakeSystem = './fast.refund/cyber.system/cyber.system.wasm'
 
 systemAccounts = [
     'eosio.bpay',
-    'eosio.msig',
+    'cyber.msig',
     'eosio.names',
     'eosio.ram',
     'eosio.ramfee',
     'eosio.saving',
     'eosio.stake',
-    'eosio.token',
+    'cyber.token',
     'eosio.vpay',
 ]
 
@@ -286,17 +286,17 @@ def stepStartBoot():
     startNode(0, {'name': 'eosio', 'pvt': args.private_key, 'pub': args.public_key})
     sleep(9)
 def stepInstallSystemContracts():
-    retry(args.cleos + 'set contract eosio.token ' + args.contracts_dir + 'eosio.token/')
-    retry(args.cleos + 'set contract eosio.msig ' + args.contracts_dir + 'eosio.msig/')
+    retry(args.cleos + 'set contract cyber.token ' + args.contracts_dir + 'cyber.token/')
+    retry(args.cleos + 'set contract cyber.msig ' + args.contracts_dir + 'cyber.msig/')
 def stepCreateTokens():
-    retry(args.cleos + 'push action eosio.token create \'["eosio", "10000000000.0000 %s"]\' -p eosio.token' % (args.symbol))
+    retry(args.cleos + 'push action cyber.token create \'["eosio", "10000000000.0000 %s"]\' -p cyber.token' % (args.symbol))
     totalAllocation = allocateFunds(0, len(accounts))
-    retry(args.cleos + 'push action eosio.token issue \'["eosio", "%s", "memo"]\' -p eosio' % intToCurrency(totalAllocation))
+    retry(args.cleos + 'push action cyber.token issue \'["eosio", "%s", "memo"]\' -p eosio' % intToCurrency(totalAllocation))
     sleep(1)
 def stepSetSystemContract():
-    retry(args.cleos + 'set contract eosio ' + args.contracts_dir + 'eosio.bios/')
+    retry(args.cleos + 'set contract eosio ' + args.contracts_dir + 'cyber.bios/')
     sleep(1)
-    retry(args.cleos + 'push action eosio setpriv' + jsonArg(['eosio.msig', 1]) + '-p eosio@active')
+    retry(args.cleos + 'push action eosio setpriv' + jsonArg(['cyber.msig', 1]) + '-p eosio@active')
 def stepCreateStakedAccounts():
     createStakedAccounts(0, len(accounts))
 def stepRegProducers():
@@ -360,7 +360,7 @@ parser.add_argument('--nodes-dir', metavar='', help="Path to nodes directory", d
 parser.add_argument('--genesis', metavar='', help="Path to genesis.json", default="./genesis.json")
 parser.add_argument('--wallet-dir', metavar='', help="Path to wallet directory", default='./wallet/')
 parser.add_argument('--log-path', metavar='', help="Path to log file", default='./output.log')
-parser.add_argument('--symbol', metavar='', help="The eosio.system symbol", default='SYS')
+parser.add_argument('--symbol', metavar='', help="The cyber.system symbol", default='SYS')
 parser.add_argument('--user-limit', metavar='', help="Max number of users. (0 = no limit)", type=int, default=3000)
 parser.add_argument('--max-user-keys', metavar='', help="Maximum user keys to import into wallet", type=int, default=10)
 parser.add_argument('--ram-funds', metavar='', help="How much funds for each user to spend on ram", type=float, default=0.1)
