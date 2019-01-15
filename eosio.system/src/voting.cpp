@@ -202,7 +202,6 @@ namespace eosiosystem {
       if ( proxy ) {
          eosio_assert( producers.size() == 0, "cannot vote for producers and proxy at same time" );
          eosio_assert( voter_name != proxy, "cannot proxy to self" );
-         require_recipient( proxy );
       } else {
          eosio_assert( producers.size() <= 30, "attempt to vote for too many producers" );
          for( size_t i = 1; i < producers.size(); ++i ) {
