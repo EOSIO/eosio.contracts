@@ -13,6 +13,8 @@
 
 #include <string>
 #include <deque>
+#include <type_traits>
+#include <optional>
 
 #ifdef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
 #undef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
@@ -36,6 +38,25 @@ namespace eosiosystem {
    using eosio::microseconds;
    using eosio::datastream;
    using eosio::check;
+
+   template<typename E, typename F>
+   static inline auto has_field( F flags, E field )
+   -> std::enable_if_t< std::is_integral_v<F> && std::is_unsigned_v<F> &&
+                        std::is_enum_v<E> && std::is_same_v< F, std::underlying_type_t<E> >, bool>
+   {
+      return ( (flags & static_cast<F>(field)) != 0 );
+   }
+
+   template<typename E, typename F>
+   static inline auto set_field( F flags, E field, bool value = true )
+   -> std::enable_if_t< std::is_integral_v<F> && std::is_unsigned_v<F> &&
+                        std::is_enum_v<E> && std::is_same_v< F, std::underlying_type_t<E> >, F >
+   {
+      if( value )
+         return ( flags | static_cast<F>(field) );
+      else
+         return ( flags & ~static_cast<F>(field) );
+   }
 
    struct [[eosio::table, eosio::contract("eosio.system")]] name_bid {
      name            newname;
@@ -162,14 +183,20 @@ namespace eosiosystem {
       bool                is_proxy = 0; /// whether the voter is a proxy for others
 
 
-      uint32_t            reserved1 = 0;
+      uint32_t            flags1 = 0;
       uint32_t            reserved2 = 0;
       eosio::asset        reserved3;
 
       uint64_t primary_key()const { return owner.value; }
 
+      enum class flags1_fields : uint32_t {
+         ram_managed = 1,
+         net_managed = 2,
+         cpu_managed = 4
+      };
+
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(proxied_vote_weight)(is_proxy)(reserved1)(reserved2)(reserved3) )
+      EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(proxied_vote_weight)(is_proxy)(flags1)(reserved2)(reserved3) )
    };
 
    typedef eosio::multi_index< "voters"_n, voter_info >  voters_table;
@@ -322,6 +349,16 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
+
+         [[eosio::action]]
+         void setacctram( name account, std::optional<int64_t> ram_bytes );
+
+         [[eosio::action]]
+         void setacctnet( name account, std::optional<int64_t> net_weight );
+
+         [[eosio::action]]
+         void setacctcpu( name account, std::optional<int64_t> cpu_weight );
+
          // functions defined in delegate_bandwidth.cpp
 
          /**

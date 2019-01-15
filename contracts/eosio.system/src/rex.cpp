@@ -410,33 +410,48 @@ namespace eosiosystem {
          return;
       }
 
-      {
-         user_resources_table totals_tbl( _self, receiver.value );
-         auto tot_itr = totals_tbl.find( receiver.value );
-         if ( tot_itr == totals_tbl.end() ) {
-            check( 0 <= delta_net && 0 <= delta_cpu, "logic error, should not occur");
-            tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
-               tot.owner      = receiver;
-               tot.net_weight = asset( delta_net, core_symbol() );
-               tot.cpu_weight = asset( delta_cpu, core_symbol() );
-            });
-         } else {
-            totals_tbl.modify( tot_itr, same_payer, [&]( auto& tot ) {
-               tot.net_weight.amount += delta_net;
-               tot.cpu_weight.amount += delta_cpu;
-            });
-         }
-         check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
-         check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
-         
-         if ( tot_itr->is_empty() ) {
-            totals_tbl.erase( tot_itr );
-         }
+      user_resources_table totals_tbl( _self, receiver.value );
+      auto tot_itr = totals_tbl.find( receiver.value );
+      if ( tot_itr == totals_tbl.end() ) {
+         check( 0 <= delta_net && 0 <= delta_cpu, "logic error, should not occur");
+         tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
+            tot.owner      = receiver;
+            tot.net_weight = asset( delta_net, core_symbol() );
+            tot.cpu_weight = asset( delta_cpu, core_symbol() );
+         });
+      } else {
+         totals_tbl.modify( tot_itr, same_payer, [&]( auto& tot ) {
+            tot.net_weight.amount += delta_net;
+            tot.cpu_weight.amount += delta_cpu;
+         });
+      }
+      check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
+      check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
+
+      if ( tot_itr->is_empty() ) {
+         totals_tbl.erase( tot_itr );
       }
 
-      int64_t ram_bytes = 0, net = 0, cpu = 0;
-      get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
-      set_resource_limits( receiver.value, ram_bytes, net + delta_net, cpu + delta_cpu );
+      {
+         bool net_managed = false;
+         bool cpu_managed = false;
+
+         auto voter_itr = _voters.find( receiver.value );
+         if( voter_itr != _voters.end() ) {
+            net_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::net_managed );
+            cpu_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::cpu_managed );
+         }
+
+         if( !(net_managed && cpu_managed) ) {
+            int64_t ram_bytes = 0, net = 0, cpu = 0;
+            get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+
+            set_resource_limits( receiver.value,
+                                 ram_bytes,
+                                 net_managed ? net : tot_itr->net_weight.amount,
+                                 cpu_managed ? cpu : tot_itr->cpu_weight.amount );
+         }
+      }
    }
 
    void system_contract::check_voting_requirement( const name& owner, const char* error_msg )const
