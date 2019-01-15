@@ -126,7 +126,7 @@ namespace eosiosystem {
       check( rex.amount <= bitr->matured_rex, "insufficient available rex" );
 
       auto current_order = fill_rex_order( bitr, rex );
-      update_rex_account( from, current_order.proceeds, current_order.stake_change );
+      asset pending_sell_order = update_rex_account( from, current_order.proceeds, current_order.stake_change );
       if ( !current_order.success ) {
          /**
           * REX order couldn't be filled and is added to queue.
@@ -134,7 +134,7 @@ namespace eosiosystem {
           */
          auto oitr = _rexorders.find( from.value );
          if ( oitr == _rexorders.end() ) {
-            _rexorders.emplace( from, [&]( auto& order ) {
+            oitr = _rexorders.emplace( from, [&]( auto& order ) {
                order.owner         = from;
                order.rex_requested = rex;
                order.is_open       = true;
@@ -145,11 +145,11 @@ namespace eosiosystem {
          } else {
             _rexorders.modify( oitr, same_payer, [&]( auto& order ) {
                order.rex_requested.amount += rex.amount;
-               check( order.rex_requested.amount <= bitr->matured_rex,
-                      "insufficient funds for current and scheduled orders");
             });
          }
+         pending_sell_order.amount = oitr->rex_requested.amount;
       }
+      check( pending_sell_order.amount <= bitr->matured_rex, "insufficient funds for current and scheduled orders" );
       // dummy action added so that sell order proceeds show up in action trace
       if ( current_order.success ) {
          dispatch_inline( null_account, "sellresult"_n, { }, std::make_tuple( current_order.proceeds ) );
@@ -575,7 +575,7 @@ namespace eosiosystem {
    {
       runrex(2);
 
-      check( rex_loans_available(), "rex loans are not currently available" );
+      check( rex_loans_available(), "rex loans are currently not available" );
       check( payment.symbol == core_symbol() && fund.symbol == core_symbol(), "must use core token" );
       check( 0 < payment.amount && 0 <= fund.amount, "must use positive asset amount" );
 
@@ -735,7 +735,7 @@ namespace eosiosystem {
    {
       asset to_fund( proceeds );
       asset to_stake( delta_stake );
-      asset rex_in_sell_order( 0, core_symbol() );
+      asset rex_in_sell_order( 0, rex_symbol );
       auto itr = _rexorders.find( owner.value );
       if ( itr != _rexorders.end() ) {
          if ( itr->is_open ) {
@@ -839,7 +839,9 @@ namespace eosiosystem {
             total += rb.rex_maturities.front().second;
             rb.rex_maturities.pop_front();
          }
-         rb.rex_maturities.emplace_back( get_rex_maturity(), total );
+         if (total > 0 ) {
+            rb.rex_maturities.emplace_back( get_rex_maturity(), total );
+         }
       });
    }
 
@@ -891,9 +893,7 @@ namespace eosiosystem {
          const int64_t S1 = S0 + payment.amount;
          const int64_t R0 = itr->total_rex.amount;
          const int64_t R1 = (uint128_t(S1) * R0) / S0;
-
          rex_received.amount = R1 - R0;
-
          _rexpool.modify( itr, same_payer, [&]( auto& rp ) {
             rp.total_lendable.amount = S1;
             rp.total_rex.amount      = R1;
