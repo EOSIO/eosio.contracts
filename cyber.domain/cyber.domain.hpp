@@ -62,7 +62,7 @@ class [[eosio::contract("cyber.domain")]] domain: public domain_native {
 public:
     // TODO: move this names to system config
     static constexpr name active_permission{"active"_n};
-    static constexpr name token_account{"eosio.token"_n};
+    static constexpr name token_account{"cyber.token"_n};
     static constexpr name names_account{"cyber.names"_n};
 
     using domain_native::domain_native;
