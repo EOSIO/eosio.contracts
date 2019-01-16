@@ -414,6 +414,20 @@
             ]
         },
         {
+            "name": "providebw",
+            "base": "",
+            "fields": [
+                {
+                    "name": "provider",
+                    "type": "name"
+                },
+                {
+                    "name": "account",
+                    "type": "name"
+                }
+            ]
+        },
+        {
             "name": "wait_weight",
             "base": "",
             "fields": [
@@ -503,6 +517,11 @@
         {
             "name": "updateauth",
             "type": "updateauth",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "providebw",
+            "type": "providebw",
             "ricardian_contract": ""
         }
     ],
