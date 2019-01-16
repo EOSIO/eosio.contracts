@@ -159,7 +159,13 @@ namespace eosiosystem {
                res.ram_bytes += bytes_out;
             });
       }
-      set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
+
+      auto voter_itr = _voters.find( res_itr->owner.value );
+      if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
+         int64_t ram_bytes, net, cpu;
+         get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
+         set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+      }
    }
 
   /**
@@ -197,7 +203,13 @@ namespace eosiosystem {
       userres.modify( res_itr, account, [&]( auto& res ) {
           res.ram_bytes -= bytes;
       });
-      set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
+
+      auto voter_itr = _voters.find( res_itr->owner.value );
+      if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
+         int64_t ram_bytes, net, cpu;
+         get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
+         set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+      }
 
       INLINE_ACTION_SENDER(eosio::token, transfer)(
          token_account, { {ram_account, active_permission}, {account, active_permission} },
@@ -280,10 +292,28 @@ namespace eosiosystem {
          eosio_assert( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
          eosio_assert( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
 
-         int64_t ram_bytes, net, cpu;
-         get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+         {
+            bool ram_managed = false;
+            bool net_managed = false;
+            bool cpu_managed = false;
 
-         set_resource_limits( receiver.value, std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ), tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
+            auto voter_itr = _voters.find( receiver.value );
+            if( voter_itr != _voters.end() ) {
+               ram_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed );
+               net_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::net_managed );
+               cpu_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::cpu_managed );
+            }
+
+            if( !(net_managed && cpu_managed) ) {
+               int64_t ram_bytes, net, cpu;
+               get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+
+               set_resource_limits( receiver.value,
+                                    ram_managed ? ram_bytes : std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ),
+                                    net_managed ? net : tot_itr->net_weight.amount,
+                                    cpu_managed ? cpu : tot_itr->cpu_weight.amount );
+            }
+         }
 
          if ( tot_itr->net_weight.amount == 0 && tot_itr->cpu_weight.amount == 0  && tot_itr->ram_bytes == 0 ) {
             totals_tbl.erase( tot_itr );
