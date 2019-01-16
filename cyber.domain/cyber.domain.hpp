@@ -18,7 +18,7 @@ using eosio::time_point_sec;
 
 // declares domain and linked account to ensure deferred tx applied for right account
 struct [[eosio::table, eosio::contract("cyber.domain")]] name_info {
-    domain_name domain;             // domain
+    domain_name domain;             // domain. empty value = username@@account case
     name account;                   // account_name linked to given domain
     std::vector<username> users;    // usernames of this domain used in tx
 };
@@ -73,6 +73,9 @@ public:
 
     // Ensures that at execution time given domains linked to specified accounts and usernames exist.
     // Also can be parsed by explorers to resolve account_names to full names.
+    // * domains must be sorted ascending by `.domain`, `.account`
+    // * there must be no 2+ domains with the same `.domain` value except empty ("") value
+    //     * there must be no 2+ domains with empty value and the same `.account`
     [[eosio::action]] void declarenames(const std::vector<name_info>& domains);
 };
 

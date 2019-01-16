@@ -171,22 +171,27 @@ void domain_native::newdomain(name creator, const domain_name& name) {
     }
 }
 
-// TODO: std::map to ensure unique?
 void domain::declarenames(const std::vector<name_info>& domains) {
-    eosio_assert(domains.size(), "declarenames don't accept empty list");
-    std::vector<domain_name> prev;
+    eosio_assert(domains.size(), "domains must not be empty");
+    name prev_account;
+    domain_name prev_domain;
     for (const auto& info: domains) {
         const auto& domain = info.domain;
         const auto& dacc = info.account;
-        // TODO: it's handy to have domain name in assert messages
-        validate_domain_name(domain);
-        eosio_assert(std::find(prev.begin(), prev.end(), domain) == prev.end(), "same domain declared several times");
-        eosio_assert(is_domain(domain), "domain don't exists");
-        eosio_assert(dacc == resolve_domain(domain), "domain resolves to different account");
-        prev.push_back(domain);
+        if (domain.size() == 0 && prev_domain.size() == 0) {
+            eosio_assert(dacc > prev_account, ".account values must be ordered ascending, no repeats allowed");
+            prev_account = dacc;
+        } else {
+            eosio_assert(domain > prev_domain, ".domain values must be ordered ascending, no repeats allowed (except \"\")");
+            prev_domain = domain;
+            // TODO: it's handy to have domain name in assert messages
+            validate_domain_name(domain);
+            eosio_assert(is_domain(domain), "domain doesn't exist");
+            eosio_assert(dacc == resolve_domain(domain), "domain resolves to different account");
+        }
         for (const auto& u: info.users) {
             validate_username(u);
-            eosio_assert(is_username(dacc, u), "username don't exists in domain");
+            eosio_assert(is_username(dacc, u), "username doesn't exist in given scope");
         }
     }
 }
