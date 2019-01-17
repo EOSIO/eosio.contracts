@@ -41,7 +41,7 @@
             "name": "name_info",
             "base": "",
             "fields": [
-                {"type": "domain_name", "name": "domains"},
+                {"type": "domain_name", "name": "domain"},
                 {"type": "name",        "name": "account"},
                 {"type": "username[]",  "name": "users"}
             ]

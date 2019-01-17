@@ -3,7 +3,11 @@ find_package(Git REQUIRED)
 include(GNUInstallDirs)
 
 if(EOSIO_ROOT STREQUAL "" OR NOT EOSIO_ROOT)
-  set(EOSIO_ROOT "/opt/eosio")
+  if(APPLE)
+    set(EOSIO_ROOT "/usr/local/eosio")
+  else()
+    set(EOSIO_ROOT "/opt/eosio")
+  endif()
 endif()
 
 string(REPLACE ";" "|" TEST_FRAMEWORK_PATH "${CMAKE_FRAMEWORK_PATH}")
