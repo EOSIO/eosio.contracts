@@ -440,6 +440,20 @@
                     "type": "uint16"
                 }
             ]
+        },
+        {
+            "name": "requestbw",
+            "base": "",
+            "fields": [
+                {
+                    "name": "provider",
+                    "type": "name"
+                },
+                {
+                    "name": "account",
+                    "type": "name"
+                }
+            ]
         }
     ],
     "types": [],
@@ -522,6 +536,11 @@
         {
             "name": "providebw",
             "type": "providebw",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "requestbw",
+            "type": "requestbw",
             "ricardian_contract": ""
         }
     ],
