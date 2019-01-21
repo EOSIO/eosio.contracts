@@ -1,0 +1,197 @@
+{
+    "version": "cyberway::abi/1.1",
+    "structs": [
+        {
+            "name": "agent_struct",
+            "base": "",
+            "fields": [
+                { "type": "name",           "name": "account"  },
+                { "type": "uint8",          "name": "proxy_level" },
+                { "type": "time_point_sec", "name": "last_proxied_update" },
+                { "type": "int64",          "name": "balance" },
+                { "type": "int64",          "name": "proxied" },
+                { "type": "int64",          "name": "shares_sum" },
+                { "type": "int64",          "name": "own_share" },
+                { "type": "int16",          "name": "fee" },
+                { "type": "int64",          "name": "min_own_staked" }
+            ]
+        },{
+            "name": "grant_struct",
+            "base": "",
+            "fields": [
+                { "type": "uint64",         "name": "id" },
+                { "type": "name",           "name": "grantor_name"  },
+                { "type": "name",           "name": "agent_name"  },
+                { "type": "int16",          "name": "pct"  },
+                { "type": "int64",          "name": "share"  }
+            ]
+        },{
+            "name": "code_uint8",
+            "base": "",
+            "fields": [
+                { "type": "symbol_code",    "name": "key" },
+                { "type": "uint8",          "name": "value"  }
+            ]
+        },{
+            "name": "param_struct",
+            "base": "",
+            "fields": [
+                { "type": "symbol",         "name": "token_symbol" },
+                { "type": "code_uint8[]",   "name": "purpose_ids"  },
+                { "type": "uint8[]",        "name": "max_proxies"  },
+                { "type": "int64",          "name": "frame_length"  },
+                { "type": "int64",          "name": "payout_step_lenght"  },
+                { "type": "uint16",         "name": "payout_steps_num"  }
+            ]
+        },{
+            "name": "payout_struct",
+            "base": "",
+            "fields": [
+                { "type": "uint64",         "name": "id" },
+                { "type": "name",           "name": "account"  },
+                { "type": "int64",          "name": "balance"  },
+                { "type": "uint16",         "name": "steps_left"  },
+                { "type": "time_point_sec", "name": "last_step"  }
+            ]
+        },{
+            "name": "create_args",
+            "base": "",
+            "fields": [
+                { "type": "symbol",         "name": "token_symbol" },
+                { "type": "symbol_code[]",  "name": "purpose_codes"  },
+                { "type": "uint8[]",        "name": "max_proxies"  },
+                { "type": "int64",          "name": "frame_length"  },
+                { "type": "int64",          "name": "payout_step_lenght"  },
+                { "type": "uint16",         "name": "payout_steps_num"  }
+            ]
+        },{
+            "name": "delegate_args",
+            "base": "",
+            "fields": [
+                { "type": "name",           "name": "grantor_name" },
+                { "type": "name",           "name": "agent_name"  },
+                { "type": "asset",          "name": "quantity"  },
+                { "type": "symbol_code",    "name": "purpose_code"  }
+            ]
+        },{
+            "name": "setpct_args",
+            "base": "",
+            "fields": [
+                { "type": "name",           "name": "grantor_name" },
+                { "type": "name",           "name": "agent_name"  },
+                { "type": "symbol_code",    "name": "token_code"  },
+                { "type": "symbol_code",    "name": "purpose_code"  },
+                { "type": "int16",          "name": "pct"  }
+            ]
+        },{
+            "name": "withdraw_args",
+            "base": "",
+            "fields": [
+                { "type": "name",           "name": "account" },
+                { "type": "asset",          "name": "quantity"  },
+                { "type": "symbol_code",    "name": "purpose_code"  }
+            ]
+        },{
+            "name": "claim_args",
+            "base": "",
+            "fields": [
+                { "type": "name",           "name": "account" },
+                { "type": "symbol_code",    "name": "token_code"  },
+                { "type": "symbol_code",    "name": "purpose_code"  }
+            ]
+        },{
+            "name": "setproxylvl_args",
+            "base": "",
+            "fields": [
+                { "type": "name",           "name": "account" },
+                { "type": "uint8",          "name": "level"  },
+                { "type": "symbol_code",    "name": "token_code"  },
+                { "type": "symbol_code",    "name": "purpose_code"  }
+            ]
+        },{
+            "name": "updatefunds_args",
+            "base": "",
+            "fields": [
+                { "type": "name",           "name": "account" },
+                { "type": "symbol_code",    "name": "token_code"  },
+                { "type": "symbol_code",    "name": "purpose_code"  }
+            ]
+        }
+    ],
+    "types": [],
+    "actions": [
+        {
+            "name": "create",
+            "type": "create_args",
+            "ricardian_contract": ""
+        },{
+            "name": "delegate",
+            "type": "delegate_args",
+            "ricardian_contract": ""
+        },{
+            "name": "setagentpct",
+            "type": "setpct_args",
+            "ricardian_contract": ""
+        },{
+            "name": "recall",
+            "type": "setpct_args",
+            "ricardian_contract": ""
+        },{
+            "name": "withdraw",
+            "type": "withdraw_args",
+            "ricardian_contract": ""
+        },{
+            "name": "cancelwd",
+            "type": "withdraw_args",
+            "ricardian_contract": ""
+        },{
+            "name": "claim",
+            "type": "claim_args",
+            "ricardian_contract": ""
+        },{
+            "name": "setproxylvl",
+            "type": "setproxylvl_args",
+            "ricardian_contract": ""
+        },{
+            "name": "updatefunds",
+            "type": "updatefunds_args",
+            "ricardian_contract": ""
+        },{
+            "name": "amerce",
+            "type": "withdraw_args",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "agent",
+            "type": "agent_struct",
+            "indexes": [
+                { "name": "primary", "unique": "true", "orders": [ {"field": "account", "order": "asc"} ] }
+            ]
+        },{
+            "name": "grant",
+            "type": "grant_struct",
+            "indexes": [
+                { "name": "primary", "unique": "true", "orders": [ {"field": "id", "order": "asc"} ] },
+                { "name": "grantor", "unique": "false", "orders": [ {"field": "grantor_name", "order": "asc"} ] }
+            ]
+        },{
+            "name": "param",
+            "type": "param_struct",
+            "indexes": [
+                { "name": "primary", "unique": "true", "orders": [ {"field": "token_symbol.sym", "order": "asc"} ] }
+            ]
+        },{
+            "name": "payout",
+            "type": "payout_struct",
+            "indexes": [
+                { "name": "primary", "unique": "true", "orders": [ {"field": "id", "order": "asc"} ] },
+                { "name": "payoutacc", "unique": "false", "orders": [ {"field": "account", "order": "asc"} ] }
+            ]
+        }
+    ],
+    "ricardian_clauses": [],
+    "variants": [],
+    "abi_extensions": []
+}
