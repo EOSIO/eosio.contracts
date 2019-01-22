@@ -51,6 +51,9 @@ public:
     const account_name _carol = N(carol);
 
     struct errors: contract_error_messages {
+        string incorrect_proxy_levels(uint8_t g, uint8_t a) {
+            return amsg("incorrect proxy levels: grantor " + std::to_string(g) + ", agent " + std::to_string(a));
+        };
     } err;
 };
 
@@ -83,17 +86,21 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, cyber_stake_tester) try {
     BOOST_CHECK_EQUAL(success(), token.transfer(_alice, _code, stake_a, purpose_str));
     BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_carol, 0, token._symbol.to_symbol_code(), purpose));
     BOOST_CHECK_EQUAL(success(), stake.setagentpct(_bob, _carol, token._symbol.to_symbol_code(), purpose, pct_c * cfg::_100percent));
+    BOOST_CHECK_EQUAL(err.incorrect_proxy_levels(4, 4), 
+        stake.setagentpct(_alice, _bob, token._symbol.to_symbol_code(), purpose, pct_b * cfg::_100percent));
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_bob, 1, token._symbol.to_symbol_code(), purpose));
+    BOOST_CHECK_EQUAL(success(), stake.setagentpct(_alice, _bob, token._symbol.to_symbol_code(), purpose, pct_b * cfg::_100percent));
+
     produce_block();
     auto t = head_block_time();
     BOOST_CHECK_EQUAL(stake.get_agent(_alice, token._symbol, purpose),
         stake.make_agent(_alice, max_proxies.size(), t, stake_a.get_amount(),
         0, stake_a.get_amount(), stake_a.get_amount()));
     BOOST_CHECK_EQUAL(stake.get_agent(_bob, token._symbol, purpose),
-        stake.make_agent(_bob, max_proxies.size(), t));
+        stake.make_agent(_bob, 1, t));
     BOOST_CHECK_EQUAL(stake.get_agent(_carol, token._symbol, purpose),
         stake.make_agent(_carol, 0, t));
         
-    BOOST_CHECK_EQUAL(success(), stake.setagentpct(_alice, _bob, token._symbol.to_symbol_code(), purpose, pct_b * cfg::_100percent));
     BOOST_CHECK_EQUAL(success(), token.transfer(_bob, _code, stake_b, purpose_str));
     BOOST_CHECK_EQUAL(success(), token.transfer(_alice, _code, stake_a2, purpose_str));
     BOOST_CHECK_EQUAL(success(), token.transfer(_carol, _code, stake_c, purpose_str));
@@ -111,7 +118,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, cyber_stake_tester) try {
     BOOST_CHECK_EQUAL(stake.get_agent(_alice, token._symbol, purpose),
         stake.make_agent(_alice, max_proxies.size(), t, balance_a, total_a - balance_a, total_a, own_a));
     BOOST_CHECK_EQUAL(stake.get_agent(_bob, token._symbol, purpose),
-        stake.make_agent(_bob, max_proxies.size(), t, balance_b, total_b - balance_b, total_b, own_b));
+        stake.make_agent(_bob, 1, t, balance_b, total_b - balance_b, total_b, own_b));
     BOOST_CHECK_EQUAL(stake.get_agent(_carol, token._symbol, purpose),
         stake.make_agent(_carol, 0, t, balance_c, total_c - balance_c, total_c, own_c));
     
@@ -121,7 +128,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, cyber_stake_tester) try {
         stake.make_agent(_carol, 0, t, balance_c * (1.0 - amerced_c), total_c - balance_c, total_c, own_c));
     BOOST_CHECK_EQUAL(success(), stake.updatefunds(_alice, token._symbol.to_symbol_code(), purpose));
     BOOST_CHECK_EQUAL(stake.get_agent(_bob, token._symbol, purpose),
-        stake.make_agent(_bob, max_proxies.size(), t, balance_b, total_b - balance_b, total_b, own_b));
+        stake.make_agent(_bob, 1, t, balance_b, total_b - balance_b, total_b, own_b));
     
     auto t1 = time_point_sec(t.sec_since_epoch() + frame_length);
     auto blocks_num = ((t1.sec_since_epoch() - head_block_time().sec_since_epoch()) * 1000) / cfg::block_interval_ms - 1;
@@ -130,11 +137,69 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, cyber_stake_tester) try {
     double bob_lost = (total_b - balance_b) * amerced_c;
     BOOST_CHECK_EQUAL(success(), stake.updatefunds(_alice, token._symbol.to_symbol_code(), purpose));
     BOOST_CHECK_EQUAL(stake.get_agent(_bob, token._symbol, purpose),
-        stake.make_agent(_bob, max_proxies.size(), t1, balance_b, (total_b - balance_b) - bob_lost, total_b, own_b));
+        stake.make_agent(_bob, 1, t1, balance_b, (total_b - balance_b) - bob_lost, total_b, own_b));
     BOOST_CHECK_EQUAL(stake.get_agent(_alice, token._symbol, purpose),
         stake.make_agent(_alice, max_proxies.size(), t1, balance_a, 
             (total_a - balance_a) - (bob_lost * (1.0 - own_b / total_b)), 
             total_a, own_a));
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(increase_proxy_level_test, cyber_stake_tester) try {
+    BOOST_TEST_MESSAGE("Increase proxy level test");
+    auto purpose_str = "CPU";
+    auto purpose = to_code(purpose_str);
+    std::vector<uint8_t> max_proxies = {30, 10, 3, 1};
+    int64_t frame_length = 30;
+    double pct_a = 0.4;
+    double pct_b = 0.5;
+    double pct_c = 0.2;
+    asset staked(10000000, token._symbol);
+    BOOST_CHECK_EQUAL(success(), token.create(_cyber, asset(1000000000, token._symbol)));
+    BOOST_CHECK_EQUAL(success(), stake.create(_cyber, token._symbol, {purpose}, max_proxies, frame_length, 7 * 24 * 60 * 60, 52));
+
+    BOOST_CHECK_EQUAL(success(), token.issue(_cyber, _carol, staked, ""));
+    BOOST_CHECK_EQUAL(success(), token.issue(_cyber, _alice, staked, ""));
+    
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_alice, 0, token._symbol.to_symbol_code(), purpose));
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_bob,   1, token._symbol.to_symbol_code(), purpose));
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_carol, 2, token._symbol.to_symbol_code(), purpose));
+    BOOST_CHECK_EQUAL(success(), stake.setagentpct(_bob, _alice, token._symbol.to_symbol_code(), purpose, pct_b * cfg::_100percent));
+    BOOST_CHECK_EQUAL(success(), stake.setagentpct(_carol, _bob, token._symbol.to_symbol_code(), purpose, pct_c * cfg::_100percent));
+    BOOST_TEST_MESSAGE("--- carol stakes " << staked);
+    BOOST_CHECK_EQUAL(success(), token.transfer(_carol, _code, staked, purpose_str));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_alice, _code, staked, purpose_str));
+    produce_block();
+    auto t = head_block_time();
+    auto balance_a = ((pct_b * pct_c) + 1.0) * staked.get_amount();
+    BOOST_CHECK_EQUAL(stake.get_agent(_alice, token._symbol, purpose),
+        stake.make_agent(_alice, 0, t, balance_a, 0, balance_a, staked.get_amount()));
+    BOOST_TEST_MESSAGE("--- alice changes level");
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_alice, 4, token._symbol.to_symbol_code(), purpose));
+    produce_block();
+    BOOST_CHECK_EQUAL(stake.get_agent(_alice, token._symbol, purpose),
+        stake.make_agent(_alice, 4, t, balance_a, 0, balance_a, staked.get_amount()));
+    
+    BOOST_TEST_MESSAGE("--- alice delegates");
+    BOOST_CHECK_EQUAL(success(), stake.delegate(_alice, _carol, asset(staked.get_amount() * pct_a, token._symbol), purpose));
+    produce_block();
+    t = head_block_time();
+    balance_a = (1.0 - pct_a) * staked.get_amount();
+    auto proxied_a = staked.get_amount() - balance_a;
+    BOOST_CHECK_EQUAL(stake.get_agent(_alice, token._symbol, purpose),
+        stake.make_agent(_alice, 4, t, balance_a, proxied_a, staked.get_amount(), staked.get_amount()));
+        
+    auto total_c = proxied_a + staked.get_amount();
+    auto balance_c = total_c * (1.0 - pct_c);
+    auto proxied_c = total_c * pct_c;
+    BOOST_CHECK_EQUAL(stake.get_agent(_carol, token._symbol, purpose),
+        stake.make_agent(_carol, 2, t, balance_c, proxied_c, total_c, staked.get_amount()));
+        
+    auto total_b = proxied_c;
+    auto balance_b = total_b;
+    auto proxied_b = 0;
+    BOOST_CHECK_EQUAL(stake.get_agent(_bob, token._symbol, purpose),
+        stake.make_agent(_bob, 1, t, balance_b, proxied_b, balance_b, 0));
 
 } FC_LOG_AND_RETHROW()
 

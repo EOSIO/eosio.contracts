@@ -88,23 +88,24 @@ struct structures {
     using payout_acc_index = eosio::indexed_by<"payoutacc"_n, eosio::const_mem_fun<structures::payout, uint64_t, &structures::payout::by_account> >;
     using payouts = eosio::multi_index<"payout"_n, structures::payout, payout_id_index, payout_acc_index>;
     
-    void update_proxied(agents& agents_table, grants& grants_table, agents::const_iterator agent, int64_t frame_length);
+    void update_proxied(agents& agents_table, grants& grants_table, agents::const_iterator agent, int64_t frame_length, bool force = false);
     void update_proxied(name agent_name, symbol purpose_symbol, int64_t frame_length);
     
     void send_scheduled_payout(payouts& payouts_table, name account, int64_t payout_step_lenght, symbol sym);
     void update_payout(name account, asset quantity, symbol_code purpose_code, bool claim_mode = false);
     
     //return: token amount
-    int64_t recall_traversal(agents& agents_table, grants& grants_table, name agent_name, int64_t share, int64_t frame_length);
+    int64_t recall_traversal(agents& agents_table, grants& grants_table, name agent_name, int64_t share);
     
     //return: share
-    int64_t delegate_traversal(agents& agents_table, grants& grants_table, name agent_name, int64_t amount, int64_t frame_length, bool refill = false);
+    int64_t delegate_traversal(agents& agents_table, grants& grants_table, name agent_name, int64_t amount, bool refill = false);
     
-    bool set_proxy_level(name account, uint8_t level, symbol sym);
+    bool set_proxy_level(name account, uint8_t level, symbol sym, const std::vector<uint8_t>& max_proxies);
     bool set_agent_pct(name grantor_name, name agent_name, int16_t pct, symbol sym, const structures::param& param);
     
     agents::const_iterator get_agent_itr(agents& agents_table, name agent_name, int16_t proxy_level_for_emplaced = -1, bool* emplaced = nullptr);
-    
+
+    void add_proxy(grants& grants_table, agents::const_iterator grantor_as_agent, agents::const_iterator agent, int16_t pct, int64_t share);
 public:
     using contract::contract;
     [[eosio::action]] void create(symbol token_symbol, std::vector<symbol_code> purpose_codes, std::vector<uint8_t> max_proxies, 
