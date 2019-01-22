@@ -4,6 +4,8 @@
 
 #include <eosio.system/eosio.system.hpp>
 
+#include <eosiolib/print.hpp>
+
 namespace eosiosystem {
 
    /**
@@ -23,6 +25,7 @@ namespace eosiosystem {
       transfer_to_fund( owner, amount );
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
+
    /**
     * @brief Withdraws SYS tokens from user REX fund
     *
@@ -623,13 +626,13 @@ namespace eosiosystem {
       const int64_t S1 = (uint128_t(R1) * S0) / R0;
       asset proceeds( S0 - S1, core_symbol() );
       asset stake_change( 0, core_symbol() );
-      bool success = false;
+      bool  success = false;
 
       const int64_t unlent_lower_bound = ( uint128_t(2) * rexitr->total_lent.amount ) / 10;
       const int64_t available_unlent   = rexitr->total_unlent.amount - unlent_lower_bound; // available_unlent <= 0 is possible
-      if ( proceeds.amount <=  available_unlent ) {
+      if ( proceeds.amount <= available_unlent ) {
          const int64_t init_vote_stake_amount = bitr->vote_stake.amount;
-         const int64_t current_stake_value = ( uint128_t(bitr->rex_balance.amount) * S0 ) / R0;
+         const int64_t current_stake_value    = ( uint128_t(bitr->rex_balance.amount) * S0 ) / R0;
          _rexpool.modify( rexitr, same_payer, [&]( auto& rt ) {
             rt.total_rex.amount      = R1;
             rt.total_lendable.amount = S1;
@@ -947,6 +950,31 @@ namespace eosiosystem {
       });
 
       return current_rex_stake - init_rex_stake;
+   }
+
+   void system_contract::update_rex_stake( const name& voter )
+   {
+      int64_t delta_stake = 0;
+      auto bitr = _rexbalance.find( voter.value );
+      if ( bitr != _rexbalance.end() && rex_available() ) {
+         asset init_vote_stake = bitr->vote_stake;
+         asset current_vote_stake( 0, core_symbol() );
+         current_vote_stake.amount = ( uint128_t(bitr->rex_balance.amount) * _rexpool.begin()->total_lendable.amount )
+                                     / _rexpool.begin()->total_rex.amount;
+         _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+            rb.vote_stake.amount = current_vote_stake.amount; 
+         });
+         delta_stake = current_vote_stake.amount - init_vote_stake.amount;
+      }
+      
+      if ( delta_stake != 0 ) {
+         auto vitr = _voters.find( voter.value );
+         if ( vitr != _voters.end() ) {
+            _voters.modify( vitr, same_payer, [&]( auto& vinfo ) {
+               vinfo.staked += delta_stake;
+            });
+         }
+      }
    }
 
 }; /// namespace eosiosystem

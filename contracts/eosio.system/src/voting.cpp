@@ -6,7 +6,6 @@
 
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/crypto.h>
-#include <eosiolib/print.hpp>
 #include <eosiolib/datastream.hpp>
 #include <eosiolib/serialize.hpp>
 #include <eosiolib/multi_index.hpp>
@@ -21,7 +20,6 @@
 namespace eosiosystem {
    using eosio::indexed_by;
    using eosio::const_mem_fun;
-   using eosio::print;
    using eosio::singleton;
    using eosio::transaction;
 
@@ -194,6 +192,7 @@ namespace eosiosystem {
     */
    void system_contract::voteproducer( const name voter_name, const name proxy, const std::vector<name>& producers ) {
       require_auth( voter_name );
+      vote_stake_updater( voter_name );
       update_votes( voter_name, proxy, producers, true );
       auto rex_itr = _rexbalance.find( voter_name.value );
       if( rex_itr != _rexbalance.end() && rex_itr->rex_balance.amount > 0 ) {
