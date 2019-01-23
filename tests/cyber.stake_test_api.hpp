@@ -112,6 +112,14 @@ public:
         );
     }
     
+    action_result reward(account_name issuer, account_name account, asset quantity, symbol_code purpose_code) {
+        return push(N(reward), issuer, args()
+            ("account", account)
+            ("quantity", quantity)
+            ("purpose_code", purpose_code)
+        );
+    }
+    
      ////tables
     variant get_agent(account_name account, symbol token_symbol, symbol_code purpose_code) {
         return get_struct(get_stake_symbol(token_symbol, purpose_code).value(), N(agent), account.value, "agent_struct");

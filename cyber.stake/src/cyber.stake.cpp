@@ -107,7 +107,7 @@ void stake::update_proxied(agents& agents_table, grants& grants_table, agents::c
 
 symbol stake::structures::param::get_purpose_symbol(symbol_code token_code, symbol_code purpose_code)const {
     auto purpose_itr = purpose_ids.find(purpose_code);
-    eosio_assert(purpose_itr != purpose_ids.end(), "unknown purpose");
+    eosio_assert(purpose_itr != purpose_ids.end(), ("unknown purpose" + purpose_code.to_string()).c_str());
     return symbol(token_code, purpose_itr->second);
 }
 
@@ -262,7 +262,7 @@ void stake::setagentpct(name grantor_name, name agent_name, symbol_code token_co
 }
 
 void stake::on_transfer(name from, name to, asset quantity, std::string memo) {
-    if (_self != to)
+    if (_self != to || memo == config::reward_memo)
         return;
         
     auto purpose_code = symbol_code(memo.c_str());
@@ -512,7 +512,8 @@ void stake::updatefunds(name account, symbol_code token_code, symbol_code purpos
             update_proxied(account, symbol(token_code, p.second), param.frame_length);
 }
 
-void stake::amerce(name account, asset quantity, symbol_code purpose_code) {
+void stake::change_balance(name account, asset quantity, symbol_code purpose_code) {
+    eosio_assert(quantity.is_valid(), "invalid quantity");
     auto issuer = eosio::token::get_issuer(config::token_name, quantity.symbol.code());
     require_auth(issuer);
     params params_table(_self, quantity.symbol.code().raw());
@@ -521,21 +522,36 @@ void stake::amerce(name account, asset quantity, symbol_code purpose_code) {
     auto sym = param.get_purpose_symbol(quantity.symbol.code(), purpose_code);
     agents agents_table(_self, sym.raw());
     auto agent = get_agent_itr(agents_table, account);
-    quantity.amount = std::min(quantity.amount, agent->balance);
+    if (quantity.amount < 0)
+        quantity.amount = std::max(quantity.amount, -agent->balance);
     
-    agents_table.modify(agent, name(), [&](auto& a) { a.balance -= quantity.amount; });
+    agents_table.modify(agent, name(), [&](auto& a) { a.balance += quantity.amount; });
     
-    INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {_self, config::active_name},
-        {_self, issuer, quantity, "amerced tokens"});
-        
-    //TODO: issuer should retire it
-    //INLINE_ACTION_SENDER(eosio::token, retire)(config::token_name, {issuer, config::amerce_name},
-    //  {quantity, "amerced tokens"});
+    if (quantity.amount < 0) {
+        quantity.amount = -quantity.amount;
+        INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {_self, config::active_name},
+            {_self, issuer, quantity, ""});
+        INLINE_ACTION_SENDER(eosio::token, retire)(config::token_name, {issuer, config::amerce_name}, {quantity, ""});
+    }
+    else {
+        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {issuer, config::reward_name}, {_self, quantity, config::reward_memo});
+    }
+}
+
+void stake::amerce(name account, asset quantity, symbol_code purpose_code) {
+    eosio_assert(quantity.amount > 0, "quantity must be positive");
+    quantity.amount = -quantity.amount;
+    change_balance(account, quantity, purpose_code);
+}
+
+void stake::reward(name account, asset quantity, symbol_code purpose_code) {
+    eosio_assert(quantity.amount > 0, "quantity must be positive");
+    change_balance(account, quantity, purpose_code);
 }
 
 
 } /// namespace cyber
 
 DISPATCH_WITH_TRANSFER(cyber::stake, cyber::config::token_name, on_transfer,
-    (create)(delegate)(setagentpct)(recall)(withdraw)(claim)(cancelwd)(setproxylvl)(updatefunds)(amerce)
+    (create)(delegate)(setagentpct)(recall)(withdraw)(claim)(cancelwd)(setproxylvl)(updatefunds)(amerce)(reward)
 )

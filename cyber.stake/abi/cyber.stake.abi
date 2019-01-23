@@ -160,6 +160,10 @@
             "name": "amerce",
             "type": "withdraw_args",
             "ricardian_contract": ""
+        },{
+            "name": "reward",
+            "type": "withdraw_args",
+            "ricardian_contract": ""
         }
     ],
     "tables": [

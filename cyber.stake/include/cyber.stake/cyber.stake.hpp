@@ -7,7 +7,7 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/time.hpp>
-
+#include "config.hpp"
 #include <string>
 
 
@@ -24,11 +24,7 @@ class [[eosio::contract("eosio.stake")]] stake : public eosio::contract {
 struct structures {
     struct [[eosio::table]] agent {
         name account;
-        uint8_t proxy_level; //it can't be increased for now
-        //TODO: it seems like, we can allow to increase it. we should: 
-            // -recall the share from the proxy with a level not less than ours on update_proxied
-            // -check for the existence of cycles on set_agent_pct
-            // -what else?
+        uint8_t proxy_level;
         
         time_point_sec last_proxied_update;
         int64_t balance = 0;// aka unproxied funds
@@ -58,8 +54,8 @@ struct structures {
         std::map<symbol_code, uint8_t> purpose_ids;
         std::vector<uint8_t> max_proxies;
         int64_t frame_length;
-        int64_t payout_step_lenght;
-        uint16_t payout_steps_num;
+        int64_t payout_step_lenght; //TODO: these parameters should
+        uint16_t payout_steps_num;  //--/--  depend on the purposes      
         uint64_t primary_key()const { return token_symbol.code().raw(); }
         symbol get_purpose_symbol(symbol_code token_code, symbol_code purpose_code) const;
     };
@@ -106,6 +102,7 @@ struct structures {
     agents::const_iterator get_agent_itr(agents& agents_table, name agent_name, int16_t proxy_level_for_emplaced = -1, bool* emplaced = nullptr);
 
     void add_proxy(grants& grants_table, agents::const_iterator grantor_as_agent, agents::const_iterator agent, int16_t pct, int64_t share);
+    void change_balance(name account, asset quantity, symbol_code purpose_code);
 public:
     using contract::contract;
     [[eosio::action]] void create(symbol token_symbol, std::vector<symbol_code> purpose_codes, std::vector<uint8_t> max_proxies, 

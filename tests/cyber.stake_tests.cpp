@@ -3,6 +3,7 @@
 #include "cyber.stake_test_api.hpp"
 #include "contracts.hpp"
 #include "../common/config.hpp"
+#include "../cyber.stake/include/cyber.stake/config.hpp"
 
 namespace cfg = cyber::config;
 using namespace eosio::testing;
@@ -63,6 +64,8 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, cyber_stake_tester) try {
     BOOST_TEST_MESSAGE("Basic stake tests");
     auto purpose_str = "CPU";
     auto purpose = to_code(purpose_str);
+    delegate_authority(_cyber, {_code}, cfg::token_name, N(retire), cfg::amerce_name);
+    delegate_authority(_cyber, {_code}, cfg::token_name, N(issue), cfg::reward_name);
     
     std::vector<uint8_t> max_proxies = {30, 10, 3, 1};
     int64_t frame_length = 30;
@@ -122,8 +125,13 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, cyber_stake_tester) try {
     BOOST_CHECK_EQUAL(stake.get_agent(_carol, token._symbol, purpose),
         stake.make_agent(_carol, 0, t, balance_c, total_c - balance_c, total_c, own_c));
     
-    BOOST_CHECK_EQUAL(success(), stake.amerce(_cyber, _carol, asset(balance_c * amerced_c, token._symbol), purpose));
+    BOOST_CHECK_EQUAL(token.get_stats()["supply"], supply.to_string());
+    auto amerced = asset(balance_c * amerced_c, token._symbol);
+    BOOST_CHECK_EQUAL(success(), stake.amerce(_cyber, _carol, amerced, purpose));
+    supply -= amerced;
+    BOOST_CHECK_EQUAL(token.get_stats()["supply"], supply.to_string());
     produce_block();
+    
     BOOST_CHECK_EQUAL(stake.get_agent(_carol, token._symbol, purpose),
         stake.make_agent(_carol, 0, t, balance_c * (1.0 - amerced_c), total_c - balance_c, total_c, own_c));
     BOOST_CHECK_EQUAL(success(), stake.updatefunds(_alice, token._symbol.to_symbol_code(), purpose));
@@ -142,6 +150,23 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, cyber_stake_tester) try {
         stake.make_agent(_alice, max_proxies.size(), t1, balance_a, 
             (total_a - balance_a) - (bob_lost * (1.0 - own_b / total_b)), 
             total_a, own_a));
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), stake.reward(_cyber, _carol, amerced, purpose));
+    supply += amerced;
+    BOOST_CHECK_EQUAL(token.get_stats()["supply"], supply.to_string());
+
+    t1 = time_point_sec(t1.sec_since_epoch() + frame_length);
+    blocks_num = ((t1.sec_since_epoch() - head_block_time().sec_since_epoch()) * 1000) / cfg::block_interval_ms - 1;
+    BOOST_TEST_MESSAGE("--- produce " << blocks_num << " blocks");
+    produce_blocks(blocks_num);
+    BOOST_CHECK_EQUAL(success(), stake.updatefunds(_alice, token._symbol.to_symbol_code(), purpose));
+    BOOST_CHECK_EQUAL(stake.get_agent(_alice, token._symbol, purpose),
+        stake.make_agent(_alice, max_proxies.size(), t1, balance_a, total_a - balance_a, total_a, own_a));
+    BOOST_CHECK_EQUAL(stake.get_agent(_bob, token._symbol, purpose),
+        stake.make_agent(_bob, 1, t1, balance_b, total_b - balance_b, total_b, own_b));
+    BOOST_CHECK_EQUAL(stake.get_agent(_carol, token._symbol, purpose),
+        stake.make_agent(_carol, 0, t1, balance_c, total_c - balance_c, total_c, own_c));
+
 
 } FC_LOG_AND_RETHROW()
 
