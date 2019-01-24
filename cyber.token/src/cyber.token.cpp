@@ -3,9 +3,19 @@
  *  @copyright defined in eos/LICENSE.txt
  */
 
+#include <eosiolib/event.hpp>
 #include <cyber.token/cyber.token.hpp>
 
 namespace eosio {
+
+void token::send_currency_event(const currency_stats& stat) {
+    eosio::event(_self, "currency"_n, stat).send();
+}
+
+void token::send_balance_event(name acc, const account& accinfo) {
+    balance_event data{acc, accinfo.balance};
+    eosio::event(_self, "balance"_n, data).send();
+}
 
 void token::create( name   issuer,
                     asset  maximum_supply )
@@ -25,6 +35,8 @@ void token::create( name   issuer,
        s.supply.symbol = maximum_supply.symbol;
        s.max_supply    = maximum_supply;
        s.issuer        = issuer;
+
+       send_currency_event(s);
     });
 }
 
@@ -49,6 +61,7 @@ void token::issue( name to, asset quantity, string memo )
 
     statstable.modify( st, same_payer, [&]( auto& s ) {
        s.supply += quantity;
+       send_currency_event(s);
     });
 
     add_balance( st.issuer, quantity, st.issuer );
@@ -79,6 +92,7 @@ void token::retire( asset quantity, string memo )
 
     statstable.modify( st, same_payer, [&]( auto& s ) {
        s.supply -= quantity;
+       send_currency_event(s);
     });
 
     sub_balance( st.issuer, quantity );
@@ -118,6 +132,7 @@ void token::sub_balance( name owner, asset value ) {
 
    from_acnts.modify( from, owner, [&]( auto& a ) {
          a.balance -= value;
+         send_balance_event(owner, a);
       });
 }
 
@@ -128,10 +143,12 @@ void token::add_balance( name owner, asset value, name ram_payer )
    if( to == to_acnts.end() ) {
       to_acnts.emplace( ram_payer, [&]( auto& a ){
         a.balance = value;
+        send_balance_event(owner, a);
       });
    } else {
       to_acnts.modify( to, same_payer, [&]( auto& a ) {
         a.balance += value;
+        send_balance_event(owner, a);
       });
    }
 }

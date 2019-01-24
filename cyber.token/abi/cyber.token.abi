@@ -58,6 +58,20 @@
             ]
         },
         {
+            "name": "balance_event",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "balance",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
             "name": "issue",
             "base": "",
             "fields": [
@@ -162,6 +176,10 @@
             "type": "transfer",
             "ricardian_contract": ""
         }
+    ],
+    "events": [
+        {"name": "currency", "type": "currency_stats"},
+        {"name": "balance", "type": "balance_event"}
     ],
     "tables": [
         {
