@@ -79,10 +79,18 @@ namespace eosio {
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
 
+         struct balance_event {
+            name     account;
+            asset    balance;
+         };
+
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
+
+         void send_currency_event(const currency_stats& stat);
+         void send_balance_event(name acc, const account& accinfo);
    };
 } /// namespace eosio
