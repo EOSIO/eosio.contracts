@@ -637,11 +637,14 @@ namespace eosiosystem {
       auto rexitr = _rexpool.begin();
       const int64_t S0 = rexitr->total_lendable.amount;
       const int64_t R0 = rexitr->total_rex.amount;
+      const int64_t p  = (uint128_t(rex.amount) * S0) / R0;
       const int64_t R1 = R0 - rex.amount;
-      const int64_t S1 = (uint128_t(R1) * S0) / R0;
-      asset proceeds( S0 - S1, core_symbol() );
+      const int64_t S1 = S0 - p;
+      asset proceeds( p, core_symbol() );
       asset stake_change( 0, core_symbol() );
       bool  success = false;
+
+      check( proceeds.amount > 0, "proceeds are negligible" );
 
       const int64_t unlent_lower_bound = ( uint128_t(2) * rexitr->total_lent.amount ) / 10;
       const int64_t available_unlent   = rexitr->total_unlent.amount - unlent_lower_bound; // available_unlent <= 0 is possible
