@@ -17,15 +17,15 @@ unlockTimeout = 999999999
 fastUnstakeSystem = './fast.refund/cyber.system/cyber.system.wasm'
 
 systemAccounts = [
-    'eosio.bpay',
+    'cyber.bpay',
     'cyber.msig',
-    'eosio.names',
-    'eosio.ram',
-    'eosio.ramfee',
-    'eosio.saving',
-    'eosio.stake',
+    'cyber.names',
+    'cyber.ram',
+    'cyber.ramfee',
+    'cyber.saving',
+    'cyber.stake',
     'cyber.token',
-    'eosio.vpay',
+    'cyber.vpay',
 ]
 
 def jsonArg(a):
@@ -333,7 +333,7 @@ commands = [
     ('w', 'wallet',         startWallet,                True,  False,   "Start wallet (start keosd)"),
     ('K', 'keys',           importKeys,                 True,  True,    "Create wallet and fill with keys"),
     ('b', 'boot',           stepStartBoot,              True,  False,   "Start boot node"),
-    ('s', 'sys',            createSystemAccounts,       True,  True,    "Create system accounts (eosio.*)"),
+    ('s', 'sys',            createSystemAccounts,       True,  True,    "Create system accounts (cyber.*)"),
     ('c', 'contracts',      stepInstallSystemContracts, True,  True,    "Install system contracts (token, msig)"),
     ('t', 'tokens',         stepCreateTokens,           True,  True,    "Create tokens"),
     ('S', 'sys-contract',   stepSetSystemContract,      True,  True,    "Set system contract"),
