@@ -275,7 +275,8 @@ namespace eosiosystem {
       for( const auto& pd : producer_deltas ) {
          auto pitr = _producers.find( pd.first.value );
          if( pitr != _producers.end() ) {
-            eosio_assert( !voting || pitr->active() || !pd.second.second /* not from new set */, "producer is not currently registered" );
+            eosio_assert( !voting || pitr->active() || !pd.second.second /* not from new set */,
+                          ( "producer " + pitr->owner.to_string() + " is not currently registered" ).data() );
             double init_total_votes = pitr->total_votes;
             _producers.modify( pitr, same_payer, [&]( auto& p ) {
                p.total_votes += pd.second.first;
