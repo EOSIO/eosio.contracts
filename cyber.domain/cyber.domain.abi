@@ -13,6 +13,37 @@
                 {"type": "domain_name", "name": "name"}
             ]
         },{
+            "name": "passdomain",
+            "base": "",
+            "fields": [
+                {"type": "name",        "name": "from"},
+                {"type": "name",        "name": "to"},
+                {"type": "domain_name", "name": "name"}
+            ]
+        },{
+            "name": "linkdomain",
+            "base": "",
+            "fields": [
+                {"type": "name",        "name": "owner"},
+                {"type": "name",        "name": "to"},
+                {"type": "domain_name", "name": "name"}
+            ]
+        },{
+            "name": "unlinkdomain",
+            "base": "",
+            "fields": [
+                {"type": "name",        "name": "owner"},
+                {"type": "domain_name", "name": "name"}
+            ]
+        },{
+            "name": "newusername",
+            "base": "",
+            "fields": [
+                {"type": "name",     "name": "creator"},
+                {"type": "name",     "name": "owner"},
+                {"type": "username", "name": "name"}
+            ]
+        },{
             "name": "biddomain",
             "base": "",
             "fields": [
@@ -94,6 +125,18 @@
             "name": "declarenames",
             "type": "declarenames",
             "ricardian_contract": ""
+        },{
+            "name": "passdomain",
+            "type": "passdomain",
+        },{
+            "name": "linkdomain",
+            "type": "linkdomain",
+        },{
+            "name": "unlinkdomain",
+            "type": "unlinkdomain",
+        },{
+            "name": "newusername",
+            "type": "newusername",
         }
     ],
     "tables": [
