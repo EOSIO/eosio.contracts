@@ -107,7 +107,7 @@ void stake::update_proxied(agents& agents_table, grants& grants_table, agents::c
 
 symbol stake::structures::param::get_purpose_symbol(symbol_code token_code, symbol_code purpose_code)const {
     auto purpose_itr = purpose_ids.find(purpose_code);
-    eosio_assert(purpose_itr != purpose_ids.end(), ("unknown purpose" + purpose_code.to_string()).c_str());
+    eosio_assert(purpose_itr != purpose_ids.end(), ("unknown purpose: " + purpose_code.to_string()).c_str());
     return symbol(token_code, purpose_itr->second);
 }
 
@@ -534,7 +534,9 @@ void stake::change_balance(name account, asset quantity, symbol_code purpose_cod
         INLINE_ACTION_SENDER(eosio::token, retire)(config::token_name, {issuer, config::amerce_name}, {quantity, ""});
     }
     else {
-        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {issuer, config::reward_name}, {_self, quantity, config::reward_memo});
+        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {issuer, config::reward_name}, {issuer, quantity, ""});
+        INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {issuer, config::reward_name},
+            {issuer, _self, quantity, config::reward_memo});    
     }
 }
 

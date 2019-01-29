@@ -8,7 +8,7 @@
 namespace cfg = cyber::config;
 using namespace eosio::testing;
 using namespace eosio::chain;
-using namespace fc;
+using namespace fc; 
 static const auto token_code_str = "SYS";
 static const auto _token = symbol(3, token_code_str);
 static const auto cyber_stake_name = "cyber.stake"_n;
@@ -19,7 +19,7 @@ class cyber_stake_tester : public golos_tester {
 protected:
     cyber_token_api token;
     cyber_stake_api stake;
-    
+
     time_point_sec head_block_time() { return time_point_sec(control->head_block_time().time_since_epoch().to_seconds()); };
     
     account_name user_name(size_t n) {
@@ -29,7 +29,7 @@ protected:
             ret_str += std::string(1, 'a' + n % q);
             n /= q;
         }
-        return string_to_name(ret_str.c_str());
+        return string_to_name(ret_str.c_str()); 
     };
 
 public:
@@ -37,7 +37,7 @@ public:
         : golos_tester(cyber_stake_name)
         , token({this, cfg::token_name, cfg::system_token})
         , stake({this, _code})
-    {
+    { 
         create_accounts({_code, _cyber, _alice, _bob, _carol,
             cfg::token_name});
         produce_block();
@@ -66,6 +66,8 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, cyber_stake_tester) try {
     auto purpose = to_code(purpose_str);
     delegate_authority(_cyber, {_code}, cfg::token_name, N(retire), cfg::amerce_name);
     delegate_authority(_cyber, {_code}, cfg::token_name, N(issue), cfg::reward_name);
+    produce_block();
+    delegate_authority(_cyber, {_code}, cfg::token_name, N(transfer), cfg::reward_name);
     
     std::vector<uint8_t> max_proxies = {30, 10, 3, 1};
     int64_t frame_length = 30;
@@ -154,7 +156,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, cyber_stake_tester) try {
     BOOST_CHECK_EQUAL(success(), stake.reward(_cyber, _carol, amerced, purpose));
     supply += amerced;
     BOOST_CHECK_EQUAL(token.get_stats()["supply"], supply.to_string());
-
+    
     t1 = time_point_sec(t1.sec_since_epoch() + frame_length);
     blocks_num = ((t1.sec_since_epoch() - head_block_time().sec_since_epoch()) * 1000) / cfg::block_interval_ms - 1;
     BOOST_TEST_MESSAGE("--- produce " << blocks_num << " blocks");
@@ -289,7 +291,7 @@ BOOST_FIXTURE_TEST_CASE(recursive_update_test, cyber_stake_tester) try {
     BOOST_CHECK_EQUAL(stake.get_agent(user, token._symbol, purpose),
         stake.make_agent(user, max_proxies.size(), t, 0,
         staked.get_amount() * (1.0 - amerced), staked.get_amount(), staked.get_amount()));
-    
+
     produce_block();
 } FC_LOG_AND_RETHROW()
 
