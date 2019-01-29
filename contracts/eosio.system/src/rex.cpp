@@ -970,6 +970,11 @@ namespace eosiosystem {
       return current_rex_stake - init_rex_stake;
    }
 
+   /**
+    * @brief Updates voter REX vote stake to the current value of REX tokens held
+    *
+    * @param voter - account name of voter
+    */
    void system_contract::update_rex_stake( const name& voter )
    {
       int64_t delta_stake = 0;

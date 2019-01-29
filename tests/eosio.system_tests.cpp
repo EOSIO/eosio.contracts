@@ -3402,7 +3402,7 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( asset::from_string("25000.0000 REX"), get_buyrex_result( alice, core_sym::from_string("2.5000") ) );
    produce_blocks(2);
    produce_block(fc::days(5));
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("2.5000"),      get_sellrex_result( alice, asset::from_string("25000.0000 REX") ) );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("2.5000"),     get_sellrex_result( alice, asset::from_string("25000.0000 REX") ) );
 
    BOOST_REQUIRE_EQUAL( success(),                           buyrex( alice, core_sym::from_string("13.0000") ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("13.0000"),    get_rex_vote_stake( alice ) );
