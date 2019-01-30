@@ -646,7 +646,7 @@ namespace eosiosystem {
 
       check( proceeds.amount > 0, "proceeds are negligible" );
 
-      const int64_t unlent_lower_bound = ( uint128_t(2) * rexitr->total_lent.amount ) / 10;
+      const int64_t unlent_lower_bound = rexitr->total_lent.amount;
       const int64_t available_unlent   = rexitr->total_unlent.amount - unlent_lower_bound; // available_unlent <= 0 is possible
       if ( proceeds.amount <= available_unlent ) {
          const int64_t init_vote_stake_amount = bitr->vote_stake.amount;
@@ -884,7 +884,7 @@ namespace eosiosystem {
        * If precision of CORE_SYMBOL is 4, that corresponds to a maximum supply of 40 billion tokens.
        */
       const int64_t rex_ratio       = 10000;
-      const int64_t init_total_rent = 100'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() is made available
+      const int64_t init_total_rent = 20'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() is made available
       asset rex_received( 0, rex_symbol );
       auto itr = _rexpool.begin();
       if ( !rex_system_initialized() ) {
