@@ -148,11 +148,10 @@ void token::open( name owner, const symbol& symbol, name ram_payer )
 
    accounts acnts( _self, owner.value );
    auto it = acnts.find( sym_code_raw );
-   if( it == acnts.end() ) {
-      acnts.emplace( ram_payer, [&]( auto& a ){
-        a.balance = asset{0, symbol};
-      });
-   }
+   check( it == acnts.end(), "Balance row already exists" );
+   acnts.emplace( ram_payer, [&]( auto& a ){
+     a.balance = asset{0, symbol};
+   });
 }
 
 void token::close( name owner, const symbol& symbol )

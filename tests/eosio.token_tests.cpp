@@ -383,6 +383,9 @@ BOOST_FIXTURE_TEST_CASE( open_tests, eosio_token_tester ) try {
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "symbol precision mismatch" ),
                         open( N(carol), "1,CERO", N(alice) ) );
 
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "Balance row already exists" ),
+                        open( N(bob), "0,CERO", N(alice) ) );
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( close_tests, eosio_token_tester ) try {
