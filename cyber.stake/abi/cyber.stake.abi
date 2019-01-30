@@ -23,7 +23,9 @@
                 { "type": "name",           "name": "grantor_name"  },
                 { "type": "name",           "name": "agent_name"  },
                 { "type": "int16",          "name": "pct"  },
-                { "type": "int64",          "name": "share"  }
+                { "type": "int64",          "name": "share"  },
+                { "type": "int16",          "name": "break_fee"  },
+                { "type": "int64",          "name": "break_min_own_staked"  }
             ]
         },{
             "name": "code_uint8",
@@ -54,6 +56,15 @@
                 { "type": "time_point_sec", "name": "last_step"  }
             ]
         },{
+            "name": "stat_struct",
+            "base": "",
+            "fields": [
+                { "type": "uint64",         "name": "id" },
+                { "type": "symbol_code",    "name": "token_code"  },
+                { "type": "symbol_code",    "name": "purpose_code"  },
+                { "type": "int64",          "name": "total_staked"  }
+            ]
+        },{
             "name": "create_args",
             "base": "",
             "fields": [
@@ -74,7 +85,7 @@
                 { "type": "symbol_code",    "name": "purpose_code"  }
             ]
         },{
-            "name": "setpct_args",
+            "name": "recall_args",
             "base": "",
             "fields": [
                 { "type": "name",           "name": "grantor_name" },
@@ -82,6 +93,13 @@
                 { "type": "symbol_code",    "name": "token_code"  },
                 { "type": "symbol_code",    "name": "purpose_code"  },
                 { "type": "int16",          "name": "pct"  }
+            ]
+        },{
+            "name": "setterms_args",
+            "base": "recall_args",
+            "fields": [
+                { "type": "int16",          "name": "break_fee"  },
+                { "type": "int64",          "name": "break_min_own_staked"  }
             ]
         },{
             "name": "withdraw_args",
@@ -101,12 +119,21 @@
             ]
         },{
             "name": "setproxylvl_args",
-            "base": "",
+            "base": "claim_args",
             "fields": [
-                { "type": "name",           "name": "account" },
-                { "type": "uint8",          "name": "level"  },
-                { "type": "symbol_code",    "name": "token_code"  },
-                { "type": "symbol_code",    "name": "purpose_code"  }
+                { "type": "uint8",          "name": "level"  }
+            ]
+        },{
+            "name": "setproxyfee_args",
+            "base": "claim_args",
+            "fields": [
+                { "type": "int16",          "name": "fee"  }
+            ]
+        },{
+            "name": "setminstaked_args",
+            "base": "claim_args",
+            "fields": [
+                { "type": "int64",          "name": "min_own_staked"  }
             ]
         },{
             "name": "updatefunds_args",
@@ -129,12 +156,12 @@
             "type": "delegate_args",
             "ricardian_contract": ""
         },{
-            "name": "setagentpct",
-            "type": "setpct_args",
+            "name": "setgrntterms",
+            "type": "setterms_args",
             "ricardian_contract": ""
         },{
             "name": "recall",
-            "type": "setpct_args",
+            "type": "recall_args",
             "ricardian_contract": ""
         },{
             "name": "withdraw",
@@ -151,6 +178,14 @@
         },{
             "name": "setproxylvl",
             "type": "setproxylvl_args",
+            "ricardian_contract": ""
+        },{
+            "name": "setproxyfee",
+            "type": "setproxyfee_args",
+            "ricardian_contract": ""
+        },{
+            "name": "setminstaked",
+            "type": "setminstaked_args",
             "ricardian_contract": ""
         },{
             "name": "updatefunds",
@@ -192,6 +227,12 @@
             "indexes": [
                 { "name": "primary", "unique": "true", "orders": [ {"field": "id", "order": "asc"} ] },
                 { "name": "payoutacc", "unique": "false", "orders": [ {"field": "account", "order": "asc"} ] }
+            ]
+        },{
+            "name": "stat",
+            "type": "stat_struct",
+            "indexes": [
+                { "name": "primary", "unique": "true", "orders": [ {"field": "id", "order": "asc"} ] }
             ]
         }
     ],
