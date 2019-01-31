@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(eosio_contracts VERSION 1.5.1)
 
 set(EOSIO_CDT_VERSION_MIN "1.4")
-set(EOSIO_CDT_VERSION_SOFT_MAX "1.4")
+set(EOSIO_CDT_VERSION_SOFT_MAX "1.5")
 #set(EOSIO_CDT_VERSION_HARD_MAX "")
 
 find_package(eosio.cdt)
