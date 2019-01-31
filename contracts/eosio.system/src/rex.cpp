@@ -4,7 +4,6 @@
 
 #include <eosio.system/eosio.system.hpp>
 
-#include <eosiolib/print.hpp>
 
 namespace eosiosystem {
 
