@@ -4,11 +4,10 @@
 
 #include <eosio.system/eosio.system.hpp>
 
-
 namespace eosiosystem {
 
    /**
-    * @brief Deposits SYS tokens to user REX fund
+    * @brief Deposits core tokens to user REX fund
     *
     * @param owner - REX fund owner
     * @param amount - amount of tokens to be deposited
@@ -26,7 +25,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Withdraws SYS tokens from user REX fund
+    * @brief Withdraws core tokens from user REX fund
     *
     * @param owner - REX fund owner
     * @param amount - amount of tokens to be withdrawn
@@ -44,10 +43,10 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Buys REX in exchange for SYS tokens taken out of user REX fund
+    * @brief Buys REX in exchange for core tokens taken out of user REX fund
     *
     * @param from - owner account name
-    * @param amount - amount of SYS tokens to be used for purchase
+    * @param amount - amount of core tokens to be used for purchase
     */
    void system_contract::buyrex( const name& from, const asset& amount )
    {
@@ -66,7 +65,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Buys REX using staked SYS tokens
+    * @brief Buys REX using staked core tokens
     *
     * @param owner - owner of staked tokens account name
     * @param receiver - account name that tokens have previously been staked to
@@ -110,7 +109,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Sells REX in exchange for SYS tokens
+    * @brief Sells REX in exchange for core tokens
     *
     * @param from - owner of REX tokens
     * @param rex - amount of REX tokens to be sold
@@ -173,8 +172,8 @@ namespace eosiosystem {
    }
 
    /**
-    * Rents as many SYS tokens as determined by market price and stakes them for CPU bandwidth
-    * for the benefit of receiver account. After 30 days the rented SYS delegation of CPU will
+    * Rents as many core tokens as determined by market price and stakes them for CPU bandwidth
+    * for the benefit of receiver account. After 30 days the rented core delegation of CPU will
     * expire or be renewed at new market price depending on available loan fund.
     *
     * @brief Rents CPU resources for 30 days in exchange for market-determined price
@@ -194,8 +193,8 @@ namespace eosiosystem {
    }
 
    /**
-    * Rents as many SYS tokens as determined by market price and stakes them for NET bandwidth
-    * for the benefit of receiver account. After 30 days the rented SYS delegation of NET will
+    * Rents as many core tokens as determined by market price and stakes them for NET bandwidth
+    * for the benefit of receiver account. After 30 days the rented core delegation of NET will
     * expire or be renewed at new market price depending on available loan fund.
     *
     * @brief Rents NET resources for 30 days in exchange for market-determined price
