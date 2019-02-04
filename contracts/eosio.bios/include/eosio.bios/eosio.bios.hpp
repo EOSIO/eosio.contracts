@@ -1,9 +1,9 @@
 #pragma once
-#include <eosiolib/action.hpp>
-#include <eosiolib/crypto.h>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/privileged.hpp>
-#include <eosiolib/producer_schedule.hpp>
+#include <eosio/action.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/privileged.hpp>
+#include <eosio/producer_schedule.hpp>
 
 namespace eosio {
    using eosio::permission_level;
@@ -48,9 +48,9 @@ namespace eosio {
       uint32_t                                  timestamp;
       name                                      producer;
       uint16_t                                  confirmed = 0;
-      capi_checksum256                          previous;
-      capi_checksum256                          transaction_mroot;
-      capi_checksum256                          action_mroot;
+      checksum256                          previous;
+      checksum256                          transaction_mroot;
+      checksum256                          action_mroot;
       uint32_t                                  schedule_version = 0;
       std::optional<eosio::producer_schedule>   new_producers;
 
@@ -91,7 +91,7 @@ namespace eosio {
                           ignore<name>  type ) {}
 
          [[eosio::action]]
-         void canceldelay( ignore<permission_level> canceling_auth, ignore<capi_checksum256> trx_id ) {}
+         void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
 
          [[eosio::action]]
          void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {}
@@ -102,13 +102,13 @@ namespace eosio {
          [[eosio::action]]
          void setpriv( name account, uint8_t is_priv ) {
             require_auth( _self );
-            set_privileged( account.value, is_priv );
+            set_privileged( account, is_priv );
          }
 
          [[eosio::action]]
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight ) {
             require_auth( _self );
-            set_resource_limits( account.value, ram_bytes, net_weight, cpu_weight );
+            set_resource_limits( account, ram_bytes, net_weight, cpu_weight );
          }
 
          [[eosio::action]]
@@ -147,18 +147,18 @@ namespace eosio {
             if( itr == table.end() ) {
                table.emplace( account, [&]( auto& row ) {
                   row.owner = account;
-                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+                  row.hash = sha256( const_cast<char*>(abi.data()), abi.size() );
                });
             } else {
                table.modify( itr, same_payer, [&]( auto& row ) {
-                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+                  row.hash = sha256( const_cast<char*>(abi.data()), abi.size() );
                });
             }
          }
 
          struct [[eosio::table]] abi_hash {
             name              owner;
-            capi_checksum256  hash;
+            checksum256  hash;
             uint64_t primary_key()const { return owner.value; }
 
             EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )

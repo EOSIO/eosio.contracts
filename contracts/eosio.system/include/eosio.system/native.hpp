@@ -4,13 +4,13 @@
  */
 #pragma once
 
-#include <eosiolib/action.hpp>
-#include <eosiolib/public_key.hpp>
-#include <eosiolib/print.hpp>
-#include <eosiolib/privileged.h>
-#include <eosiolib/producer_schedule.hpp>
-#include <eosiolib/contract.hpp>
-#include <eosiolib/ignore.hpp>
+#include <eosio/action.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/print.hpp>
+#include <eosio/privileged.hpp>
+#include <eosio/producer_schedule.hpp>
+#include <eosio/contract.hpp>
+#include <eosio/ignore.hpp>
 
 namespace eosiosystem {
    using eosio::name;
@@ -56,9 +56,9 @@ namespace eosiosystem {
       uint32_t                                  timestamp;
       name                                      producer;
       uint16_t                                  confirmed = 0;
-      capi_checksum256                          previous;
-      capi_checksum256                          transaction_mroot;
-      capi_checksum256                          action_mroot;
+      eosio::checksum256                          previous;
+      eosio::checksum256                          transaction_mroot;
+      eosio::checksum256                          action_mroot;
       uint32_t                                  schedule_version = 0;
       std::optional<eosio::producer_schedule>   new_producers;
 
@@ -70,7 +70,7 @@ namespace eosiosystem {
 
    struct [[eosio::table("abihash"), eosio::contract("eosio.system")]] abi_hash {
       name              owner;
-      capi_checksum256  hash;
+      eosio::checksum256  hash;
       uint64_t primary_key()const { return owner.value; }
 
       EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
@@ -125,7 +125,7 @@ namespace eosiosystem {
                           ignore<name>  type ) {}
 
          [[eosio::action]]
-         void canceldelay( ignore<permission_level> canceling_auth, ignore<capi_checksum256> trx_id ) {}
+         void canceldelay( ignore<permission_level> canceling_auth, ignore<eosio::checksum256> trx_id ) {}
 
          [[eosio::action]]
          void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {}

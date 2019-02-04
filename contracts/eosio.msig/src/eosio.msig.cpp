@@ -1,12 +1,12 @@
 #include <eosio.msig/eosio.msig.hpp>
-#include <eosiolib/action.hpp>
-#include <eosiolib/permission.hpp>
-#include <eosiolib/crypto.hpp>
+#include <eosio/action.hpp>
+#include <eosio/permission.hpp>
+#include <eosio/crypto.hpp>
 
 namespace eosio {
 
 time_point current_time_point() {
-   const static time_point ct{ microseconds{ static_cast<int64_t>( current_time() ) } };
+   const static time_point ct{ current_time() };
    return ct;
 }
 
@@ -205,5 +205,3 @@ void multisig::invalidate( name account ) {
 }
 
 } /// namespace eosio
-
-EOSIO_DISPATCH( eosio::multisig, (propose)(approve)(unapprove)(cancel)(exec)(invalidate) )

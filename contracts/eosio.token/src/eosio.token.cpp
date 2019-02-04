@@ -166,5 +166,3 @@ void token::close( name owner, const symbol& symbol )
 }
 
 } /// namespace eosio
-
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire) )
