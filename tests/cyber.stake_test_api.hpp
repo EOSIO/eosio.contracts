@@ -1,5 +1,6 @@
 #pragma once
 #include "test_api_helper.hpp"
+#include "../common/config.hpp"
 
 namespace eosio { namespace testing {
 
@@ -43,13 +44,16 @@ public:
         );
     }
     
-    action_result setagentpct(account_name grantor_name, account_name agent_name, symbol_code token_code, symbol_code purpose_code, int16_t pct) {
-        return push(N(setagentpct), grantor_name, args()
+    action_result setgrntterms(account_name grantor_name, account_name agent_name, symbol_code token_code, symbol_code purpose_code, 
+        int16_t pct, int16_t break_fee = cyber::config::_100percent, int64_t break_min_own_staked = 0) {
+        return push(N(setgrntterms), grantor_name, args()
             ("grantor_name", grantor_name)
             ("agent_name", agent_name)
             ("token_code", token_code)
             ("purpose_code", purpose_code)
             ("pct", pct)
+            ("break_fee", break_fee)
+            ("break_min_own_staked", break_min_own_staked)        
         );
     }
     
@@ -87,12 +91,20 @@ public:
         );
     }
     
-    action_result setproxylvl(account_name account, uint8_t level, symbol_code token_code, symbol_code purpose_code) {
+    action_result setproxylvl(account_name account, symbol_code token_code, symbol_code purpose_code, uint8_t level) {
         return push(N(setproxylvl), account, args()
             ("account", account)
-            ("level", level)
             ("token_code", token_code)
             ("purpose_code", purpose_code)
+            ("level", level)
+        );
+    }
+    action_result setproxyfee(account_name account, symbol_code token_code, symbol_code purpose_code, int16_t fee) {
+        return push(N(setproxyfee), account, args()
+            ("account", account)
+            ("token_code", token_code)
+            ("purpose_code", purpose_code)
+            ("fee", fee)
         );
     }
     
@@ -147,6 +159,19 @@ public:
             ("fee", fee)
             ("min_own_staked", min_own_staked);
     }
+    
+    variant get_stats(symbol token_symbol, symbol_code purpose_code) {
+        return get_struct(_code.value, N(stat), get_stake_symbol(token_symbol, purpose_code).value(), "stat_struct");
+    }
+    
+    variant make_stats(symbol token_symbol, symbol_code purpose_code, int64_t total_staked) {
+        return mvo()
+            ("id", get_stake_symbol(token_symbol, purpose_code).value())
+            ("token_code", token_symbol.to_symbol_code())
+            ("purpose_code", purpose_code)
+            ("total_staked", total_staked);
+    }
+    
 };
 
 
