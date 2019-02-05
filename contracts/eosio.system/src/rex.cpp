@@ -345,13 +345,13 @@ namespace eosiosystem {
       require_auth( owner );
 
       runrex(2);
+
       auto bitr = _rexbalance.require_find( owner.value, "account has no REX balance" );
       check( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol, "asset must be a positive amount of (REX, 4)" );
       asset rex_in_sell_order = update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       check( rex + rex_in_sell_order <= bitr->rex_balance, "insufficient REX balance" );
       process_rex_maturities( bitr );
-      int64_t rex_in_savings = read_rex_savings( bitr );
-      int64_t moved_rex      = 0;
+      const int64_t rex_in_savings = read_rex_savings( bitr );
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          int64_t moved_rex = 0;
          while ( moved_rex < rex.amount ) {
@@ -366,11 +366,11 @@ namespace eosiosystem {
                int64_t drex = rex.amount - moved_rex;
                rb.matured_rex -= drex;
                moved_rex      += drex;
-               check( rex_in_sell_order.amount <= rb.matured_rex, " " );
+               check( rex_in_sell_order.amount <= rb.matured_rex, "logic error" );
             }
          }
       });
-      put_rex_savings( bitr, rex_in_savings + moved_rex );
+      put_rex_savings( bitr, rex_in_savings + rex.amount );
    }
 
    /**
@@ -381,13 +381,11 @@ namespace eosiosystem {
       require_auth( owner );
 
       runrex(2);
+
       auto bitr = _rexbalance.require_find( owner.value, "account has no REX balance" );
       check( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol, "asset must be a positive amount of (REX, 4)" );
-      const static time_point_sec end_of_days{ std::numeric_limits<uint32_t>::max() };
-      const auto& maturities = bitr->rex_maturities;
-      check( !maturities.empty() && maturities.back().first == end_of_days && rex.amount < maturities.back().second,
-             "insufficient REX in savings" );
       const int64_t rex_in_savings = read_rex_savings( bitr );
+      check( rex.amount <= rex_in_savings, "insufficient REX in savings" );
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          rb.rex_maturities.pop_back();
          const time_point_sec maturity = get_rex_maturity();
@@ -398,6 +396,7 @@ namespace eosiosystem {
          }
       });
       put_rex_savings( bitr, rex_in_savings - rex.amount );
+      update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
 
    /**
@@ -1022,8 +1021,8 @@ namespace eosiosystem {
 
       process_rex_maturities( bitr );
       const int64_t rex_in_savings  = read_rex_savings( bitr );
-      const time_point_sec maturity = get_rex_maturity();
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+         const time_point_sec maturity = get_rex_maturity();
          if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == maturity ) {
             rb.rex_maturities.back().second += rex_received.amount;
          } else {
