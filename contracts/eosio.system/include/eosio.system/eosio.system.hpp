@@ -468,6 +468,18 @@ namespace eosiosystem {
          void consolidate( const name& owner );
 
          /**
+          *
+          */
+         [[eosio::action]]
+         void mvtosavings( const name& owner, const asset& rex );
+         
+         /**
+          *
+          */
+         [[eosio::action]]
+         void mvfrsavings( const name& owner, const asset& rex );
+
+         /**
           * Deletes owner records from REX tables and frees used RAM.
           * Owner must not have an outstanding REX balance.
           */
@@ -604,6 +616,8 @@ namespace eosiosystem {
          void process_rex_maturities( const rex_balance_table::const_iterator& bitr );
          void consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
                                        const asset& rex_in_sell_order );
+         int64_t read_rex_savings( const rex_balance_table::const_iterator& bitr );
+         void put_rex_savings( const rex_balance_table::const_iterator& bitr, int64_t rex );
          void update_rex_stake( const name& voter );
 
          // defined in delegate_bandwidth.cpp
