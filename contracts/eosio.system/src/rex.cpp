@@ -338,7 +338,10 @@ namespace eosiosystem {
    }
 
    /**
+    * @brief Moves a specified amount of REX to savings bucket 
     *
+    * @param owner - account name of REX owner
+    * @param rex - amount of REX to be moved
     */
    void system_contract::mvtosavings( const name& owner, const asset& rex )
    {
@@ -348,14 +351,15 @@ namespace eosiosystem {
 
       auto bitr = _rexbalance.require_find( owner.value, "account has no REX balance" );
       check( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol, "asset must be a positive amount of (REX, 4)" );
-      asset rex_in_sell_order = update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
-      const int64_t rex_in_savings = read_rex_savings( bitr );
-      check( rex.amount + rex_in_sell_order.amount + rex_in_savings <= bitr->rex_balance.amount, "insufficient REX balance" );
+      const asset   rex_in_sell_order = update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
+      const int64_t rex_in_savings    = read_rex_savings( bitr );
+      check( rex.amount + rex_in_sell_order.amount + rex_in_savings <= bitr->rex_balance.amount,
+             "insufficient REX balance" );
       process_rex_maturities( bitr );
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          int64_t moved_rex = 0;
          while ( !rb.rex_maturities.empty() && moved_rex < rex.amount) {
-            int64_t drex = std::min( rex.amount - moved_rex, rb.rex_maturities.back().second );
+            const int64_t drex = std::min( rex.amount - moved_rex, rb.rex_maturities.back().second );
             rb.rex_maturities.back().second -= drex;
             moved_rex                       += drex;
             if ( rb.rex_maturities.back().second == 0 ) {
@@ -363,17 +367,21 @@ namespace eosiosystem {
             }
          }
          if ( moved_rex < rex.amount ) {
-            int64_t drex = rex.amount - moved_rex;
-            rb.matured_rex -= drex;
-            moved_rex      += drex;
-            check( rex_in_sell_order.amount <= rb.matured_rex, "logic error" );
+            const int64_t drex = rex.amount - moved_rex;
+            rb.matured_rex    -= drex;
+            moved_rex         += drex;
+            check( rex_in_sell_order.amount <= rb.matured_rex, "logic error in mvtosavings" );
          }
+         check( moved_rex == rex.amount, "programmer error in mvtosavings" );
       });
       put_rex_savings( bitr, rex_in_savings + rex.amount );
    }
 
    /**
+    * @brief Moves a specified amount of REX from savings bucket
     *
+    * @param owner - account name of REX owner
+    * @param rex - amount of REX to be moved
     */
    void system_contract::mvfrsavings( const name& owner, const asset& rex )
    {
@@ -1018,7 +1026,7 @@ namespace eosiosystem {
       }
 
       process_rex_maturities( bitr );
-      const int64_t rex_in_savings  = read_rex_savings( bitr );
+      const int64_t rex_in_savings = read_rex_savings( bitr );
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          const time_point_sec maturity = get_rex_maturity();
          if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == maturity ) {

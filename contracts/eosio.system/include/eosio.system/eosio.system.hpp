@@ -468,13 +468,17 @@ namespace eosiosystem {
          void consolidate( const name& owner );
 
          /**
-          *
+          * Moves a specified amount of REX into savings bucket. REX savings bucket
+          * never matures. In order for it to be sold, it has to be moved explicitly
+          * out of that bucket. Then the moved amount will have the regular maturity
+          * period of 4 days starting from the end of the day.
           */
          [[eosio::action]]
          void mvtosavings( const name& owner, const asset& rex );
          
          /**
-          *
+          * Moves a specified amount of REX out of savings bucket. The moved amount
+          * will have the regular REX maturity period of 4 days.  
           */
          [[eosio::action]]
          void mvfrsavings( const name& owner, const asset& rex );
