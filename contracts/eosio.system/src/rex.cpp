@@ -393,6 +393,7 @@ namespace eosiosystem {
       check( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol, "asset must be a positive amount of (REX, 4)" );
       const int64_t rex_in_savings = read_rex_savings( bitr );
       check( rex.amount <= rex_in_savings, "insufficient REX in savings" );
+      process_rex_maturities( bitr );
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          const time_point_sec maturity = get_rex_maturity();
          if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == maturity ) {
@@ -1040,12 +1041,20 @@ namespace eosiosystem {
    }
 
    /**
+    * @brief Reads amount of REX in savings bucket and removes the bucket from maturities
     *
+    * Reads and (temporarily) removes REX savings bucket from REX maturities in order to
+    * allow uniform processing of remaining buckets as savings is a special case. This 
+    * function is used in conjunction with put_rex_savings.
+    *
+    * @param bitr - iterator pointing to rex_balance object
+    *
+    * @return int64_t - amount of REX in savings bucket
     */
    int64_t system_contract::read_rex_savings( const rex_balance_table::const_iterator& bitr )
    {
       int64_t rex_in_savings = 0;
-      static const time_point_sec end_of_days{ std::numeric_limits<uint32_t>::max() };
+      static const time_point_sec end_of_days = time_point_sec::maximum();
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == end_of_days ) {
             rex_in_savings = rb.rex_maturities.back().second;
@@ -1056,12 +1065,15 @@ namespace eosiosystem {
    }
 
    /**
+    * @brief Adds a specified REX amount to savings bucket
     *
+    * @param bitr - iterator pointing to rex_balance object
+    * @param rex - amount of REX to be added
     */
    void system_contract::put_rex_savings( const rex_balance_table::const_iterator& bitr, int64_t rex )
    {
       if ( rex == 0 ) return;
-      static const time_point_sec end_of_days{ std::numeric_limits<uint32_t>::max() };
+      static const time_point_sec end_of_days = time_point_sec::maximum();
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == end_of_days ) {
             rb.rex_maturities.back().second += rex;
