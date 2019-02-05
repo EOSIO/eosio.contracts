@@ -500,6 +500,14 @@ public:
       return push_action( name(owner), N(consolidate), mvo()("owner", owner) );
    }
 
+   action_result mvtosavings( const account_name& owner, const asset& rex ) {
+      return push_action( name(owner), N(mvtosavings), mvo()("owner", owner)("rex", rex) );
+   }
+
+   action_result mvfrsavings( const account_name& owner, const asset& rex ) {
+      return push_action( name(owner), N(mvfrsavings), mvo()("owner", owner)("rex", rex) );
+   }
+
    action_result closerex( const account_name& owner ) {
       return push_action( name(owner), N(closerex), mvo()("owner", owner) );
    }

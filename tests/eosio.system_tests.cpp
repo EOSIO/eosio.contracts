@@ -4192,6 +4192,176 @@ BOOST_FIXTURE_TEST_CASE( rex_maturity, eosio_system_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 
+BOOST_FIXTURE_TEST_CASE( rex_savings, eosio_system_tester ) try {
+
+   const asset init_balance = core_sym::from_string("100000.0000");
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount), N(carolaccount), N(emilyaccount), N(frankaccount) };
+   account_name alice = accounts[0], bob = accounts[1], carol = accounts[2], emily = accounts[3], frank = accounts[4];
+   setup_rex_accounts( accounts, init_balance );
+
+   const int64_t rex_ratio = 10000;
+   const symbol  rex_sym( SY(4, REX) );
+   
+   {
+      const asset payment1 = core_sym::from_string("14.8000");
+      const asset payment2 = core_sym::from_string("15.2000");
+      const asset payment  = payment1 + payment2;
+      const asset rex_bucket( rex_ratio * payment.get_amount(), rex_sym );
+      for ( uint8_t i = 0; i < 8; ++i ) {
+         BOOST_REQUIRE_EQUAL( success(), buyrex( alice, payment1 ) );
+         produce_block( fc::hours(12) );
+         BOOST_REQUIRE_EQUAL( success(), buyrex( alice, payment2 ) );
+         produce_block( fc::hours(14) );
+      }
+
+      auto rex_balance = get_rex_balance_obj( alice );
+      BOOST_REQUIRE_EQUAL( 8 * rex_bucket.get_amount(), rex_balance["rex_balance"].as<asset>().get_amount() );
+      BOOST_REQUIRE_EQUAL( 5,                           rex_balance["rex_maturities"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( 4 * rex_bucket.get_amount(), rex_balance["matured_rex"].as<int64_t>() );
+      
+      BOOST_REQUIRE_EQUAL( success(),                   mvtosavings( alice, asset( 8 * rex_bucket.get_amount(), rex_sym ) ) );
+      rex_balance = get_rex_balance_obj( alice );
+      BOOST_REQUIRE_EQUAL( 1,                           rex_balance["rex_maturities"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( 0,                           rex_balance["matured_rex"].as<int64_t>() );
+      produce_block( fc::days(100) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient available rex"),
+                           sellrex( alice, asset::from_string( "1.0000 REX" ) ) );
+      BOOST_REQUIRE_EQUAL( success(),                   mvfrsavings( alice, asset::from_string( "10.0000 REX" ) ) );
+      rex_balance = get_rex_balance_obj( alice );
+      BOOST_REQUIRE_EQUAL( 2,                           rex_balance["rex_maturities"].get_array().size() );
+      produce_block( fc::days(3) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient available rex"),
+                           sellrex( alice, asset::from_string( "1.0000 REX" ) ) );
+      produce_blocks( 2 );
+      produce_block( fc::days(2) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient available rex"),
+                           sellrex( alice, asset::from_string( "10.0001 REX" ) ) );
+      BOOST_REQUIRE_EQUAL( success(),                   sellrex( alice, asset::from_string( "10.0000 REX" ) ) );
+      rex_balance = get_rex_balance_obj( alice );
+      BOOST_REQUIRE_EQUAL( 1,                           rex_balance["rex_maturities"].get_array().size() );
+      produce_block( fc::days(100) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient available rex"),
+                           sellrex( alice, asset::from_string( "0.0001 REX" ) ) );
+      BOOST_REQUIRE_EQUAL( success(),                   mvfrsavings( alice, get_rex_balance( alice ) ) );
+      produce_block( fc::days(5) );
+      BOOST_REQUIRE_EQUAL( success(),                   sellrex( alice, get_rex_balance( alice ) ) );
+   }
+
+   {
+      const asset payment = core_sym::from_string("20.0000");
+      const asset rex_bucket( rex_ratio * payment.get_amount(), rex_sym );
+      for ( uint8_t i = 0; i < 5; ++i ) {
+         produce_block( fc::hours(24) );
+         BOOST_REQUIRE_EQUAL( success(), buyrex( bob, payment ) );
+      }
+
+      auto rex_balance = get_rex_balance_obj( bob );
+      BOOST_REQUIRE_EQUAL( 5 * rex_bucket.get_amount(), rex_balance["rex_balance"].as<asset>().get_amount() );
+      BOOST_REQUIRE_EQUAL( 5,                           rex_balance["rex_maturities"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( 0,                           rex_balance["matured_rex"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( success(),                   mvtosavings( bob, asset( rex_bucket.get_amount() / 2, rex_sym ) ) );
+      rex_balance = get_rex_balance_obj( bob );
+      BOOST_REQUIRE_EQUAL( 6,                           rex_balance["rex_maturities"].get_array().size() );
+
+      BOOST_REQUIRE_EQUAL( success(),                   mvtosavings( bob, asset( rex_bucket.get_amount() / 2, rex_sym ) ) );
+      rex_balance = get_rex_balance_obj( bob );
+      BOOST_REQUIRE_EQUAL( 5,                           rex_balance["rex_maturities"].get_array().size() );
+      produce_block( fc::days(1) );
+      BOOST_REQUIRE_EQUAL( success(),                   sellrex( bob, rex_bucket ) );
+      rex_balance = get_rex_balance_obj( bob );
+      BOOST_REQUIRE_EQUAL( 4,                           rex_balance["rex_maturities"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( 0,                           rex_balance["matured_rex"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 4 * rex_bucket.get_amount(), rex_balance["rex_balance"].as<asset>().get_amount() );
+      
+      BOOST_REQUIRE_EQUAL( success(),                   mvtosavings( bob, asset( 3 * rex_bucket.get_amount() / 2, rex_sym ) ) );
+      rex_balance = get_rex_balance_obj( bob );
+      BOOST_REQUIRE_EQUAL( 3,                           rex_balance["rex_maturities"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient available rex"),
+                           sellrex( bob, rex_bucket ) );
+
+      produce_block( fc::days(1) );
+      BOOST_REQUIRE_EQUAL( success(),                   sellrex( bob, rex_bucket ) );
+      rex_balance = get_rex_balance_obj( bob );
+      BOOST_REQUIRE_EQUAL( 2,                           rex_balance["rex_maturities"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( 0,                           rex_balance["matured_rex"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 3 * rex_bucket.get_amount(), rex_balance["rex_balance"].as<asset>().get_amount() );
+      
+      produce_block( fc::days(1) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient available rex"),
+                           sellrex( bob, rex_bucket ) );
+      BOOST_REQUIRE_EQUAL( success(),                   sellrex( bob, asset( rex_bucket.get_amount() / 2, rex_sym ) ) );
+      rex_balance = get_rex_balance_obj( bob );
+      BOOST_REQUIRE_EQUAL( 1,                           rex_balance["rex_maturities"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( 0,                           rex_balance["matured_rex"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 5 * rex_bucket.get_amount(), 2 * rex_balance["rex_balance"].as<asset>().get_amount() );
+      
+      produce_block( fc::days(20) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient available rex"),
+                           sellrex( bob, rex_bucket ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient REX in savings"),
+                           mvfrsavings( bob, asset( 3 * rex_bucket.get_amount(), rex_sym ) ) );
+      BOOST_REQUIRE_EQUAL( success(),                   mvfrsavings( bob, rex_bucket ) );
+      BOOST_REQUIRE_EQUAL( 2,                           get_rex_balance_obj( bob )["rex_maturities"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient REX balance"),
+                           mvtosavings( bob, asset( 3 * rex_bucket.get_amount() / 2, rex_sym ) ) );
+      produce_block( fc::days(1) );
+      BOOST_REQUIRE_EQUAL( success(),                   mvfrsavings( bob, rex_bucket ) );
+      BOOST_REQUIRE_EQUAL( 3,                           get_rex_balance_obj( bob )["rex_maturities"].get_array().size() );
+      produce_block( fc::days(4) );
+      BOOST_REQUIRE_EQUAL( success(),                   sellrex( bob, rex_bucket ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient available rex"),
+                           sellrex( bob, rex_bucket ) );
+      produce_block( fc::days(1) );
+      BOOST_REQUIRE_EQUAL( success(),                   sellrex( bob, rex_bucket ) );
+      rex_balance = get_rex_balance_obj( bob );
+      BOOST_REQUIRE_EQUAL( 1,                           rex_balance["rex_maturities"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( rex_bucket.get_amount() / 2, rex_balance["rex_balance"].as<asset>().get_amount() );
+      
+      BOOST_REQUIRE_EQUAL( success(),                   mvfrsavings( bob, asset( rex_bucket.get_amount() / 4, rex_sym ) ) );
+      produce_block( fc::days(2) );
+      BOOST_REQUIRE_EQUAL( success(),                   mvfrsavings( bob, asset( rex_bucket.get_amount() / 8, rex_sym ) ) );
+      BOOST_REQUIRE_EQUAL( 3,                           get_rex_balance_obj( bob )["rex_maturities"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( success(),                   consolidate( bob ) );
+      BOOST_REQUIRE_EQUAL( 2,                           get_rex_balance_obj( bob )["rex_maturities"].get_array().size() );
+      
+      produce_block( fc::days(5) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient available rex"),
+                           sellrex( bob, asset( rex_bucket.get_amount() / 2, rex_sym ) ) );
+      BOOST_REQUIRE_EQUAL( success(),                   sellrex( bob, asset( 3 * rex_bucket.get_amount() / 8, rex_sym ) ) );
+      rex_balance = get_rex_balance_obj( bob );
+      BOOST_REQUIRE_EQUAL( 1,                           rex_balance["rex_maturities"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( 0,                           rex_balance["matured_rex"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( rex_bucket.get_amount() / 8, rex_balance["rex_balance"].as<asset>().get_amount() );
+      BOOST_REQUIRE_EQUAL( success(),                   mvfrsavings( bob, get_rex_balance( bob ) ) );
+      produce_block( fc::days(5) );
+      BOOST_REQUIRE_EQUAL( success(),                   sellrex( bob, get_rex_balance( bob ) ) );
+   }
+
+   {
+      const asset payment = core_sym::from_string("20000.0000");
+      const int64_t rex_bucket_amount = rex_ratio * payment.get_amount();
+      const asset rex_bucket( rex_bucket_amount, rex_sym );
+      BOOST_REQUIRE_EQUAL( success(),  buyrex( alice, payment ) );
+      BOOST_REQUIRE_EQUAL( rex_bucket, get_rex_balance( alice ) );
+      BOOST_REQUIRE_EQUAL( rex_bucket, get_rex_pool()["total_rex"].as<asset>() );
+
+      produce_block( fc::days(5) );
+
+      BOOST_REQUIRE_EQUAL( success(),                       rentcpu( bob, bob, core_sym::from_string("2000.0000") ) );
+      BOOST_REQUIRE_EQUAL( success(),                       sellrex( alice, asset( 9 * rex_bucket_amount / 10, rex_sym ) ) );
+      BOOST_REQUIRE_EQUAL( rex_bucket,                      get_rex_balance( alice ) );
+      BOOST_REQUIRE_EQUAL( success(),                       mvtosavings( alice, asset( rex_bucket_amount / 10, rex_sym ) ) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("insufficient REX balance"),
+                           mvtosavings( alice, asset( rex_bucket_amount / 10, rex_sym ) ) );
+      BOOST_REQUIRE_EQUAL( success(),                       cancelrexorder( alice ) );
+      BOOST_REQUIRE_EQUAL( success(),                       mvtosavings( alice, asset( rex_bucket_amount / 10, rex_sym ) ) );
+      auto rb = get_rex_balance_obj( alice );
+      BOOST_REQUIRE_EQUAL( rb["matured_rex"].as<int64_t>(), 8 * rex_bucket_amount / 10 );
+   }
+
+} FC_LOG_AND_RETHROW()
+
+
 BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::tolerance(1e-10) ) try {
 
    const asset init_balance = core_sym::from_string("10000.0000");
