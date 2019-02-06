@@ -1026,8 +1026,8 @@ namespace eosiosystem {
          current_rex_stake.amount = bitr->vote_stake.amount;
       }
 
-      process_rex_maturities( bitr );
       const int64_t rex_in_savings = read_rex_savings( bitr );
+      process_rex_maturities( bitr );
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          const time_point_sec maturity = get_rex_maturity();
          if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == maturity ) {
