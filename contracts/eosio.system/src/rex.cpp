@@ -902,7 +902,7 @@ namespace eosiosystem {
     */
    void system_contract::process_rex_maturities( const rex_balance_table::const_iterator& bitr )
    {
-      time_point_sec now = current_time_point_sec();
+      const time_point_sec now = current_time_point_sec();
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          while ( !rb.rex_maturities.empty() && rb.rex_maturities.front().first <= now ) {
             rb.matured_rex += rb.rex_maturities.front().second;
@@ -1055,12 +1055,12 @@ namespace eosiosystem {
    {
       int64_t rex_in_savings = 0;
       static const time_point_sec end_of_days = time_point_sec::maximum();
-      _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
-         if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == end_of_days ) {
+      if ( !bitr->rex_maturities.empty() && bitr->rex_maturities.back().first == end_of_days ) {
+         _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
             rex_in_savings = rb.rex_maturities.back().second;
             rb.rex_maturities.pop_back();
-         }
-      });
+         });
+      }
       return rex_in_savings;
    }
 
