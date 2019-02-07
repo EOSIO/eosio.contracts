@@ -576,6 +576,49 @@ namespace eosiosystem {
          [[eosio::action]]
          void bidrefund( name bidder, name newname );
 
+         using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
+         using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
+         using setacctnet_action = eosio::action_wrapper<"setacctnet"_n, &system_contract::setacctnet>;
+         using setacctcpu_action = eosio::action_wrapper<"setacctcpu"_n, &system_contract::setacctcpu>;
+         using delegatebw_action = eosio::action_wrapper<"delegatebw"_n, &system_contract::delegatebw>;
+         using deposit_action = eosio::action_wrapper<"deposit"_n, &system_contract::deposit>;
+         using withdraw_action = eosio::action_wrapper<"withdraw"_n, &system_contract::withdraw>;
+         using buyrex_action = eosio::action_wrapper<"buyrex"_n, &system_contract::buyrex>;
+         using unstaketorex_action = eosio::action_wrapper<"unstaketorex"_n, &system_contract::unstaketorex>;
+         using sellrex_action = eosio::action_wrapper<"sellrex"_n, &system_contract::sellrex>;
+         using cnclrexorder_action = eosio::action_wrapper<"cnclrexorder"_n, &system_contract::cnclrexorder>;
+         using rentcpu_action = eosio::action_wrapper<"rentcpu"_n, &system_contract::rentcpu>;
+         using rentnet_action = eosio::action_wrapper<"rentnet"_n, &system_contract::rentnet>;
+         using fundcpuloan_action = eosio::action_wrapper<"fundcpuloan"_n, &system_contract::fundcpuloan>;
+         using fundnetloan_action = eosio::action_wrapper<"fundnetloan"_n, &system_contract::fundnetloan>;
+         using defcpuloan_action = eosio::action_wrapper<"defcpuloan"_n, &system_contract::defcpuloan>;
+         using defnetloan_action = eosio::action_wrapper<"defnetloan"_n, &system_contract::defnetloan>;
+         using updaterex_action = eosio::action_wrapper<"updaterex"_n, &system_contract::updaterex>;
+         using rexexec_action = eosio::action_wrapper<"rexexec"_n, &system_contract::rexexec>;
+         using mvtosavings_action = eosio::action_wrapper<"mvtosavings"_n, &system_contract::mvtosavings>;
+         using mvfrsavings_action = eosio::action_wrapper<"mvfrsavings"_n, &system_contract::mvfrsavings>;
+         using consolidate_action = eosio::action_wrapper<"consolidate"_n, &system_contract::consolidate>;
+         using closerex_action = eosio::action_wrapper<"closerex"_n, &system_contract::closerex>;
+         using undelegatebw_action = eosio::action_wrapper<"undelegatebw"_n, &system_contract::undelegatebw>;
+         using buyram_action = eosio::action_wrapper<"buyram"_n, &system_contract::buyram>;
+         using buyrambytes_action = eosio::action_wrapper<"buyrambytes"_n, &system_contract::buyrambytes>;
+         using sellram_action = eosio::action_wrapper<"sellram"_n, &system_contract::sellram>;
+         using refund_action = eosio::action_wrapper<"refund"_n, &system_contract::refund>;
+         using regproducer_action = eosio::action_wrapper<"regproducer"_n, &system_contract::regproducer>;
+         using unregprod_action = eosio::action_wrapper<"unregprod"_n, &system_contract::unregprod>;
+         using setram_action = eosio::action_wrapper<"setram"_n, &system_contract::setram>;
+         using setramrate_action = eosio::action_wrapper<"setramrate"_n, &system_contract::setramrate>;
+         using voteproducer_action = eosio::action_wrapper<"voteproducer"_n, &system_contract::voteproducer>;
+         using regproxy_action = eosio::action_wrapper<"regproxy"_n, &system_contract::regproxy>;
+         using claimrewards_action = eosio::action_wrapper<"claimrewards"_n, &system_contract::claimrewards>;
+         using rmvproducer_action = eosio::action_wrapper<"rmvproducer"_n, &system_contract::rmvproducer>;
+         using updtrevision_action = eosio::action_wrapper<"updtrevision"_n, &system_contract::updtrevision>;
+         using bidname_action = eosio::action_wrapper<"bidname"_n, &system_contract::bidname>;
+         using bidrefund_action = eosio::action_wrapper<"bidrefund"_n, &system_contract::bidrefund>;
+         using setpriv_action = eosio::action_wrapper<"setpriv"_n, &system_contract::setpriv>;
+         using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
+         using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
+
       private:
 
          // Implementation details:

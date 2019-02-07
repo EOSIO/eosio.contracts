@@ -24,6 +24,12 @@ namespace eosio {
          [[eosio::action]]
          void invalidate( name account );
 
+         using propose_action = eosio::action_wrapper<"propose"_n, &multisig::propose>;
+         using approve_action = eosio::action_wrapper<"approve"_n, &multisig::approve>;
+         using unapprove_action = eosio::action_wrapper<"unapprove"_n, &multisig::unapprove>;
+         using cancel_action = eosio::action_wrapper<"cancel"_n, &multisig::cancel>;
+         using exec_action = eosio::action_wrapper<"exec"_n, &multisig::exec>;
+         using invalidate_action = eosio::action_wrapper<"invalidate"_n, &multisig::invalidate>;
       private:
          struct [[eosio::table]] proposal {
             name                            proposal_name;
