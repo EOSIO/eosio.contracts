@@ -328,6 +328,7 @@ namespace eosiosystem {
          static constexpr eosio::name names_account{"eosio.names"_n};
          static constexpr eosio::name saving_account{"eosio.saving"_n};
          static constexpr eosio::name rex_account{"eosio.rex"_n};
+         static constexpr eosio::name null_account{"eosio.null"_n};
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
          static constexpr symbol ram_symbol     = symbol(symbol_code("RAM"), 0);
          static constexpr symbol rex_symbol     = symbol(symbol_code("REX"), 4);
@@ -467,6 +468,22 @@ namespace eosiosystem {
          void consolidate( const name& owner );
 
          /**
+          * Moves a specified amount of REX into savings bucket. REX savings bucket
+          * never matures. In order for it to be sold, it has to be moved explicitly
+          * out of that bucket. Then the moved amount will have the regular maturity
+          * period of 4 days starting from the end of the day.
+          */
+         [[eosio::action]]
+         void mvtosavings( const name& owner, const asset& rex );
+         
+         /**
+          * Moves a specified amount of REX out of savings bucket. The moved amount
+          * will have the regular REX maturity period of 4 days.  
+          */
+         [[eosio::action]]
+         void mvfrsavings( const name& owner, const asset& rex );
+
+         /**
           * Deletes owner records from REX tables and frees used RAM.
           * Owner must not have an outstanding REX balance.
           */
@@ -578,6 +595,8 @@ namespace eosiosystem {
          using defnetloan_action = eosio::action_wrapper<"defnetloan"_n, &system_contract::defnetloan>;
          using updaterex_action = eosio::action_wrapper<"updaterex"_n, &system_contract::updaterex>;
          using rexexec_action = eosio::action_wrapper<"rexexec"_n, &system_contract::rexexec>;
+         using mvtosavings_action = eosio::action_wrapper<"mvtosavings"_n, &system_contract::mvtosavings>;
+         using mvfrsavings_action = eosio::action_wrapper<"mvfrsavings"_n, &system_contract::mvfrsavings>;
          using consolidate_action = eosio::action_wrapper<"consolidate"_n, &system_contract::consolidate>;
          using closerex_action = eosio::action_wrapper<"closerex"_n, &system_contract::closerex>;
          using undelegatebw_action = eosio::action_wrapper<"undelegatebw"_n, &system_contract::undelegatebw>;
@@ -596,6 +615,7 @@ namespace eosiosystem {
          using updtrevision_action = eosio::action_wrapper<"updtrevision"_n, &system_contract::updtrevision>;
          using bidname_action = eosio::action_wrapper<"bidname"_n, &system_contract::bidname>;
          using bidrefund_action = eosio::action_wrapper<"bidrefund"_n, &system_contract::bidrefund>;
+         using setpriv_action = eosio::action_wrapper<"setpriv"_n, &system_contract::setpriv>;
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
 
@@ -643,6 +663,9 @@ namespace eosiosystem {
          void process_rex_maturities( const rex_balance_table::const_iterator& bitr );
          void consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
                                        const asset& rex_in_sell_order );
+         int64_t read_rex_savings( const rex_balance_table::const_iterator& bitr );
+         void put_rex_savings( const rex_balance_table::const_iterator& bitr, int64_t rex );
+         void update_rex_stake( const name& voter );
 
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,
@@ -658,6 +681,38 @@ namespace eosiosystem {
                                                double shares_rate, bool reset_to_zero = false );
          double update_total_votepay_share( time_point ct,
                                             double additional_shares_delta = 0.0, double shares_rate_delta = 0.0 );
+
+         template <auto system_contract::*...Ptrs>
+         class registration {
+            public:
+               template <auto system_contract::*P, auto system_contract::*...Ps>
+               struct for_each {
+                     template <typename... Args>
+                     static constexpr void call( system_contract* this_contract, Args&&... args )
+                     {
+                        std::invoke( P, this_contract, std::forward<Args>(args)... );
+                        for_each<Ps...>::call( this_contract, std::forward<Args>(args)... );
+                     }
+               };
+               template <auto system_contract::*P>
+               struct for_each<P> {
+                  template <typename... Args>
+                  static constexpr void call( system_contract* this_contract, Args&&... args )
+                  {
+                     std::invoke( P, this_contract, std::forward<Args>(args)... );
+                  }
+               };
+
+               template <typename... Args>
+               constexpr void operator() ( Args&&... args )
+               {
+                  for_each<Ptrs...>::call( this_contract, std::forward<Args>(args)... );
+               }
+
+               system_contract* this_contract;
+         };
+
+         registration<&system_contract::update_rex_stake> vote_stake_updater{ this };
    };
 
 } /// eosiosystem

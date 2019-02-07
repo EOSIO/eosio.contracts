@@ -6,6 +6,7 @@
 
 #include <eosio/testing/tester.hpp>
 #include <eosio/chain/abi_serializer.hpp>
+#include <eosio/chain/resource_limits.hpp>
 #include "contracts.hpp"
 #include "test_symbol.hpp"
 
@@ -312,6 +313,20 @@ public:
       return unstake( acnt, acnt, net, cpu );
    }
 
+   int64_t bancor_convert( int64_t S, int64_t R, int64_t T ) { return double(R) * T  / ( double(S) + T ); };
+
+   int64_t get_net_limit( account_name a ) {
+      int64_t ram_bytes = 0, net = 0, cpu = 0;
+      control->get_resource_limits_manager().get_account_limits( a, ram_bytes, net, cpu );
+      return net;
+   };
+
+   int64_t get_cpu_limit( account_name a ) {
+      int64_t ram_bytes = 0, net = 0, cpu = 0;
+      control->get_resource_limits_manager().get_account_limits( a, ram_bytes, net, cpu );
+      return cpu;
+   };
+
    action_result deposit( const account_name& owner, const asset& amount ) {
       return push_action( name(owner), N(deposit), mvo()
                           ("owner",  owner)
@@ -333,6 +348,22 @@ public:
       );
    }
 
+   asset get_buyrex_result( const account_name& from, const asset& amount ) {
+      auto trace = base_tester::push_action( N(eosio), N(buyrex), from, mvo()("from", from)("amount", amount) );
+      asset rex_received;
+      for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
+         for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
+            if ( trace->action_traces[i].inline_traces[j].act.name == N(buyresult) ) {
+               fc::raw::unpack( trace->action_traces[i].inline_traces[j].act.data.data(),
+                                trace->action_traces[i].inline_traces[j].act.data.size(),
+                                rex_received );
+               return rex_received;
+            }
+         }
+      }
+      return rex_received;
+   }   
+
    action_result unstaketorex( const account_name& owner, const account_name& receiver, const asset& from_net, const asset& from_cpu ) {
       return push_action( name(owner), N(unstaketorex), mvo()
                           ("owner",    owner)
@@ -342,11 +373,64 @@ public:
       );
    }
 
+   asset get_unstaketorex_result( const account_name& owner, const account_name& receiver, const asset& from_net, const asset& from_cpu ) {
+      auto trace = base_tester::push_action( N(eosio), N(unstaketorex), owner, mvo()
+                                             ("owner", owner)
+                                             ("receiver", receiver)
+                                             ("from_net", from_net)
+                                             ("from_cpu", from_cpu)
+      );
+      asset rex_received;
+      for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
+         for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
+            if ( trace->action_traces[i].inline_traces[j].act.name == N(buyresult) ) {
+               fc::raw::unpack( trace->action_traces[i].inline_traces[j].act.data.data(),
+                                trace->action_traces[i].inline_traces[j].act.data.size(),
+                                rex_received );
+               return rex_received;
+            }
+         }
+      }
+      return rex_received;
+   }
+
    action_result sellrex( const account_name& from, const asset& rex ) {
       return push_action( name(from), N(sellrex), mvo()
                           ("from", from)
                           ("rex",  rex)
       );
+   }
+
+   asset get_sellrex_result( const account_name& from, const asset& rex ) {
+      auto trace = base_tester::push_action( N(eosio), N(sellrex), from, mvo()("from", from)("rex", rex) );
+      asset proceeds;
+      for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
+         for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
+            if ( trace->action_traces[i].inline_traces[j].act.name == N(sellresult) ) {
+               fc::raw::unpack( trace->action_traces[i].inline_traces[j].act.data.data(),
+                                trace->action_traces[i].inline_traces[j].act.data.size(),
+                                proceeds );
+               return proceeds;
+            }
+         }
+      } 
+      return proceeds;
+   }
+   
+   auto get_rexorder_result( const transaction_trace_ptr& trace ) {
+      std::vector<std::pair<account_name, asset>> output;
+      for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
+         for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
+            if ( trace->action_traces[i].inline_traces[j].act.name == N(orderresult) ) {
+               fc::datastream<const char*> ds( trace->action_traces[i].inline_traces[j].act.data.data(),
+                                               trace->action_traces[i].inline_traces[j].act.data.size() );
+               account_name owner; fc::raw::unpack( ds, owner );
+               asset proceeds; fc::raw::unpack( ds, proceeds );
+               output.emplace_back( owner, proceeds );
+            }
+         }
+      }
+      return output;
    }
 
    action_result cancelrexorder( const account_name& owner ) {
@@ -414,6 +498,14 @@ public:
 
    action_result consolidate( const account_name& owner ) {
       return push_action( name(owner), N(consolidate), mvo()("owner", owner) );
+   }
+
+   action_result mvtosavings( const account_name& owner, const asset& rex ) {
+      return push_action( name(owner), N(mvtosavings), mvo()("owner", owner)("rex", rex) );
+   }
+
+   action_result mvfrsavings( const account_name& owner, const asset& rex ) {
+      return push_action( name(owner), N(mvfrsavings), mvo()("owner", owner)("rex", rex) );
    }
 
    action_result closerex( const account_name& owner ) {
@@ -501,6 +593,11 @@ public:
    fc::variant get_rex_order( const account_name& act ) {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexqueue), act );
       return abi_ser.binary_to_variant( "rex_order", data, abi_serializer_max_time );
+   }
+
+   fc::variant get_rex_order_obj( const account_name& act ) {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexqueue), act );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "rex_order", data, abi_serializer_max_time );
    }
 
    fc::variant get_rex_pool() const {
