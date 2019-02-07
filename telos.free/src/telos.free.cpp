@@ -13,6 +13,7 @@ freeaccounts::freeaccounts(name self, name code, datastream<const char*> ds) :
 contract(self, code, ds), 
 configuration(self, self.value),
 freeacctslogtable(self, self.value),
+whitelisttable(self, self.value),
 whitelistedtable(self, self.value),
 rammarkettable(system_account, system_account.value)
  {
@@ -155,6 +156,15 @@ void freeaccounts::removewlist( name account_name)
     whitelistedtable.erase(w);
 }
 
+void freeaccounts::erasewlist()
+{
+    name account = "sqrlfreeacct"_n;
+    auto w = whitelisttable.find(account.value);
+    eosio_assert(w != whitelisttable.end(), "Account does not exist in the old whitelist");
+
+    whitelisttable.erase(w);
+}
+
 void freeaccounts::configure(int16_t max_accounts_per_hour, int64_t stake_cpu_tlos_amount, int64_t stake_net_tlos_amount)
 {
     require_auth(_self);
@@ -197,4 +207,4 @@ freeaccounts::signup_public_key freeaccounts::getpublickey (string public_key, s
     return pubkey;
 }
 
-EOSIO_DISPATCH( freeaccounts, (configure)(create)(addwhitelist)(removewlist) )
+EOSIO_DISPATCH( freeaccounts, (configure)(create)(addwhitelist)(removewlist)(erasewlist) )
