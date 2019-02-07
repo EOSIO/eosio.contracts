@@ -7,7 +7,7 @@
 namespace eosiosystem {
 
    /**
-    * @brief Deposits SYS tokens to user REX fund
+    * @brief Deposits core tokens to user REX fund
     *
     * @param owner - REX fund owner
     * @param amount - amount of tokens to be deposited
@@ -23,8 +23,9 @@ namespace eosiosystem {
       transfer_to_fund( owner, amount );
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
+
    /**
-    * @brief Withdraws SYS tokens from user REX fund
+    * @brief Withdraws core tokens from user REX fund
     *
     * @param owner - REX fund owner
     * @param amount - amount of tokens to be withdrawn
@@ -42,10 +43,10 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Buys REX in exchange for SYS tokens taken out of user REX fund
+    * @brief Buys REX in exchange for core tokens taken out of user REX fund
     *
     * @param from - owner account name
-    * @param amount - amount of SYS tokens to be used for purchase
+    * @param amount - amount of core tokens to be used for purchase
     */
    void system_contract::buyrex( const name& from, const asset& amount )
    {
@@ -59,10 +60,12 @@ namespace eosiosystem {
       const asset delta_rex_stake = add_to_rex_balance( from, amount, rex_received );
       runrex(2);
       update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
+      // dummy action added so that amount of REX tokens purchased shows up in action trace 
+      dispatch_inline( null_account, "buyresult"_n, { }, std::make_tuple( rex_received ) );      
    }
 
    /**
-    * @brief Buys REX using staked SYS tokens
+    * @brief Buys REX using staked core tokens
     *
     * @param owner - owner of staked tokens account name
     * @param receiver - account name that tokens have previously been staked to
@@ -75,7 +78,7 @@ namespace eosiosystem {
 
       check( from_net.symbol == core_symbol() && from_cpu.symbol == core_symbol(), "asset must be core token" );
       check( (0 <= from_net.amount) && (0 <= from_cpu.amount) && (0 < from_net.amount || 0 < from_cpu.amount),
-                    "must unstake a positive amount to buy rex" );
+             "must unstake a positive amount to buy rex" );
       check_voting_requirement( owner );
 
       {
@@ -101,10 +104,12 @@ namespace eosiosystem {
       add_to_rex_balance( owner, payment, rex_received );
       runrex(2);
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ), true );
+      // dummy action added so that amount of REX tokens purchased shows up in action trace
+      dispatch_inline( null_account, "buyresult"_n, { }, std::make_tuple( rex_received ) );
    }
 
    /**
-    * @brief Sells REX in exchange for SYS tokens
+    * @brief Sells REX in exchange for core tokens
     *
     * @param from - owner of REX tokens
     * @param rex - amount of REX tokens to be sold
@@ -117,12 +122,12 @@ namespace eosiosystem {
 
       auto bitr = _rexbalance.require_find( from.value, "user must first buyrex" );
       check( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol,
-                    "asset must be a positive amount of (REX, 4)" );
+             "asset must be a positive amount of (REX, 4)" );
       process_rex_maturities( bitr );
       check( rex.amount <= bitr->matured_rex, "insufficient available rex" );
 
       auto current_order = fill_rex_order( bitr, rex );
-      update_rex_account( from, current_order.proceeds, current_order.stake_change );
+      asset pending_sell_order = update_rex_account( from, current_order.proceeds, current_order.stake_change );
       if ( !current_order.success ) {
          /**
           * REX order couldn't be filled and is added to queue.
@@ -130,7 +135,7 @@ namespace eosiosystem {
           */
          auto oitr = _rexorders.find( from.value );
          if ( oitr == _rexorders.end() ) {
-            _rexorders.emplace( from, [&]( auto& order ) {
+            oitr = _rexorders.emplace( from, [&]( auto& order ) {
                order.owner         = from;
                order.rex_requested = rex;
                order.is_open       = true;
@@ -141,10 +146,14 @@ namespace eosiosystem {
          } else {
             _rexorders.modify( oitr, same_payer, [&]( auto& order ) {
                order.rex_requested.amount += rex.amount;
-               check( order.rex_requested.amount <= bitr->matured_rex,
-                             "insufficient funds for current and scheduled orders");
             });
          }
+         pending_sell_order.amount = oitr->rex_requested.amount;
+      }
+      check( pending_sell_order.amount <= bitr->matured_rex, "insufficient funds for current and scheduled orders" );
+      // dummy action added so that sell order proceeds show up in action trace
+      if ( current_order.success ) {
+         dispatch_inline( null_account, "sellresult"_n, { }, std::make_tuple( current_order.proceeds ) );
       }
    }
 
@@ -163,8 +172,8 @@ namespace eosiosystem {
    }
 
    /**
-    * Rents as many SYS tokens as determined by market price and stakes them for CPU bandwidth
-    * for the benefit of receiver account. After 30 days the rented SYS delegation of CPU will
+    * Rents as many core tokens as determined by market price and stakes them for CPU bandwidth
+    * for the benefit of receiver account. After 30 days the rented core delegation of CPU will
     * expire or be renewed at new market price depending on available loan fund.
     *
     * @brief Rents CPU resources for 30 days in exchange for market-determined price
@@ -182,10 +191,10 @@ namespace eosiosystem {
       int64_t rented_tokens = rent_rex( cpu_loans, from, receiver, loan_payment, loan_fund );
       update_resource_limits( from, receiver, 0, rented_tokens );
    }
-   
+
    /**
-    * Rents as many SYS tokens as determined by market price and stakes them for NET bandwidth
-    * for the benefit of receiver account. After 30 days the rented SYS delegation of NET will
+    * Rents as many core tokens as determined by market price and stakes them for NET bandwidth
+    * for the benefit of receiver account. After 30 days the rented core delegation of NET will
     * expire or be renewed at new market price depending on available loan fund.
     *
     * @brief Rents NET resources for 30 days in exchange for market-determined price
@@ -241,12 +250,12 @@ namespace eosiosystem {
     *
     * @param from - loan creator
     * @param loan_num - loan id
-    * @param amount - tokens to be withdrawn from loan fund 
+    * @param amount - tokens to be withdrawn from loan fund
     */
    void system_contract::defcpuloan( const name& from, uint64_t loan_num, const asset& amount )
    {
       require_auth( from );
-      
+
       rex_cpu_loan_table cpu_loans( _self, _self.value );
       defund_rex_loan( cpu_loans, from, loan_num, amount );
    }
@@ -269,7 +278,7 @@ namespace eosiosystem {
    /**
     * @brief Updates REX owner vote weight to current value of held REX tokens
     *
-    * @param owner - owner of REX tokens  
+    * @param owner - owner of REX tokens
     */
    void system_contract::updaterex( const name& owner )
    {
@@ -284,7 +293,7 @@ namespace eosiosystem {
       const int64_t total_rex      = rexp_itr->total_rex.amount;
       const int64_t total_lendable = rexp_itr->total_lendable.amount;
       const int64_t rex_balance    = itr->rex_balance.amount;
-      
+
       asset current_stake( 0, core_symbol() );
       if ( total_rex > 0 ) {
          current_stake.amount = ( uint128_t(rex_balance) * total_lendable ) / total_rex;
@@ -307,7 +316,7 @@ namespace eosiosystem {
    void system_contract::rexexec( const name& user, uint16_t max )
    {
       require_auth( user );
-      
+
       runrex( max );
    }
 
@@ -320,12 +329,81 @@ namespace eosiosystem {
    void system_contract::consolidate( const name& owner )
    {
       require_auth( owner );
-      
+
       runrex(2);
-      
+
       auto bitr = _rexbalance.require_find( owner.value, "account has no REX balance" );
       asset rex_in_sell_order = update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       consolidate_rex_balance( bitr, rex_in_sell_order );
+   }
+
+   /**
+    * @brief Moves a specified amount of REX to savings bucket 
+    *
+    * @param owner - account name of REX owner
+    * @param rex - amount of REX to be moved
+    */
+   void system_contract::mvtosavings( const name& owner, const asset& rex )
+   {
+      require_auth( owner );
+
+      runrex(2);
+
+      auto bitr = _rexbalance.require_find( owner.value, "account has no REX balance" );
+      check( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol, "asset must be a positive amount of (REX, 4)" );
+      const asset   rex_in_sell_order = update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
+      const int64_t rex_in_savings    = read_rex_savings( bitr );
+      check( rex.amount + rex_in_sell_order.amount + rex_in_savings <= bitr->rex_balance.amount,
+             "insufficient REX balance" );
+      process_rex_maturities( bitr );
+      _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+         int64_t moved_rex = 0;
+         while ( !rb.rex_maturities.empty() && moved_rex < rex.amount) {
+            const int64_t drex = std::min( rex.amount - moved_rex, rb.rex_maturities.back().second );
+            rb.rex_maturities.back().second -= drex;
+            moved_rex                       += drex;
+            if ( rb.rex_maturities.back().second == 0 ) {
+               rb.rex_maturities.pop_back();
+            }
+         }
+         if ( moved_rex < rex.amount ) {
+            const int64_t drex = rex.amount - moved_rex;
+            rb.matured_rex    -= drex;
+            moved_rex         += drex;
+            check( rex_in_sell_order.amount <= rb.matured_rex, "logic error in mvtosavings" );
+         }
+         check( moved_rex == rex.amount, "programmer error in mvtosavings" );
+      });
+      put_rex_savings( bitr, rex_in_savings + rex.amount );
+   }
+
+   /**
+    * @brief Moves a specified amount of REX from savings bucket
+    *
+    * @param owner - account name of REX owner
+    * @param rex - amount of REX to be moved
+    */
+   void system_contract::mvfrsavings( const name& owner, const asset& rex )
+   {
+      require_auth( owner );
+
+      runrex(2);
+
+      auto bitr = _rexbalance.require_find( owner.value, "account has no REX balance" );
+      check( rex.amount > 0 && rex.symbol == bitr->rex_balance.symbol, "asset must be a positive amount of (REX, 4)" );
+      const int64_t rex_in_savings = read_rex_savings( bitr );
+      check( rex.amount <= rex_in_savings, "insufficient REX in savings" );
+      process_rex_maturities( bitr );
+      _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+         const time_point_sec maturity = get_rex_maturity();
+         if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == maturity ) {
+            rb.rex_maturities.back().second += rex.amount;
+         } else {
+            rb.rex_maturities.emplace_back( maturity, rex.amount );
+         }
+      });
+      put_rex_savings( bitr, rex_in_savings - rex.amount );
+      update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
 
    /**
@@ -336,12 +414,12 @@ namespace eosiosystem {
    void system_contract::closerex( const name& owner )
    {
       require_auth( owner );
-      
+
       if ( rex_system_initialized() )
          runrex(2);
-      
+
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
-      
+
       /// check for any outstanding loans or rex fund
       {
          rex_cpu_loan_table cpu_loans( _self, _self.value );
@@ -354,7 +432,7 @@ namespace eosiosystem {
 
          auto fund_itr = _rexfunds.find( owner.value );
          bool no_outstanding_rex_fund = ( fund_itr != _rexfunds.end() ) && ( fund_itr->balance.amount == 0 );
-         
+
          if ( no_outstanding_cpu_loans && no_outstanding_net_loans && no_outstanding_rex_fund ) {
             _rexfunds.erase( fund_itr );
          }
@@ -410,33 +488,48 @@ namespace eosiosystem {
          return;
       }
 
+      user_resources_table totals_tbl( _self, receiver.value );
+      auto tot_itr = totals_tbl.find( receiver.value );
+      if ( tot_itr == totals_tbl.end() ) {
+         check( 0 <= delta_net && 0 <= delta_cpu, "logic error, should not occur");
+         tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
+            tot.owner      = receiver;
+            tot.net_weight = asset( delta_net, core_symbol() );
+            tot.cpu_weight = asset( delta_cpu, core_symbol() );
+         });
+      } else {
+         totals_tbl.modify( tot_itr, same_payer, [&]( auto& tot ) {
+            tot.net_weight.amount += delta_net;
+            tot.cpu_weight.amount += delta_cpu;
+         });
+      }
+      check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
+      check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
+
       {
-         user_resources_table totals_tbl( _self, receiver.value );
-         auto tot_itr = totals_tbl.find( receiver.value );
-         if ( tot_itr == totals_tbl.end() ) {
-            check( 0 <= delta_net && 0 <= delta_cpu, "logic error, should not occur");
-            tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
-               tot.owner      = receiver;
-               tot.net_weight = asset( delta_net, core_symbol() );
-               tot.cpu_weight = asset( delta_cpu, core_symbol() );
-            });
-         } else {
-            totals_tbl.modify( tot_itr, same_payer, [&]( auto& tot ) {
-               tot.net_weight.amount += delta_net;
-               tot.cpu_weight.amount += delta_cpu;
-            });
+         bool net_managed = false;
+         bool cpu_managed = false;
+
+         auto voter_itr = _voters.find( receiver.value );
+         if( voter_itr != _voters.end() ) {
+            net_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::net_managed );
+            cpu_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::cpu_managed );
          }
-         check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
-         check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
-         
-         if ( tot_itr->is_empty() ) {
-            totals_tbl.erase( tot_itr );
+
+         if( !(net_managed && cpu_managed) ) {
+            int64_t ram_bytes = 0, net = 0, cpu = 0;
+            get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+
+            set_resource_limits( receiver.value,
+                                 ram_bytes,
+                                 net_managed ? net : tot_itr->net_weight.amount,
+                                 cpu_managed ? cpu : tot_itr->cpu_weight.amount );
          }
       }
 
-      int64_t ram_bytes = 0, net = 0, cpu = 0;
-      get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
-      set_resource_limits( receiver.value, ram_bytes, net + delta_net, cpu + delta_cpu );
+      if ( tot_itr->is_empty() ) {
+         totals_tbl.erase( tot_itr );
+      }
    }
 
    void system_contract::check_voting_requirement( const name& owner, const char* error_msg )const
@@ -462,7 +555,6 @@ namespace eosiosystem {
             rt.total_lent.amount    -= itr->total_staked.amount;
             rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
          });
-
          bool    delete_loan = false;
          int64_t delta_stake = 0;
          if ( itr->payment <= itr->balance && rex_loans_available() ) {
@@ -489,7 +581,7 @@ namespace eosiosystem {
                transfer_to_fund( itr->from, itr->balance );
             }
          }
-         
+
          return { delete_loan, delta_stake };
       };
 
@@ -506,9 +598,9 @@ namespace eosiosystem {
          rex_cpu_loan_table cpu_loans( _self, _self.value );
          auto cpu_idx = cpu_loans.get_index<"byexpr"_n>();
          for ( uint16_t i = 0; i < max; ++i ) {
-            auto itr = cpu_idx.begin();                                                                                                                                                                                                                                        
+            auto itr = cpu_idx.begin();
             if ( itr == cpu_idx.end() || itr->expiration > current_time_point() ) break;
-      
+
             auto result = process_expired_loan( cpu_idx, itr );
             if ( result.second != 0 )
                update_resource_limits( itr->from, itr->receiver, 0, result.second );
@@ -547,11 +639,14 @@ namespace eosiosystem {
             if ( bitr != _rexbalance.end() ) { // should always be true
                auto result = fill_rex_order( bitr, oitr->rex_requested );
                if ( result.success ) {
+                  const name order_owner = oitr->owner;
                   idx.modify( oitr, same_payer, [&]( auto& order ) {
                      order.proceeds.amount     = result.proceeds.amount;
                      order.stake_change.amount = result.stake_change.amount;
                      order.close();
                   });
+                  /// send dummy action to show and owner and proceeds of filled sellrex order
+                  dispatch_inline( null_account, "orderresult"_n, { }, std::make_tuple( order_owner, result.proceeds ) );
                }
             }
             oitr = next;
@@ -565,7 +660,7 @@ namespace eosiosystem {
    {
       runrex(2);
 
-      check( rex_loans_available(), "rex loans are not currently available" );
+      check( rex_loans_available(), "rex loans are currently not available" );
       check( payment.symbol == core_symbol() && fund.symbol == core_symbol(), "must use core token" );
       check( 0 < payment.amount && 0 <= fund.amount, "must use positive asset amount" );
 
@@ -609,17 +704,20 @@ namespace eosiosystem {
       auto rexitr = _rexpool.begin();
       const int64_t S0 = rexitr->total_lendable.amount;
       const int64_t R0 = rexitr->total_rex.amount;
+      const int64_t p  = (uint128_t(rex.amount) * S0) / R0;
       const int64_t R1 = R0 - rex.amount;
-      const int64_t S1 = (uint128_t(R1) * S0) / R0;
-      asset proceeds( S0 - S1, core_symbol() );
+      const int64_t S1 = S0 - p;
+      asset proceeds( p, core_symbol() );
       asset stake_change( 0, core_symbol() );
-      bool success = false;
+      bool  success = false;
 
-      const int64_t unlent_lower_bound = ( uint128_t(2) * rexitr->total_lent.amount ) / 10;
+      check( proceeds.amount > 0, "proceeds are negligible" );
+
+      const int64_t unlent_lower_bound = rexitr->total_lent.amount;
       const int64_t available_unlent   = rexitr->total_unlent.amount - unlent_lower_bound; // available_unlent <= 0 is possible
-      if ( proceeds.amount <=  available_unlent ) {
+      if ( proceeds.amount <= available_unlent ) {
          const int64_t init_vote_stake_amount = bitr->vote_stake.amount;
-         const int64_t current_stake_value = ( uint128_t(bitr->rex_balance.amount) * S0 ) / R0;
+         const int64_t current_stake_value    = ( uint128_t(bitr->rex_balance.amount) * S0 ) / R0;
          _rexpool.modify( rexitr, same_payer, [&]( auto& rt ) {
             rt.total_rex.amount      = R1;
             rt.total_lendable.amount = S1;
@@ -676,8 +774,7 @@ namespace eosiosystem {
     */
    void system_contract::transfer_from_fund( const name& owner, const asset& amount )
    {
-      check( 0 < amount.amount && amount.symbol == core_symbol(),
-                    "must transfer positive amount from REX fund" );
+      check( 0 < amount.amount && amount.symbol == core_symbol(), "must transfer positive amount from REX fund" );
       auto itr = _rexfunds.require_find( owner.value, "must deposit to REX fund first" );
       check( amount <= itr->balance, "insufficient funds");
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
@@ -693,14 +790,13 @@ namespace eosiosystem {
     */
    void system_contract::transfer_to_fund( const name& owner, const asset& amount )
    {
-      check( 0 < amount.amount && amount.symbol == core_symbol(),
-                    "must transfer positive amount to REX fund" );
+      check( 0 < amount.amount && amount.symbol == core_symbol(), "must transfer positive amount to REX fund" );
       auto itr = _rexfunds.find( owner.value );
       if ( itr == _rexfunds.end() ) {
          _rexfunds.emplace( owner, [&]( auto& fund ) {
             fund.owner   = owner;
             fund.balance = amount;
-         }); 
+         });
       } else {
          _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
             fund.balance.amount += amount.amount;
@@ -719,15 +815,15 @@ namespace eosiosystem {
     * @param owner - owner account name
     * @param proceeds - additional proceeds to be transfered to owner REX fund
     * @param delta_stake - additional stake to be added to owner vote weight
-    * @param force_vote_update - if true, vote weight is updated even if vote stake didn't change 
+    * @param force_vote_update - if true, vote weight is updated even if vote stake didn't change
     *
-    * @return asset - REX amount of owner unfilled sell order if one exists 
+    * @return asset - REX amount of owner unfilled sell order if one exists
     */
    asset system_contract::update_rex_account( const name& owner, const asset& proceeds, const asset& delta_stake, bool force_vote_update )
    {
       asset to_fund( proceeds );
       asset to_stake( delta_stake );
-      asset rex_in_sell_order( 0, core_symbol() );
+      asset rex_in_sell_order( 0, rex_symbol );
       auto itr = _rexorders.find( owner.value );
       if ( itr != _rexorders.end() ) {
          if ( itr->is_open ) {
@@ -750,7 +846,7 @@ namespace eosiosystem {
    /**
     * @brief Channels system fees to REX pool
     *
-    * @param from - account from which asset is transfered to REX pool 
+    * @param from - account from which asset is transfered to REX pool
     * @param amount - amount of tokens to be transfered
     */
    void system_contract::channel_to_rex( const name& from, const asset& amount )
@@ -794,7 +890,7 @@ namespace eosiosystem {
    {
       const uint32_t num_of_maturity_buckets = 5;
       static const uint32_t now = current_time_point_sec().utc_seconds;
-      static const uint32_t r = now % seconds_per_day;
+      static const uint32_t r   = now % seconds_per_day;
       static const time_point_sec rms{ now - r + num_of_maturity_buckets * seconds_per_day };
       return rms;
    }
@@ -806,7 +902,7 @@ namespace eosiosystem {
     */
    void system_contract::process_rex_maturities( const rex_balance_table::const_iterator& bitr )
    {
-      time_point_sec now = current_time_point_sec();
+      const time_point_sec now = current_time_point_sec();
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          while ( !rb.rex_maturities.empty() && rb.rex_maturities.front().first <= now ) {
             rb.matured_rex += rb.rex_maturities.front().second;
@@ -819,11 +915,12 @@ namespace eosiosystem {
     * @brief Consolidates REX maturity buckets into one
     *
     * @param bitr - iterator pointing to rex_balance object
-    * @param rex_in_sell_order - REX tokens in owner unfilled sell order, if one exists 
+    * @param rex_in_sell_order - REX tokens in owner unfilled sell order, if one exists
     */
    void system_contract::consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
-                                                  const asset& rex_in_sell_order ) 
+                                                  const asset& rex_in_sell_order )
    {
+      const int64_t rex_in_savings = read_rex_savings( bitr );
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          int64_t total  = rb.matured_rex - rex_in_sell_order.amount;
          rb.matured_rex = rex_in_sell_order.amount;
@@ -831,8 +928,11 @@ namespace eosiosystem {
             total += rb.rex_maturities.front().second;
             rb.rex_maturities.pop_front();
          }
-         rb.rex_maturities.emplace_back( get_rex_maturity(), total );
+         if (total > 0 ) {
+            rb.rex_maturities.emplace_back( get_rex_maturity(), total );
+         }
       });
+      put_rex_savings( bitr, rex_in_savings );
    }
 
    /**
@@ -845,22 +945,21 @@ namespace eosiosystem {
    asset system_contract::add_to_rex_pool( const asset& payment )
    {
       /**
-       * If CORE_SYMBOL is (EOS,4), maximum supply is 10^10 tokens (10 billion tokens), i.e., maximum amount 
+       * If CORE_SYMBOL is (EOS,4), maximum supply is 10^10 tokens (10 billion tokens), i.e., maximum amount
        * of indivisible units is 10^14. rex_ratio = 10^4 sets the upper bound on (REX,4) indivisible units to
-       * 10^18 and that is within the maximum allowable amount field of asset type which is set to 2^62 
+       * 10^18 and that is within the maximum allowable amount field of asset type which is set to 2^62
        * (approximately 4.6 * 10^18). For a different CORE_SYMBOL, and in order for maximum (REX,4) amount not
        * to exceed that limit, maximum amount of indivisible units cannot be set to a value larger than 4 * 10^14.
-       * If precision of CORE_SYMBOL is 4, that corresponds to a maximum supply of 40 billion tokens. 
+       * If precision of CORE_SYMBOL is 4, that corresponds to a maximum supply of 40 billion tokens.
        */
       const int64_t rex_ratio       = 10000;
-      const int64_t init_total_rent = 100'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() is made available
+      const int64_t init_total_rent = 20'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() is made available
       asset rex_received( 0, rex_symbol );
       auto itr = _rexpool.begin();
       if ( !rex_system_initialized() ) {
          /// initialize REX pool
          _rexpool.emplace( _self, [&]( auto& rp ) {
             rex_received.amount = payment.amount * rex_ratio;
-
             rp.total_lendable   = payment;
             rp.total_lent       = asset( 0, core_symbol() );
             rp.total_unlent     = rp.total_lendable - rp.total_lent;
@@ -870,8 +969,7 @@ namespace eosiosystem {
          });
       } else if ( !rex_available() ) { /// should be a rare corner case, REX pool is initialized but empty
          _rexpool.modify( itr, same_payer, [&]( auto& rp ) {
-            rex_received.amount = payment.amount * rex_ratio;
-
+            rex_received.amount      = payment.amount * rex_ratio;
             rp.total_lendable.amount = payment.amount;
             rp.total_lent.amount     = 0;
             rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
@@ -885,9 +983,7 @@ namespace eosiosystem {
          const int64_t S1 = S0 + payment.amount;
          const int64_t R0 = itr->total_rex.amount;
          const int64_t R1 = (uint128_t(S1) * R0) / S0;
-
          rex_received.amount = R1 - R0;
-
          _rexpool.modify( itr, same_payer, [&]( auto& rp ) {
             rp.total_lendable.amount = S1;
             rp.total_rex.amount      = R1;
@@ -895,7 +991,7 @@ namespace eosiosystem {
             check( rp.total_unlent.amount >= 0, "programmer error, this should never go negative" );
          });
       }
-      
+
       return rex_received;
    }
 
@@ -904,7 +1000,7 @@ namespace eosiosystem {
     *
     * @param owner - account name of REX owner
     * @param payment - amount core tokens paid to buy REX
-    * @param rex_received - amount of purchased REX tokens 
+    * @param rex_received - amount of purchased REX tokens
     *
     * @return asset - change in owner REX vote stake
     */
@@ -924,23 +1020,97 @@ namespace eosiosystem {
          init_rex_stake.amount = bitr->vote_stake.amount;
          _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
             rb.rex_balance.amount += rex_received.amount;
-            rb.vote_stake.amount   = ( uint128_t(rb.rex_balance.amount) * _rexpool.begin()->total_lendable.amount ) 
+            rb.vote_stake.amount   = ( uint128_t(rb.rex_balance.amount) * _rexpool.begin()->total_lendable.amount )
                                      / _rexpool.begin()->total_rex.amount;
          });
          current_rex_stake.amount = bitr->vote_stake.amount;
       }
 
+      const int64_t rex_in_savings = read_rex_savings( bitr );
       process_rex_maturities( bitr );
-      const time_point_sec maturity = get_rex_maturity();
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+         const time_point_sec maturity = get_rex_maturity();
          if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == maturity ) {
             rb.rex_maturities.back().second += rex_received.amount;
          } else {
             rb.rex_maturities.emplace_back( maturity, rex_received.amount );
          }
       });
-
+      put_rex_savings( bitr, rex_in_savings );
       return current_rex_stake - init_rex_stake;
+   }
+
+   /**
+    * @brief Reads amount of REX in savings bucket and removes the bucket from maturities
+    *
+    * Reads and (temporarily) removes REX savings bucket from REX maturities in order to
+    * allow uniform processing of remaining buckets as savings is a special case. This 
+    * function is used in conjunction with put_rex_savings.
+    *
+    * @param bitr - iterator pointing to rex_balance object
+    *
+    * @return int64_t - amount of REX in savings bucket
+    */
+   int64_t system_contract::read_rex_savings( const rex_balance_table::const_iterator& bitr )
+   {
+      int64_t rex_in_savings = 0;
+      static const time_point_sec end_of_days = time_point_sec::maximum();
+      if ( !bitr->rex_maturities.empty() && bitr->rex_maturities.back().first == end_of_days ) {
+         _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+            rex_in_savings = rb.rex_maturities.back().second;
+            rb.rex_maturities.pop_back();
+         });
+      }
+      return rex_in_savings;
+   }
+
+   /**
+    * @brief Adds a specified REX amount to savings bucket
+    *
+    * @param bitr - iterator pointing to rex_balance object
+    * @param rex - amount of REX to be added
+    */
+   void system_contract::put_rex_savings( const rex_balance_table::const_iterator& bitr, int64_t rex )
+   {
+      if ( rex == 0 ) return;
+      static const time_point_sec end_of_days = time_point_sec::maximum();
+      _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+         if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == end_of_days ) {
+            rb.rex_maturities.back().second += rex;
+         } else {
+            rb.rex_maturities.emplace_back( end_of_days, rex );
+         }
+      });
+   }
+
+   /**
+    * @brief Updates voter REX vote stake to the current value of REX tokens held
+    *
+    * @param voter - account name of voter
+    */
+   void system_contract::update_rex_stake( const name& voter )
+   {
+      int64_t delta_stake = 0;
+      auto bitr = _rexbalance.find( voter.value );
+      if ( bitr != _rexbalance.end() && rex_available() ) {
+         asset init_vote_stake = bitr->vote_stake;
+         asset current_vote_stake( 0, core_symbol() );
+         current_vote_stake.amount = ( uint128_t(bitr->rex_balance.amount) * _rexpool.begin()->total_lendable.amount )
+                                     / _rexpool.begin()->total_rex.amount;
+         _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
+            rb.vote_stake.amount = current_vote_stake.amount; 
+         });
+         delta_stake = current_vote_stake.amount - init_vote_stake.amount;
+      }
+      
+      if ( delta_stake != 0 ) {
+         auto vitr = _voters.find( voter.value );
+         if ( vitr != _voters.end() ) {
+            _voters.modify( vitr, same_payer, [&]( auto& vinfo ) {
+               vinfo.staked += delta_stake;
+            });
+         }
+      }
    }
 
 }; /// namespace eosiosystem

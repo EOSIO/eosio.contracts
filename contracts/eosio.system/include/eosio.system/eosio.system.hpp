@@ -13,6 +13,8 @@
 
 #include <string>
 #include <deque>
+#include <type_traits>
+#include <optional>
 
 #ifdef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
 #undef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
@@ -36,6 +38,25 @@ namespace eosiosystem {
    using eosio::microseconds;
    using eosio::datastream;
    using eosio::check;
+
+   template<typename E, typename F>
+   static inline auto has_field( F flags, E field )
+   -> std::enable_if_t< std::is_integral_v<F> && std::is_unsigned_v<F> &&
+                        std::is_enum_v<E> && std::is_same_v< F, std::underlying_type_t<E> >, bool>
+   {
+      return ( (flags & static_cast<F>(field)) != 0 );
+   }
+
+   template<typename E, typename F>
+   static inline auto set_field( F flags, E field, bool value = true )
+   -> std::enable_if_t< std::is_integral_v<F> && std::is_unsigned_v<F> &&
+                        std::is_enum_v<E> && std::is_same_v< F, std::underlying_type_t<E> >, F >
+   {
+      if( value )
+         return ( flags | static_cast<F>(field) );
+      else
+         return ( flags & ~static_cast<F>(field) );
+   }
 
    struct [[eosio::table, eosio::contract("eosio.system")]] name_bid {
      name            newname;
@@ -162,14 +183,20 @@ namespace eosiosystem {
       bool                is_proxy = 0; /// whether the voter is a proxy for others
 
 
-      uint32_t            reserved1 = 0;
+      uint32_t            flags1 = 0;
       uint32_t            reserved2 = 0;
       eosio::asset        reserved3;
 
       uint64_t primary_key()const { return owner.value; }
 
+      enum class flags1_fields : uint32_t {
+         ram_managed = 1,
+         net_managed = 2,
+         cpu_managed = 4
+      };
+
       // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(proxied_vote_weight)(is_proxy)(reserved1)(reserved2)(reserved3) )
+      EOSLIB_SERIALIZE( voter_info, (owner)(proxy)(producers)(staked)(last_vote_weight)(proxied_vote_weight)(is_proxy)(flags1)(reserved2)(reserved3) )
    };
 
    typedef eosio::multi_index< "voters"_n, voter_info >  voters_table;
@@ -301,6 +328,7 @@ namespace eosiosystem {
          static constexpr eosio::name names_account{"eosio.names"_n};
          static constexpr eosio::name saving_account{"eosio.saving"_n};
          static constexpr eosio::name rex_account{"eosio.rex"_n};
+         static constexpr eosio::name null_account{"eosio.null"_n};
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
          static constexpr symbol ram_symbol     = symbol(symbol_code("RAM"), 0);
          static constexpr symbol rex_symbol     = symbol(symbol_code("REX"), 4);
@@ -322,6 +350,16 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
+
+         [[eosio::action]]
+         void setacctram( name account, std::optional<int64_t> ram_bytes );
+
+         [[eosio::action]]
+         void setacctnet( name account, std::optional<int64_t> net_weight );
+
+         [[eosio::action]]
+         void setacctcpu( name account, std::optional<int64_t> cpu_weight );
+
          // functions defined in delegate_bandwidth.cpp
 
          /**
@@ -428,6 +466,22 @@ namespace eosiosystem {
           */
          [[eosio::action]]
          void consolidate( const name& owner );
+
+         /**
+          * Moves a specified amount of REX into savings bucket. REX savings bucket
+          * never matures. In order for it to be sold, it has to be moved explicitly
+          * out of that bucket. Then the moved amount will have the regular maturity
+          * period of 4 days starting from the end of the day.
+          */
+         [[eosio::action]]
+         void mvtosavings( const name& owner, const asset& rex );
+         
+         /**
+          * Moves a specified amount of REX out of savings bucket. The moved amount
+          * will have the regular REX maturity period of 4 days.  
+          */
+         [[eosio::action]]
+         void mvfrsavings( const name& owner, const asset& rex );
 
          /**
           * Deletes owner records from REX tables and frees used RAM.
@@ -566,6 +620,9 @@ namespace eosiosystem {
          void process_rex_maturities( const rex_balance_table::const_iterator& bitr );
          void consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
                                        const asset& rex_in_sell_order );
+         int64_t read_rex_savings( const rex_balance_table::const_iterator& bitr );
+         void put_rex_savings( const rex_balance_table::const_iterator& bitr, int64_t rex );
+         void update_rex_stake( const name& voter );
 
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,
@@ -581,6 +638,38 @@ namespace eosiosystem {
                                                double shares_rate, bool reset_to_zero = false );
          double update_total_votepay_share( time_point ct,
                                             double additional_shares_delta = 0.0, double shares_rate_delta = 0.0 );
+
+         template <auto system_contract::*...Ptrs>
+         class registration {
+            public:
+               template <auto system_contract::*P, auto system_contract::*...Ps>
+               struct for_each {
+                     template <typename... Args>
+                     static constexpr void call( system_contract* this_contract, Args&&... args )
+                     {
+                        std::invoke( P, this_contract, std::forward<Args>(args)... );
+                        for_each<Ps...>::call( this_contract, std::forward<Args>(args)... );
+                     }
+               };
+               template <auto system_contract::*P>
+               struct for_each<P> {
+                  template <typename... Args>
+                  static constexpr void call( system_contract* this_contract, Args&&... args )
+                  {
+                     std::invoke( P, this_contract, std::forward<Args>(args)... );
+                  }
+               };
+
+               template <typename... Args>
+               constexpr void operator() ( Args&&... args )
+               {
+                  for_each<Ptrs...>::call( this_contract, std::forward<Args>(args)... );
+               }
+
+               system_contract* this_contract;
+         };
+
+         registration<&system_contract::update_rex_stake> vote_stake_updater{ this };
    };
 
 } /// eosiosystem

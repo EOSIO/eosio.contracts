@@ -5,7 +5,6 @@
 #include <eosio.system/eosio.system.hpp>
 
 #include <eosiolib/eosio.hpp>
-#include <eosiolib/print.hpp>
 #include <eosiolib/datastream.hpp>
 #include <eosiolib/serialize.hpp>
 #include <eosiolib/multi_index.hpp>
@@ -22,7 +21,6 @@ namespace eosiosystem {
    using eosio::asset;
    using eosio::indexed_by;
    using eosio::const_mem_fun;
-   using eosio::print;
    using eosio::permission_level;
    using eosio::time_point_sec;
    using std::map;
@@ -163,7 +161,13 @@ namespace eosiosystem {
                res.ram_bytes += bytes_out;
             });
       }
-      set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
+
+      auto voter_itr = _voters.find( res_itr->owner.value );
+      if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
+         int64_t ram_bytes, net, cpu;
+         get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
+         set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+      }
    }
 
   /**
@@ -201,7 +205,13 @@ namespace eosiosystem {
       userres.modify( res_itr, account, [&]( auto& res ) {
           res.ram_bytes -= bytes;
       });
-      set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, res_itr->net_weight.amount, res_itr->cpu_weight.amount );
+
+      auto voter_itr = _voters.find( res_itr->owner.value );
+      if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
+         int64_t ram_bytes, net, cpu;
+         get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
+         set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+      }
 
       INLINE_ACTION_SENDER(eosio::token, transfer)(
          token_account, { {ram_account, active_permission}, {account, active_permission} },
@@ -233,8 +243,8 @@ namespace eosiosystem {
       require_auth( from );
       check( stake_net_delta.amount != 0 || stake_cpu_delta.amount != 0, "should stake non-zero amount" );
       check( std::abs( (stake_net_delta + stake_cpu_delta).amount )
-                     >= std::max( std::abs( stake_net_delta.amount ), std::abs( stake_cpu_delta.amount ) ),
-                    "net and cpu deltas cannot be opposite signs" );
+             >= std::max( std::abs( stake_net_delta.amount ), std::abs( stake_cpu_delta.amount ) ),
+             "net and cpu deltas cannot be opposite signs" );
 
       name source_stake_from = from;
       if ( transfer ) {
@@ -285,10 +295,28 @@ namespace eosiosystem {
          check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
          check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
 
-         int64_t ram_bytes, net, cpu;
-         get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+         {
+            bool ram_managed = false;
+            bool net_managed = false;
+            bool cpu_managed = false;
 
-         set_resource_limits( receiver.value, std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ), tot_itr->net_weight.amount, tot_itr->cpu_weight.amount );
+            auto voter_itr = _voters.find( receiver.value );
+            if( voter_itr != _voters.end() ) {
+               ram_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed );
+               net_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::net_managed );
+               cpu_managed = has_field( voter_itr->flags1, voter_info::flags1_fields::cpu_managed );
+            }
+
+            if( !(net_managed && cpu_managed) ) {
+               int64_t ram_bytes, net, cpu;
+               get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+
+               set_resource_limits( receiver.value,
+                                    ram_managed ? ram_bytes : std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ),
+                                    net_managed ? net : tot_itr->net_weight.amount,
+                                    cpu_managed ? cpu : tot_itr->cpu_weight.amount );
+            }
+         }
 
          if ( tot_itr->is_empty() ) {
             totals_tbl.erase( tot_itr );
@@ -385,6 +413,7 @@ namespace eosiosystem {
          }
       }
 
+      vote_stake_updater( from );
       update_voting_power( from, stake_net_delta + stake_cpu_delta );
    }
 
@@ -402,7 +431,7 @@ namespace eosiosystem {
          });
       }
 
-      check( 0 <= voter_itr->staked, "stake for voting cannot be negative");
+      check( 0 <= voter_itr->staked, "stake for voting cannot be negative" );
 
       if( voter == "b1"_n ) {
          validate_b1_vesting( voter_itr->staked );
@@ -434,7 +463,7 @@ namespace eosiosystem {
       check( unstake_net_quantity >= zero_asset, "must unstake a positive amount" );
       check( unstake_cpu_quantity.amount + unstake_net_quantity.amount > 0, "must unstake a positive amount" );
       check( _gstate.total_activated_stake >= min_activated_stake,
-                    "cannot undelegate bandwidth until the chain is activated (at least 15% of all tokens participate in voting)" );
+             "cannot undelegate bandwidth until the chain is activated (at least 15% of all tokens participate in voting)" );
 
       changebw( from, receiver, -unstake_net_quantity, -unstake_cpu_quantity, false);
    } // undelegatebw
@@ -447,7 +476,7 @@ namespace eosiosystem {
       auto req = refunds_tbl.find( owner.value );
       check( req != refunds_tbl.end(), "refund request not found" );
       check( req->request_time + seconds(refund_delay_sec) <= current_time_point(),
-                    "refund is not available yet" );
+             "refund is not available yet" );
 
       INLINE_ACTION_SENDER(eosio::token, transfer)(
          token_account, { {stake_account, active_permission}, {req->owner, active_permission} },
