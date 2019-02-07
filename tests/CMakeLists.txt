@@ -33,3 +33,7 @@ include_directories(${CMAKE_BINARY_DIR})
 file(GLOB UNIT_TESTS "*.cpp" "*.hpp")
 
 add_eosio_test( unit_test ${UNIT_TESTS} )
+target_include_directories(unit_test
+   PUBLIC
+   ${CMAKE_CURRENT_SOURCE_DIR}/..
+)
