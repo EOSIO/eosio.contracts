@@ -13,6 +13,7 @@ namespace eosio {
          [[eosio::action]]
          void exec( ignore<name> executer, ignore<transaction> trx );
 
+         using exec_action = eosio::action_wrapper<"exec"_n, &wrap::exec>;
    };
 
 } /// namespace eosio

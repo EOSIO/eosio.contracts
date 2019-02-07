@@ -135,5 +135,15 @@ namespace eosiosystem {
 
          [[eosio::action]]
          void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
+
+         using newaccount_action = eosio::action_wrapper<"newaccount"_n, &native::newaccount>;
+         using updateauth_action = eosio::action_wrapper<"updateauth"_n, &native::updateauth>;
+         using deleteauth_action = eosio::action_wrapper<"deleteauth"_n, &native::deleteauth>;
+         using unlinkauth_action = eosio::action_wrapper<"unlinkauth"_n, &native::unlinkauth>;
+         using canceldelay_action = eosio::action_wrapper<"canceldelay"_n, &native::canceldelay>;
+         using onerror_action = eosio::action_wrapper<"onerror"_n, &native::onerror>;
+         using setcode_action = eosio::action_wrapper<"setcode"_n, &native::setcode>;
+         using setabi_action = eosio::action_wrapper<"setabi"_n, &native::setabi>;
+
    };
 }

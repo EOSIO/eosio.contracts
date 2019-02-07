@@ -165,6 +165,22 @@ namespace eosio {
          };
 
          typedef eosio::multi_index< "abihash"_n, abi_hash > abi_hash_table;
+         
+         using newaccount_action = action_wrapper<"newaccount"_n, &bios::newaccount>;
+         using updateauth_action = action_wrapper<"updateauth"_n, &bios::updateauth>;
+         using deleteauth_action = action_wrapper<"deleteauth"_n, &bios::deleteauth>;
+         using unlinkauth_action = action_wrapper<"unlinkauth"_n, &bios::unlinkauth>;
+         using canceldelay_action = action_wrapper<"canceldelay"_n, &bios::canceldelay>;
+         using onerror_action = action_wrapper<"onerror"_n, &bios::onerror>;
+         using setcode_action = action_wrapper<"setcode"_n, &bios::setcode>;
+         using setpriv_action = action_wrapper<"setpriv"_n, &bios::setpriv>;
+         using setalimits_action = action_wrapper<"setalimits"_n, &bios::setalimits>;
+         using setglimits_action = action_wrapper<"setglimits"_n, &bios::setglimits>;
+         using setprods_action = action_wrapper<"setprods"_n, &bios::setprods>;
+         using setparams_action = action_wrapper<"setparams"_n, &bios::setparams>;
+         using reqauth_action = action_wrapper<"reqauth"_n, &bios::reqauth>;
+         using setabi_action = action_wrapper<"setabi"_n, &bios::setabi>;
+            
    };
 
 } /// namespace eosio
