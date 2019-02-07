@@ -560,7 +560,6 @@ namespace eosiosystem {
          void bidrefund( name bidder, name newname );
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
-         using onblock_action = eosio::action_wrapper<"onblock"_n, &system_contract::onblock>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
          using setacctnet_action = eosio::action_wrapper<"setacctnet"_n, &system_contract::setacctnet>;
          using setacctcpu_action = eosio::action_wrapper<"setacctcpu"_n, &system_contract::setacctcpu>;
