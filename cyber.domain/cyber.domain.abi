@@ -107,24 +107,19 @@
     "actions": [
         {
             "name": "biddomain",
-            "type": "biddomain",
-            "ricardian_contract": ""
+            "type": "biddomain"
         },{
             "name": "biddmrefund",
-            "type": "biddmrefund",
-            "ricardian_contract": ""
+            "type": "biddmrefund"
         },{
             "name": "newdomain",
-            "type": "newdomain",
-            "ricardian_contract": ""
+            "type": "newdomain"
         },{
             "name": "checkwin",
-            "type": "checkwin",
-            "ricardian_contract": ""
+            "type": "checkwin"
         },{
             "name": "declarenames",
-            "type": "declarenames",
-            "ricardian_contract": ""
+            "type": "declarenames"
         },{
             "name": "passdomain",
             "type": "passdomain",
@@ -187,7 +182,6 @@
             }]
         }
     ],
-    "ricardian_clauses": [],
     "variants": [],
     "abi_extensions": []
 }

@@ -460,88 +460,71 @@
     "actions": [
         {
             "name": "canceldelay",
-            "type": "canceldelay",
-            "ricardian_contract": ""
+            "type": "canceldelay"
         },
         {
             "name": "deleteauth",
-            "type": "deleteauth",
-            "ricardian_contract": ""
+            "type": "deleteauth"
         },
         {
             "name": "linkauth",
-            "type": "linkauth",
-            "ricardian_contract": ""
+            "type": "linkauth"
         },
         {
             "name": "newaccount",
-            "type": "newaccount",
-            "ricardian_contract": ""
+            "type": "newaccount"
         },
         {
             "name": "onerror",
-            "type": "onerror",
-            "ricardian_contract": ""
+            "type": "onerror"
         },
         {
             "name": "reqauth",
-            "type": "reqauth",
-            "ricardian_contract": ""
+            "type": "reqauth"
         },
         {
             "name": "setabi",
-            "type": "setabi",
-            "ricardian_contract": ""
+            "type": "setabi"
         },
         {
             "name": "setalimits",
-            "type": "setalimits",
-            "ricardian_contract": ""
+            "type": "setalimits"
         },
         {
             "name": "setcode",
-            "type": "setcode",
-            "ricardian_contract": ""
+            "type": "setcode"
         },
         {
             "name": "setglimits",
-            "type": "setglimits",
-            "ricardian_contract": ""
+            "type": "setglimits"
         },
         {
             "name": "setparams",
-            "type": "setparams",
-            "ricardian_contract": ""
+            "type": "setparams"
         },
         {
             "name": "setpriv",
-            "type": "setpriv",
-            "ricardian_contract": ""
+            "type": "setpriv"
         },
         {
             "name": "setprods",
-            "type": "setprods",
-            "ricardian_contract": ""
+            "type": "setprods"
         },
         {
             "name": "unlinkauth",
-            "type": "unlinkauth",
-            "ricardian_contract": ""
+            "type": "unlinkauth"
         },
         {
             "name": "updateauth",
-            "type": "updateauth",
-            "ricardian_contract": ""
+            "type": "updateauth"
         },
         {
             "name": "providebw",
-            "type": "providebw",
-            "ricardian_contract": ""
+            "type": "providebw"
         },
         {
             "name": "requestbw",
-            "type": "requestbw",
-            "ricardian_contract": ""
+            "type": "requestbw"
         }
     ],
     "tables": [
@@ -559,7 +542,6 @@
             ]
         }
     ],
-    "ricardian_clauses": [],
     "variants": [],
     "abi_extensions": []
 }

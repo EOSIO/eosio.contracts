@@ -148,33 +148,27 @@
     "actions": [
         {
             "name": "close",
-            "type": "close",
-            "ricardian_contract": ""
+            "type": "close"
         },
         {
             "name": "create",
-            "type": "create",
-            "ricardian_contract": ""
+            "type": "create"
         },
         {
             "name": "issue",
-            "type": "issue",
-            "ricardian_contract": ""
+            "type": "issue"
         },
         {
             "name": "open",
-            "type": "open",
-            "ricardian_contract": ""
+            "type": "open"
         },
         {
             "name": "retire",
-            "type": "retire",
-            "ricardian_contract": ""
+            "type": "retire"
         },
         {
             "name": "transfer",
-            "type": "transfer",
-            "ricardian_contract": ""
+            "type": "transfer"
         }
     ],
     "events": [
@@ -209,7 +203,6 @@
             ]
         }
     ],
-    "ricardian_clauses": [],
     "variants": [],
     "abi_extensions": []
 }
