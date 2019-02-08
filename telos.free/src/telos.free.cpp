@@ -14,6 +14,7 @@ contract(self, code, ds),
 configuration(self, self.value),
 freeacctslogtable(self, self.value),
 whitelisttable(self, self.value),
+whitelistedtable(self, self.value),
 rammarkettable(system_account, system_account.value)
  {
     if (!configuration.exists()) {
@@ -34,22 +35,34 @@ freeaccounts::~freeaccounts() {
 void freeaccounts::create( name account_creator, name account_name, string owner_key, string active_key, string key_prefix)
 {
     require_auth(account_creator);
-    
-    auto w = whitelisttable.find(account_creator.value);
-    eosio_assert(w != whitelisttable.end(), "Account doesn't have permission to create accounts");
-
-    // verify that we're within our account creation per hour threshold
-    uint64_t accounts_created = 0;
-    for (const auto& account : freeacctslogtable)
-    {
-        uint64_t secs_since_created = now() - account.created_on;
-        if (secs_since_created <= 3600) {
-            accounts_created++;
-        }
-    }
-
     auto config = getconfig();
-    eosio_assert(accounts_created < config.max_accounts_per_hour, "You have exceeded the maximum number of accounts per hour");
+    
+    auto w = whitelistedtable.find(account_creator.value);
+    eosio_assert(w != whitelistedtable.end(), "Account doesn't have permission to create accounts");
+    
+    // verify that account creator is within its per-account threshold
+    if (w->max_accounts > 0)
+    {
+        uint32_t total_accounts = w->total_accounts + 1;
+        eosio_assert(total_accounts <= w->max_accounts, "You have exceeded the maximum number of accounts allowed for your account");
+
+        whitelistedtable.modify( w, same_payer, [&]( auto& a ) {
+            a.total_accounts = total_accounts;
+        });
+    }
+    else // verify that we're within our account creation per hour threshold
+    {
+        uint64_t accounts_created = 0;
+        for (const auto& account : freeacctslogtable)
+        {
+            uint64_t secs_since_created = now() - account.created_on;
+            if (secs_since_created <= 3600) {
+                accounts_created++;
+            }
+        }
+
+        eosio_assert(accounts_created < config.max_accounts_per_hour, "You have exceeded the maximum number of accounts per hour");
+    }
 
     signup_public_key owner_pubkey = getpublickey(owner_key, key_prefix);
     signup_public_key active_pubkey = getpublickey(active_key, key_prefix);
@@ -119,16 +132,17 @@ void freeaccounts::create( name account_creator, name account_name, string owner
     });
 }
 
-void freeaccounts::addwhitelist( name account_name)
+void freeaccounts::addwhitelist( name account_name, uint32_t total_accounts, uint32_t max_accounts )
 {
     require_auth(_self);
 
-    auto w = whitelisttable.find(account_name.value);
-    eosio_assert(w == whitelisttable.end(), "Account already exists in the whitelist");
+    auto w = whitelistedtable.find(account_name.value);
+    eosio_assert(w == whitelistedtable.end(), "Account already exists in the whitelist");
 
-    // make sure not exists
-    whitelisttable.emplace( _self, [&]( whitelist& list ){
+    whitelistedtable.emplace( _self, [&]( whitelisted& list ){
         list.account_name  = account_name;
+        list.total_accounts = total_accounts;
+        list.max_accounts = max_accounts;
     });
 }
 
@@ -136,8 +150,17 @@ void freeaccounts::removewlist( name account_name)
 {
     require_auth(_self);
 
-    auto w = whitelisttable.find(account_name.value);
-    eosio_assert(w != whitelisttable.end(), "Account does not exist in the whitelist");
+    auto w = whitelistedtable.find(account_name.value);
+    eosio_assert(w != whitelistedtable.end(), "Account does not exist in the whitelist");
+
+    whitelistedtable.erase(w);
+}
+
+void freeaccounts::erasewlist()
+{
+    name account = "sqrlfreeacct"_n;
+    auto w = whitelisttable.find(account.value);
+    eosio_assert(w != whitelisttable.end(), "Account does not exist in the old whitelist");
 
     whitelisttable.erase(w);
 }
@@ -184,4 +207,4 @@ freeaccounts::signup_public_key freeaccounts::getpublickey (string public_key, s
     return pubkey;
 }
 
-EOSIO_DISPATCH( freeaccounts, (configure)(create)(addwhitelist)(removewlist) )
+EOSIO_DISPATCH( freeaccounts, (configure)(create)(addwhitelist)(removewlist)(erasewlist) )

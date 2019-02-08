@@ -61,10 +61,13 @@ public:
       void configure( int16_t max_accounts_per_hour, int64_t stake_cpu_tlos_amount, int64_t stake_net_tlos_amount );
 
       [[eosio::action]]
-      void addwhitelist(name account_name);
+      void addwhitelist(name account_name, uint32_t total_accounts, uint32_t max_accounts);
 
       [[eosio::action]]
       void removewlist(name account_name);
+
+      [[eosio::action]]
+      void erasewlist();
 
       struct [[eosio::table]] freeacctcfg {
             name publisher;
@@ -95,9 +98,21 @@ public:
             EOSLIB_SERIALIZE(whitelist, (account_name))
       };
 
+      struct [[eosio::table]] whitelisted {
+            name account_name;
+            uint32_t total_accounts = 0;
+            uint32_t max_accounts = 0;
+
+            auto primary_key() const { return account_name.value; }
+
+            EOSLIB_SERIALIZE(whitelisted, (account_name)(total_accounts)(max_accounts))
+      };
+
       typedef multi_index<"freeacctlogs"_n, freeacctlog> t_freeaccountlogs;
 
       typedef multi_index<"whitelists"_n, whitelist> t_whitelist;
+    
+      typedef multi_index<"whitelstacts"_n, whitelisted> t_whitelisted;
 
       freeaccounts(name self, name code, datastream<const char*> ds);
 
@@ -107,6 +122,7 @@ protected:
       typedef singleton<"config"_n, freeacctcfg> config_singleton;
       config_singleton configuration;
       t_freeaccountlogs freeacctslogtable;
+      t_whitelisted whitelistedtable;
       t_whitelist whitelisttable;
 
       rammarket rammarkettable;
