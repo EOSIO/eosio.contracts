@@ -286,6 +286,7 @@ def stepStartBoot():
     startNode(0, {'name': 'eosio', 'pvt': args.private_key, 'pub': args.public_key})
     sleep(9)
 def stepInstallSystemContracts():
+    retry(args.cleos + 'set contract cyber.domain ' + args.contracts_dir + 'cyber.domain/')
     retry(args.cleos + 'set contract cyber.token ' + args.contracts_dir + 'cyber.token/')
     retry(args.cleos + 'set contract cyber.msig ' + args.contracts_dir + 'cyber.msig/')
 def stepCreateTokens():
