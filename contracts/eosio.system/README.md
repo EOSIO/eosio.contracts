@@ -102,6 +102,19 @@ The naming convention is codeaccount::actionname followed by a list of paramters
    - Cancels unfilled REX sell order by owner if one exists.
    - **owner** owner account name
 
+## eosio::mvtosavings owner rex
+   - Moves REX to owner's REX savings bucket
+   - REX held in savings bucket does not mature and cannot be sold directly
+   - REX is moved out from the owner's maturity buckets as necessary starting with the bucket with furthest maturity date
+   - **owner** owner account of REX
+   - **rex** amount of REX to be moved to savings bucket
+
+## eosio::mvfrsavings owner rex
+   - Moves REX from owner's savings bucket to a bucket with a maturity date that is 4 days after the end of the day
+   - This action is required if the owner wants to sell REX held in savings bucket
+   - **owner** owner account of REX
+   - **rex** amount of REX to be moved from savings bucket
+
 ## eosio::rentcpu from receiver loan\_payment loan\_fund
    - Rents CPU resources for 30 days in exchange for market-determined price
    - **from** account creating and paying for CPU loan
