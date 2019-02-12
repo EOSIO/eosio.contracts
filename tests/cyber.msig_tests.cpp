@@ -20,20 +20,22 @@ using mvo = fc::mutable_variant_object;
 class cyber_msig_tester : public tester {
 public:
    cyber_msig_tester() {
-      create_accounts( { N(cyber.msig), N(eosio.stake), N(eosio.ram), N(eosio.ramfee), N(alice), N(bob), N(carol) } );
+      create_accounts({config::msig_account_name, config::stake_account_name,
+         config::ram_account_name, config::ramfee_account_name,
+         N(alice), N(bob), N(carol)});
       produce_block();
 
       auto trace = base_tester::push_action(config::system_account_name, N(setpriv),
                                             config::system_account_name,  mutable_variant_object()
-                                            ("account", "cyber.msig")
+                                            ("account", name{config::msig_account_name})
                                             ("is_priv", 1)
       );
 
-      set_code( N(cyber.msig), contracts::msig_wasm() );
-      set_abi( N(cyber.msig), contracts::msig_abi().data() );
+      set_code(config::msig_account_name, contracts::msig_wasm());
+      set_abi(config::msig_account_name, contracts::msig_abi().data());
 
       produce_blocks();
-      const auto& accnt = control->db().get<account_object,by_name>( N(cyber.msig) );
+      const auto& accnt = control->db().get<account_object,by_name>(config::msig_account_name);
       abi_def abi;
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
       abi_ser.set_abi(abi, abi_serializer_max_time);
@@ -60,14 +62,14 @@ public:
                                    .active   = authority( get_public_key( a, "active" ) )
                                 });
 
-      trx.actions.emplace_back( get_action( N(eosio), N(buyram), vector<permission_level>{{creator,config::active_name}},
+      trx.actions.emplace_back( get_action(config::system_account_name, N(buyram), vector<permission_level>{{creator,config::active_name}},
                                             mvo()
                                             ("payer", creator)
                                             ("receiver", a)
                                             ("quant", ramfunds) )
                               );
 
-      trx.actions.emplace_back( get_action( N(eosio), N(delegatebw), vector<permission_level>{{creator,config::active_name}},
+      trx.actions.emplace_back( get_action(config::system_account_name, N(delegatebw), vector<permission_level>{{creator,config::active_name}},
                                             mvo()
                                             ("from", creator)
                                             ("receiver", a)
@@ -373,18 +375,18 @@ BOOST_FIXTURE_TEST_CASE( big_transaction, cyber_msig_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, cyber_msig_tester ) try {
 
-   // required to set up the link between (eosio active) and (eosio.prods active)
+   // required to set up the link between (cyber active) and (cyber.prods active)
    //
-   //                  eosio active
+   //                  cyber active
    //                       |
-   //             eosio.prods active (2/3 threshold)
+   //             cyber.prods active (2/3 threshold)
    //             /         |        \             <--- implicitly updated in onblock action
    // alice active     bob active   carol active
 
-   set_authority(N(eosio), "active", authority(1,
-      vector<key_weight>{{get_private_key("eosio", "active").get_public_key(), 1}},
-      vector<permission_level_weight>{{{N(eosio.prods), config::active_name}, 1}}), "owner",
-      { { N(eosio), "active" } }, { get_private_key( N(eosio), "active" ) });
+   set_authority(config::system_account_name, "active", authority(1,
+      vector<key_weight>{{get_private_key(config::system_account_name, "active").get_public_key(), 1}},
+      vector<permission_level_weight>{{{N(cyber.prods), config::active_name}, 1}}), "owner",
+      {{config::system_account_name, "active"}}, {get_private_key(config::system_account_name, "active")});
 
 
    set_producers( {N(alice),N(bob),N(carol)} );
@@ -398,7 +400,8 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, cyber_msig_tester )
 
    issue(config::system_account_name, core_sym::from_string("1000000000.0000"));
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
-                        get_balance("eosio") + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
+      get_balance(config::system_account_name) + get_balance(config::ramfee_account_name) +
+      get_balance(config::stake_account_name) + get_balance(config::ram_account_name));
 
    // TODO: CyberWay system contract
    return;
@@ -411,17 +414,18 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, cyber_msig_tester )
                               ("core", CORE_SYM_STR)
    );
    produce_blocks();
-   create_account_with_resources( N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false );
-   create_account_with_resources( N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false );
-   create_account_with_resources( N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false );
+   create_account_with_resources(N(alice1111111), config::system_account_name, core_sym::from_string("1.0000"), false);
+   create_account_with_resources(N(bob111111111), config::system_account_name, core_sym::from_string("0.4500"), false);
+   create_account_with_resources(N(carol1111111), config::system_account_name, core_sym::from_string("1.0000"), false);
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
-                        get_balance("eosio") + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
+      get_balance(config::system_account_name) + get_balance(config::ramfee_account_name) +
+      get_balance(config::stake_account_name) + get_balance(config::ram_account_name));
 
    vector<permission_level> perm = { { N(alice), config::active_name }, { N(bob), config::active_name },
       {N(carol), config::active_name} };
 
-   vector<permission_level> action_perm = {{N(eosio), config::active_name}};
+   vector<permission_level> action_perm = {{config::system_account_name, config::active_name}};
 
    auto wasm = contracts::util::test_api_wasm();
 
@@ -491,7 +495,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, cyber_msig_tester )
 
    // can't create account because system contract was replace by the test_api contract
 
-   BOOST_REQUIRE_EXCEPTION( create_account_with_resources( N(alice1111112), N(eosio), core_sym::from_string("1.0000"), false ),
+   BOOST_REQUIRE_EXCEPTION(create_account_with_resources( N(alice1111112), config::system_account_name, core_sym::from_string("1.0000"), false),
                             eosio_assert_message_exception, eosio_assert_message_is("Unknown Test")
 
    );
@@ -499,11 +503,11 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, cyber_msig_tester )
 
 BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, cyber_msig_tester ) try {
 
-   // set up the link between (eosio active) and (eosio.prods active)
-   set_authority(N(eosio), "active", authority(1,
-      vector<key_weight>{{get_private_key("eosio", "active").get_public_key(), 1}},
-      vector<permission_level_weight>{{{N(eosio.prods), config::active_name}, 1}}), "owner",
-      { { N(eosio), "active" } }, { get_private_key( N(eosio), "active" ) });
+   // set up the link between (cyber active) and (cyber.prods active)
+   set_authority(config::system_account_name, "active", authority(1,
+      vector<key_weight>{{get_private_key(config::system_account_name, "active").get_public_key(), 1}},
+      vector<permission_level_weight>{{{config::producers_account_name, config::active_name}, 1}}), "owner",
+      {{config::system_account_name, "active"}}, {get_private_key(config::system_account_name, "active")});
 
    create_accounts( { N(apple) } );
    set_producers( {N(alice),N(bob),N(carol), N(apple)} );
@@ -515,7 +519,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, cyber_msig_tester
 
    create_currency( N(cyber.token), config::system_account_name, core_sym::from_string("10000000000.0000") );
    issue(config::system_account_name, core_sym::from_string("1000000000.0000"));
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance( "eosio" ) );
+   BOOST_REQUIRE_EQUAL(core_sym::from_string("1000000000.0000"), get_balance(config::system_account_name));
 
    // TODO: Cyberway system contract
    return;
@@ -528,17 +532,18 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, cyber_msig_tester
    );
    produce_blocks();
 
-   create_account_with_resources( N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false );
-   create_account_with_resources( N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false );
-   create_account_with_resources( N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false );
+   create_account_with_resources(N(alice1111111), config::system_account_name, core_sym::from_string("1.0000"), false);
+   create_account_with_resources(N(bob111111111), config::system_account_name, core_sym::from_string("0.4500"), false);
+   create_account_with_resources(N(carol1111111), config::system_account_name, core_sym::from_string("1.0000"), false);
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
-                        get_balance("eosio") + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
+      get_balance(config::system_account_name) + get_balance(config::ramfee_account_name) +
+      get_balance(config::stake_account_name) + get_balance(config::ram_account_name));
 
    vector<permission_level> perm = { { N(alice), config::active_name }, { N(bob), config::active_name },
       {N(carol), config::active_name}, {N(apple), config::active_name}};
 
-   vector<permission_level> action_perm = {{N(eosio), config::active_name}};
+   vector<permission_level> action_perm = {{config::system_account_name, config::active_name}};
 
    auto wasm = contracts::util::test_api_wasm();
 
@@ -620,7 +625,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, cyber_msig_tester
 
    // can't create account because system contract was replace by the test_api contract
 
-   BOOST_REQUIRE_EXCEPTION( create_account_with_resources( N(alice1111112), N(eosio), core_sym::from_string("1.0000"), false ),
+   BOOST_REQUIRE_EXCEPTION(create_account_with_resources(N(alice1111112), config::system_account_name, core_sym::from_string("1.0000"), false),
                             eosio_assert_message_exception, eosio_assert_message_is("Unknown Test")
 
    );
