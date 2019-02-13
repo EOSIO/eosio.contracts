@@ -137,7 +137,7 @@ def startProducers(b, e):
 
 def createSystemAccounts():
     for a in systemAccounts:
-        retry(args.cleos + 'create account eosio ' + a + ' ' + args.public_key)
+        retry(args.cleos + 'create account cyber ' + a + ' ' + args.public_key)
 
 def intToCurrency(i):
     return '%d.%04d %s' % (i // 10000, i % 10000, args.symbol)
@@ -176,10 +176,10 @@ def createStakedAccounts(b, e):
         stakeCpu = stake - stakeNet
         print('%s: total funds=%s, ram=%s, net=%s, cpu=%s, unstaked=%s' % (a['name'], intToCurrency(a['funds']), intToCurrency(ramFunds), intToCurrency(stakeNet), intToCurrency(stakeCpu), intToCurrency(unstaked)))
         assert(funds == ramFunds + stakeNet + stakeCpu + unstaked)
-        retry(args.cleos + 'system newaccount --transfer eosio %s %s --stake-net "%s" --stake-cpu "%s" --buy-ram "%s"   ' % 
+        retry(args.cleos + 'system newaccount --transfer cyber %s %s --stake-net "%s" --stake-cpu "%s" --buy-ram "%s"   ' % 
             (a['name'], a['pub'], intToCurrency(stakeNet), intToCurrency(stakeCpu), intToCurrency(ramFunds)))
         if unstaked:
-            retry(args.cleos + 'transfer eosio %s "%s"' % (a['name'], intToCurrency(unstaked)))
+            retry(args.cleos + 'transfer cyber %s "%s"' % (a['name'], intToCurrency(unstaked)))
 
 def regProducers(b, e):
     for i in range(b, e):
@@ -197,7 +197,7 @@ def vote(b, e):
         retry(args.cleos + 'system voteproducer prods ' + voter + ' ' + prods)
 
 def claimRewards():
-    table = getJsonOutput(args.cleos + 'get table eosio eosio producers -l 100')
+    table = getJsonOutput(args.cleos + 'get table cyber cyber producers -l 100')
     times = []
     for row in table['rows']:
         if row['unpaid_blocks'] and not row['last_claim_time']:
@@ -214,7 +214,7 @@ def proxyVotes(b, e):
         retry(args.cleos + 'system voteproducer proxy ' + voter + ' ' + proxy)
 
 def updateAuth(account, permission, parent, controller):
-    retry(args.cleos + 'push action eosio updateauth' + jsonArg({
+    retry(args.cleos + 'push action cyber updateauth' + jsonArg({
         'account': account,
         'permission': permission,
         'parent': parent,
@@ -245,11 +245,11 @@ def msigProposeReplaceSystem(proposer, proposalName):
     requestedPermissions = []
     for i in range(firstProducer, firstProducer + numProducers):
         requestedPermissions.append({'actor': accounts[i]['name'], 'permission': 'active'})
-    trxPermissions = [{'actor': 'eosio', 'permission': 'active'}]
+    trxPermissions = [{'actor': 'cyber', 'permission': 'active'}]
     with open(fastUnstakeSystem, mode='rb') as f:
-        setcode = {'account': 'eosio', 'vmtype': 0, 'vmversion': 0, 'code': f.read().hex()}
+        setcode = {'account': 'cyber', 'vmtype': 0, 'vmversion': 0, 'code': f.read().hex()}
     retry(args.cleos + 'multisig propose ' + proposalName + jsonArg(requestedPermissions) + 
-        jsonArg(trxPermissions) + 'eosio setcode' + jsonArg(setcode) + ' -p ' + proposer)
+        jsonArg(trxPermissions) + 'cyber setcode' + jsonArg(setcode) + ' -p ' + proposer)
 
 def msigApproveReplaceSystem(proposer, proposalName):
     for i in range(firstProducer, firstProducer + numProducers):
@@ -261,7 +261,7 @@ def msigExecReplaceSystem(proposer, proposalName):
     retry(args.cleos + 'multisig exec ' + proposer + ' ' + proposalName + ' -p ' + proposer)
 
 def msigReplaceSystem():
-    retry(args.cleos + 'push action eosio buyrambytes' + jsonArg(['eosio', accounts[0]['name'], 200000]) + '-p eosio')
+    retry(args.cleos + 'push action cyber buyrambytes' + jsonArg(['cyber', accounts[0]['name'], 200000]) + '-p cyber')
     sleep(1)
     msigProposeReplaceSystem(accounts[0]['name'], 'fast.unstake')
     sleep(1)
@@ -283,21 +283,21 @@ def stepKillAll():
     run('killall keosd nodeos || true')
     sleep(1.5)
 def stepStartBoot():
-    startNode(0, {'name': 'eosio', 'pvt': args.private_key, 'pub': args.public_key})
+    startNode(0, {'name': 'cyber', 'pvt': args.private_key, 'pub': args.public_key})
     sleep(9)
 def stepInstallSystemContracts():
     retry(args.cleos + 'set contract cyber.domain ' + args.contracts_dir + 'cyber.domain/')
     retry(args.cleos + 'set contract cyber.token ' + args.contracts_dir + 'cyber.token/')
     retry(args.cleos + 'set contract cyber.msig ' + args.contracts_dir + 'cyber.msig/')
 def stepCreateTokens():
-    retry(args.cleos + 'push action cyber.token create \'["eosio", "10000000000.0000 %s"]\' -p cyber.token' % (args.symbol))
+    retry(args.cleos + 'push action cyber.token create \'["cyber", "10000000000.0000 %s"]\' -p cyber.token' % (args.symbol))
     totalAllocation = allocateFunds(0, len(accounts))
-    retry(args.cleos + 'push action cyber.token issue \'["eosio", "%s", "memo"]\' -p eosio' % intToCurrency(totalAllocation))
+    retry(args.cleos + 'push action cyber.token issue \'["cyber", "%s", "memo"]\' -p cyber' % intToCurrency(totalAllocation))
     sleep(1)
 def stepSetSystemContract():
-    retry(args.cleos + 'set contract eosio ' + args.contracts_dir + 'cyber.bios/')
+    retry(args.cleos + 'set contract cyber ' + args.contracts_dir + 'cyber.bios/')
     sleep(1)
-    retry(args.cleos + 'push action eosio setpriv' + jsonArg(['cyber.msig', 1]) + '-p eosio@active')
+    retry(args.cleos + 'push action cyber setpriv' + jsonArg(['cyber.msig', 1]) + '-p cyber@active')
 def stepCreateStakedAccounts():
     createStakedAccounts(0, len(accounts))
 def stepRegProducers():
@@ -315,9 +315,9 @@ def stepVote():
 def stepProxyVotes():
     proxyVotes(0, 0 + args.num_voters)
 def stepResign():
-    resign('eosio', 'eosio.prods')
+    resign('cyber', 'cyber.prods')
     for a in systemAccounts:
-        resign(a, 'eosio')
+        resign(a, 'cyber')
 def stepTransfer():
     while True:
         randomTransfer(0, args.num_senders)
@@ -344,7 +344,7 @@ commands = [
     ('v', 'vote',           stepVote,                   False, False,    "Vote for producers"),
     ('R', 'claim',          claimRewards,               False, False,    "Claim rewards"),
     ('x', 'proxy',          stepProxyVotes,             False, False,    "Proxy votes"),
-    ('q', 'resign',         stepResign,                 False, False,    "Resign eosio"),
+    ('q', 'resign',         stepResign,                 False, False,    "Resign cyber"),
     ('m', 'msg-replace',    msigReplaceSystem,          False, False,   "Replace system contract using msig"),
     ('X', 'xfer',           stepTransfer,               False, False,   "Random transfer tokens (infinite loop)"),
     ('l', 'log',            stepLog,                    False, False,    "Show tail of node's log"),

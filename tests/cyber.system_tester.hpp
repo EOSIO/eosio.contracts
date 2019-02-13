@@ -35,8 +35,10 @@ public:
    void basic_setup() {
       produce_blocks( 2 );
 
-      create_accounts({ N(cyber.token), N(eosio.ram), N(eosio.ramfee), N(eosio.stake),
-               N(eosio.bpay), N(eosio.vpay), N(eosio.saving), N(eosio.names) });
+      create_accounts({config::token_name,
+         config::ram_account_name, config::ramfee_account_name, config::stake_account_name,
+         config::bpay_account_name, config::vpay_account_name, config::saving_account_name,
+         config::names_account_name});
 
 
       produce_blocks( 100 );
@@ -54,7 +56,7 @@ public:
       FC_ASSERT( core_symbol.precision() != 4, "create_core_token assumes precision of core token is 4" );
       create_currency( N(cyber.token), config::system_account_name, asset(100000000000000, core_symbol) );
       issue(config::system_account_name, asset(10000000000000, core_symbol) );
-      BOOST_REQUIRE_EQUAL( asset(10000000000000, core_symbol), get_balance( "eosio", core_symbol ) );
+      BOOST_REQUIRE_EQUAL(asset(10000000000000, core_symbol), get_balance(config::system_account_name, core_symbol));
    }
 
    void deploy_contract( bool call_init = true ) {
@@ -84,7 +86,9 @@ public:
       create_account_with_resources( N(bob111111111), config::system_account_name, core_sym::from_string("0.4500"), false );
       create_account_with_resources( N(carol1111111), config::system_account_name, core_sym::from_string("1.0000"), false );
 
-      BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance("eosio")  + get_balance("eosio.ramfee") + get_balance("eosio.stake") + get_balance("eosio.ram") );
+      BOOST_REQUIRE_EQUAL(core_sym::from_string("1000000000.0000"),
+         get_balance(config::system_account_name) + get_balance(config::ramfee_account_name) +
+         get_balance(config::stake_account_name) + get_balance(config::ram_account_name));
    }
 
    enum class setup_level {
@@ -463,12 +467,13 @@ public:
       abi_serializer msig_abi_ser;
       {
          create_account_with_resources( N(cyber.msig), config::system_account_name );
-         BOOST_REQUIRE_EQUAL( success(), buyram( "eosio", "cyber.msig", core_sym::from_string("5000.0000") ) );
+         BOOST_REQUIRE_EQUAL(success(),
+            buyram(config::system_account_name, config::msig_account_name, core_sym::from_string("5000.0000")));
          produce_block();
 
          auto trace = base_tester::push_action(config::system_account_name, N(setpriv),
                                                config::system_account_name,  mutable_variant_object()
-                                               ("account", "cyber.msig")
+                                               ("account", name{config::msig_account_name})
                                                ("is_priv", 1)
          );
 
@@ -486,7 +491,7 @@ public:
 
    vector<name> active_and_vote_producers() {
       //stake more than 15% of total EOS supply to activate chain
-      transfer( "eosio", "alice1111111", core_sym::from_string("650000000.0000"), "eosio" );
+      transfer(config::system_account_name, "alice1111111", core_sym::from_string("650000000.0000"));
       BOOST_REQUIRE_EQUAL( success(), stake( "alice1111111", "alice1111111", core_sym::from_string("300000000.0000"), core_sym::from_string("300000000.0000") ) );
 
       // create accounts {defproducera, defproducerb, ..., defproducerz} and register as producers

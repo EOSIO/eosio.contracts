@@ -65,9 +65,9 @@ public:
     action_result push_action_msig_tx(account_name code, action_name name,
         std::vector<permission_level> perms, std::vector<account_name> signers, const variant_object& data);
     action_result push_tx(signed_transaction&& tx);
-    void delegate_authority(account_name from, std::vector<account_name> to, 
+    void delegate_authority(account_name from, std::vector<account_name> to,
         account_name code, action_name type,
-        permission_name req, permission_name parent = N(active), permission_name prov = N(eosio.code));
+        permission_name req, permission_name parent = N(active), permission_name prov = config::eosio_code_name);
 
     // table helpers
     const table_id_object* find_table(name code, uint64_t scope, name tbl) const;

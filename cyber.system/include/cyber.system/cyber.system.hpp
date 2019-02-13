@@ -192,20 +192,20 @@ namespace eosiosystem {
       public:
          static constexpr eosio::name active_permission{"active"_n};
          static constexpr eosio::name token_account{"cyber.token"_n};
-         static constexpr eosio::name ram_account{"eosio.ram"_n};
-         static constexpr eosio::name ramfee_account{"eosio.ramfee"_n};
-         static constexpr eosio::name stake_account{"eosio.stake"_n};
-         static constexpr eosio::name bpay_account{"eosio.bpay"_n};
-         static constexpr eosio::name vpay_account{"eosio.vpay"_n};
-         static constexpr eosio::name names_account{"eosio.names"_n};
-         static constexpr eosio::name saving_account{"eosio.saving"_n};
+         static constexpr eosio::name ram_account{"cyber.ram"_n};
+         static constexpr eosio::name ramfee_account{"cyber.ramfee"_n};
+         static constexpr eosio::name stake_account{"cyber.stake"_n};
+         static constexpr eosio::name bpay_account{"cyber.bpay"_n};
+         static constexpr eosio::name vpay_account{"cyber.vpay"_n};
+         static constexpr eosio::name names_account{"cyber.names"_n};
+         static constexpr eosio::name saving_account{"cyber.saving"_n};
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
          static constexpr symbol ram_symbol     = symbol(symbol_code("RAM"), 0);
 
          system_contract( name s, name code, datastream<const char*> ds );
          ~system_contract();
 
-         static symbol get_core_symbol( name system_account = "eosio"_n ) {
+         static symbol get_core_symbol( name system_account = "cyber"_n ) {
             rammarket rm(system_account, system_account.value);
             const static auto sym = get_core_symbol( rm );
             return sym;
