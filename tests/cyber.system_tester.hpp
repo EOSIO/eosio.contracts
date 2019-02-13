@@ -35,7 +35,7 @@ public:
    void basic_setup() {
       produce_blocks( 2 );
 
-      create_accounts({config::token_name,
+      create_accounts({config::token_account_name,
          config::ram_account_name, config::ramfee_account_name, config::stake_account_name,
          config::bpay_account_name, config::vpay_account_name, config::saving_account_name,
          config::names_account_name});
