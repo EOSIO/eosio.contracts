@@ -303,9 +303,6 @@ namespace eosiosystem {
          void claimrewards( const name owner );
 
          [[eosio::action]]
-         void setpriv( name account, uint8_t is_priv );
-
-         [[eosio::action]]
          void rmvproducer( name producer );
 
          [[eosio::action]]

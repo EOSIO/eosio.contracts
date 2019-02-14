@@ -20,19 +20,13 @@ using mvo = fc::mutable_variant_object;
 class cyber_msig_tester : public tester {
 public:
    cyber_msig_tester() {
-      create_accounts({config::msig_account_name, config::stake_account_name,
-         config::ram_account_name, config::ramfee_account_name,
+      create_accounts({config::stake_account_name, config::ram_account_name, config::ramfee_account_name,
          N(alice), N(bob), N(carol)});
       produce_block();
 
-      auto trace = base_tester::push_action(config::system_account_name, N(setpriv),
-                                            config::system_account_name,  mutable_variant_object()
-                                            ("account", name{config::msig_account_name})
-                                            ("is_priv", 1)
-      );
-
-      set_code(config::msig_account_name, contracts::msig_wasm());
-      set_abi(config::msig_account_name, contracts::msig_abi().data());
+      const auto sys_priv_key = get_private_key(config::system_account_name, name{config::active_name}.to_string());
+      set_code(config::msig_account_name, contracts::msig_wasm(), &sys_priv_key);
+      set_abi(config::msig_account_name, contracts::msig_abi().data(), &sys_priv_key);
 
       produce_blocks();
       const auto& accnt = control->db().get<account_object,by_name>(config::msig_account_name);
@@ -91,14 +85,14 @@ public:
       base_tester::push_action(contract, N(create), contract, act );
    }
    void issue( name to, const asset& amount, name manager = config::system_account_name ) {
-      base_tester::push_action( N(cyber.token), N(issue), manager, mutable_variant_object()
+      base_tester::push_action(config::token_account_name, N(issue), manager, mutable_variant_object()
                                 ("to",      to )
                                 ("quantity", amount )
                                 ("memo", "")
                                 );
    }
    void transfer( name from, name to, const string& amount, name manager = config::system_account_name ) {
-      base_tester::push_action( N(cyber.token), N(transfer), manager, mutable_variant_object()
+      base_tester::push_action(config::token_account_name, N(transfer), manager, mutable_variant_object()
                                 ("from",    from)
                                 ("to",      to )
                                 ("quantity", asset::from_string(amount) )
@@ -106,14 +100,14 @@ public:
                                 );
    }
    asset get_balance( const account_name& act ) {
-      return tester::get_currency_balance(N(cyber.token), symbol(CORE_SYM), act);
+      return tester::get_currency_balance(config::token_account_name, symbol(CORE_SYM), act);
    }
 
    transaction_trace_ptr push_action( const account_name& signer, const action_name& name, const variant_object& data, bool auth = true ) {
       vector<account_name> accounts;
       if( auth )
          accounts.push_back( signer );
-      auto trace = base_tester::push_action( N(cyber.msig), name, accounts, data );
+      auto trace = base_tester::push_action(config::msig_account_name, name, accounts, data );
       produce_block();
       BOOST_REQUIRE_EQUAL( true, chain_has_transaction(trace->id) );
       return trace;
@@ -122,7 +116,7 @@ public:
          string action_type_name = abi_ser.get_action_type(name);
 
          action act;
-         act.account = N(cyber.msig);
+         act.account = config::msig_account_name;
          act.name = name;
          act.data = abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
          //std::cout << "test:\n" << fc::to_hex(act.data.data(), act.data.size()) << " size = " << act.data.size() << std::endl;
@@ -385,18 +379,18 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, cyber_msig_tester )
 
    set_authority(config::system_account_name, "active", authority(1,
       vector<key_weight>{{get_private_key(config::system_account_name, "active").get_public_key(), 1}},
-      vector<permission_level_weight>{{{N(cyber.prods), config::active_name}, 1}}), "owner",
+      vector<permission_level_weight>{{{config::producers_account_name, config::active_name}, 1}}), "owner",
       {{config::system_account_name, "active"}}, {get_private_key(config::system_account_name, "active")});
 
 
    set_producers( {N(alice),N(bob),N(carol)} );
    produce_blocks(50);
 
-   create_accounts( { N(cyber.token) } );
-   set_code( N(cyber.token), contracts::token_wasm() );
-   set_abi( N(cyber.token), contracts::token_abi().data() );
+   create_account(config::token_account_name);
+   set_code(config::token_account_name, contracts::token_wasm());
+   set_abi(config::token_account_name, contracts::token_abi().data());
 
-   create_currency( N(cyber.token), config::system_account_name, core_sym::from_string("10000000000.0000") );
+   create_currency(config::token_account_name, config::system_account_name, core_sym::from_string("10000000000.0000"));
 
    issue(config::system_account_name, core_sym::from_string("1000000000.0000"));
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
@@ -513,11 +507,11 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, cyber_msig_tester
    set_producers( {N(alice),N(bob),N(carol), N(apple)} );
    produce_blocks(50);
 
-   create_accounts( { N(cyber.token) } );
-   set_code( N(cyber.token), contracts::token_wasm() );
-   set_abi( N(cyber.token), contracts::token_abi().data() );
+   create_account(config::token_account_name);
+   set_code(config::token_account_name, contracts::token_wasm());
+   set_abi(config::token_account_name, contracts::token_abi().data());
 
-   create_currency( N(cyber.token), config::system_account_name, core_sym::from_string("10000000000.0000") );
+   create_currency(config::token_account_name, config::system_account_name, core_sym::from_string("10000000000.0000"));
    issue(config::system_account_name, core_sym::from_string("1000000000.0000"));
    BOOST_REQUIRE_EQUAL(core_sym::from_string("1000000000.0000"), get_balance(config::system_account_name));
 
@@ -721,153 +715,6 @@ BOOST_FIXTURE_TEST_CASE( propose_invalidate_approve, cyber_msig_tester ) try {
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( approve_execute_old, cyber_msig_tester ) try {
-   // Is not valid case for CyberWay
-   return;
-
-   set_code( N(cyber.msig), contracts::util::msig_wasm_old() );
-   set_abi( N(cyber.msig), contracts::util::msig_abi_old().data() );
-   produce_blocks();
-
-   //propose with old version of cyber.msig
-   auto trx = reqauth("alice", {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
-   push_action( N(alice), N(propose), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("trx",           trx)
-                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
-   );
-
-   set_code( N(cyber.msig), contracts::msig_wasm() );
-   set_abi( N(cyber.msig), contracts::msig_abi().data() );
-   produce_blocks();
-
-   //approve and execute with new version
-   push_action( N(alice), N(approve), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
-   );
-
-   transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
-   push_action( N(alice), N(exec), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("executer",      "alice")
-   );
-
-   BOOST_REQUIRE( bool(trace) );
-   BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
-   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
-
-} FC_LOG_AND_RETHROW()
-
-
-BOOST_FIXTURE_TEST_CASE( approve_unapprove_old, cyber_msig_tester ) try {
-   // Is not valid case for CyberWay
-   return;
-
-   set_code( N(cyber.msig), contracts::util::msig_wasm_old() );
-   set_abi( N(cyber.msig), contracts::util::msig_abi_old().data() );
-   produce_blocks();
-
-   //propose with old version of cyber.msig
-   auto trx = reqauth("alice", {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
-   push_action( N(alice), N(propose), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("trx",           trx)
-                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
-   );
-
-   //approve with old version
-   push_action( N(alice), N(approve), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
-   );
-
-   set_code( N(cyber.msig), contracts::msig_wasm() );
-   set_abi( N(cyber.msig), contracts::msig_abi().data() );
-   produce_blocks();
-
-   //unapprove with old version
-   push_action( N(alice), N(unapprove), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
-   );
-
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
-                                          ("proposer",      "alice")
-                                          ("proposal_name", "first")
-                                          ("executer",      "alice")
-                            ),
-                            eosio_assert_message_exception,
-                            eosio_assert_message_is("transaction authorization failed")
-   );
-
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE( approve_by_two_old, cyber_msig_tester ) try {
-   // Is not valid case for CyberWay
-   return;
-
-   set_code( N(cyber.msig), contracts::util::msig_wasm_old() );
-   set_abi( N(cyber.msig), contracts::util::msig_abi_old().data() );
-   produce_blocks();
-
-   auto trx = reqauth("alice", vector<permission_level>{ { N(alice), config::active_name }, { N(bob), config::active_name } }, abi_serializer_max_time );
-   push_action( N(alice), N(propose), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("trx",           trx)
-                  ("requested", vector<permission_level>{ { N(alice), config::active_name }, { N(bob), config::active_name } })
-   );
-
-   //approve by alice
-   push_action( N(alice), N(approve), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
-   );
-
-   set_code( N(cyber.msig), contracts::msig_wasm() );
-   set_abi( N(cyber.msig), contracts::msig_abi().data() );
-   produce_blocks();
-
-   //fail because approval by bob is missing
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
-                                          ("proposer",      "alice")
-                                          ("proposal_name", "first")
-                                          ("executer",      "alice")
-                            ),
-                            eosio_assert_message_exception,
-                            eosio_assert_message_is("transaction authorization failed")
-   );
-
-   //approve and execute with new version
-   push_action( N(bob), N(approve), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(bob), config::active_name })
-   );
-
-   transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
-
-   push_action( N(alice), N(exec), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("executer",      "alice")
-   );
-
-   BOOST_REQUIRE( bool(trace) );
-   BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
-   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
-
-} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( approve_with_hash, cyber_msig_tester ) try {
    auto trx = reqauth("alice", {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
