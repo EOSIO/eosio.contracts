@@ -1,0 +1,10 @@
+#pragma once
+#include <common/config.hpp>
+
+namespace cyber { namespace config {
+
+static const auto govern_update_window = 120;
+
+}
+
+} // cyber::config

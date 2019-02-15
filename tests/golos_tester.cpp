@@ -12,10 +12,10 @@ uint64_t hash64(const std::string& s) {
 
 
 void golos_tester::install_contract(
-    account_name acc, const vector<uint8_t>& wasm, const vector<char>& abi, bool produce
+    account_name acc, const vector<uint8_t>& wasm, const vector<char>& abi, bool produce, const private_key_type* signer
 ) {
-    set_code(acc, wasm);
-    set_abi (acc, abi.data());
+    set_code(acc, wasm, signer);
+    set_abi (acc, abi.data(), signer);
     if (produce)
         produce_block();
     const auto& accnt = control->db().get<account_object,by_name>(acc);

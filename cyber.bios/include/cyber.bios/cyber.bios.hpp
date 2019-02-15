@@ -4,11 +4,16 @@
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/privileged.hpp>
 #include <eosiolib/producer_schedule.hpp>
+#include <eosiolib/singleton.hpp>
+#include <eosiolib/time.hpp>
 
-namespace eosio {
+namespace cyber {
    using eosio::permission_level;
    using eosio::public_key;
    using eosio::ignore;
+   using eosio::name;
+   using eosio::time_point_sec;
+   using eosio::contract;
 
    struct permission_level_weight {
       permission_level  permission;
@@ -43,23 +48,24 @@ namespace eosio {
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts)(waits) )
    };
-
-   struct block_header {
-      uint32_t                                  timestamp;
-      name                                      producer;
-      uint16_t                                  confirmed = 0;
-      capi_checksum256                          previous;
-      capi_checksum256                          transaction_mroot;
-      capi_checksum256                          action_mroot;
-      uint32_t                                  schedule_version = 0;
-      std::optional<eosio::producer_schedule>   new_producers;
-
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE(block_header, (timestamp)(producer)(confirmed)(previous)(transaction_mroot)(action_mroot)
-                                     (schedule_version)(new_producers))
+   
+    struct block_header {
+        uint32_t                                  timestamp;
+        name                                      producer;
+        uint16_t                                  confirmed = 0;
+        capi_checksum256                          previous;
+        capi_checksum256                          transaction_mroot;
+        capi_checksum256                          action_mroot;
+        uint32_t                                  schedule_version = 0;
+        std::optional<eosio::producer_schedule>   new_producers;
    };
 
    class [[eosio::contract("cyber.bios")]] bios : public contract {
+      struct [[eosio::table("state")]] state_info {
+         time_point_sec last_govern_update;
+      };
+      using state_singleton = eosio::singleton<"biosstate"_n, state_info>;
+       
       public:
          using contract::contract;
          [[eosio::action]]
@@ -144,7 +150,7 @@ namespace eosio {
                   sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
                });
             } else {
-               table.modify( itr, same_payer, [&]( auto& row ) {
+               table.modify( itr, name(), [&]( auto& row ) {
                   sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
                });
             }
@@ -159,6 +165,8 @@ namespace eosio {
          };
 
          typedef eosio::multi_index< "abihash"_n, abi_hash > abi_hash_table;
+         
+         [[eosio::action]] void onblock(ignore<block_header> header);
    };
 
-} /// namespace eosio
+} /// namespace cyber

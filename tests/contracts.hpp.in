@@ -24,6 +24,8 @@ struct contracts {
    static std::vector<char>    bios_abi() { return read_abi(cyberway_contracts + "/cyber.bios/cyber.bios.abi"); }
    static std::vector<uint8_t> stake_wasm() { return read_wasm(cyberway_contracts + "/cyber.stake/cyber.stake.wasm"); }
    static std::vector<char>    stake_abi() { return read_abi(cyberway_contracts + "/cyber.stake/cyber.stake.abi"); }
+   static std::vector<uint8_t> govern_wasm() { return read_wasm(cyberway_contracts + "/cyber.govern/cyber.govern.wasm"); }
+   static std::vector<char>    govern_abi() { return read_abi(cyberway_contracts + "/cyber.govern/cyber.govern.abi"); }
 
    struct util {
       static std::vector<uint8_t> test_api_wasm() { return read_wasm(cyberway_test_contracts + "/test_api.wasm"); }

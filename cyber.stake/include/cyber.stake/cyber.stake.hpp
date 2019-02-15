@@ -10,12 +10,7 @@
 #include "config.hpp"
 #include <string>
 #include <tuple>
-
-extern "C" {
-    void update_stake_proxied(uint64_t purpose_symbol_raw, capi_name account, int64_t frame_length, int force);
-    void recall_stake_proxied(capi_name grantor_name, capi_name agent_name, 
-        uint64_t token_code_raw, uint64_t purpose_code_raw, int32_t pct);
-}
+#include <eosiolib/privileged.h>
 
 using purpose_id_t = uint64_t; //TODO: workaround due to index issues. uint8_t is enough here
 #define table_owner name()
@@ -110,12 +105,12 @@ struct structures {
     using agent_key_index = eosio::indexed_by<"bykey"_n, eosio::const_mem_fun<structures::agent, structures::agent::key_t, &structures::agent::by_key> >;
     using agent_ultimate_index = eosio::indexed_by<"byultimate"_n, eosio::const_mem_fun<structures::agent, structures::agent::ultimate_key_t, &structures::agent::by_ultimate> >;
     using agents = eosio::multi_index<"stake.agent"_n, structures::agent, agent_id_index, agent_key_index, agent_ultimate_index>;
-    using AgentsIdx = decltype(agents(table_owner, table_owner.value).get_index<"bykey"_n>());
+    using agents_idx_t = decltype(agents(table_owner, table_owner.value).get_index<"bykey"_n>());
     
     using grant_id_index = eosio::indexed_by<"grantid"_n, eosio::const_mem_fun<structures::grant, uint64_t, &structures::grant::primary_key> >;
     using grant_key_index = eosio::indexed_by<"bykey"_n, eosio::const_mem_fun<structures::grant, structures::grant::key_t, &structures::grant::by_key> >;
     using grants = eosio::multi_index<"stake.grant"_n, structures::grant, grant_id_index, grant_key_index>;
-    using GrantsIdx = decltype(grants(table_owner, table_owner.value).get_index<"bykey"_n>());
+    using grants_idx_t = decltype(grants(table_owner, table_owner.value).get_index<"bykey"_n>());
     
     using params = eosio::multi_index<"stake.param"_n, structures::param>;
     using stats = eosio::multi_index<"stake.stat"_n, structures::stat>;
@@ -130,15 +125,15 @@ struct structures {
     
     void send_scheduled_payout(payouts& payouts_table, name account, int64_t payout_step_lenght, symbol sym);
     void update_payout(name account, asset quantity, symbol_code purpose_code, bool claim_mode = false);
-    
+
     //return: share
-    int64_t delegate_traversal(symbol purpose_symbol, AgentsIdx& agents_idx, GrantsIdx& grants_idx, name agent_name, int64_t amount, bool refill = false);
+    int64_t delegate_traversal(symbol purpose_symbol, agents_idx_t& agents_idx, grants_idx_t& grants_idx, name agent_name, int64_t amount, bool refill = false);
     
     bool set_proxy_level(name account, symbol sym, const std::vector<uint8_t>& max_proxies, uint8_t level);
     bool set_grant_terms(name grantor_name, name agent_name, int16_t pct, int16_t break_fee, int64_t break_min_own_staked, 
         symbol sym, const structures::param& param);
     
-    AgentsIdx::const_iterator get_agent_itr(symbol purpose_symbol, AgentsIdx& agents_idx, name agent_name, int16_t proxy_level_for_emplaced = -1, agents* agents_table = nullptr, bool* emplaced = nullptr);
+    agents_idx_t::const_iterator get_agent_itr(symbol purpose_symbol, agents_idx_t& agents_idx, name agent_name, int16_t proxy_level_for_emplaced = -1, agents* agents_table = nullptr, bool* emplaced = nullptr);
     void add_proxy(symbol purpose_symbol, grants& grants_table, const structures::agent& grantor_as_agent, const structures::agent& agent, 
         int16_t pct, int64_t share, int16_t break_fee = -1, int64_t break_min_own_staked = -1);
 
@@ -210,6 +205,10 @@ public:
 
         for (auto i = agents_vector.begin(); i != agents_mid; ++i)
             ret.emplace_back(std::make_pair(i->account, i->signing_key));
+        
+        std::sort(ret.begin(), ret.end(), [](const std::pair<name, public_key>& lhs, const std::pair<name, public_key>& rhs) {
+            return lhs.first < rhs.first;
+        });
         return ret;
     }
 

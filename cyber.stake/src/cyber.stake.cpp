@@ -11,9 +11,9 @@
 #include <common/dispatchers.hpp>
 #include <common/parameter_ops.hpp>
 
-namespace cyber {
+namespace cyber { 
     
-int64_t delegate_traversal(symbol purpose_symbol, stake::AgentsIdx& agents_idx, stake::GrantsIdx& grants_idx, name agent_name, int64_t amount, bool refill) {
+int64_t stake::delegate_traversal(symbol purpose_symbol, stake::agents_idx_t& agents_idx, stake::grants_idx_t& grants_idx, name agent_name, int64_t amount, bool refill) {
     
     auto agent = get_agent_itr(purpose_symbol, agents_idx, agent_name);
     auto total_funds = agent->get_total_funds();
@@ -493,7 +493,7 @@ void stake::create(symbol token_symbol, std::vector<symbol_code> purpose_codes, 
         };});
 }
 
-stake::AgentsIdx::const_iterator stake::get_agent_itr(symbol purpose_symbol, stake::AgentsIdx& agents_idx, name agent_name, int16_t proxy_level_for_emplaced, agents* agents_table, bool* emplaced) {
+stake::agents_idx_t::const_iterator stake::get_agent_itr(symbol purpose_symbol, stake::agents_idx_t& agents_idx, name agent_name, int16_t proxy_level_for_emplaced, agents* agents_table, bool* emplaced) {
     auto key = std::make_tuple(purpose_symbol.precision(), purpose_symbol.code(), agent_name);
     auto agent = agents_idx.find(key);
     
