@@ -1,4 +1,4 @@
-FROM gcr.io/b1-automation-dev/eosio/builder:latest as builder
+FROM gcr.io/b1-automation-dev/eosio/builder:develop as builder
 # import build-time arguments
 ARG CONTRACTS_COMMIT
 ARG CONTRACTS_BRANCH
