@@ -1,12 +1,18 @@
 FROM gcr.io/b1-automation-dev/eosio/builder:latest as builder
+# import build-time arguments
+ARG CONTRACTS_COMMIT
+ARG CONTRACTS_BRANCH
 # install external dependencies
 RUN apt-get update && \
-DEBIAN_FRONTEND=noninteractive apt-get -y install openssl ca-certificates build-essential libbz2-dev zlib1g-dev libssl-dev libgmp3-dev libicu-dev cmake bc jq curl wget net-tools unzip gnupg git graphviz
+apt-get -y upgrade && \
+DEBIAN_FRONTEND=noninteractive apt-get -y install openssl ca-certificates build-essential libbz2-dev zlib1g-dev libssl-dev libgmp3-dev libicu-dev cmake bc jq curl wget net-tools unzip gnupg git graphviz awscli
 # download contracts
-RUN git clone -n https://github.com/EOSIO/eosio.contracts.git --recursive && \
+RUN echo "# git clone -n https://github.com/EOSIO/eosio.contracts.git --recursive" && \
+git clone -n https://github.com/EOSIO/eosio.contracts.git --recursive && \
+echo "# cd eosio.contracts" && \
 cd eosio.contracts && \
-git checkout $CONTRACTS_COMMIT && \
-cd ..
+echo "# git checkout $CONTRACTS_COMMIT" && \
+git checkout $CONTRACTS_COMMIT
 # download internal dependencies
 ADD downloadDependencies.sh /
 RUN /downloadDependencies.sh
@@ -14,8 +20,7 @@ RUN /downloadDependencies.sh
 RUN cd eos && \
 ./eosio_build.sh
 # install eosio
-RUN ./eosio_install.sh && \
-cd ..
+RUN ./eosio_install.sh
 # install cdt
 RUN for filename in $(ls *.deb); do /usr/bin/dpkg -i "$filename" && rm -f "$filename"; done
 # set environment variables
