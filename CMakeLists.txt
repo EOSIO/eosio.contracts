@@ -38,7 +38,6 @@ endmacro()
 
 add_subdirectory(cyber.bios)
 add_subdirectory(cyber.msig)
-add_subdirectory(cyber.wrap)
 add_subdirectory(cyber.system)
 add_subdirectory(cyber.token)
 add_subdirectory(cyber.domain)

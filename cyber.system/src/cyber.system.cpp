@@ -113,11 +113,6 @@ namespace eosiosystem {
       set_blockchain_parameters( params );
    }
 
-   void system_contract::setpriv( name account, uint8_t ispriv ) {
-      require_auth( _self );
-      set_privileged( account.value, ispriv );
-   }
-
    void system_contract::setalimits( name account, int64_t ram, int64_t net, int64_t cpu ) {
       require_auth( _self );
       user_resources_table userres( _self, account.value );
@@ -308,7 +303,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in cyber.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // cyber.system.cpp
-     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
+     (init)(setram)(setramrate)(setparams)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

@@ -30,8 +30,6 @@ struct contracts {
       static std::vector<uint8_t> exchange_wasm() { return read_wasm(cyberway_test_contracts + "/exchange.wasm"); }
       static std::vector<uint8_t> system_wasm_old() { return read_wasm(cyberway_test_contracts + "/cyber.system.old/cyber.system.wasm"); }
       static std::vector<char>    system_abi_old() { return read_abi(cyberway_test_contracts + "/cyber.system.old/cyber.system.abi"); }
-      static std::vector<uint8_t> msig_wasm_old() { return read_wasm(cyberway_test_contracts + "/cyber.msig.old/cyber.msig.wasm"); }
-      static std::vector<char>    msig_abi_old() { return read_abi(cyberway_test_contracts + "/cyber.msig.old/cyber.msig.abi"); }
    };
 };
 }} //ns eosio::testing

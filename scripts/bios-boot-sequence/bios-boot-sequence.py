@@ -18,7 +18,6 @@ fastUnstakeSystem = './fast.refund/cyber.system/cyber.system.wasm'
 
 systemAccounts = [
     'cyber.bpay',
-    'cyber.msig',
     'cyber.names',
     'cyber.ram',
     'cyber.ramfee',
@@ -297,7 +296,6 @@ def stepCreateTokens():
 def stepSetSystemContract():
     retry(args.cleos + 'set contract cyber ' + args.contracts_dir + 'cyber.bios/')
     sleep(1)
-    retry(args.cleos + 'push action cyber setpriv' + jsonArg(['cyber.msig', 1]) + '-p cyber@active')
 def stepCreateStakedAccounts():
     createStakedAccounts(0, len(accounts))
 def stepRegProducers():

@@ -466,22 +466,16 @@ public:
    abi_serializer initialize_multisig() {
       abi_serializer msig_abi_ser;
       {
-         create_account_with_resources( N(cyber.msig), config::system_account_name );
+//         create_account_with_resources(config::msig_account_name, config::system_account_name);
          BOOST_REQUIRE_EQUAL(success(),
             buyram(config::system_account_name, config::msig_account_name, core_sym::from_string("5000.0000")));
          produce_block();
 
-         auto trace = base_tester::push_action(config::system_account_name, N(setpriv),
-                                               config::system_account_name,  mutable_variant_object()
-                                               ("account", name{config::msig_account_name})
-                                               ("is_priv", 1)
-         );
-
-         set_code( N(cyber.msig), contracts::msig_wasm() );
-         set_abi( N(cyber.msig), contracts::msig_abi().data() );
+         set_code(config::msig_account_name, contracts::msig_wasm());
+         set_abi(config::msig_account_name, contracts::msig_abi().data());
 
          produce_blocks();
-         const auto& accnt = control->db().get<account_object,by_name>( N(cyber.msig) );
+         const auto& accnt = control->db().get<account_object,by_name>(config::msig_account_name);
          abi_def msig_abi;
          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, msig_abi), true);
          msig_abi_ser.set_abi(msig_abi, abi_serializer_max_time);

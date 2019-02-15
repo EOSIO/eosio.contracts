@@ -350,20 +350,6 @@
             ]
         },
         {
-            "name": "setpriv",
-            "base": "",
-            "fields": [
-                {
-                    "name": "account",
-                    "type": "name"
-                },
-                {
-                    "name": "is_priv",
-                    "type": "uint8"
-                }
-            ]
-        },
-        {
             "name": "setprods",
             "base": "",
             "fields": [
@@ -501,10 +487,6 @@
         {
             "name": "setparams",
             "type": "setparams"
-        },
-        {
-            "name": "setpriv",
-            "type": "setpriv"
         },
         {
             "name": "setprods",
