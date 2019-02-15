@@ -1,7 +1,12 @@
 FROM gcr.io/b1-automation-dev/eosio/builder:latest as builder
 # install external dependencies
 RUN apt-get update && \
-DEBIAN_FRONTEND=noninteractive apt-get -y install openssl ca-certificates build-essential libbz2-dev zlib1g-dev libssl-dev libgmp3-dev libicu-dev cmake bc jq curl wget net-tools unzip gnupg git graphviz 
+DEBIAN_FRONTEND=noninteractive apt-get -y install openssl ca-certificates build-essential libbz2-dev zlib1g-dev libssl-dev libgmp3-dev libicu-dev cmake bc jq curl wget net-tools unzip gnupg git graphviz
+# download contracts
+RUN git clone -n https://github.com/EOSIO/eosio.contracts.git --recursive && \
+cd eosio.contracts && \
+git checkout $CONTRACTS_COMMIT && \
+cd ..
 # download internal dependencies
 ADD downloadDependencies.sh /
 RUN /downloadDependencies.sh
