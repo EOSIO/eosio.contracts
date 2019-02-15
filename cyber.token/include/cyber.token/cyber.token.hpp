@@ -37,6 +37,15 @@ namespace eosio {
                         asset   quantity,
                         string  memo );
 
+        [[eosio::action]]
+        void payment( name    from,
+                      name    to,
+                      asset   quantity,
+                      string  memo );
+
+         [[eosio::action]]
+         void claim(name owner , asset quantity);
+
          [[eosio::action]]
          void open( name owner, const symbol& symbol, name ram_payer );
 
@@ -67,6 +76,7 @@ namespace eosio {
       private:
          struct [[eosio::table]] account {
             asset    balance;
+            asset    payments;
 
             uint64_t primary_key()const { return balance.symbol.code().raw(); }
          };
@@ -89,8 +99,15 @@ namespace eosio {
 
          void sub_balance( name owner, asset value );
          void add_balance( name owner, asset value, name ram_payer );
+         void add_payment( name owner, asset value, name ram_payer );
 
          void send_currency_event(const currency_stats& stat);
          void send_balance_event(name acc, const account& accinfo);
+
+         void do_transfer( name    from,
+                           name    to,
+                           const asset& quantity,
+                           const string& memo,
+                           bool payment = false);
    };
 } /// namespace eosio

@@ -8,6 +8,10 @@
                 {
                     "name": "balance",
                     "type": "asset"
+                },
+                {
+                    "name": "payments",
+                    "type": "asset"
                 }
             ]
         },
@@ -142,6 +146,20 @@
                     "type": "string"
                 }
             ]
+        },
+        {
+            "name": "claim",
+            "base": "",
+            "fields": [
+                {
+                    "name": "owner",
+                    "type": "name"
+                },
+                {
+                    "name": "quantity",
+                    "type": "asset"
+                }
+            ]
         }
     ],
     "types": [],
@@ -169,6 +187,14 @@
         {
             "name": "transfer",
             "type": "transfer"
+        },
+        {
+            "name": "payment",
+            "type": "transfer"
+        },
+        {
+            "name": "claim",
+            "type": "claim"
         }
     ],
     "events": [

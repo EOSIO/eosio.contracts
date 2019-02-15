@@ -103,15 +103,29 @@ void token::transfer( name    from,
                       asset   quantity,
                       string  memo )
 {
+    do_transfer(from, to, quantity, memo);
+}
+
+void token::payment( name    from,
+                     name    to,
+                     asset   quantity,
+                     string  memo )
+{
+    do_transfer(from, to, quantity, memo, true);
+}
+
+void token::do_transfer( name  from,
+                              name  to,
+                              const asset& quantity,
+                              const string& memo,
+                              bool payment )
+{
     eosio_assert( from != to, "cannot transfer to self" );
     require_auth( from );
     eosio_assert( is_account( to ), "to account does not exist");
     auto sym = quantity.symbol.code();
     stats statstable( _self, sym.raw() );
     const auto& st = statstable.get( sym.raw() );
-
-    require_recipient( from );
-    require_recipient( to );
 
     eosio_assert( quantity.is_valid(), "invalid quantity" );
     eosio_assert( quantity.amount > 0, "must transfer positive quantity" );
@@ -121,7 +135,14 @@ void token::transfer( name    from,
     auto payer = has_auth( to ) ? to : from;
 
     sub_balance( from, quantity );
-    add_balance( to, quantity, payer );
+    if (payment)
+        add_payment( to, quantity, payer );
+    else {
+        require_recipient( from );
+        require_recipient( to );
+
+        add_balance( to, quantity, payer );
+    }
 }
 
 void token::sub_balance( name owner, asset value ) {
@@ -143,11 +164,30 @@ void token::add_balance( name owner, asset value, name ram_payer )
    if( to == to_acnts.end() ) {
       to_acnts.emplace( ram_payer, [&]( auto& a ){
         a.balance = value;
+        a.payments.symbol = value.symbol;
         send_balance_event(owner, a);
       });
    } else {
       to_acnts.modify( to, same_payer, [&]( auto& a ) {
         a.balance += value;
+        send_balance_event(owner, a);
+      });
+   }
+}
+
+void token::add_payment( name owner, asset value, name ram_payer )
+{
+   accounts to_acnts( _self, owner.value );
+   auto to = to_acnts.find( value.symbol.code().raw() );
+   if( to == to_acnts.end() ) {
+      to_acnts.emplace( ram_payer, [&]( auto& a ){
+        a.balance.symbol = value.symbol;
+        a.payments = value;
+        send_balance_event(owner, a);
+      });
+   } else {
+      to_acnts.modify( to, same_payer, [&]( auto& a ) {
+        a.payments += value;
         send_balance_event(owner, a);
       });
    }
@@ -168,6 +208,7 @@ void token::open( name owner, const symbol& symbol, name ram_payer )
    if( it == acnts.end() ) {
       acnts.emplace( ram_payer, [&]( auto& a ){
         a.balance = asset{0, symbol};
+        a.payments = asset{0, symbol};
       });
    }
 }
@@ -182,6 +223,26 @@ void token::close( name owner, const symbol& symbol )
    acnts.erase( it );
 }
 
+void token::claim( name owner, asset quantity )
+{
+   require_auth( owner );
+
+   eosio_assert( quantity.is_valid(), "invalid quantity" );
+   eosio_assert( quantity.amount > 0, "must transfer positive quantity" );
+
+   accounts owner_acnts( _self, owner.value );
+   auto account = owner_acnts.find( quantity.symbol.code().raw() );
+   eosio_assert( account != owner_acnts.end(), "not found object account" );
+   eosio_assert( quantity.symbol == account->payments.symbol, "symbol precision mismatch" );
+   eosio_assert( account->payments >= quantity, "insufficient funds" );
+   owner_acnts.modify( account, owner, [&]( auto& a ) {
+       a.balance += quantity;
+       a.payments -= quantity;
+
+       send_balance_event(owner, a);
+   });
+}
+
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(payment)(claim)(open)(close)(retire) )
