@@ -9,6 +9,7 @@ git clone -n https://github.com/EOSIO/eos.git --recursive --quiet
 cd eos
 test "$(git cat-file -t $EOSIO_COMMIT 2>/dev/null)" != "commit" && cd .. && echo "downloadDependencies.sh - ERROR: EOSIO tag, branch, or commit \"$EOSIO_VERSION\" not found in github.com/EOSIO/eos$(test $EOSIO_VERSION != $EOSIO_COMMIT && echo " using commit \"${EOSIO_COMMIT:0:7}\"")! Exiting..." && exit 1
 git checkout $EOSIO_COMMIT --quiet
+echo "$CONTRACTS_BRANCH:$EOSIO_COMMIT" > /etc/eosio-version # this is necessary for our eos CMake VersionMacros which construct the string returned from "$ nodeos --version"; CONTRACTS_BRANCH is a build-arg passed from pipeline.yml into the Docker container
 cd ..
 echo "downloadDependencies.sh - Downloaded EOSIO at $EOSIO_COMMIT from \"$EOSIO_VERSION\""'!'
 # get CDT
