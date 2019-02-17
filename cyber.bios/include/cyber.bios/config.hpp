@@ -3,7 +3,7 @@
 
 namespace cyber { namespace config {
 
-static const auto govern_update_window = 120;
+static const auto govern_update_window = 300;
 
 }
 

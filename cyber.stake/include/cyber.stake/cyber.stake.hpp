@@ -197,7 +197,7 @@ public:
         size_t ret_size = std::min(static_cast<size_t>(n), agents_vector.size());
         auto agents_mid = agents_vector.begin() + ret_size;
         std::partial_sort(agents_vector.begin(), agents_mid, agents_vector.end(), [](const agent_info& lhs, const agent_info& rhs) {
-            return lhs.balance > rhs.balance;
+            return std::tie(lhs.balance, lhs.account) > std::tie(rhs.balance, rhs.account);
         });
         
         std::vector<std::pair<name, public_key> > ret;

@@ -286,10 +286,49 @@ BOOST_FIXTURE_TEST_CASE(set_producers_test, cyber_stake_tester) try {
     BOOST_TEST_MESSAGE("Set producers test");
     deploy_sys_contracts();
     stake.register_candidate(_alice, token._symbol.to_symbol_code());
-    auto blocks_num = (cfg::govern_update_window * 1000) / cfg::block_interval_ms + 5;
-    BOOST_TEST_MESSAGE("--- produce " << blocks_num << " blocks");
+    auto blocks_num = (cfg::govern_update_window * 1000) / cfg::block_interval_ms;
+    
+    produce_blocks(blocks_num - 1);
+    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers({_alice}));
+    stake.register_candidate(_bob, token._symbol.to_symbol_code());
     produce_blocks(blocks_num);
+    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers({_alice, _bob}));
+    
+    std::vector<account_name> producers;
+    std::vector<account_name> crowd_of_bps;
+    for (size_t u = 0; u < cfg::producers_num - 1; u++) {
+        auto user = user_name(u);
+        crowd_of_bps.emplace_back(user);
+        create_accounts({user});
+        stake.register_candidate(user, token._symbol.to_symbol_code());
+        BOOST_CHECK_EQUAL(success(), token.issue(_issuer, user, asset(u + 1, token._symbol), ""));
+        BOOST_CHECK_EQUAL(success(), token.transfer(user, _code, asset(u + 1, token._symbol), "CPU"));
+    }
+    
+    auto crowd_and_alice = crowd_of_bps;
+    crowd_and_alice.emplace_back(_alice);
+    auto crowd_and_bob = crowd_of_bps;
+    crowd_and_bob.emplace_back(_bob);
+    
+    produce_blocks(blocks_num);
+    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers(crowd_and_bob));
+    
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _carol, asset(3, token._symbol), ""));
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_carol, token._symbol.to_symbol_code(), to_code("CPU"), 1));
+    
+    BOOST_CHECK_EQUAL(success(), token.transfer(_carol, _code, asset(1, token._symbol), "CPU"));
+    BOOST_CHECK_EQUAL(success(), stake.delegate(_carol, _alice, asset(1, token._symbol), to_code("CPU")));
+    
+    produce_blocks(blocks_num);
+    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers(crowd_and_alice));
+    
+    BOOST_CHECK_EQUAL(success(), token.transfer(_carol, _code, asset(2, token._symbol), "CPU"));
+    BOOST_CHECK_EQUAL(success(), stake.delegate(_carol, _bob, asset(2, token._symbol), to_code("CPU")));
+    
+    produce_blocks(blocks_num);
+    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers(crowd_and_bob));
 
+    
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

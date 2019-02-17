@@ -211,6 +211,23 @@ public:
             ("total_staked", total_staked);
     }
     
+    variant get_producers() {
+        return _tester->get_chaindb_struct(name(), name().value, 
+            N(gproperty), 0, "global_property_object")["proposed_schedule"]["producers"];
+    }
+    
+    variant make_producers(std::vector<account_name> accounts) {
+        std::sort(accounts.begin(), accounts.end());
+        std::vector<producer_key> keys;
+        keys.reserve(accounts.size());
+        for (auto & a : accounts) {
+            keys.emplace_back(producer_key{a, base_tester::get_public_key(a, "active")});
+        }
+        variant ret;
+        to_variant(keys, ret);
+        return ret;
+    }
+    
 };
 
 }} // eosio::testing
