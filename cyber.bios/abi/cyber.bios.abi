@@ -440,6 +440,14 @@
                     "type": "name"
                 }
             ]
+        },
+        {
+            "name": "state_info",
+            "base": "",
+            "fields": [
+                {"type": "uint64",         "name": "id"},
+                {"type": "time_point_sec", "name": "last_govern_update"}
+            ]
         }
     ],
     "types": [],
@@ -522,6 +530,17 @@
                     ]
                 }
             ]
+        },
+        {
+            "name": "biosstate",
+            "type": "state_info",
+            "indexes": [{
+                "name": "primary",
+                "unique": "true",
+                "orders": [
+                    {"field": "id", "order": "asc"}
+                ]
+            }]
         }
     ],
     "variants": [],
