@@ -51,10 +51,10 @@ public:
    }
 
    void create_core_token( symbol core_symbol = symbol{CORE_SYM} ) {
-      FC_ASSERT( core_symbol.precision() != 4, "create_core_token assumes precision of core token is 4" );
-      create_currency( N(eosio.token), config::system_account_name, asset(100000000000000, core_symbol) );
-      issue(config::system_account_name, asset(10000000000000, core_symbol) );
-      BOOST_REQUIRE_EQUAL( asset(10000000000000, core_symbol), get_balance( "eosio", core_symbol ) );
+      FC_ASSERT( core_symbol.decimals() == 4, "create_core_token assumes precision of core token is 4" );
+      create_currency( N(eosio.token), config::system_account_name, core_sym::from_string("10000000000.0000") );
+      issue(config::system_account_name, core_sym::from_string("1000000000.0000") );
+      BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance( "eosio", core_symbol ) );
    }
 
    void deploy_contract( bool call_init = true ) {
