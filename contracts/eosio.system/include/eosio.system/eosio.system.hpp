@@ -667,6 +667,11 @@ namespace eosiosystem {
          void put_rex_savings( const rex_balance_table::const_iterator& bitr, int64_t rex );
          void update_rex_stake( const name& voter );
 
+         void add_loan_to_rex_pool( const asset& payment, int64_t rented_tokens, bool new_loan );
+         void remove_loan_from_rex_pool( const rex_loan& loan );
+         template <typename Index, typename Iterator>
+         int64_t update_renewed_loan( Index& idx, const Iterator& itr, int64_t rented_tokens );
+
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,
                         asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
@@ -687,12 +692,12 @@ namespace eosiosystem {
             public:
                template <auto system_contract::*P, auto system_contract::*...Ps>
                struct for_each {
-                     template <typename... Args>
-                     static constexpr void call( system_contract* this_contract, Args&&... args )
-                     {
-                        std::invoke( P, this_contract, std::forward<Args>(args)... );
-                        for_each<Ps...>::call( this_contract, std::forward<Args>(args)... );
-                     }
+                  template <typename... Args>
+                  static constexpr void call( system_contract* this_contract, Args&&... args )
+                  {
+                     std::invoke( P, this_contract, std::forward<Args>(args)... );
+                     for_each<Ps...>::call( this_contract, std::forward<Args>(args)... );
+                  }
                };
                template <auto system_contract::*P>
                struct for_each<P> {

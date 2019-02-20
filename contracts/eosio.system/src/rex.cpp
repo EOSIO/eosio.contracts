@@ -475,6 +475,29 @@ namespace eosiosystem {
    }
 
    /**
+    * Given two connector balances (conin, and conout), and an incoming amount of
+    * in, this function calculates the delta out using Banacor equation.
+    *
+    * @param in - input amount, same units as conin
+    * @param conin - the input connector balance
+    * @param conout - the output connector balance
+    *
+    * @return int64_t - conversion output amount
+    */
+   int64_t get_bancor_output( int64_t conin, int64_t conout, int64_t in )
+   {
+      const double F0 = double(conin);
+      const double T0 = double(conout);
+      const double I  = double(in);
+
+      auto out = int64_t((I*T0) / (I+F0));
+
+      if ( out < 0 ) out = 0;
+
+      return out;
+   }
+
+   /**
     * @brief Updates account NET and CPU resource limits
     *
     * @param from - account charged for RAM if there is a need
@@ -539,6 +562,55 @@ namespace eosiosystem {
    }
 
    /**
+    * @brief Updates rex_pool balances upon creating a new loan or renewing an existing one
+    */
+   void system_contract::add_loan_to_rex_pool( const asset& payment, int64_t rented_tokens, bool new_loan )
+   {
+      _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rt ) {
+         rt.total_unlent.amount  -= rented_tokens;
+         rt.total_lent.amount    += rented_tokens;
+         rt.total_unlent.amount  += payment.amount;
+         rt.total_rent.amount    += payment.amount;
+         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+         if ( new_loan ) {
+            rt.loan_num++;
+         }
+      });
+   }
+
+   /**
+    * @brief Updates rex_pool balances upon closing an expired loan
+    */
+   void system_contract::remove_loan_from_rex_pool( const rex_loan& loan )
+   {
+      const auto& pool = _rexpool.begin();
+      const int64_t delta_total_rent = get_bancor_output( pool->total_unlent.amount,
+                                                          pool->total_rent.amount,
+                                                          loan.total_staked.amount );
+      _rexpool.modify( pool, same_payer, [&]( auto& rt ) {
+         rt.total_rent.amount    -= delta_total_rent;
+         rt.total_unlent.amount  += loan.total_staked.amount;
+         rt.total_lent.amount    -= loan.total_staked.amount;
+         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+      });
+   }
+
+   /**
+    * @brief Updates the fields of an existing loan that is being renewed
+    */
+   template <typename Index, typename Iterator>
+   int64_t system_contract::update_renewed_loan( Index& idx, const Iterator& itr, int64_t rented_tokens )
+   {
+      int64_t delta_stake = rented_tokens - itr->total_staked.amount;
+      idx.modify ( itr, same_payer, [&]( auto& loan ) {
+         loan.total_staked.amount = rented_tokens;
+         loan.expiration         += eosio::days(30);
+         loan.balance.amount     -= loan.payment.amount;
+      });
+      return delta_stake;
+   }
+
+   /**
     * @brief Performs maintenance operations on expired NET and CPU loans and sellrex oders
     *
     * @param max - maximum number of each of the three categories to be processed
@@ -547,32 +619,18 @@ namespace eosiosystem {
    {
       check( rex_system_initialized(), "rex system not initialized yet" );
 
-      auto rexi = _rexpool.begin();
+      const auto& pool = _rexpool.begin();
 
       auto process_expired_loan = [&]( auto& idx, const auto& itr ) -> std::pair<bool, int64_t> {
-         _rexpool.modify( rexi, same_payer, [&]( auto& rt ) {
-            bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, itr->total_staked.amount );
-            rt.total_lent.amount    -= itr->total_staked.amount;
-            rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
-         });
-         bool    delete_loan = false;
-         int64_t delta_stake = 0;
+         remove_loan_from_rex_pool( *itr );
+         bool    delete_loan   = false;
+         int64_t delta_stake   = 0;
+         int64_t rented_tokens = get_bancor_output( pool->total_rent.amount,
+                                                    pool->total_unlent.amount,
+                                                    itr->payment.amount );
          if ( itr->payment <= itr->balance && rex_loans_available() ) {
-            int64_t rented_tokens = 0;
-            _rexpool.modify( rexi, same_payer, [&]( auto& rt ) {
-               rented_tokens = bancor_convert( rt.total_rent.amount,
-                                               rt.total_unlent.amount,
-                                               itr->payment.amount );
-               rt.total_lent.amount    += rented_tokens;
-               rt.total_unlent.amount  += itr->payment.amount;
-               rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
-            });
-            idx.modify ( itr, same_payer, [&]( auto& loan ) {
-               delta_stake              = rented_tokens - loan.total_staked.amount;
-               loan.total_staked.amount = rented_tokens;
-               loan.expiration         += eosio::days(30);
-               loan.balance.amount     -= loan.payment.amount;
-            });
+            add_loan_to_rex_pool( itr->payment, rented_tokens, false );
+            delta_stake = update_renewed_loan( idx, itr, rented_tokens );
          } else {
             delete_loan = true;
             delta_stake = -( itr->total_staked.amount );
@@ -586,9 +644,9 @@ namespace eosiosystem {
       };
 
       /// transfer from eosio.names to eosio.rex
-      if ( rexi->namebid_proceeds.amount > 0 ) {
-         channel_to_rex( names_account, rexi->namebid_proceeds );
-         _rexpool.modify( rexi, same_payer, [&]( auto& rt ) {
+      if ( pool->namebid_proceeds.amount > 0 ) {
+         channel_to_rex( names_account, pool->namebid_proceeds );
+         _rexpool.modify( pool, same_payer, [&]( auto& rt ) {
             rt.namebid_proceeds.amount = 0;
          });
       }
@@ -667,16 +725,10 @@ namespace eosiosystem {
       update_rex_account( from, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( from, payment + fund );
 
-      auto itr = _rexpool.begin(); /// already checked that _rexpool.begin() != _rexpool.end() in rex_loans_available()
+      const auto& pool = _rexpool.begin(); /// already checked that _rexpool.begin() != _rexpool.end() in rex_loans_available()
 
-      int64_t rented_tokens = 0;
-      _rexpool.modify( itr, same_payer, [&]( auto& rt ) {
-         rented_tokens = bancor_convert( rt.total_rent.amount, rt.total_unlent.amount, payment.amount );
-         rt.total_lent.amount    += rented_tokens;
-         rt.total_unlent.amount  += payment.amount;
-         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
-         rt.loan_num++;
-      });
+      int64_t rented_tokens = get_bancor_output( pool->total_rent.amount, pool->total_unlent.amount, payment.amount );
+      add_loan_to_rex_pool( payment, rented_tokens, true );
 
       table.emplace( from, [&]( auto& c ) {
          c.from         = from;
@@ -685,7 +737,7 @@ namespace eosiosystem {
          c.balance      = fund;
          c.total_staked = asset( rented_tokens, core_symbol() );
          c.expiration   = current_time_point() + eosio::days(30);
-         c.loan_num     = itr->loan_num;
+         c.loan_num     = pool->loan_num;
       });
 
       return rented_tokens;
