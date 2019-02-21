@@ -11,11 +11,18 @@
 #include <common/dispatchers.hpp>
 #include <common/parameter_ops.hpp>
 
-namespace cyber { 
+namespace cyber {
     
-int64_t stake::delegate_traversal(symbol purpose_symbol, stake::agents_idx_t& agents_idx, stake::grants_idx_t& grants_idx, name agent_name, int64_t amount, bool refill) {
+const auto& stake::get_param(const stake::params& params_table, symbol_code purpose_code, symbol_code token_code, bool strict) const {
+    const auto& ret = params_table.get(token_code.raw(), "no staking for token");
+    eosio_assert(!strict || std::find(ret.purposes.begin(), ret.purposes.end(), purpose_code) != ret.purposes.end(), 
+        ("unknown purpose: " + purpose_code.to_string()).c_str());
+    return ret;
+}
     
-    auto agent = get_agent_itr(purpose_symbol, agents_idx, agent_name);
+int64_t stake::delegate_traversal(symbol_code purpose_code, symbol_code token_code, stake::agents_idx_t& agents_idx, stake::grants_idx_t& grants_idx, name agent_name, int64_t amount, bool refill) {
+    
+    auto agent = get_agent_itr(purpose_code, token_code, agents_idx, agent_name);
     auto total_funds = agent->get_total_funds();
     eosio_assert((total_funds == 0) == (agent->shares_sum == 0), "SYSTEM: incorrect total_funds or shares_sum");
     auto own_funds = total_funds && agent->shares_sum ? 
@@ -26,16 +33,16 @@ int64_t stake::delegate_traversal(symbol purpose_symbol, stake::agents_idx_t& ag
 
     auto remaining_amount = amount;
     auto grant_itr = grants_idx.lower_bound(
-        std::make_tuple(purpose_symbol.precision(), purpose_symbol.code(), agent_name, name()));
+        std::make_tuple(purpose_code, token_code, agent_name, name()));
     while ((grant_itr != grants_idx.end()) &&
-           (grant_itr->purpose_id   == static_cast<purpose_id_t>(purpose_symbol.precision())) &&
-           (grant_itr->token_code   == purpose_symbol.code()) &&
+           (grant_itr->purpose_code   == purpose_code) &&
+           (grant_itr->token_code   == token_code) &&
            (grant_itr->grantor_name == agent_name))
     {
         auto to_delegate = static_cast<int64_t>((static_cast<int128_t>(amount) * grant_itr->pct) / config::_100percent);
         remaining_amount -= to_delegate;
         eosio_assert(remaining_amount >= 0, "SYSTEM: incorrect remaining_amount");
-        auto delegated = delegate_traversal(purpose_symbol, agents_idx, grants_idx, grant_itr->agent_name, to_delegate, true);
+        auto delegated = delegate_traversal(purpose_code, token_code, agents_idx, grants_idx, grant_itr->agent_name, to_delegate, true);
         grants_idx.modify(grant_itr, name(), [&](auto& g) { g.share += delegated; });
         ++grant_itr;
     }
@@ -53,19 +60,7 @@ int64_t stake::delegate_traversal(symbol purpose_symbol, stake::agents_idx_t& ag
     return ret;
 }
 
-symbol stake::structures::param::get_purpose_symbol(symbol_code token_code, symbol_code purpose_code)const {
-    if (purpose_code) {
-        auto purpose_itr = purpose_ids.find(purpose_code);
-        eosio_assert(purpose_itr != purpose_ids.end(), ("unknown purpose: " + purpose_code.to_string()).c_str());
-        return symbol(token_code, purpose_itr->second);
-    }
-    else {
-        eosio_assert(purpose_ids.size(), "no purposes");
-        return symbol(token_code, 0);
-    } 
-} 
- 
-void stake::add_proxy(symbol purpose_symbol, grants& grants_table, const structures::agent& grantor_as_agent, const structures::agent& agent, 
+void stake::add_proxy(symbol_code purpose_code, symbol_code token_code, grants& grants_table, const structures::agent& grantor_as_agent, const structures::agent& agent, 
         int16_t pct, int64_t share, int16_t break_fee, int64_t break_min_own_staked) {
 
     auto now = ::now();
@@ -78,8 +73,8 @@ void stake::add_proxy(symbol purpose_symbol, grants& grants_table, const structu
         ", agent " + std::to_string(agent.proxy_level)).c_str());
     grants_table.emplace(grantor_as_agent.account, [&]( auto &item ) { item = structures::grant {
         .id = grants_table.available_primary_key(),
-        .purpose_id = purpose_symbol.precision(),
-        .token_code = purpose_symbol.code(),
+        .purpose_code = purpose_code,
+        .token_code = token_code,
         .grantor_name = grantor_as_agent.account,
         .agent_name = agent.account,
         .pct = pct,
@@ -91,28 +86,27 @@ void stake::add_proxy(symbol purpose_symbol, grants& grants_table, const structu
  
 void stake::delegate(name grantor_name, name agent_name, asset quantity, symbol_code purpose_code) {
     require_auth(grantor_name);
-
     params params_table(table_owner, table_owner.value);
-    const auto& param = params_table.get(quantity.symbol.code().raw(), "no staking for token");
+    const auto& param = get_param(params_table, purpose_code, quantity.symbol.code());
     
-    auto sym = param.get_purpose_symbol(quantity.symbol.code(), purpose_code);
-    update_stake_proxied(sym, agent_name, param.frame_length, true);
+    update_stake_proxied(purpose_code, quantity.symbol.code(), agent_name, param.frame_length, true);
     
     agents agents_table(table_owner, table_owner.value);
     auto agents_idx = agents_table.get_index<"bykey"_n>();
+    auto token_code = quantity.symbol.code();
     
-    auto grantor_as_agent = get_agent_itr(sym, agents_idx, grantor_name);   
+    auto grantor_as_agent = get_agent_itr(purpose_code, token_code, agents_idx, grantor_name);   
     eosio_assert(quantity.amount <= grantor_as_agent->balance, "insufficient balance");
-    auto agent = get_agent_itr(sym, agents_idx, agent_name);
+    auto agent = get_agent_itr(purpose_code, token_code, agents_idx, agent_name);
     grants grants_table(table_owner, table_owner.value);
     auto grants_idx = grants_table.get_index<"bykey"_n>();
     
-    auto delegated = delegate_traversal(sym, agents_idx, grants_idx, agent_name, quantity.amount);
+    auto delegated = delegate_traversal(purpose_code, token_code, agents_idx, grants_idx, agent_name, quantity.amount);
     uint8_t proxies_num = 0;
-    auto grant_itr = grants_idx.lower_bound(std::make_tuple(sym.precision(), sym.code(), grantor_name, name()));
+    auto grant_itr = grants_idx.lower_bound(std::make_tuple(purpose_code, token_code, grantor_name, name()));
     while ((grant_itr != grants_idx.end()) &&
-           (grant_itr->purpose_id   == sym.precision()) &&
-           (grant_itr->token_code   == sym.code()) &&
+           (grant_itr->purpose_code   == purpose_code) &&
+           (grant_itr->token_code   == token_code) &&
            (grant_itr->grantor_name == grantor_name))
     {
         ++proxies_num;
@@ -125,7 +119,7 @@ void stake::delegate(name grantor_name, name agent_name, asset quantity, symbol_
     
     if (delegated) {
         eosio_assert(proxies_num < param.max_proxies[grantor_as_agent->proxy_level - 1], "proxy cannot be added");
-        add_proxy(sym, grants_table, *grantor_as_agent, *agent, 0, delegated);
+        add_proxy(purpose_code, token_code, grants_table, *grantor_as_agent, *agent, 0, delegated);
     }
     
     agents_idx.modify(grantor_as_agent, name(), [&](auto& a) {
@@ -135,7 +129,7 @@ void stake::delegate(name grantor_name, name agent_name, asset quantity, symbol_
 }
 
 void stake::recall(name grantor_name, name agent_name, symbol_code token_code, symbol_code purpose_code, int16_t pct) {
-    ::recall_stake_proxied(grantor_name.value, agent_name.value, token_code.raw(), purpose_code.raw(), pct);
+    ::recall_stake_proxied(purpose_code.raw(), token_code.raw(), grantor_name.value, agent_name.value, pct);
 }
 
 void stake::check_grant_terms(const structures::agent& agent, int16_t break_fee, int64_t break_min_own_staked) {
@@ -144,7 +138,7 @@ void stake::check_grant_terms(const structures::agent& agent, int16_t break_fee,
 }
 
 bool stake::set_grant_terms(name grantor_name, name agent_name, int16_t pct, int16_t break_fee, int64_t break_min_own_staked, 
-        symbol sym, const structures::param& param) {
+        symbol_code purpose_code, symbol_code token_code, const structures::param& param) {
     agents agents_table(table_owner, table_owner.value);
     auto agents_idx = agents_table.get_index<"bykey"_n>();
     grants grants_table(table_owner, table_owner.value);
@@ -154,15 +148,15 @@ bool stake::set_grant_terms(name grantor_name, name agent_name, int16_t pct, int
     bool changed = false;
     bool agent_found = false;
     uint8_t proxies_num = 0;
-    auto grant_itr = grants_idx.lower_bound(std::make_tuple(sym.precision(), sym.code(), grantor_name, name()));
+    auto grant_itr = grants_idx.lower_bound(std::make_tuple(purpose_code, token_code, grantor_name, name()));
     while ((grant_itr != grants_idx.end()) &&
-           (grant_itr->purpose_id   == sym.precision()) &&
-           (grant_itr->token_code   == sym.code()) &&
+           (grant_itr->purpose_code   == purpose_code) &&
+           (grant_itr->token_code   == token_code) &&
            (grant_itr->grantor_name == grantor_name))
     {
          ++proxies_num;
         if (grant_itr->agent_name == agent_name) {
-            check_grant_terms(*get_agent_itr(sym, agents_idx, agent_name), break_fee, break_min_own_staked);
+            check_grant_terms(*get_agent_itr(purpose_code, token_code, agents_idx, agent_name), break_fee, break_min_own_staked);
             changed = changed
                 || grant_itr->pct != pct
                 || grant_itr->break_fee != break_fee
@@ -187,13 +181,13 @@ bool stake::set_grant_terms(name grantor_name, name agent_name, int16_t pct, int
         eosio_assert(pct_sum <= config::_100percent, "too high pct value\n");
     }
     if (!agent_found && pct) {
-        auto grantor_as_agent = get_agent_itr(sym, agents_idx, grantor_name, param.max_proxies.size(), &agents_table);
+        auto grantor_as_agent = get_agent_itr(purpose_code, token_code, agents_idx, grantor_name, param.max_proxies.size(), &agents_table);
         eosio_assert(proxies_num < param.max_proxies[grantor_as_agent->proxy_level - 1], "proxy cannot be added");
-        auto agent = get_agent_itr(sym, agents_idx, agent_name);
+        auto agent = get_agent_itr(purpose_code, token_code, agents_idx, agent_name);
         check_grant_terms(*agent, break_fee, break_min_own_staked);
-        update_stake_proxied(sym, agent_name, param.frame_length, true);
+        update_stake_proxied(purpose_code, token_code, agent_name, param.frame_length, true);
     
-        add_proxy(sym, grants_table, *grantor_as_agent, *agent, pct, 0, break_fee, break_min_own_staked);
+        add_proxy(purpose_code, token_code, grants_table, *grantor_as_agent, *agent, pct, 0, break_fee, break_min_own_staked);
         changed = true;
     }
     return changed;
@@ -206,15 +200,16 @@ void stake::setgrntterms(name grantor_name, name agent_name, symbol_code token_c
     
     require_auth(grantor_name);
     params params_table(table_owner, table_owner.value);
-    const auto& param = params_table.get(token_code.raw(), "no staking for token");
+    const auto& param = get_param(params_table, purpose_code, token_code, static_cast<bool>(purpose_code));
+    
     bool changed = false;
     if (static_cast<bool>(purpose_code))
-        changed = set_grant_terms(grantor_name, agent_name, pct, break_fee, break_min_own_staked,
-            param.get_purpose_symbol(token_code, purpose_code), param) || changed;
+        changed = set_grant_terms(grantor_name, agent_name, pct, break_fee, break_min_own_staked, 
+            purpose_code, token_code, param) || changed;
     else
-        for (auto& p : param.purpose_ids)
+        for (auto& p : param.purposes)
             changed = set_grant_terms(grantor_name, agent_name, pct, break_fee, break_min_own_staked, 
-                symbol(token_code, p.second), param) || changed;
+                p, token_code, param) || changed;
     
     eosio_assert(changed, "agent pct has not been changed");
 }
@@ -225,14 +220,13 @@ void stake::on_transfer(name from, name to, asset quantity, std::string memo) {
     auto token_code = quantity.symbol.code();
     auto purpose_code = symbol_code(memo.c_str());
     params params_table(table_owner, table_owner.value);
-    const auto& param = params_table.get(token_code.raw(), "no staking for token");
-    auto sym = param.get_purpose_symbol(token_code, purpose_code);
+    const auto& param = get_param(params_table, purpose_code, token_code);
     
     {
         agents agents_table(table_owner, table_owner.value);
         auto agents_idx = agents_table.get_index<"bykey"_n>();
-        get_agent_itr(sym, agents_idx, from, param.max_proxies.size(), &agents_table);
-        update_stake_proxied(sym, from, param.frame_length, false);
+        get_agent_itr(purpose_code, token_code, agents_idx, from, param.max_proxies.size(), &agents_table);
+        update_stake_proxied(purpose_code, token_code, from, param.frame_length, false);
     }
 
     agents agents_table(table_owner, table_owner.value);
@@ -240,12 +234,12 @@ void stake::on_transfer(name from, name to, asset quantity, std::string memo) {
     grants grants_table(table_owner, table_owner.value);
     auto grants_idx = grants_table.get_index<"bykey"_n>();
     
-    auto agent = get_agent_itr(sym, agents_idx, from, param.max_proxies.size(), &agents_table);
+    auto agent = get_agent_itr(purpose_code, token_code, agents_idx, from, param.max_proxies.size(), &agents_table);
     
-    auto share = delegate_traversal(sym, agents_idx, grants_idx, from, quantity.amount);
+    auto share = delegate_traversal(purpose_code, token_code, agents_idx, grants_idx, from, quantity.amount);
     agents_idx.modify(agent, name(), [&](auto& a) { a.own_share += share; });
     update_stats(structures::stat {
-        .id = sym.raw(),
+        .id = 0,
         .token_code = token_code,
         .purpose_code = purpose_code,
         .total_staked = quantity.amount
@@ -271,24 +265,22 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
     require_auth(account); 
     auto token_code = quantity.symbol.code();
     params params_table(table_owner, table_owner.value);
-    const auto& param = params_table.get(token_code.raw(), "no staking for token");
-    auto sym = param.get_purpose_symbol(token_code, purpose_code);
-    payouts payouts_table(_self, sym.raw());
+    const auto& param = get_param(params_table, purpose_code, token_code);
+    payouts payouts_table(_self, purpose_code.raw());
     send_scheduled_payout(payouts_table, account, param.payout_step_lenght, param.token_symbol);
     
     if(claim_mode)
         return;
     
-    update_stake_proxied(sym, account, param.frame_length, false);
+    update_stake_proxied(purpose_code, token_code, account, param.frame_length, false);
      
     agents agents_table(table_owner, table_owner.value);
     auto agents_idx = agents_table.get_index<"bykey"_n>();
-    auto agent = get_agent_itr(sym, agents_idx, account);
+    auto agent = get_agent_itr(purpose_code, token_code, agents_idx, account);
 
     grants grants_table(table_owner, table_owner.value);
     auto grants_idx = grants_table.get_index<"bykey"_n>();
     
-
     auto total_funds = agent->get_total_funds();
     eosio_assert((total_funds == 0) == (agent->shares_sum == 0), "SYSTEM: incorrect total_funds or shares_sum");
     
@@ -307,6 +299,7 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
         
         payouts_table.emplace(account, [&]( auto &item ) { item = structures::payout {
             .id = payouts_table.available_primary_key(),
+            .token_code = token_code,
             .account = account,
             .balance = quantity.amount,
             .steps_left = param.payout_steps_num,
@@ -316,16 +309,16 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
     else {
         quantity.amount = -quantity.amount;
         auto acc_index = payouts_table.get_index<"payoutacc"_n>();
-        auto payout_lb_itr = acc_index.lower_bound(account.value);
+        auto payout_lb_itr = acc_index.lower_bound(std::make_tuple(token_code, account));
 
         int64_t amount_sum = 0;
         auto payout_itr = payout_lb_itr;
-        while ((payout_itr != acc_index.end()) && (payout_itr->account == account)) {
+        while ((payout_itr != acc_index.end()) && (payout_itr->token_code == token_code) && (payout_itr->account == account)) {
             amount_sum += payout_itr->balance;
         }
         eosio_assert(amount_sum >= quantity.amount, "insufficient funds");
         
-        while ((payout_itr != acc_index.end()) && (payout_itr->account == account)) {
+        while ((payout_itr != acc_index.end()) && (payout_itr->token_code == token_code) && (payout_itr->account == account)) {
             auto cur_amount = quantity.amount ? 
                 static_cast<int64_t>((static_cast<int128_t>(payout_itr->balance) * quantity.amount) / amount_sum) : 
                 payout_itr->balance;
@@ -348,7 +341,7 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
     });
     
     update_stats(structures::stat {
-        .id = sym.raw(),
+        .id = 0,
         .token_code = token_code,
         .purpose_code = purpose_code,
         .total_staked = balance_diff
@@ -357,14 +350,15 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
  
 void stake::update_stats(const structures::stat& stat_arg, name payer) {
     stats stats_table(table_owner, table_owner.value);
-    auto stat = stats_table.find(stat_arg.id);
+    auto stat_index = stats_table.get_index<"bykey"_n>();
+    auto stat = stat_index.find(std::make_tuple(stat_arg.purpose_code, stat_arg.token_code));
 
-    if (stat == stats_table.end() && payer != name()) {
+    if (stat == stat_index.end() && payer != name()) {
         eosio_assert(stat_arg.total_staked >= 0, "SYSTEM: incorrect total_staked");
-        stats_table.emplace(payer, [&](auto& s) { s = stat_arg; });
+        stats_table.emplace(payer, [&](auto& s) { s = stat_arg; s.id = stats_table.available_primary_key(); });
     }
-    else if (stat != stats_table.end()) {
-        stats_table.modify(stat, name(), [&](auto& s) { s.total_staked += stat_arg.total_staked; });
+    else if (stat != stat_index.end()) {
+        stat_index.modify(stat, name(), [&](auto& s) { s.total_staked += stat_arg.total_staked; });
     }
     else {
         eosio_assert(false, "stats doesn't exist");
@@ -376,9 +370,9 @@ void stake::send_scheduled_payout(payouts& payouts_table, name account, int64_t 
     eosio_assert(payout_step_lenght > 0, "SYSTEM: incorrect payout_step_lenght val");
     
     auto acc_index = payouts_table.get_index<"payoutacc"_n>();
-    auto payout_itr = acc_index.lower_bound(account.value);
+    auto payout_itr = acc_index.lower_bound(std::make_tuple(sym.code(), account)); 
     int64_t amount = 0;
-    while ((payout_itr != acc_index.end()) && (payout_itr->account == account)) {
+    while ((payout_itr != acc_index.end()) && (payout_itr->token_code == sym.code()) && (payout_itr->account == account)) {
         auto seconds_passed = now - payout_itr->last_step.utc_seconds;
         eosio_assert(seconds_passed >= 0, "SYSTEM: incorrect seconds_passed val");
         auto steps_passed = std::min(seconds_passed / payout_step_lenght, static_cast<int64_t>(payout_itr->steps_left));
@@ -423,33 +417,32 @@ void stake::setkey(name account, symbol_code token_code, public_key signing_key)
 void stake::setproxylvl(name account, symbol_code token_code, symbol_code purpose_code, uint8_t level) {
     require_auth(account);
     params params_table(table_owner, table_owner.value);
-
-    const auto& param = params_table.get(token_code.raw(), "no staking for token");
+    const auto& param = get_param(params_table, purpose_code, token_code, static_cast<bool>(purpose_code));
     
     bool changed = false;
     if (static_cast<bool>(purpose_code))
-        changed = set_proxy_level(account, param.get_purpose_symbol(token_code, purpose_code), param.max_proxies, level) || changed;
+        changed = set_proxy_level(account, purpose_code, token_code, param.max_proxies, level) || changed;
     else
-        for (auto& p : param.purpose_ids)
-            changed = set_proxy_level(account, symbol(token_code, p.second), param.max_proxies, level) || changed;
+        for (auto& p : param.purposes)
+            changed = set_proxy_level(account, p, token_code, param.max_proxies, level) || changed;
     eosio_assert(changed, "proxy level has not been changed");
 } 
  
-bool stake::set_proxy_level(name account, symbol sym, const std::vector<uint8_t>& max_proxies, uint8_t level) {
-    eosio::print("set_proxy_level for ", account, " ", sym , ": ", int(level), "\n");
+bool stake::set_proxy_level(name account, symbol_code purpose_code, symbol_code token_code, const std::vector<uint8_t>& max_proxies, uint8_t level) {
+    eosio::print("set_proxy_level for ", account, " ", int(level), "\n");
     eosio_assert(level <= max_proxies.size(), "level too high");
     agents agents_table(table_owner, table_owner.value);
     auto agents_idx = agents_table.get_index<"bykey"_n>();
     bool emplaced = false;
-    auto agent = get_agent_itr(sym, agents_idx, account, level, &agents_table, &emplaced);
+    auto agent = get_agent_itr(purpose_code, token_code, agents_idx, account, level, &agents_table, &emplaced);
     bool changed = emplaced || (level != agent->proxy_level);
     grants grants_table(table_owner, table_owner.value);
     auto grants_idx = grants_table.get_index<"bykey"_n>();
     uint8_t proxies_num = 0;
-    auto grant_itr = grants_idx.lower_bound(std::make_tuple(sym.precision(), sym.code(), account, name()));
+    auto grant_itr = grants_idx.lower_bound(std::make_tuple(purpose_code, token_code, account, name()));
     while ((grant_itr != grants_idx.end()) &&
-           (grant_itr->purpose_id   == static_cast<purpose_id_t>(sym.precision())) &&
-           (grant_itr->token_code   == sym.code()) &&
+           (grant_itr->purpose_code   == purpose_code) &&
+           (grant_itr->token_code   == token_code) &&
            (grant_itr->grantor_name == account))
     { 
          ++proxies_num;
@@ -478,14 +471,11 @@ void stake::create(symbol token_symbol, std::vector<symbol_code> purpose_codes, 
     require_auth(issuer);
     params params_table(table_owner, table_owner.value);
     eosio_assert(params_table.find(token_symbol.code().raw()) == params_table.end(), "already exists");
-    std::map<symbol_code, uint8_t> purpose_ids;
-    for (size_t i = 0; i < purpose_codes.size(); i++)
-        purpose_ids[purpose_codes[i]] = i;
     
     params_table.emplace(issuer, [&](auto& p) { p = {
         .id = token_symbol.code().raw(),
         .token_symbol = token_symbol,
-        .purpose_ids = purpose_ids,
+        .purposes = purpose_codes,
         .max_proxies = max_proxies,
         .frame_length = frame_length,
         .payout_step_lenght = payout_step_lenght,
@@ -493,8 +483,8 @@ void stake::create(symbol token_symbol, std::vector<symbol_code> purpose_codes, 
         };});
 }
 
-stake::agents_idx_t::const_iterator stake::get_agent_itr(symbol purpose_symbol, stake::agents_idx_t& agents_idx, name agent_name, int16_t proxy_level_for_emplaced, agents* agents_table, bool* emplaced) {
-    auto key = std::make_tuple(purpose_symbol.precision(), purpose_symbol.code(), agent_name);
+stake::agents_idx_t::const_iterator stake::get_agent_itr(symbol_code purpose_code, symbol_code token_code, stake::agents_idx_t& agents_idx, name agent_name, int16_t proxy_level_for_emplaced, agents* agents_table, bool* emplaced) {
+    auto key = std::make_tuple(purpose_code, token_code, agent_name);
     auto agent = agents_idx.find(key);
     
     if (emplaced)
@@ -508,8 +498,8 @@ stake::agents_idx_t::const_iterator stake::get_agent_itr(symbol purpose_symbol, 
         eosio_assert(static_cast<bool>(agents_table), "SYSTEM: agents_table can't be null");
         (*agents_table).emplace(agent_name, [&](auto& a) { a = {
             .id = agents_table->available_primary_key(),
-            .purpose_id = static_cast<purpose_id_t>(purpose_symbol.precision()),
-            .token_code = purpose_symbol.code(),
+            .purpose_code = purpose_code,
+            .token_code = token_code,
             .account = agent_name,
             .proxy_level = static_cast<uint8_t>(proxy_level_for_emplaced),
             .ultimate = !proxy_level_for_emplaced,
@@ -526,12 +516,12 @@ stake::agents_idx_t::const_iterator stake::get_agent_itr(symbol purpose_symbol, 
 void stake::updatefunds(name account, symbol_code token_code, symbol_code purpose_code) {
     //require_auth(anyone);
     params params_table(table_owner, table_owner.value);
-    const auto& param = params_table.get(token_code.raw(), "no staking for token");
+    const auto& param = get_param(params_table, purpose_code, token_code, static_cast<bool>(purpose_code));
     if (static_cast<bool>(purpose_code))
-        update_stake_proxied(param.get_purpose_symbol(token_code, purpose_code), account, param.frame_length, false);
+        update_stake_proxied(purpose_code, token_code, account, param.frame_length, false);
     else
-        for (auto& p : param.purpose_ids)
-            update_stake_proxied(symbol(token_code, p.second), account, param.frame_length, false);
+        for (auto& p : param.purposes)
+            update_stake_proxied(p, token_code, account, param.frame_length, false);
 }
 
 void stake::change_balance(name account, asset quantity, symbol_code purpose_code) {
@@ -540,19 +530,18 @@ void stake::change_balance(name account, asset quantity, symbol_code purpose_cod
     auto issuer = eosio::token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
     params params_table(table_owner, table_owner.value);
-    const auto& param = params_table.get(token_code.raw(), "no staking for token");
-    
-    auto sym = param.get_purpose_symbol(token_code, purpose_code);
+    get_param(params_table, purpose_code, token_code);
+
     agents agents_table(table_owner, table_owner.value);
     auto agents_idx = agents_table.get_index<"bykey"_n>();
-    auto agent = get_agent_itr(sym, agents_idx, account);
+    auto agent = get_agent_itr(purpose_code, token_code, agents_idx, account);
     if (quantity.amount < 0)
         quantity.amount = std::max(quantity.amount, -agent->balance);
     
     agents_idx.modify(agent, name(), [&](auto& a) { a.balance += quantity.amount; });
     
     update_stats(structures::stat {
-        .id = sym.raw(),
+        .id = 0,
         .token_code = token_code,
         .purpose_code = purpose_code,
         .total_staked = quantity.amount

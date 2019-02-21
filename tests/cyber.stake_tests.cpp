@@ -62,7 +62,6 @@ public:
     void deploy_sys_contracts() {
 
         std::vector<uint8_t> max_proxies = {30, 10, 3, 1};
-        int64_t frame_length = 30;
         BOOST_TEST_MESSAGE("--- creating token and stake"); 
         BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(1000000, token._symbol)));
         BOOST_CHECK_EQUAL(success(), stake.create(_issuer, token._symbol, res_purposes, 
@@ -148,7 +147,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, cyber_stake_tester) try {
     double total_a = stake_a.get_amount() + stake_a2.get_amount();
     double total_b = stake_b.get_amount() + (total_a - balance_a);
     double total_c = balance_c;
-
+ 
     BOOST_CHECK_EQUAL(stake.get_agent(_alice, token._symbol, purpose),
         stake.make_agent(_alice, token._symbol, purpose, max_proxies.size(), t, balance_a, total_a - balance_a, total_a, own_a));
     BOOST_CHECK_EQUAL(stake.get_agent(_bob, token._symbol, purpose),
@@ -279,6 +278,8 @@ BOOST_FIXTURE_TEST_CASE(increase_proxy_level_test, cyber_stake_tester) try {
     auto proxied_b = 0;
     BOOST_CHECK_EQUAL(stake.get_agent(_bob, token._symbol, purpose),
         stake.make_agent(_bob, token._symbol, purpose, 1, t, balance_b, proxied_b, balance_b, 0));
+    BOOST_CHECK_EQUAL(success(), stake.recall(_alice, _carol, token._symbol.to_symbol_code(), purpose, cfg::_100percent));
+    produce_block();
 
 } FC_LOG_AND_RETHROW()
 
@@ -290,6 +291,7 @@ BOOST_FIXTURE_TEST_CASE(set_producers_test, cyber_stake_tester) try {
     
     produce_blocks(blocks_num - 1);
     BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers({_alice}));
+    
     stake.register_candidate(_bob, token._symbol.to_symbol_code());
     produce_blocks(blocks_num);
     BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers({_alice, _bob}));

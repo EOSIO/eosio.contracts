@@ -11,21 +11,10 @@ struct cyber_stake_api: base_contract_api {
 public:
     cyber_stake_api(golos_tester* tester, name code)
     :   base_contract_api(tester, code){}
-    
-    std::map<symbol_code, std::map<symbol_code, uint8_t> > _purpose_ids;
-    
-    symbol get_stake_symbol(symbol token_symbol, symbol_code purpose_code) {
-        auto purpose_id = _purpose_ids[token_symbol.to_symbol_code()][purpose_code];
-        return symbol(purpose_id, token_symbol.name().c_str());
-    }
 
     ////actions
     action_result create(account_name issuer, symbol token_symbol, std::vector<symbol_code> purpose_codes, 
             std::vector<uint8_t> max_proxies, int64_t frame_length, int64_t payout_step_lenght, uint16_t payout_steps_num) {
-
-        auto& cur_purpose_ids = _purpose_ids[token_symbol.to_symbol_code()];
-        for (size_t i = 0; i < purpose_codes.size(); i++)
-            cur_purpose_ids[purpose_codes[i]] = i;
         
         return push(N(create), issuer, args()
             ("token_symbol", token_symbol)
@@ -154,13 +143,12 @@ public:
 
      ////tables
     variant get_agent(account_name account, symbol token_symbol, symbol_code purpose_code) {
-        auto purpose_symbol = get_stake_symbol(token_symbol, purpose_code);
         auto all = _tester->get_all_chaindb_rows(name(), 0, N(stake.agent), false);
         for(auto& v : all) {
             auto o = mvo(v);
             if (v["account"].as<account_name>() == account && 
-                v["purpose_id"].as<uint8_t>() == purpose_symbol.decimals() &&
-                v["token_code"].as<symbol_code>() == purpose_symbol.to_symbol_code()) 
+                v["purpose_code"].as<symbol_code>() == purpose_code &&
+                v["token_code"].as<symbol_code>() == token_symbol.to_symbol_code()) 
             {
                 o.erase("id");
                 o.erase("signing_key");
@@ -182,10 +170,9 @@ public:
             int16_t fee = 0,
             int64_t min_own_staked = 0
         ) {
-            auto purpose_symbol = get_stake_symbol(token_symbol, purpose_code);
         return mvo()
-            ("purpose_id", purpose_symbol.decimals())
-            ("token_code", purpose_symbol.to_symbol_code())
+            ("purpose_code", purpose_code)
+            ("token_code", token_symbol.to_symbol_code())
             ("account", account)
             ("proxy_level", proxy_level)
             ("ultimate", !proxy_level)
@@ -199,13 +186,22 @@ public:
     }
     
     variant get_stats(symbol token_symbol, symbol_code purpose_code) {
-        return _tester->get_chaindb_struct(name(), name().value, 
-            N(stake.stat), get_stake_symbol(token_symbol, purpose_code).value(), "stat_struct");
+        auto all = _tester->get_all_chaindb_rows(name(), 0, N(stake.stat), false);
+        for(auto& v : all) {
+            auto o = mvo(v);
+            if (v["purpose_code"].as<symbol_code>() == purpose_code &&
+                v["token_code"].as<symbol_code>() == token_symbol.to_symbol_code()) 
+            {
+                o.erase("id");
+                v = o;
+                return v;
+            }
+        }
+        return variant();
     }
     
     variant make_stats(symbol token_symbol, symbol_code purpose_code, int64_t total_staked) {
         return mvo()
-            ("id", get_stake_symbol(token_symbol, purpose_code).value())
             ("token_code", token_symbol.to_symbol_code())
             ("purpose_code", purpose_code)
             ("total_staked", total_staked);
