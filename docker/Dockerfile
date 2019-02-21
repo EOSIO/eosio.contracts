@@ -17,7 +17,8 @@ echo "# git submodule update --recursive --init --quiet" && \
 git submodule update --recursive --init --quiet
 # download internal dependencies
 RUN /eosio.contracts/docker/downloadDependencies.sh
-RUN read -p "Paused for screenshot, press enter to continue..."
+RUN echo "Waiting for screenshot..." && \
+sleep 600
 # build eosio
 RUN cd eos && \
 ./eosio_build.sh
