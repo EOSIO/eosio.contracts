@@ -628,7 +628,11 @@ namespace eosiosystem {
          int64_t rented_tokens = get_bancor_output( pool->total_rent.amount,
                                                     pool->total_unlent.amount,
                                                     itr->payment.amount );
-         if ( itr->payment <= itr->balance && rex_loans_available() ) {
+         // conditions for loan renewal
+         bool renew_loan = itr->payment <= itr->balance        // loan has sufficient balance 
+                        && itr->payment.amount < rented_tokens // loan has favorable return 
+                        && rex_loans_available();              // no pending sell orders
+         if ( renew_loan ) {
             add_loan_to_rex_pool( itr->payment, rented_tokens, false );
             delta_stake = update_renewed_loan( idx, itr, rented_tokens );
          } else {
@@ -728,6 +732,7 @@ namespace eosiosystem {
       const auto& pool = _rexpool.begin(); /// already checked that _rexpool.begin() != _rexpool.end() in rex_loans_available()
 
       int64_t rented_tokens = get_bancor_output( pool->total_rent.amount, pool->total_unlent.amount, payment.amount );
+      check( payment.amount < rented_tokens, "loan price does not favor renting" );
       add_loan_to_rex_pool( payment, rented_tokens, true );
 
       table.emplace( from, [&]( auto& c ) {
@@ -1005,7 +1010,7 @@ namespace eosiosystem {
        * If precision of CORE_SYMBOL is 4, that corresponds to a maximum supply of 40 billion tokens.
        */
       const int64_t rex_ratio       = 10000;
-      const int64_t init_total_rent = 20'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() is made available
+      const asset   init_total_rent( 20'000'0000, core_symbol() ); /// base balance prevents renting profitably until at least a minimum number of core_symbol() is made available
       asset rex_received( 0, rex_symbol );
       auto itr = _rexpool.begin();
       if ( !rex_system_initialized() ) {
@@ -1015,7 +1020,7 @@ namespace eosiosystem {
             rp.total_lendable   = payment;
             rp.total_lent       = asset( 0, core_symbol() );
             rp.total_unlent     = rp.total_lendable - rp.total_lent;
-            rp.total_rent       = asset( init_total_rent, core_symbol() );
+            rp.total_rent       = init_total_rent;
             rp.total_rex        = rex_received;
             rp.namebid_proceeds = asset( 0, core_symbol() );
          });
@@ -1025,7 +1030,7 @@ namespace eosiosystem {
             rp.total_lendable.amount = payment.amount;
             rp.total_lent.amount     = 0;
             rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
-            rp.total_rent.amount     = init_total_rent;
+            rp.total_rent.amount     = init_total_rent.amount;
             rp.total_rex.amount      = rex_received.amount;
          });
       } else {
