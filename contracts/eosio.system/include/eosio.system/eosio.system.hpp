@@ -654,7 +654,7 @@ namespace eosiosystem {
          void defund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& amount );
          void transfer_from_fund( const name& owner, const asset& amount );
          void transfer_to_fund( const name& owner, const asset& amount );
-         bool rex_loans_available()const { return _rexorders.begin() == _rexorders.end() && rex_available(); }
+         bool rex_loans_available()const;
          bool rex_system_initialized()const { return _rexpool.begin() != _rexpool.end(); }
          bool rex_available()const { return rex_system_initialized() && _rexpool.begin()->total_rex.amount > 0; }
          static time_point_sec get_rex_maturity();

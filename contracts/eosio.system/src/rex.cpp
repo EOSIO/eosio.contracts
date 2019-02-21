@@ -561,6 +561,23 @@ namespace eosiosystem {
       check( vitr != _voters.end() && ( vitr->proxy || 21 <= vitr->producers.size() ), error_msg );
    }
 
+   bool system_contract::rex_loans_available()const
+   {
+      if ( !rex_available() ) {
+         return false;
+      } else if ( _rexorders.begin() == _rexorders.end() ) { // rex_available() && _rexorders.begin() == _rexorders.end()
+         return true;
+      } else {                                               // rex_available() && _rexorders.begin() != _rexorders.end()
+         auto idx = _rexorders.get_index<"bytime"_n>();
+         auto begin = idx.begin();
+         if ( begin->is_open ) {
+            return false;
+         } else {
+            return true;
+         }
+      }
+   }
+
    /**
     * @brief Updates rex_pool balances upon creating a new loan or renewing an existing one
     */
