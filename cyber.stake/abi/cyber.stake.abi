@@ -6,6 +6,7 @@
             "base": "",
             "fields": [
                 { "type": "uint64",         "name": "id" },
+                { "type": "symbol_code",    "name": "token_code"  },
                 { "type": "name",           "name": "account"  },
                 { "type": "int64",          "name": "balance"  },
                 { "type": "uint16",         "name": "steps_left"  },
@@ -166,7 +167,8 @@
             "type": "payout_struct",
             "indexes": [
                 { "name": "primary", "unique": "true", "orders": [ {"field": "id", "order": "asc"} ] },
-                { "name": "payoutacc", "unique": "false", "orders": [ {"field": "account", "order": "asc"} ] }
+                { "name": "payoutacc", "unique": "false", "orders": [
+                    {"field": "token_code", "order": "asc"}, {"field": "account", "order": "asc"} ] }
             ]
         }
     ],
