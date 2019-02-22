@@ -299,8 +299,8 @@ def stepConfigureSystem():
     retry(args.cleos + 'push action cyber.stake create \'["4,%s", ["CPU","NET","RAM"], [30, 10, 3, 1], 1800, 43200, 12]\' -p cyber' % (args.symbol))
     retry(args.cleos + 'push action cyber.stake setproxylvl \'{"account":"cyber", "token_code":"%s", "purpose_code":"", "level":0}\' -p cyber' % (args.symbol))
     # Stake half of total supply for guaranteed election to the block producers
-    retry(args.cleos + 'push action cyber.token issue \'["cyber", "5000000000.0000 %s"]\' -p cyber' % (args.symbol))
-    retry(args.cleos + 'push action cyber.token transfer \'["cyber", "cyber.stake", "5000000000.0000 %s"]\' -p cyber' % (args.symbol))
+    retry(args.cleos + 'push action cyber.token issue \'["cyber", "5000000000.0000 %s", ""]\' -p cyber' % (args.symbol))
+    retry(args.cleos + 'push action cyber.token transfer \'["cyber", "cyber.stake", "5000000000.0000 %s", ""]\' -p cyber' % (args.symbol))
     retry(args.cleos + 'push action cyber.stake setkey \'{"account":"cyber","token_code":"%s","signing_key":"GLS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV"}\' -p cyber' % (args.symbol))
     sleep(1)
 def stepCreateStakedAccounts():
