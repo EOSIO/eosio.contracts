@@ -61,7 +61,7 @@ namespace eosiosystem {
       runrex(2);
       update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
       // dummy action added so that amount of REX tokens purchased shows up in action trace 
-      dispatch_inline( null_account, "buyresult"_n, { }, std::make_tuple( rex_received ) );      
+      dispatch_inline( null_account, "buyresult"_n, { }, std::make_tuple( rex_received ) );
    }
 
    /**
@@ -450,32 +450,6 @@ namespace eosiosystem {
 
    /**
     * Given two connector balances (conin, and conout), and an incoming amount of
-    * in, this function will modify conin and conout and return the delta out.
-    *
-    * @param in - input amount, same units as conin
-    * @param conin - the input connector balance
-    * @param conout - the output connector balance
-    *
-    * @return int64_t - conversion output amount
-    */
-   int64_t bancor_convert( int64_t& conin, int64_t& conout, int64_t in )
-   {
-      const double F0 = double(conin);
-      const double T0 = double(conout);
-      const double I  = double(in);
-
-      auto out = int64_t((I*T0) / (I+F0));
-
-      if ( out < 0 ) out = 0;
-
-      conin  += in;
-      conout -= out;
-
-      return out;
-   }
-
-   /**
-    * Given two connector balances (conin, and conout), and an incoming amount of
     * in, this function calculates the delta out using Banacor equation.
     *
     * @param in - input amount, same units as conin
@@ -555,40 +529,58 @@ namespace eosiosystem {
       }
    }
 
+   /**
+    * @brief Checks if account voting requirements (voting for a proxy or 21 producers) when
+    * buying REX
+    *
+    * @param owner - account buying or already holding REX tokens
+    * @err_msg - error message
+    */
    void system_contract::check_voting_requirement( const name& owner, const char* error_msg )const
    {
       auto vitr = _voters.find( owner.value );
       check( vitr != _voters.end() && ( vitr->proxy || 21 <= vitr->producers.size() ), error_msg );
    }
 
+   /**
+    * @brief Checks if CPU and Network loans are available
+    *
+    * Loans are available if 1) REX pool lendable balance is nonempty, and 2) there are no
+    * unfilled sellrex orders.
+    */
    bool system_contract::rex_loans_available()const
    {
       if ( !rex_available() ) {
          return false;
-      } else if ( _rexorders.begin() == _rexorders.end() ) { // rex_available() && _rexorders.begin() == _rexorders.end()
-         return true;
-      } else {                                               // rex_available() && _rexorders.begin() != _rexorders.end()
-         auto idx = _rexorders.get_index<"bytime"_n>();
-         auto begin = idx.begin();
-         if ( begin->is_open ) {
-            return false;
+      } else {
+         if ( _rexorders.begin() == _rexorders.end() ) {
+            return true; // no outstanding sellrex orders
          } else {
-            return true;
+            auto idx = _rexorders.get_index<"bytime"_n>();
+            return !idx.begin()->is_open; // no outstanding unfilled sellrex orders
          }
       }
    }
 
    /**
     * @brief Updates rex_pool balances upon creating a new loan or renewing an existing one
+    *
+    * @param payment - loan fee paid
+    * @param rented_tokens - amount of tokens to be staked to loan receiver
+    * @param new_loan - flag indicating whether the loan is new or being renewed
     */
    void system_contract::add_loan_to_rex_pool( const asset& payment, int64_t rented_tokens, bool new_loan )
    {
       _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rt ) {
+         // add payment to total_rent
+         rt.total_rent.amount    += payment.amount;
+         // move rented_tokens from total_unlent to total_lent
          rt.total_unlent.amount  -= rented_tokens;
          rt.total_lent.amount    += rented_tokens;
+         // add payment to total_unlent
          rt.total_unlent.amount  += payment.amount;
-         rt.total_rent.amount    += payment.amount;
          rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+         // increment loan_num if a new loan is being created
          if ( new_loan ) {
             rt.loan_num++;
          }
@@ -597,6 +589,8 @@ namespace eosiosystem {
 
    /**
     * @brief Updates rex_pool balances upon closing an expired loan
+    *
+    * @param loan - loan to be closed
     */
    void system_contract::remove_loan_from_rex_pool( const rex_loan& loan )
    {
@@ -605,7 +599,9 @@ namespace eosiosystem {
                                                           pool->total_rent.amount,
                                                           loan.total_staked.amount );
       _rexpool.modify( pool, same_payer, [&]( auto& rt ) {
+         // deduct calculated delta_total_rent from total_rent
          rt.total_rent.amount    -= delta_total_rent;
+         // move rented tokens from total_lent to total_unlent
          rt.total_unlent.amount  += loan.total_staked.amount;
          rt.total_lent.amount    -= loan.total_staked.amount;
          rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
