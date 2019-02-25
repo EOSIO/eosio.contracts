@@ -3,6 +3,7 @@
  */
 
 #include <eosio.system/eosio.system.hpp>
+#include <eosio.system/rex.results.hpp>
 
 namespace eosiosystem {
 
@@ -61,7 +62,8 @@ namespace eosiosystem {
       runrex(2);
       update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
       // dummy action added so that amount of REX tokens purchased shows up in action trace 
-      dispatch_inline( null_account, "buyresult"_n, { }, std::make_tuple( rex_received ) );
+      rex_results::buyresult_action buyrex_act( rex_account, std::vector<eosio::permission_level>{ } );
+      buyrex_act.send( rex_received );
    }
 
    /**
@@ -105,7 +107,8 @@ namespace eosiosystem {
       runrex(2);
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ), true );
       // dummy action added so that amount of REX tokens purchased shows up in action trace
-      dispatch_inline( null_account, "buyresult"_n, { }, std::make_tuple( rex_received ) );
+      rex_results::buyresult_action buyrex_act( rex_account, std::vector<eosio::permission_level>{ } );
+      buyrex_act.send( rex_received );
    }
 
    /**
@@ -153,7 +156,8 @@ namespace eosiosystem {
       check( pending_sell_order.amount <= bitr->matured_rex, "insufficient funds for current and scheduled orders" );
       // dummy action added so that sell order proceeds show up in action trace
       if ( current_order.success ) {
-         dispatch_inline( null_account, "sellresult"_n, { }, std::make_tuple( current_order.proceeds ) );
+         rex_results::sellresult_action sellrex_act( rex_account, std::vector<eosio::permission_level>{ } );
+         sellrex_act.send( current_order.proceeds );
       }
    }
 
@@ -721,7 +725,8 @@ namespace eosiosystem {
                      order.close();
                   });
                   /// send dummy action to show and owner and proceeds of filled sellrex order
-                  dispatch_inline( null_account, "orderresult"_n, { }, std::make_tuple( order_owner, result.proceeds ) );
+                  rex_results::orderresult_action order_act( rex_account, std::vector<eosio::permission_level>{ } );
+                  order_act.send( order_owner, result.proceeds );
                }
             }
             oitr = next;
@@ -1172,7 +1177,7 @@ namespace eosiosystem {
          });
          delta_stake = current_vote_stake.amount - init_vote_stake.amount;
       }
-      
+
       if ( delta_stake != 0 ) {
          auto vitr = _voters.find( voter.value );
          if ( vitr != _voters.end() ) {
