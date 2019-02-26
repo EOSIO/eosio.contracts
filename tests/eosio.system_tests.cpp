@@ -3818,7 +3818,7 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
 
    // wait for 30 days minus 1 hour
    produce_block( fc::hours(19*24 + 23) );
-   BOOST_REQUIRE_EQUAL( success(),      buyrex( frank, core_sym::from_string("0.0001") ) );
+   BOOST_REQUIRE_EQUAL( success(),      updaterex( alice ) );
    BOOST_REQUIRE_EQUAL( true,           get_rex_order(alice)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( true,           get_rex_order(bob)["is_open"].as<bool>() );
    BOOST_REQUIRE_EQUAL( true,           get_rex_order(carol)["is_open"].as<bool>() );
@@ -3831,45 +3831,57 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex loans are currently not available"),
                         rentcpu( frank, frank, core_sym::from_string("0.0001") ) );
    {
-      auto trace = base_tester::push_action( N(eosio), N(buyrex), frank,
-                                             mvo()("from", frank)("amount", core_sym::from_string("0.0001")) );
+      auto trace = base_tester::push_action( config::system_account_name, N(rexexec), frank,
+                                             mvo()("user", frank)("max", 2) );
       auto output = get_rexorder_result( trace );
       BOOST_REQUIRE_EQUAL( output.size(),    1 );
       BOOST_REQUIRE_EQUAL( output[0].first,  bob );
       BOOST_REQUIRE_EQUAL( output[0].second, get_rex_order(bob)["proceeds"].as<asset>() );
    }
 
-   BOOST_REQUIRE_EQUAL( true,           get_rex_order(alice)["is_open"].as<bool>() );
-   BOOST_REQUIRE_EQUAL( init_alice_rex, get_rex_order(alice)["rex_requested"].as<asset>() );
-   BOOST_REQUIRE_EQUAL( 0,              get_rex_order(alice)["proceeds"].as<asset>().get_amount() );
-
-   BOOST_REQUIRE_EQUAL( false,          get_rex_order(bob)["is_open"].as<bool>() );
-   BOOST_REQUIRE_EQUAL( init_bob_rex,   get_rex_order(bob)["rex_requested"].as<asset>() );
-   BOOST_REQUIRE      ( 0 <             get_rex_order(bob)["proceeds"].as<asset>().get_amount() );
-
-   BOOST_REQUIRE_EQUAL( true,           get_rex_order(carol)["is_open"].as<bool>() );
-   BOOST_REQUIRE_EQUAL( init_carol_rex, get_rex_order(carol)["rex_requested"].as<asset>() );
-   BOOST_REQUIRE_EQUAL( 0,              get_rex_order(carol)["proceeds"].as<asset>().get_amount() );
-
-   BOOST_REQUIRE_EQUAL( success(),      updaterex( bob ) );
-   BOOST_REQUIRE_EQUAL( 0,              get_rex_vote_stake( bob ).get_amount() );
-   BOOST_REQUIRE_EQUAL( init_stake,     get_voter_info( bob )["staked"].as<int64_t>() );
-   BOOST_REQUIRE_EQUAL( success(),      updaterex( carol ) );
-   BOOST_REQUIRE_EQUAL( 0,              get_rex_vote_stake( carol ).get_amount() );
-   BOOST_REQUIRE_EQUAL( init_stake,     get_voter_info( carol )["staked"].as<int64_t>() );
-
    {
-      auto trace = base_tester::push_action( N(eosio), N(buyrex), frank,
-                                             mvo()("from", frank)("amount", core_sym::from_string("0.0001")) );
-      auto output = get_rexorder_result( trace );
-      BOOST_REQUIRE_EQUAL( output.size(), 0 );
+      BOOST_REQUIRE_EQUAL( true,           get_rex_order(alice)["is_open"].as<bool>() );
+      BOOST_REQUIRE_EQUAL( init_alice_rex, get_rex_order(alice)["rex_requested"].as<asset>() );
+      BOOST_REQUIRE_EQUAL( 0,              get_rex_order(alice)["proceeds"].as<asset>().get_amount() );
+      
+      BOOST_REQUIRE_EQUAL( false,          get_rex_order(bob)["is_open"].as<bool>() );
+      BOOST_REQUIRE_EQUAL( init_bob_rex,   get_rex_order(bob)["rex_requested"].as<asset>() );
+      BOOST_REQUIRE      ( 0 <             get_rex_order(bob)["proceeds"].as<asset>().get_amount() );
+      
       BOOST_REQUIRE_EQUAL( true,           get_rex_order(carol)["is_open"].as<bool>() );
+      BOOST_REQUIRE_EQUAL( init_carol_rex, get_rex_order(carol)["rex_requested"].as<asset>() );
+      BOOST_REQUIRE_EQUAL( 0,              get_rex_order(carol)["proceeds"].as<asset>().get_amount() );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex loans are currently not available"),
+                           rentcpu( frank, frank, core_sym::from_string("1.0000") ) );
    }
 
    {
-      auto trace = base_tester::push_action( N(eosio), N(rexexec), frank, mvo()("user", frank)("max", 4) );
-      auto output = get_rexorder_result( trace );
-      BOOST_REQUIRE_EQUAL( output.size(), 0 );
+      auto trace1 = base_tester::push_action( config::system_account_name, N(updaterex), bob, mvo()("owner", bob) );
+      auto trace2 = base_tester::push_action( config::system_account_name, N(updaterex), carol, mvo()("owner", carol) );
+      BOOST_REQUIRE_EQUAL( 0,              get_rex_vote_stake( bob ).get_amount() );
+      BOOST_REQUIRE_EQUAL( init_stake,     get_voter_info( bob )["staked"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 0,              get_rex_vote_stake( carol ).get_amount() );
+      BOOST_REQUIRE_EQUAL( init_stake,     get_voter_info( carol )["staked"].as<int64_t>() );
+      auto output1 = get_rexorder_result( trace1 );
+      auto output2 = get_rexorder_result( trace2 );
+      BOOST_REQUIRE_EQUAL( 2,              output1.size() + output2.size() );
+
+      BOOST_REQUIRE_EQUAL( false,          get_rex_order_obj(alice).is_null() );
+      BOOST_REQUIRE_EQUAL( true,           get_rex_order_obj(bob).is_null() );
+      BOOST_REQUIRE_EQUAL( true,           get_rex_order_obj(carol).is_null() );      
+      BOOST_REQUIRE_EQUAL( false,          get_rex_order(alice)["is_open"].as<bool>() );
+
+      const auto& rex_pool = get_rex_pool();
+      BOOST_REQUIRE_EQUAL( 0,              rex_pool["total_lendable"].as<asset>().get_amount() );
+      BOOST_REQUIRE_EQUAL( 0,              rex_pool["total_rex"].as<asset>().get_amount() );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex loans are currently not available"),
+                           rentcpu( frank, frank, core_sym::from_string("1.0000") ) );
+
+      BOOST_REQUIRE_EQUAL( success(),      buyrex( emily, core_sym::from_string("1100.0000") ) );
+      BOOST_REQUIRE_EQUAL( false,          get_rex_order_obj(alice).is_null() );
+      BOOST_REQUIRE_EQUAL( false,          get_rex_order(alice)["is_open"].as<bool>() );
+
+      BOOST_REQUIRE_EQUAL( success(),      rentcpu( frank, frank, core_sym::from_string("1.0000") ) );
    }
 
 } FC_LOG_AND_RETHROW()
