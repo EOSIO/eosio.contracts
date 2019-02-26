@@ -639,18 +639,22 @@ namespace eosiosystem {
       const auto& pool = _rexpool.begin();
 
       auto process_expired_loan = [&]( auto& idx, const auto& itr ) -> std::pair<bool, int64_t> {
+         /// update rex_pool in order to delete existing loan
          remove_loan_from_rex_pool( *itr );
          bool    delete_loan   = false;
          int64_t delta_stake   = 0;
+         /// calculate rented tokens at current price
          int64_t rented_tokens = get_bancor_output( pool->total_rent.amount,
                                                     pool->total_unlent.amount,
                                                     itr->payment.amount );
-         // conditions for loan renewal
-         bool renew_loan = itr->payment <= itr->balance        // loan has sufficient balance 
-                        && itr->payment.amount < rented_tokens // loan has favorable return 
-                        && rex_loans_available();              // no pending sell orders
+         /// conditions for loan renewal
+         bool renew_loan = itr->payment <= itr->balance        /// loan has sufficient balance 
+                        && itr->payment.amount < rented_tokens /// loan has favorable return 
+                        && rex_loans_available();              /// no pending sell orders
          if ( renew_loan ) {
+            /// update rex_pool in order to account for renewed loan 
             add_loan_to_rex_pool( itr->payment, rented_tokens, false );
+            /// update renewed loan fields
             delta_stake = update_renewed_loan( idx, itr, rented_tokens );
          } else {
             delete_loan = true;
@@ -767,12 +771,20 @@ namespace eosiosystem {
    }
 
    /**
+    * @brief Processes a sellrex order and returns object containing the results
+    *
     * Processes an incoming or already scheduled sellrex order. If REX pool has enough core
     * tokens not frozen in loans, order is filled. In this case, REX pool totals, user rex_balance
     * and user vote_stake are updated. However, this function does not update user voting power. The
     * function returns success flag, order proceeds, and vote stake delta. These are used later in a
     * different function to complete order processing, i.e. transfer proceeds to user REX fund and
     * update user vote weight.
+    *
+    * @param bitr - iterator pointing to rex_balance database record
+    * @param rex - amount of rex to be sold
+    *
+    * @return rex_order_outcome - a struct containing success flag, order proceeds, and resultant
+    * vote stake change
     */
    rex_order_outcome system_contract::fill_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex )
    {
