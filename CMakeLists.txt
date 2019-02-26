@@ -74,6 +74,9 @@ set(SECP256K1_ROOT "/usr/local")
 string(REPLACE ";" "|" TEST_FRAMEWORK_PATH "${CMAKE_FRAMEWORK_PATH}")
 string(REPLACE ";" "|" TEST_MODULE_PATH "${CMAKE_MODULE_PATH}")
 
+include(CTest)
+enable_testing()
+
 ExternalProject_Add(
   contracts_unit_tests
   LIST_SEPARATOR | # Use the alternate list separator
@@ -84,3 +87,6 @@ ExternalProject_Add(
   TEST_COMMAND   ""
   INSTALL_COMMAND ""
 )
+
+file( GLOB UNIT_TESTS "${CMAKE_SOURCE_DIR}/tests/*.cpp" )
+add_test( system_tests ${CMAKE_BINARY_DIR}/tests/unit_test )
