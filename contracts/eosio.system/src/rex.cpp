@@ -1040,7 +1040,7 @@ namespace eosiosystem {
        * If precision of CORE_SYMBOL is 4, that corresponds to a maximum supply of 40 billion tokens.
        */
       const int64_t rex_ratio = 10000;
-      const asset   init_total_rent( 1000 * 10000, core_symbol() ); /// base balance prevents renting profitably until at least a minimum number of core_symbol() is made available
+      const asset   init_total_rent( 20'000'0000, core_symbol() ); /// base balance prevents renting profitably until at least a minimum number of core_symbol() is made available
       asset rex_received( 0, rex_symbol );
       auto itr = _rexpool.begin();
       if ( !rex_system_initialized() ) {
