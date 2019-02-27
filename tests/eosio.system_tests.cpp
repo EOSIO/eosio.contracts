@@ -4753,6 +4753,46 @@ BOOST_FIXTURE_TEST_CASE( close_rex, eosio_system_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 
+BOOST_FIXTURE_TEST_CASE( set_rex, eosio_system_tester ) try {
+
+   const asset init_balance = core_sym::from_string("25000.0000");
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount) };
+   account_name alice = accounts[0], bob = accounts[1];
+   setup_rex_accounts( accounts, init_balance );
+
+   const name act_name{ N(setrex) };
+   const asset init_total_rent  = core_sym::from_string("20000.0000");
+   const asset set_total_rent   = core_sym::from_string("10000.0000");
+   const asset negative_balance = core_sym::from_string("-10000.0000");
+   const asset different_symbol = asset::from_string("10000.0000 RND");
+   BOOST_REQUIRE_EQUAL( error("missing authority of eosio"),
+                        push_action( alice, act_name, mvo()("balance", set_total_rent) ) );
+   BOOST_REQUIRE_EQUAL( error("missing authority of eosio"),
+                        push_action( bob, act_name, mvo()("balance", set_total_rent) ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex system is not initialized"),
+                        push_action( config::system_account_name, act_name, mvo()("balance", set_total_rent) ) );
+   BOOST_REQUIRE_EQUAL( success(), buyrex( alice, init_balance ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("balance must be set to have a positive amount"),
+                        push_action( config::system_account_name, act_name, mvo()("balance", negative_balance) ) );
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("balance symbol must be core symbol"),
+                        push_action( config::system_account_name, act_name, mvo()("balance", different_symbol) ) );
+   const asset fee = core_sym::from_string("100.0000");
+   BOOST_REQUIRE_EQUAL( success(),             rentcpu( bob, bob, fee ) );
+   const auto& init_rex_pool = get_rex_pool();
+   BOOST_REQUIRE_EQUAL( init_total_rent + fee, init_rex_pool["total_rent"].as<asset>() );
+   BOOST_TEST_REQUIRE( set_total_rent != init_rex_pool["total_rent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( success(),
+                        push_action( config::system_account_name, act_name, mvo()("balance", set_total_rent) ) );
+   const auto& curr_rex_pool = get_rex_pool();
+   BOOST_REQUIRE_EQUAL( init_rex_pool["total_lendable"].as<asset>(),   curr_rex_pool["total_lendable"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( init_rex_pool["total_lent"].as<asset>(),       curr_rex_pool["total_lent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( init_rex_pool["total_unlent"].as<asset>(),     curr_rex_pool["total_unlent"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( init_rex_pool["namebid_proceeds"].as<asset>(), curr_rex_pool["namebid_proceeds"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( init_rex_pool["loan_num"].as_uint64(),         curr_rex_pool["loan_num"].as_uint64() );
+   BOOST_REQUIRE_EQUAL( set_total_rent,                                curr_rex_pool["total_rent"].as<asset>() );
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_AUTO_TEST_CASE( setabi_bios ) try {
    validating_tester t( validating_tester::default_config() );
    abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::bios_abi().data()).template as<abi_def>(), base_tester::abi_serializer_max_time);

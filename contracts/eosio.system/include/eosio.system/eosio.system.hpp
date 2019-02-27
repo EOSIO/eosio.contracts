@@ -372,6 +372,12 @@ namespace eosiosystem {
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
          /**
+          * Sets total_rent balance of REX pool to the passed value
+          */
+         [[eosio::action]]
+         void setrex( const asset& balance );
+
+         /**
           * Deposits core tokens to user REX fund. All proceeds and expenses related to REX are added to
           * or taken out of this fund. Inline token transfer from user balance is executed.
           */

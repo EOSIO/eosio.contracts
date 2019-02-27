@@ -311,6 +311,23 @@ namespace eosiosystem {
    }
 
    /**
+    * @brief Sets total_rent balance of REX pool to the passed value
+    *
+    * @param balance - the value to which total_rent will be set
+    */
+   void system_contract::setrex( const asset& balance )
+   {
+      require_auth( "eosio"_n );
+
+      check( balance.amount > 0, "balance must be set to have a positive amount" );
+      check( balance.symbol == core_symbol(), "balance symbol must be core symbol" );
+      check( rex_system_initialized(), "rex system is not initialized" );
+      _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& pool ) {
+         pool.total_rent = balance;
+      });
+   }
+
+   /**
     * @brief Performs REX maintenance by processing a specified number of REX sell orders
     * and expired loans
     *
