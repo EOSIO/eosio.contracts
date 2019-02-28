@@ -18,7 +18,7 @@ void golos_tester::install_contract(
     set_abi (acc, abi.data(), signer);
     if (produce)
         produce_block();
-    const auto& accnt = control->db().get<account_object,by_name>(acc);
+    const auto& accnt = _chaindb.get<account_object,by_name>(acc);
     abi_def abi_d;
     BOOST_CHECK_EQUAL(abi_serializer::to_abi(accnt.abi, abi_d), true);
     _abis[acc].set_abi(abi_d, abi_serializer_max_time);
@@ -27,13 +27,14 @@ void golos_tester::install_contract(
 
 vector<permission> golos_tester::get_account_permissions(account_name a) {
     vector<permission> r;
-    const auto& d = control->db();
-    const auto& perms = d.get_index<permission_index,by_owner>();
+    auto table = _chaindb.get_table<permission_object>();
+    auto perms = table.get_index<by_owner>();
+    // const auto& perms = d.get_index<permission_index,by_owner>();
     auto perm = perms.lower_bound(boost::make_tuple(a));
     while (perm != perms.end() && perm->owner == a) {
         name parent;
         if (perm->parent._id) {
-            const auto* p = d.find<permission_object,by_id>(perm->parent);
+            const auto* p = _chaindb.find<permission_object,by_id>(perm->parent);
             if (p) {
                 parent = p->name;
             }
@@ -110,55 +111,6 @@ base_tester::action_result golos_tester::push_tx(signed_transaction&& tx) {
     produce_block();
     BOOST_REQUIRE_EQUAL(true, chain_has_transaction(tx.id()));
     return success();
-}
-
-// table helpers
-const table_id_object* golos_tester::find_table(name code, uint64_t scope, name tbl) const {
-    auto tid = control->db().find<table_id_object, by_code_scope_table>(std::make_tuple(code, scope, tbl));
-    return tid;
-}
-
-vector<char> golos_tester::get_tbl_row(name code, uint64_t scope, name tbl, uint64_t id) const {
-    vector<char> data;
-    const auto& tid = find_table(code, scope, tbl);
-    if (tid) {
-        const auto& db = control->db();
-        const auto& idx = db.get_index<chain::key_value_index, chain::by_scope_primary>();
-        auto itr = idx.lower_bound(std::make_tuple(tid->id, id));
-        if (itr != idx.end() && itr->t_id == tid->id) {
-            data.resize(itr->value.size());
-            memcpy(data.data(), itr->value.data(), data.size());
-        }
-    }
-    return data;
-}
-
-variant golos_tester::get_tbl_struct(name code, uint64_t scope, name tbl, uint64_t id, const string& n) const {
-    vector<char> data = get_tbl_row(code, scope, tbl, id);
-    const auto& abi = _abis.at(code);
-    return data.empty() ? variant() : abi.binary_to_variant(n, data, abi_serializer_max_time);
-}
-
-variant golos_tester::get_tbl_singleton(name code, uint64_t scope, name tbl, const string& n) const {
-    return get_tbl_struct(code, scope, tbl, tbl, n);
-}
-
-vector<vector<char>> golos_tester::get_all_rows(name code, uint64_t scope, name table, bool strict) const {
-    vector<vector<char>> ret;
-    const auto& db = control->db();
-    const auto* t_id = db.find<chain::table_id_object, chain::by_code_scope_table>(std::make_tuple(code, scope, table));
-    if (strict)
-        BOOST_REQUIRE_EQUAL(true, static_cast<bool>(t_id));
-    else if (!static_cast<bool>(t_id))
-        return ret;
-    const auto& idx = db.get_index<chain::key_value_index, chain::by_scope_primary>();
-    for (auto itr = idx.lower_bound(std::make_tuple(t_id->id, 0)); itr != idx.end() && itr->t_id == t_id->id; ++itr) {
-        ret.push_back(vector<char>());
-        auto& data = ret.back();
-        data.resize(itr->value.size());
-        memcpy(data.data(), itr->value.data(), data.size());
-    }
-    return ret;
 }
 
 variant golos_tester::get_chaindb_struct(name code, uint64_t scope, name tbl, uint64_t id,

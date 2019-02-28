@@ -2237,27 +2237,28 @@ BOOST_FIXTURE_TEST_CASE(votepay_transition, cyber_system_tester, * boost::unit_t
    }
 
    BOOST_REQUIRE_EQUAL( success(), vote(N(producvotera), vector<account_name>(producer_names.begin(), producer_names.end())) );
-   auto* tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>(
-                  boost::make_tuple( config::system_account_name,
-                                     config::system_account_name,
-                                     N(producers2) ) );
-   BOOST_REQUIRE( tbl );
+// TODO: Removed by CyberWay
+//   auto* tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>(
+//                  boost::make_tuple( config::system_account_name,
+//                                     config::system_account_name,
+//                                     N(producers2) ) );
+//   BOOST_REQUIRE( tbl );
    BOOST_REQUIRE( 0 < microseconds_since_epoch_of_iso_string( get_producer_info2("defproducera")["last_votepay_share_update"] ) );
-
-   // const_cast hack for now
-   const_cast<chainbase::database&>(control->db()).remove( *tbl );
-   tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>(
-                  boost::make_tuple( config::system_account_name,
-                                     config::system_account_name,
-                                     N(producers2) ) );
-   BOOST_REQUIRE( !tbl );
+//
+//   // const_cast hack for now
+//   const_cast<chainbase::database&>(control->db()).remove( *tbl );
+//   tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>(
+//                  boost::make_tuple( config::system_account_name,
+//                                     config::system_account_name,
+//                                     N(producers2) ) );
+//   BOOST_REQUIRE( !tbl );
 
    BOOST_REQUIRE_EQUAL( success(), vote(N(producvoterb), vector<account_name>(producer_names.begin(), producer_names.end())) );
-   tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>(
-            boost::make_tuple( config::system_account_name,
-                               config::system_account_name,
-                               N(producers2) ) );
-   BOOST_REQUIRE( !tbl );
+//   tbl = control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>(
+//            boost::make_tuple( config::system_account_name,
+//                               config::system_account_name,
+//                               N(producers2) ) );
+//   BOOST_REQUIRE( !tbl );
    BOOST_REQUIRE_EQUAL( success(), regproducer(N(defproducera)) );
    BOOST_REQUIRE( microseconds_since_epoch_of_iso_string( get_producer_info(N(defproducera))["last_claim_time"] ) < microseconds_since_epoch_of_iso_string( get_producer_info2(N(defproducera))["last_votepay_share_update"] ) );
 
@@ -2284,7 +2285,7 @@ BOOST_AUTO_TEST_CASE(votepay_transition2, * boost::unit_test::tolerance(1e-10)) 
    t.set_code( config::system_account_name, contracts::util::system_wasm_old() );
    t.set_abi(  config::system_account_name, contracts::util::system_abi_old().data() );
    {
-      const auto& accnt = t.control->db().get<account_object,by_name>( config::system_account_name );
+      const auto& accnt = t.control->chaindb().get<account_object,by_name>( config::system_account_name );
       abi_def abi;
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
       t.abi_ser.set_abi(abi, cyber_system_tester::abi_serializer_max_time);
@@ -2323,11 +2324,12 @@ BOOST_AUTO_TEST_CASE(votepay_transition2, * boost::unit_test::tolerance(1e-10)) 
    BOOST_REQUIRE_EQUAL( t.success(), t.vote(N(producvoterc), vector<account_name>(producer_names.begin(), producer_names.end())) );
    BOOST_REQUIRE_EQUAL( t.success(), t.push_action(producer_names[0], N(claimrewards), mvo()("owner", producer_names[0])) );
    BOOST_REQUIRE_EQUAL( t.success(), t.push_action(producer_names[1], N(claimrewards), mvo()("owner", producer_names[1])) );
-   auto* tbl = t.control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>(
-                                    boost::make_tuple( config::system_account_name,
-                                                       config::system_account_name,
-                                                       N(producers2) ) );
-   BOOST_REQUIRE( !tbl );
+// TODO: Removed by CyberWay
+//   auto* tbl = t.control->db().find<eosio::chain::table_id_object, eosio::chain::by_code_scope_table>(
+//                                    boost::make_tuple( config::system_account_name,
+//                                                       config::system_account_name,
+//                                                       N(producers2) ) );
+//   BOOST_REQUIRE( !tbl );
 
    t.produce_block( fc::hours(2*24) );
 

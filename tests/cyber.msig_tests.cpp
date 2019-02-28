@@ -29,7 +29,7 @@ public:
       set_abi(config::msig_account_name, contracts::msig_abi().data(), &sys_priv_key);
 
       produce_blocks();
-      const auto& accnt = control->db().get<account_object,by_name>(config::msig_account_name);
+      const auto& accnt = control->chaindb().get<account_object,by_name>(config::msig_account_name);
       abi_def abi;
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
       abi_ser.set_abi(abi, abi_serializer_max_time);

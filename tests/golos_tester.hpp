@@ -69,14 +69,6 @@ public:
         account_name code, action_name type,
         permission_name req, permission_name parent = N(active), permission_name prov = config::eosio_code_name);
 
-    // table helpers
-    const table_id_object* find_table(name code, uint64_t scope, name tbl) const;
-    // Note: uses `lower_bound`, so caller must check id of returned value
-    std::vector<char> get_tbl_row(name code, uint64_t scope, name tbl, uint64_t id) const;
-    std::vector<std::vector<char>> get_all_rows(name code, uint64_t scope, name table, bool strict = true) const;
-    fc::variant get_tbl_struct(name code, uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
-    fc::variant get_tbl_singleton(name code, uint64_t scope, name tbl, const string &n) const;
-
     fc::variant get_chaindb_struct(name code, uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
     fc::variant get_chaindb_singleton(name code, uint64_t scope, name tbl, const std::string& n) const;
     std::vector<fc::variant> get_all_chaindb_rows(name code, uint64_t scope, name tbl, bool strict) const;
