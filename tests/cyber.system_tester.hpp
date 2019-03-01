@@ -45,7 +45,7 @@ public:
       set_code( N(cyber.token), contracts::token_wasm());
       set_abi( N(cyber.token), contracts::token_abi().data() );
       {
-         const auto& accnt = control->db().get<account_object,by_name>( N(cyber.token) );
+         const auto& accnt = control->chaindb().get<account_object,by_name>( N(cyber.token) );
          abi_def abi;
          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
          token_abi_ser.set_abi(abi, abi_serializer_max_time);
@@ -71,7 +71,7 @@ public:
       }
 
       {
-         const auto& accnt = control->db().get<account_object,by_name>( config::system_account_name );
+         const auto& accnt = control->chaindb().get<account_object,by_name>( config::system_account_name );
          abi_def abi;
          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
          abi_ser.set_abi(abi, abi_serializer_max_time);
@@ -475,7 +475,7 @@ public:
          set_abi(config::msig_account_name, contracts::msig_abi().data());
 
          produce_blocks();
-         const auto& accnt = control->db().get<account_object,by_name>(config::msig_account_name);
+         const auto& accnt = control->chaindb().get<account_object,by_name>( config::msig_account_name );
          abi_def msig_abi;
          BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, msig_abi), true);
          msig_abi_ser.set_abi(msig_abi, abi_serializer_max_time);
