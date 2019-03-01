@@ -551,8 +551,8 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Checks if account voting requirements (voting for a proxy or 21 producers) when
-    * buying REX
+    * @brief Checks if account satisfies voting requirement (voting for a proxy or 21 producers)
+    * for buying REX
     *
     * @param owner - account buying or already holding REX tokens
     * @err_msg - error message

@@ -601,6 +601,7 @@ namespace eosiosystem {
          using defnetloan_action = eosio::action_wrapper<"defnetloan"_n, &system_contract::defnetloan>;
          using updaterex_action = eosio::action_wrapper<"updaterex"_n, &system_contract::updaterex>;
          using rexexec_action = eosio::action_wrapper<"rexexec"_n, &system_contract::rexexec>;
+         using setrex_action = eosio::action_wrapper<"setrex"_n, &system_contract::setrex>;
          using mvtosavings_action = eosio::action_wrapper<"mvtosavings"_n, &system_contract::mvtosavings>;
          using mvfrsavings_action = eosio::action_wrapper<"mvfrsavings"_n, &system_contract::mvfrsavings>;
          using consolidate_action = eosio::action_wrapper<"consolidate"_n, &system_contract::consolidate>;
