@@ -66,8 +66,8 @@ public:
         std::vector<permission_level> perms, std::vector<account_name> signers, const variant_object& data);
     action_result push_tx(signed_transaction&& tx);
     void delegate_authority(account_name from, std::vector<account_name> to,
-        account_name code, action_name type,
-        permission_name req, permission_name parent = N(active), permission_name prov = config::eosio_code_name);
+        account_name code, action_name type, permission_name req,
+        permission_name parent = N(active), permission_name prov = config::eosio_code_name);
 
     fc::variant get_chaindb_struct(name code, uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
     fc::variant get_chaindb_singleton(name code, uint64_t scope, name tbl, const std::string& n) const;

@@ -9,11 +9,11 @@
 namespace cfg = cyber::config;
 using eosio::chain::config::stake_account_name;
 using eosio::chain::config::govern_account_name;
+using eosio::chain::config::default_virtual_ram_limit;
 using namespace eosio::testing;
 using namespace eosio::chain;
 using namespace fc; 
 static const auto _token = cfg::system_token;
-const auto sys_priv_key = eosio::testing::base_tester::get_private_key(config::system_account_name, name{config::active_name}.to_string());
 
 class cyber_stake_tester : public golos_tester {
 protected:
@@ -38,19 +38,20 @@ public:
         , token({this, cfg::token_name, cfg::system_token})
         , stake({this, _code})
     { 
-        create_accounts({_issuer, _alice, _bob, _carol,
+        create_accounts({_alice, _bob, _carol, _whale,
             cfg::token_name});
         produce_block();
-        install_contract(_code, contracts::stake_wasm(), contracts::stake_abi(), true, &sys_priv_key);
+        install_contract(_code, contracts::stake_wasm(), contracts::stake_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         
     }
     static const std::vector<symbol_code> res_purposes;
     
-    const account_name _issuer = N(cyber.issuer);
+    const account_name _issuer = govern_account_name;
     const account_name _alice = N(alice);
     const account_name _bob = N(bob);
     const account_name _carol = N(carol);
+    const account_name _whale = N(whale);
     
     void issuer_delegate_authority() {
         delegate_authority(_issuer, {_code}, cfg::token_name, N(retire), cfg::amerce_name);
@@ -63,12 +64,12 @@ public:
 
         std::vector<uint8_t> max_proxies = {30, 10, 3, 1};
         BOOST_TEST_MESSAGE("--- creating token and stake"); 
-        BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(1000000, token._symbol)));
+        BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(10000000000, token._symbol)));
         BOOST_CHECK_EQUAL(success(), stake.create(_issuer, token._symbol, res_purposes, 
             max_proxies, cfg::balances_update_window, 7 * 24 * 60 * 60, 52));
             
         BOOST_TEST_MESSAGE("--- installing governance contract");
-        install_contract(govern_account_name, contracts::govern_wasm(), contracts::govern_abi(), true, &sys_priv_key);
+        install_contract(govern_account_name, contracts::govern_wasm(), contracts::govern_abi());
         BOOST_TEST_MESSAGE("--- installing bios contract");
         //sys token and stake must already exist at this moment
         install_contract(config::system_account_name, contracts::bios_wasm(), contracts::bios_abi());
@@ -80,6 +81,15 @@ public:
         string incorrect_proxy_levels(uint8_t g, uint8_t a) {
             return amsg("incorrect proxy levels: grantor " + std::to_string(g) + ", agent " + std::to_string(a));
         };
+        bool is_net_usage_mssg(const std::string& arg) {
+            return arg.find("transaction net usage is too high") != std::string::npos;
+        }
+        bool is_insufficient_ram_mssg(const std::string& arg) {
+            return arg.find("has insufficient ram") != std::string::npos;
+        }
+        bool is_virtual_balance_mssg(const std::string& arg) {
+            return arg.find("current staked virtual balance is") != std::string::npos;
+        }
     } err;
 };
 
@@ -247,6 +257,7 @@ BOOST_FIXTURE_TEST_CASE(increase_proxy_level_test, cyber_stake_tester) try {
     BOOST_CHECK_EQUAL(success(), token.transfer(_carol, _code, staked, purpose_str));
     BOOST_TEST_MESSAGE("--- alice stakes " << staked);
     BOOST_CHECK_EQUAL(success(), token.transfer(_alice, _code, staked, purpose_str));
+
     produce_block();
     auto t = head_block_time();
     auto balance_a = ((pct_b * pct_c) + 1.0) * staked.get_amount();
@@ -294,24 +305,24 @@ BOOST_FIXTURE_TEST_CASE(set_producers_test, cyber_stake_tester) try {
     
     stake.register_candidate(_bob, token._symbol.to_symbol_code());
     produce_blocks(blocks_num);
-    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers({_alice, _bob}));
+    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers({_bob, _alice}));
     
     std::vector<account_name> producers;
     std::vector<account_name> crowd_of_bps;
-    for (size_t u = 0; u < cfg::producers_num - 1; u++) {
+    for (int u = cfg::producers_num - 2; u >= 0; u--) {
         auto user = user_name(u);
         crowd_of_bps.emplace_back(user);
         create_accounts({user});
         stake.register_candidate(user, token._symbol.to_symbol_code());
-        BOOST_CHECK_EQUAL(success(), token.issue(_issuer, user, asset(u + 1, token._symbol), ""));
-        BOOST_CHECK_EQUAL(success(), token.transfer(user, _code, asset(u + 1, token._symbol), "CPU"));
+        BOOST_CHECK_EQUAL(success(), token.issue(_issuer, user, asset(u + 2, token._symbol), ""));
+        BOOST_CHECK_EQUAL(success(), token.transfer(user, _code, asset(u + 2, token._symbol), "CPU"));
     }
     
     auto crowd_and_alice = crowd_of_bps;
     crowd_and_alice.emplace_back(_alice);
     auto crowd_and_bob = crowd_of_bps;
     crowd_and_bob.emplace_back(_bob);
-    
+
     produce_blocks(blocks_num);
     BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers(crowd_and_bob));
     
@@ -329,8 +340,97 @@ BOOST_FIXTURE_TEST_CASE(set_producers_test, cyber_stake_tester) try {
     
     produce_blocks(blocks_num);
     BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers(crowd_and_bob));
-
     
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(bw_tests, cyber_stake_tester) try {
+    BOOST_TEST_MESSAGE("Basic bw tests");
+    auto purpose_str = "NET";
+    auto purpose = to_code(purpose_str);
+    issuer_delegate_authority();
+
+    std::vector<uint8_t> max_proxies = {30, 10, 3, 1};
+    int64_t frame_length = 30;
+    asset stake_u(100, token._symbol);
+    asset stake_w(500000, token._symbol);
+    asset reward_c(300, token._symbol);
+    BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(10000000000, token._symbol)));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _alice, stake_u , ""));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _bob,   stake_u, ""));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _whale, stake_w, ""));
+ 
+    BOOST_CHECK_EQUAL(success(), stake.create(_issuer, token._symbol, {purpose}, max_proxies, frame_length, 7 * 24 * 60 * 60, 52));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_alice, _code, stake_u, purpose_str));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_bob, _code, stake_u, purpose_str));
+    BOOST_CHECK_EQUAL(success(), stake.enable(_issuer, token._symbol, purpose));
+
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_alice, token._symbol.to_symbol_code(), purpose, 1));
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_bob, token._symbol.to_symbol_code(), purpose, 1));
+    BOOST_CHECK(err.is_net_usage_mssg(stake.setproxylvl(_carol, token._symbol.to_symbol_code(), purpose, 0)));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _carol,   stake_u, ""));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_carol, _code, stake_u, purpose_str));
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_carol, token._symbol.to_symbol_code(), purpose, 0));
+    BOOST_CHECK_EQUAL(success(), stake.delegate(_alice, _carol, stake_u, purpose));
+    auto blocks_num = (frame_length * 1000) / cfg::block_interval_ms;
+    produce_blocks(blocks_num);
+    BOOST_CHECK_EQUAL(success(), stake.reward(_issuer, _carol, reward_c, purpose));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_whale, _code, stake_w, purpose_str));
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_alice, token._symbol.to_symbol_code(), purpose, 2));
+    BOOST_CHECK(err.is_net_usage_mssg(stake.setproxylvl(_bob, token._symbol.to_symbol_code(), purpose, 2)));
+    produce_block();
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(ram_tests, cyber_stake_tester) try {
+    BOOST_TEST_MESSAGE("Basic ram tests");
+    issuer_delegate_authority();
+    
+    uint64_t aprox_user_ram_usage = 5000;
+
+    std::vector<uint8_t> max_proxies = {30, 10, 3, 1};
+    int64_t frame_length = 30;
+    asset stake_u(400, token._symbol);
+    asset stake_w_ram(stake_u.get_amount() * (default_virtual_ram_limit / aprox_user_ram_usage), token._symbol);
+    asset stake_w_net(500000, token._symbol);
+
+    BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(10000000000, token._symbol)));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _alice, stake_u , ""));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _bob,   stake_u, ""));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _carol,   stake_u, ""));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _whale, stake_w_ram, ""));
+ 
+    BOOST_CHECK_EQUAL(success(), stake.create(_issuer, token._symbol, {to_code("RAM"), to_code("NET")}, max_proxies, frame_length, 7 * 24 * 60 * 60, 52));
+    BOOST_CHECK_EQUAL(success(), stake.enable(_issuer, token._symbol, to_code("RAM")));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_whale, _code, stake_w_ram, "RAM"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_alice, _code, stake_u, "RAM"));
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_alice, token._symbol.to_symbol_code(), to_code("RAM"), 1));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_carol, _code, stake_u, "RAM"));
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_carol, token._symbol.to_symbol_code(), to_code("RAM"), 0));
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_whale, token._symbol.to_symbol_code(), to_code("RAM"), 0));
+    BOOST_CHECK(err.is_insufficient_ram_mssg(stake.setproxylvl(_bob, token._symbol.to_symbol_code(), to_code("RAM"), 1)));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_bob, _code, stake_u, "RAM"));
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_bob, token._symbol.to_symbol_code(), to_code("RAM"), 1));
+    BOOST_CHECK_EQUAL(success(), stake.delegate(_bob, _carol, stake_u, to_code("RAM")));
+    BOOST_CHECK_EQUAL(success(), stake.delegate(_alice, _whale, stake_u, to_code("RAM")));
+    BOOST_CHECK_EQUAL(success(), stake.amerce(_issuer, _carol, stake_u + stake_u, to_code("RAM")));
+    
+    produce_block();
+    
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _alice, stake_u , ""));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _bob,   stake_u, ""));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _whale, stake_w_net, ""));
+    BOOST_CHECK_EQUAL(success(), stake.enable(_issuer, token._symbol, to_code("NET")));
+    
+    BOOST_CHECK_EQUAL(success(), token.transfer(_whale, _code, stake_w_net, "NET"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_alice, _code, stake_u, "NET"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_bob, _code, stake_u, "NET"));
+    
+    auto blocks_num = (frame_length * 1000) / cfg::block_interval_ms;
+    produce_blocks(blocks_num);
+    
+    BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_alice, token._symbol.to_symbol_code(), to_code("RAM"), 2));
+    BOOST_CHECK(err.is_virtual_balance_mssg(stake.setproxylvl(_bob, token._symbol.to_symbol_code(), to_code("RAM"), 2)));
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

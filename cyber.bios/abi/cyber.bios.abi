@@ -278,28 +278,6 @@
             ]
         },
         {
-            "name": "setalimits",
-            "base": "",
-            "fields": [
-                {
-                    "name": "account",
-                    "type": "name"
-                },
-                {
-                    "name": "ram_bytes",
-                    "type": "int64"
-                },
-                {
-                    "name": "net_weight",
-                    "type": "int64"
-                },
-                {
-                    "name": "cpu_weight",
-                    "type": "int64"
-                }
-            ]
-        },
-        {
             "name": "setcode",
             "base": "",
             "fields": [
@@ -479,10 +457,6 @@
         {
             "name": "setabi",
             "type": "setabi"
-        },
-        {
-            "name": "setalimits",
-            "type": "setalimits"
         },
         {
             "name": "setcode",

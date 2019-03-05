@@ -33,4 +33,4 @@ void bios::onblock(ignore<block_header> header) {
 }
 }
 
-EOSIO_DISPATCH( cyber::bios, (setalimits)(setglimits)(setprods)(setparams)(reqauth)(setabi)(setcode)(onblock) )
+EOSIO_DISPATCH( cyber::bios, (setglimits)(setprods)(setparams)(reqauth)(setabi)(setcode)(onblock) )

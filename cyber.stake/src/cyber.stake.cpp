@@ -355,7 +355,10 @@ void stake::update_stats(const structures::stat& stat_arg, name payer) {
         stats_table.emplace(payer, [&](auto& s) { s = stat_arg; s.id = stats_table.available_primary_key(); });
     }
     else if (stat != stat_index.end()) {
-        stat_index.modify(stat, name(), [&](auto& s) { s.total_staked += stat_arg.total_staked; });
+        stat_index.modify(stat, name(), [&](auto& s) { 
+            s.total_staked += stat_arg.total_staked; 
+            s.enabled = s.enabled || stat_arg.enabled;
+        });
     }
     else {
         eosio_assert(false, "stats doesn't exist");
@@ -480,6 +483,21 @@ void stake::create(symbol token_symbol, std::vector<symbol_code> purpose_codes, 
         };});
 }
 
+void stake::enable(symbol token_symbol, symbol_code purpose_code) {
+    auto token_code = token_symbol.code();
+    auto issuer = eosio::token::get_issuer(config::token_name, token_code);
+    require_auth(issuer);
+    params params_table(table_owner, table_owner.value);
+    get_param(params_table, purpose_code, token_code);
+    update_stats(structures::stat {
+        .id = 0,
+        .token_code = token_code,
+        .purpose_code = purpose_code,
+        .total_staked = 0,
+        .enabled = true
+    }, issuer);
+}
+
 stake::agents_idx_t::const_iterator stake::get_agent_itr(symbol_code purpose_code, symbol_code token_code, stake::agents_idx_t& agents_idx, name agent_name, int16_t proxy_level_for_emplaced, agents* agents_table, bool* emplaced) {
     auto key = std::make_tuple(purpose_code, token_code, agent_name);
     auto agent = agents_idx.find(key);
@@ -521,28 +539,56 @@ void stake::updatefunds(name account, symbol_code token_code, symbol_code purpos
             update_stake_proxied(p, token_code, account, param.frame_length, false);
 }
 
+int64_t stake::update_purpose_balance(agents_idx_t& agents_idx, name account, symbol_code token_code, symbol_code purpose_code, int64_t total_amount, int64_t total_balance) {
+    if (!total_balance)
+        return 0;
+    
+    auto agent = get_agent_itr(purpose_code, token_code, agents_idx, account);
+
+    auto amount = total_balance < 0 ? total_amount : safe_prop(total_amount, agent->balance, total_balance);
+    if (amount < 0)
+        amount = std::max(amount, -agent->balance);
+    
+    agents_idx.modify(agent, name(), [&](auto& a) { a.balance += amount; });
+    
+    update_stats(structures::stat {
+        .id = 0,
+        .token_code = token_code,
+        .purpose_code = purpose_code,
+        .total_staked = amount
+    });
+    return amount;
+}
+
 void stake::change_balance(name account, asset quantity, symbol_code purpose_code) {
     eosio_assert(quantity.is_valid(), "invalid quantity");
     auto token_code = quantity.symbol.code();
     auto issuer = eosio::token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
     params params_table(table_owner, table_owner.value);
-    get_param(params_table, purpose_code, token_code);
+    const auto& param = get_param(params_table, purpose_code, token_code);
 
     agents agents_table(table_owner, table_owner.value);
     auto agents_idx = agents_table.get_index<"bykey"_n>();
-    auto agent = get_agent_itr(purpose_code, token_code, agents_idx, account);
-    if (quantity.amount < 0)
-        quantity.amount = std::max(quantity.amount, -agent->balance);
     
-    agents_idx.modify(agent, name(), [&](auto& a) { a.balance += quantity.amount; });
-    
-    update_stats(structures::stat {
-        .id = 0,
-        .token_code = token_code,
-        .purpose_code = purpose_code,
-        .total_staked = quantity.amount
-    });
+    if (static_cast<bool>(purpose_code))
+        update_purpose_balance(agents_idx, account, token_code, purpose_code, quantity.amount);
+    else {
+        int64_t total_balance = 0;
+        for (auto& p : param.purposes) {
+            total_balance += get_agent_itr(p, token_code, agents_idx, account)->balance;
+        }
+        
+        eosio_assert(param.purposes.size(), "no purpose");
+        auto last_purpose_itr = param.purposes.end();
+        --last_purpose_itr;
+        auto total_amount = quantity.amount;
+        auto left_amount = total_amount;
+        for (auto purpose_itr = param.purposes.begin(); purpose_itr != last_purpose_itr; ++purpose_itr) {
+            left_amount -= update_purpose_balance(agents_idx, account, token_code, *purpose_itr, total_amount, total_balance);
+        }
+        update_purpose_balance(agents_idx, account, token_code, param.purposes.back(), left_amount);
+    }
     
     if (quantity.amount < 0) {
         quantity.amount = -quantity.amount;
@@ -571,7 +617,7 @@ void stake::reward(name account, asset quantity, symbol_code purpose_code) {
 } /// namespace cyber
 
 DISPATCH_WITH_TRANSFER(cyber::stake, cyber::config::token_name, on_transfer,
-    (create)(delegate)(setgrntterms)(recall)(withdraw)(claim)(cancelwd)
+    (create)(enable)(delegate)(setgrntterms)(recall)(withdraw)(claim)(cancelwd)
     (setproxylvl)(setproxyfee)(setminstaked)(setkey)
     (updatefunds)(amerce)(reward)
 )
