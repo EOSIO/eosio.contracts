@@ -1,7 +1,7 @@
 #pragma once
 #include <eosiolib/datastream.hpp>
 
-namespace commun {
+namespace cyber {
 
 
 template<int N> struct nop_t {};    // TODO: is there better way?

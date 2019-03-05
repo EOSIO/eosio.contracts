@@ -10,6 +10,7 @@
 #include <cyber.token/cyber.token.hpp>
 #include <common/dispatchers.hpp>
 #include <common/parameter_ops.hpp>
+#include <common/util.hpp>
 
 namespace cyber {
     
@@ -25,8 +26,7 @@ int64_t stake::delegate_traversal(symbol_code purpose_code, symbol_code token_co
     auto agent = get_agent_itr(purpose_code, token_code, agents_idx, agent_name);
     auto total_funds = agent->get_total_funds();
     eosio_assert((total_funds == 0) == (agent->shares_sum == 0), "SYSTEM: incorrect total_funds or shares_sum");
-    auto own_funds = total_funds && agent->shares_sum ? 
-        static_cast<int64_t>((static_cast<int128_t>(agent->own_share) * total_funds) / agent->shares_sum) : 0;
+    auto own_funds = total_funds && agent->shares_sum ? safe_prop(total_funds, agent->own_share, agent->shares_sum) : 0;
     eosio_assert((own_funds >= agent->min_own_staked) || refill, "insufficient agent funds");
     if(amount == 0)
         return 0;
@@ -39,7 +39,7 @@ int64_t stake::delegate_traversal(symbol_code purpose_code, symbol_code token_co
            (grant_itr->token_code   == token_code) &&
            (grant_itr->grantor_name == agent_name))
     {
-        auto to_delegate = static_cast<int64_t>((static_cast<int128_t>(amount) * grant_itr->pct) / config::_100percent);
+        auto to_delegate = safe_pct(amount, grant_itr->pct);
         remaining_amount -= to_delegate;
         eosio_assert(remaining_amount >= 0, "SYSTEM: incorrect remaining_amount");
         auto delegated = delegate_traversal(purpose_code, token_code, agents_idx, grants_idx, grant_itr->agent_name, to_delegate, true);
@@ -48,8 +48,7 @@ int64_t stake::delegate_traversal(symbol_code purpose_code, symbol_code token_co
     }
     eosio_assert(remaining_amount <= amount, "SYSTEM: incorrect remaining_amount");
     
-    auto ret = total_funds && agent->shares_sum ?
-        static_cast<int64_t>((static_cast<int128_t>(amount) * agent->shares_sum) / total_funds) : amount;
+    auto ret = total_funds && agent->shares_sum ? safe_prop(agent->shares_sum, amount, total_funds) : amount;
     
     agents_idx.modify(agent, name(), [&](auto& a) {
         a.balance += remaining_amount;
@@ -290,11 +289,11 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
         eosio_assert(quantity.amount <= agent->balance, "insufficient funds");
 
         eosio_assert(total_funds > 0, "no funds to withdrawal");
-        auto own_funds = static_cast<int64_t>((static_cast<int128_t>(agent->own_share) * total_funds) / agent->shares_sum);
+        auto own_funds = safe_prop(total_funds, agent->own_share, agent->shares_sum);
         eosio_assert(own_funds - quantity.amount >= agent->min_own_staked, "insufficient agent funds");
 
         balance_diff = -quantity.amount;
-        shares_diff = -static_cast<int64_t>((static_cast<int128_t>(quantity.amount) * agent->shares_sum) / total_funds); 
+        shares_diff = -safe_prop(agent->shares_sum, quantity.amount, total_funds);
         eosio_assert(-shares_diff <= agent->own_share, "SYSTEM: incorrect shares_to_withdraw val");
         
         payouts_table.emplace(account, [&]( auto &item ) { item = structures::payout {
@@ -319,9 +318,7 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
         eosio_assert(amount_sum >= quantity.amount, "insufficient funds");
         
         while ((payout_itr != acc_index.end()) && (payout_itr->token_code == token_code) && (payout_itr->account == account)) {
-            auto cur_amount = quantity.amount ? 
-                static_cast<int64_t>((static_cast<int128_t>(payout_itr->balance) * quantity.amount) / amount_sum) : 
-                payout_itr->balance;
+            auto cur_amount = quantity.amount ? safe_prop(payout_itr->balance, quantity.amount, amount_sum) : payout_itr->balance;
             balance_diff += cur_amount;
             if (cur_amount < payout_itr->balance) {
                 acc_index.modify(payout_itr, name(), [&](auto& p) { p.balance -= cur_amount; });
@@ -331,7 +328,7 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
                 payout_itr = acc_index.erase(payout_itr);
         }
         //TODO:? due to rounding, balance_diff usually will be less than requested. should we do something about it?
-        shares_diff = total_funds ? static_cast<int64_t>((static_cast<int128_t>(balance_diff) * agent->shares_sum) / total_funds) : balance_diff; 
+        shares_diff = total_funds ? safe_prop(agent->shares_sum, balance_diff, total_funds) : balance_diff;
     }
     
     agents_idx.modify(agent, name(), [&](auto& a) {
@@ -378,7 +375,7 @@ void stake::send_scheduled_payout(payouts& payouts_table, name account, int64_t 
         auto steps_passed = std::min(seconds_passed / payout_step_lenght, static_cast<int64_t>(payout_itr->steps_left));
         if (steps_passed) {
             if(steps_passed != payout_itr->steps_left) {
-                auto cur_amount = static_cast<int64_t>((static_cast<int128_t>(payout_itr->balance) * steps_passed) / payout_itr->steps_left);
+                auto cur_amount = safe_prop(payout_itr->balance, steps_passed, payout_itr->steps_left);
                 acc_index.modify(payout_itr, name(), [&](auto& p) {
                     p.balance -= cur_amount;
                     p.steps_left -= steps_passed;
