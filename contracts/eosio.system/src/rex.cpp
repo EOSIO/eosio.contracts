@@ -3,6 +3,7 @@
  */
 
 #include <eosio.system/eosio.system.hpp>
+#include <eosio.system/rex.results.hpp>
 
 namespace eosiosystem {
 
@@ -61,7 +62,8 @@ namespace eosiosystem {
       runrex(2);
       update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
       // dummy action added so that amount of REX tokens purchased shows up in action trace 
-      dispatch_inline( null_account, "buyresult"_n, { }, std::make_tuple( rex_received ) );      
+      rex_results::buyresult_action buyrex_act( rex_account, std::vector<eosio::permission_level>{ } );
+      buyrex_act.send( rex_received );
    }
 
    /**
@@ -105,7 +107,8 @@ namespace eosiosystem {
       runrex(2);
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ), true );
       // dummy action added so that amount of REX tokens purchased shows up in action trace
-      dispatch_inline( null_account, "buyresult"_n, { }, std::make_tuple( rex_received ) );
+      rex_results::buyresult_action buyrex_act( rex_account, std::vector<eosio::permission_level>{ } );
+      buyrex_act.send( rex_received );
    }
 
    /**
@@ -153,7 +156,8 @@ namespace eosiosystem {
       check( pending_sell_order.amount <= bitr->matured_rex, "insufficient funds for current and scheduled orders" );
       // dummy action added so that sell order proceeds show up in action trace
       if ( current_order.success ) {
-         dispatch_inline( null_account, "sellresult"_n, { }, std::make_tuple( current_order.proceeds ) );
+         rex_results::sellresult_action sellrex_act( rex_account, std::vector<eosio::permission_level>{ } );
+         sellrex_act.send( current_order.proceeds );
       }
    }
 
@@ -307,6 +311,23 @@ namespace eosiosystem {
    }
 
    /**
+    * @brief Sets total_rent balance of REX pool to the passed value
+    *
+    * @param balance - the value to which total_rent will be set
+    */
+   void system_contract::setrex( const asset& balance )
+   {
+      require_auth( "eosio"_n );
+
+      check( balance.amount > 0, "balance must be set to have a positive amount" );
+      check( balance.symbol == core_symbol(), "balance symbol must be core symbol" );
+      check( rex_system_initialized(), "rex system is not initialized" );
+      _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& pool ) {
+         pool.total_rent = balance;
+      });
+   }
+
+   /**
     * @brief Performs REX maintenance by processing a specified number of REX sell orders
     * and expired loans
     *
@@ -450,7 +471,7 @@ namespace eosiosystem {
 
    /**
     * Given two connector balances (conin, and conout), and an incoming amount of
-    * in, this function will modify conin and conout and return the delta out.
+    * in, this function calculates the delta out using Banacor equation.
     *
     * @param in - input amount, same units as conin
     * @param conin - the input connector balance
@@ -458,7 +479,7 @@ namespace eosiosystem {
     *
     * @return int64_t - conversion output amount
     */
-   int64_t bancor_convert( int64_t& conin, int64_t& conout, int64_t in )
+   int64_t get_bancor_output( int64_t conin, int64_t conout, int64_t in )
    {
       const double F0 = double(conin);
       const double T0 = double(conout);
@@ -467,9 +488,6 @@ namespace eosiosystem {
       auto out = int64_t((I*T0) / (I+F0));
 
       if ( out < 0 ) out = 0;
-
-      conin  += in;
-      conout -= out;
 
       return out;
    }
@@ -532,10 +550,98 @@ namespace eosiosystem {
       }
    }
 
+   /**
+    * @brief Checks if account satisfies voting requirement (voting for a proxy or 21 producers)
+    * for buying REX
+    *
+    * @param owner - account buying or already holding REX tokens
+    * @err_msg - error message
+    */
    void system_contract::check_voting_requirement( const name& owner, const char* error_msg )const
    {
       auto vitr = _voters.find( owner.value );
       check( vitr != _voters.end() && ( vitr->proxy || 21 <= vitr->producers.size() ), error_msg );
+   }
+
+   /**
+    * @brief Checks if CPU and Network loans are available
+    *
+    * Loans are available if 1) REX pool lendable balance is nonempty, and 2) there are no
+    * unfilled sellrex orders.
+    */
+   bool system_contract::rex_loans_available()const
+   {
+      if ( !rex_available() ) {
+         return false;
+      } else {
+         if ( _rexorders.begin() == _rexorders.end() ) {
+            return true; // no outstanding sellrex orders
+         } else {
+            auto idx = _rexorders.get_index<"bytime"_n>();
+            return !idx.begin()->is_open; // no outstanding unfilled sellrex orders
+         }
+      }
+   }
+
+   /**
+    * @brief Updates rex_pool balances upon creating a new loan or renewing an existing one
+    *
+    * @param payment - loan fee paid
+    * @param rented_tokens - amount of tokens to be staked to loan receiver
+    * @param new_loan - flag indicating whether the loan is new or being renewed
+    */
+   void system_contract::add_loan_to_rex_pool( const asset& payment, int64_t rented_tokens, bool new_loan )
+   {
+      _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rt ) {
+         // add payment to total_rent
+         rt.total_rent.amount    += payment.amount;
+         // move rented_tokens from total_unlent to total_lent
+         rt.total_unlent.amount  -= rented_tokens;
+         rt.total_lent.amount    += rented_tokens;
+         // add payment to total_unlent
+         rt.total_unlent.amount  += payment.amount;
+         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+         // increment loan_num if a new loan is being created
+         if ( new_loan ) {
+            rt.loan_num++;
+         }
+      });
+   }
+
+   /**
+    * @brief Updates rex_pool balances upon closing an expired loan
+    *
+    * @param loan - loan to be closed
+    */
+   void system_contract::remove_loan_from_rex_pool( const rex_loan& loan )
+   {
+      const auto& pool = _rexpool.begin();
+      const int64_t delta_total_rent = get_bancor_output( pool->total_unlent.amount,
+                                                          pool->total_rent.amount,
+                                                          loan.total_staked.amount );
+      _rexpool.modify( pool, same_payer, [&]( auto& rt ) {
+         // deduct calculated delta_total_rent from total_rent
+         rt.total_rent.amount    -= delta_total_rent;
+         // move rented tokens from total_lent to total_unlent
+         rt.total_unlent.amount  += loan.total_staked.amount;
+         rt.total_lent.amount    -= loan.total_staked.amount;
+         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
+      });
+   }
+
+   /**
+    * @brief Updates the fields of an existing loan that is being renewed
+    */
+   template <typename Index, typename Iterator>
+   int64_t system_contract::update_renewed_loan( Index& idx, const Iterator& itr, int64_t rented_tokens )
+   {
+      int64_t delta_stake = rented_tokens - itr->total_staked.amount;
+      idx.modify ( itr, same_payer, [&]( auto& loan ) {
+         loan.total_staked.amount = rented_tokens;
+         loan.expiration         += eosio::days(30);
+         loan.balance.amount     -= loan.payment.amount;
+      });
+      return delta_stake;
    }
 
    /**
@@ -547,32 +653,26 @@ namespace eosiosystem {
    {
       check( rex_system_initialized(), "rex system not initialized yet" );
 
-      auto rexi = _rexpool.begin();
+      const auto& pool = _rexpool.begin();
 
       auto process_expired_loan = [&]( auto& idx, const auto& itr ) -> std::pair<bool, int64_t> {
-         _rexpool.modify( rexi, same_payer, [&]( auto& rt ) {
-            bancor_convert( rt.total_unlent.amount, rt.total_rent.amount, itr->total_staked.amount );
-            rt.total_lent.amount    -= itr->total_staked.amount;
-            rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
-         });
-         bool    delete_loan = false;
-         int64_t delta_stake = 0;
-         if ( itr->payment <= itr->balance && rex_loans_available() ) {
-            int64_t rented_tokens = 0;
-            _rexpool.modify( rexi, same_payer, [&]( auto& rt ) {
-               rented_tokens = bancor_convert( rt.total_rent.amount,
-                                               rt.total_unlent.amount,
-                                               itr->payment.amount );
-               rt.total_lent.amount    += rented_tokens;
-               rt.total_unlent.amount  += itr->payment.amount;
-               rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
-            });
-            idx.modify ( itr, same_payer, [&]( auto& loan ) {
-               delta_stake              = rented_tokens - loan.total_staked.amount;
-               loan.total_staked.amount = rented_tokens;
-               loan.expiration         += eosio::days(30);
-               loan.balance.amount     -= loan.payment.amount;
-            });
+         /// update rex_pool in order to delete existing loan
+         remove_loan_from_rex_pool( *itr );
+         bool    delete_loan   = false;
+         int64_t delta_stake   = 0;
+         /// calculate rented tokens at current price
+         int64_t rented_tokens = get_bancor_output( pool->total_rent.amount,
+                                                    pool->total_unlent.amount,
+                                                    itr->payment.amount );
+         /// conditions for loan renewal
+         bool renew_loan = itr->payment <= itr->balance        /// loan has sufficient balance 
+                        && itr->payment.amount < rented_tokens /// loan has favorable return 
+                        && rex_loans_available();              /// no pending sell orders
+         if ( renew_loan ) {
+            /// update rex_pool in order to account for renewed loan 
+            add_loan_to_rex_pool( itr->payment, rented_tokens, false );
+            /// update renewed loan fields
+            delta_stake = update_renewed_loan( idx, itr, rented_tokens );
          } else {
             delete_loan = true;
             delta_stake = -( itr->total_staked.amount );
@@ -586,9 +686,9 @@ namespace eosiosystem {
       };
 
       /// transfer from eosio.names to eosio.rex
-      if ( rexi->namebid_proceeds.amount > 0 ) {
-         channel_to_rex( names_account, rexi->namebid_proceeds );
-         _rexpool.modify( rexi, same_payer, [&]( auto& rt ) {
+      if ( pool->namebid_proceeds.amount > 0 ) {
+         channel_to_rex( names_account, pool->namebid_proceeds );
+         _rexpool.modify( pool, same_payer, [&]( auto& rt ) {
             rt.namebid_proceeds.amount = 0;
          });
       }
@@ -646,7 +746,8 @@ namespace eosiosystem {
                      order.close();
                   });
                   /// send dummy action to show and owner and proceeds of filled sellrex order
-                  dispatch_inline( null_account, "orderresult"_n, { }, std::make_tuple( order_owner, result.proceeds ) );
+                  rex_results::orderresult_action order_act( rex_account, std::vector<eosio::permission_level>{ } );
+                  order_act.send( order_owner, result.proceeds );
                }
             }
             oitr = next;
@@ -667,16 +768,11 @@ namespace eosiosystem {
       update_rex_account( from, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( from, payment + fund );
 
-      auto itr = _rexpool.begin(); /// already checked that _rexpool.begin() != _rexpool.end() in rex_loans_available()
+      const auto& pool = _rexpool.begin(); /// already checked that _rexpool.begin() != _rexpool.end() in rex_loans_available()
 
-      int64_t rented_tokens = 0;
-      _rexpool.modify( itr, same_payer, [&]( auto& rt ) {
-         rented_tokens = bancor_convert( rt.total_rent.amount, rt.total_unlent.amount, payment.amount );
-         rt.total_lent.amount    += rented_tokens;
-         rt.total_unlent.amount  += payment.amount;
-         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
-         rt.loan_num++;
-      });
+      int64_t rented_tokens = get_bancor_output( pool->total_rent.amount, pool->total_unlent.amount, payment.amount );
+      check( payment.amount < rented_tokens, "loan price does not favor renting" );
+      add_loan_to_rex_pool( payment, rented_tokens, true );
 
       table.emplace( from, [&]( auto& c ) {
          c.from         = from;
@@ -685,19 +781,27 @@ namespace eosiosystem {
          c.balance      = fund;
          c.total_staked = asset( rented_tokens, core_symbol() );
          c.expiration   = current_time_point() + eosio::days(30);
-         c.loan_num     = itr->loan_num;
+         c.loan_num     = pool->loan_num;
       });
 
       return rented_tokens;
    }
 
    /**
+    * @brief Processes a sellrex order and returns object containing the results
+    *
     * Processes an incoming or already scheduled sellrex order. If REX pool has enough core
     * tokens not frozen in loans, order is filled. In this case, REX pool totals, user rex_balance
     * and user vote_stake are updated. However, this function does not update user voting power. The
     * function returns success flag, order proceeds, and vote stake delta. These are used later in a
     * different function to complete order processing, i.e. transfer proceeds to user REX fund and
     * update user vote weight.
+    *
+    * @param bitr - iterator pointing to rex_balance database record
+    * @param rex - amount of rex to be sold
+    *
+    * @return rex_order_outcome - a struct containing success flag, order proceeds, and resultant
+    * vote stake change
     */
    rex_order_outcome system_contract::fill_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex )
    {
@@ -713,7 +817,7 @@ namespace eosiosystem {
 
       check( proceeds.amount > 0, "proceeds are negligible" );
 
-      const int64_t unlent_lower_bound = rexitr->total_lent.amount;
+      const int64_t unlent_lower_bound = ( uint128_t(2) * rexitr->total_lent.amount ) / 10;
       const int64_t available_unlent   = rexitr->total_unlent.amount - unlent_lower_bound; // available_unlent <= 0 is possible
       if ( proceeds.amount <= available_unlent ) {
          const int64_t init_vote_stake_amount = bitr->vote_stake.amount;
@@ -952,8 +1056,8 @@ namespace eosiosystem {
        * to exceed that limit, maximum amount of indivisible units cannot be set to a value larger than 4 * 10^14.
        * If precision of CORE_SYMBOL is 4, that corresponds to a maximum supply of 40 billion tokens.
        */
-      const int64_t rex_ratio       = 10000;
-      const int64_t init_total_rent = 20'000'0000; /// base amount prevents renting profitably until at least a minimum number of core_symbol() is made available
+      const int64_t rex_ratio = 10000;
+      const asset   init_total_rent( 20'000'0000, core_symbol() ); /// base balance prevents renting profitably until at least a minimum number of core_symbol() is made available
       asset rex_received( 0, rex_symbol );
       auto itr = _rexpool.begin();
       if ( !rex_system_initialized() ) {
@@ -963,7 +1067,7 @@ namespace eosiosystem {
             rp.total_lendable   = payment;
             rp.total_lent       = asset( 0, core_symbol() );
             rp.total_unlent     = rp.total_lendable - rp.total_lent;
-            rp.total_rent       = asset( init_total_rent, core_symbol() );
+            rp.total_rent       = init_total_rent;
             rp.total_rex        = rex_received;
             rp.namebid_proceeds = asset( 0, core_symbol() );
          });
@@ -973,7 +1077,7 @@ namespace eosiosystem {
             rp.total_lendable.amount = payment.amount;
             rp.total_lent.amount     = 0;
             rp.total_unlent.amount   = rp.total_lendable.amount - rp.total_lent.amount;
-            rp.total_rent.amount     = init_total_rent;
+            rp.total_rent.amount     = init_total_rent.amount;
             rp.total_rex.amount      = rex_received.amount;
          });
       } else {
@@ -1102,7 +1206,7 @@ namespace eosiosystem {
          });
          delta_stake = current_vote_stake.amount - init_vote_stake.amount;
       }
-      
+
       if ( delta_stake != 0 ) {
          auto vitr = _voters.find( voter.value );
          if ( vitr != _voters.end() ) {
