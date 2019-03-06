@@ -372,6 +372,12 @@ namespace eosiosystem {
                           asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
 
          /**
+          * Sets total_rent balance of REX pool to the passed value
+          */
+         [[eosio::action]]
+         void setrex( const asset& balance );
+
+         /**
           * Deposits core tokens to user REX fund. All proceeds and expenses related to REX are added to
           * or taken out of this fund. Inline token transfer from user balance is executed.
           */
@@ -595,6 +601,7 @@ namespace eosiosystem {
          using defnetloan_action = eosio::action_wrapper<"defnetloan"_n, &system_contract::defnetloan>;
          using updaterex_action = eosio::action_wrapper<"updaterex"_n, &system_contract::updaterex>;
          using rexexec_action = eosio::action_wrapper<"rexexec"_n, &system_contract::rexexec>;
+         using setrex_action = eosio::action_wrapper<"setrex"_n, &system_contract::setrex>;
          using mvtosavings_action = eosio::action_wrapper<"mvtosavings"_n, &system_contract::mvtosavings>;
          using mvfrsavings_action = eosio::action_wrapper<"mvfrsavings"_n, &system_contract::mvfrsavings>;
          using consolidate_action = eosio::action_wrapper<"consolidate"_n, &system_contract::consolidate>;
@@ -654,7 +661,7 @@ namespace eosiosystem {
          void defund_rex_loan( T& table, const name& from, uint64_t loan_num, const asset& amount );
          void transfer_from_fund( const name& owner, const asset& amount );
          void transfer_to_fund( const name& owner, const asset& amount );
-         bool rex_loans_available()const { return _rexorders.begin() == _rexorders.end() && rex_available(); }
+         bool rex_loans_available()const;
          bool rex_system_initialized()const { return _rexpool.begin() != _rexpool.end(); }
          bool rex_available()const { return rex_system_initialized() && _rexpool.begin()->total_rex.amount > 0; }
          static time_point_sec get_rex_maturity();
@@ -666,6 +673,11 @@ namespace eosiosystem {
          int64_t read_rex_savings( const rex_balance_table::const_iterator& bitr );
          void put_rex_savings( const rex_balance_table::const_iterator& bitr, int64_t rex );
          void update_rex_stake( const name& voter );
+
+         void add_loan_to_rex_pool( const asset& payment, int64_t rented_tokens, bool new_loan );
+         void remove_loan_from_rex_pool( const rex_loan& loan );
+         template <typename Index, typename Iterator>
+         int64_t update_renewed_loan( Index& idx, const Iterator& itr, int64_t rented_tokens );
 
          // defined in delegate_bandwidth.cpp
          void changebw( name from, name receiver,
@@ -687,12 +699,12 @@ namespace eosiosystem {
             public:
                template <auto system_contract::*P, auto system_contract::*...Ps>
                struct for_each {
-                     template <typename... Args>
-                     static constexpr void call( system_contract* this_contract, Args&&... args )
-                     {
-                        std::invoke( P, this_contract, std::forward<Args>(args)... );
-                        for_each<Ps...>::call( this_contract, std::forward<Args>(args)... );
-                     }
+                  template <typename... Args>
+                  static constexpr void call( system_contract* this_contract, Args&&... args )
+                  {
+                     std::invoke( P, this_contract, std::forward<Args>(args)... );
+                     for_each<Ps...>::call( this_contract, std::forward<Args>(args)... );
+                  }
                };
                template <auto system_contract::*P>
                struct for_each<P> {
