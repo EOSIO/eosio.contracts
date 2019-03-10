@@ -147,7 +147,7 @@ struct structures {
         int16_t pct, int64_t share, int16_t break_fee = -1, int64_t break_min_own_staked = -1);
 
     void change_balance(name account, asset quantity, symbol_code purpose_code);
-    int64_t update_purpose_balance(agents_idx_t& agents_idx, name account, symbol_code token_code, symbol_code purpose_code, int64_t total_amount, int64_t total_balance = -1);
+    int64_t update_purpose_balance(name issuer, agents_idx_t& agents_idx, name account, symbol_code token_code, symbol_code purpose_code, int64_t total_amount, int64_t total_balance = -1);
     void update_stats(const structures::stat& stat_arg, name payer = name());
     
     template<typename Lambda>

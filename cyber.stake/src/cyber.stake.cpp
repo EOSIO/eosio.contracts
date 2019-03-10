@@ -539,7 +539,7 @@ void stake::updatefunds(name account, symbol_code token_code, symbol_code purpos
             update_stake_proxied(p, token_code, account, param.frame_length, false);
 }
 
-int64_t stake::update_purpose_balance(agents_idx_t& agents_idx, name account, symbol_code token_code, symbol_code purpose_code, int64_t total_amount, int64_t total_balance) {
+int64_t stake::update_purpose_balance(name issuer, agents_idx_t& agents_idx, name account, symbol_code token_code, symbol_code purpose_code, int64_t total_amount, int64_t total_balance) {
     if (!total_balance)
         return 0;
     
@@ -549,14 +549,23 @@ int64_t stake::update_purpose_balance(agents_idx_t& agents_idx, name account, sy
     if (amount < 0)
         amount = std::max(amount, -agent->balance);
     
-    agents_idx.modify(agent, name(), [&](auto& a) { a.balance += amount; });
+    if (agent->get_total_funds()) {
+        agents_idx.modify(agent, name(), [&](auto& a) { a.balance += amount; });
+    }
+    else {
+        agents_idx.modify(agent, name(), [&](auto& a) {
+            a.balance = amount;
+            a.shares_sum = amount;
+            a.own_share = amount;
+        });
+    }
     
     update_stats(structures::stat {
         .id = 0,
         .token_code = token_code,
         .purpose_code = purpose_code,
         .total_staked = amount
-    });
+    }, issuer);
     return amount;
 }
 
@@ -566,13 +575,14 @@ void stake::change_balance(name account, asset quantity, symbol_code purpose_cod
     auto issuer = eosio::token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
     params params_table(table_owner, table_owner.value);
-    const auto& param = get_param(params_table, purpose_code, token_code);
+    const auto& param = get_param(params_table, purpose_code, token_code, static_cast<bool>(purpose_code));
 
     agents agents_table(table_owner, table_owner.value);
     auto agents_idx = agents_table.get_index<"bykey"_n>();
     
+    int64_t actual_amount = 0;
     if (static_cast<bool>(purpose_code))
-        update_purpose_balance(agents_idx, account, token_code, purpose_code, quantity.amount);
+        actual_amount = update_purpose_balance(issuer, agents_idx, account, token_code, purpose_code, quantity.amount);
     else {
         int64_t total_balance = 0;
         for (auto& p : param.purposes) {
@@ -585,18 +595,21 @@ void stake::change_balance(name account, asset quantity, symbol_code purpose_cod
         auto total_amount = quantity.amount;
         auto left_amount = total_amount;
         for (auto purpose_itr = param.purposes.begin(); purpose_itr != last_purpose_itr; ++purpose_itr) {
-            left_amount -= update_purpose_balance(agents_idx, account, token_code, *purpose_itr, total_amount, total_balance);
+            auto cur_actual_amount = update_purpose_balance(issuer, agents_idx, account, token_code, *purpose_itr, total_amount, total_balance);
+            left_amount -= cur_actual_amount;
+            actual_amount += cur_actual_amount;
         }
-        update_purpose_balance(agents_idx, account, token_code, param.purposes.back(), left_amount);
+        actual_amount += update_purpose_balance(issuer, agents_idx, account, token_code, param.purposes.back(), left_amount);
     }
     
     if (quantity.amount < 0) {
-        quantity.amount = -quantity.amount;
+        quantity.amount = -actual_amount;
         INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {_self, config::active_name},
             {_self, issuer, quantity, ""});
         INLINE_ACTION_SENDER(eosio::token, retire)(config::token_name, {issuer, config::amerce_name}, {quantity, ""});
     }
     else {
+        //we don't need actual_amount in this case
         INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {issuer, config::reward_name}, {issuer, quantity, ""});
         INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {issuer, config::reward_name},
             {issuer, _self, quantity, config::reward_memo});    
@@ -605,12 +618,14 @@ void stake::change_balance(name account, asset quantity, symbol_code purpose_cod
 
 void stake::amerce(name account, asset quantity, symbol_code purpose_code) {
     eosio_assert(quantity.amount > 0, "quantity must be positive");
+    eosio::print("stake::amerce: account = ", account, ", quantity = ", quantity, "\n");
     quantity.amount = -quantity.amount;
     change_balance(account, quantity, purpose_code);
 }
 
 void stake::reward(name account, asset quantity, symbol_code purpose_code) {
     eosio_assert(quantity.amount > 0, "quantity must be positive");
+    eosio::print("stake::reward: account = ", account, ", quantity = ", quantity, "\n");
     change_balance(account, quantity, purpose_code);
 }
 
