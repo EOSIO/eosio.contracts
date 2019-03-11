@@ -30,7 +30,7 @@ include_directories(${CMAKE_BINARY_DIR})
 
 ### BUILD UNIT TEST EXECUTABLE ###
 file(GLOB UNIT_TESTS "*.cpp" "*.hpp") # find all unit test suites
-add_executable( unit_test ${UNIT_TESTS}) # build unit tests as one executable
+add_eosio_test(unit_test ${UNIT_TESTS}) # build unit tests as one executable
 
 ### MARK TEST SUITES FOR EXECUTION ###
 foreach(TEST_SUITE ${UNIT_TESTS}) # create an independent target for each test suite
