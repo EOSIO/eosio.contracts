@@ -8,7 +8,7 @@ namespace eosiosystem {
    const int64_t  min_activated_stake   = 150'000'000'0000;
    const double   continuous_rate       = 0.04879;          // 5% annual rate
    const int64_t  inflation_pay_factor  = 5;                // 20% of the inflation
-   const int64_t  votepay_factor        = 4;                // 0.25% of the producer pay
+   const int64_t  votepay_factor        = 4;                // 25% of the producer pay
    const uint32_t blocks_per_year       = 52*7*24*2*3600;   // half seconds per year
    const uint32_t seconds_per_year      = 52*7*24*3600;
    const uint32_t blocks_per_day        = 2 * 24 * 3600;
