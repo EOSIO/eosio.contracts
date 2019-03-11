@@ -277,8 +277,9 @@ namespace eosiosystem {
       for( const auto& pd : producer_deltas ) {
          auto pitr = _producers.find( pd.first.value );
          if( pitr != _producers.end() ) {
-            check( !voting || pitr->active() || !pd.second.second /* not from new set */,
-                   ( "producer " + pitr->owner.to_string() + " is not currently registered" ).data() );
+            if( voting && !pitr->active() && pd.second.second /* from new set */ ) {
+               check( false, ( "producer " + pitr->owner.to_string() + " is not currently registered" ).data() );
+            }
             double init_total_votes = pitr->total_votes;
             _producers.modify( pitr, same_payer, [&]( auto& p ) {
                p.total_votes += pd.second.first;
@@ -309,7 +310,9 @@ namespace eosiosystem {
                }
             }
          } else {
-            check( !pd.second.second /* not from new set */, "producer is not registered" ); //data corruption
+            if( pd.second.second ) {
+               check( false, ( "producer " + pd.first.to_string() + " is not registered" ).data() );
+            }
          }
       }
 
