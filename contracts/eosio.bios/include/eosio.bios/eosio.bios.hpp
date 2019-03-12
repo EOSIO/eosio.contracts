@@ -4,6 +4,35 @@
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/privileged.hpp>
 #include <eosiolib/producer_schedule.hpp>
+#include <eosiolib/fixed_bytes.hpp>
+
+namespace eosio {
+   namespace internal_use_do_not_use {
+      extern "C" {
+         __attribute__((eosio_wasm_import))
+         bool is_feature_activated( const ::capi_checksum256* feature_digest );
+
+         __attribute__((eosio_wasm_import))
+         void preactivate_feature( const ::capi_checksum256* feature_digest );
+      }
+   }
+}
+
+namespace eosio {
+   bool is_feature_activated( const eosio::checksum256& feature_digest ) {
+      auto feature_digest_data = feature_digest.extract_as_byte_array();
+      return internal_use_do_not_use::is_feature_activated(
+         reinterpret_cast<const ::capi_checksum256*>( feature_digest_data.data() )
+      );
+   }
+
+   void preactivate_feature( const eosio::checksum256& feature_digest ) {
+      auto feature_digest_data = feature_digest.extract_as_byte_array();
+      internal_use_do_not_use::preactivate_feature(
+         reinterpret_cast<const ::capi_checksum256*>( feature_digest_data.data() )
+      );
+   }
+}
 
 namespace eosio {
    using eosio::permission_level;
@@ -141,6 +170,17 @@ namespace eosio {
          }
 
          [[eosio::action]]
+         void preactivate( const eosio::checksum256& feature_digest ) {
+            require_auth( get_self() );
+            preactivate_feature( feature_digest );
+         }
+
+         [[eosio::action]]
+         void reqactivated( const eosio::checksum256& feature_digest ) {
+            check( is_feature_activated( feature_digest ), "protocol feature is not activated" );
+         }
+
+         [[eosio::action]]
          void setabi( name account, const std::vector<char>& abi ) {
             abi_hash_table table(_self, _self.value);
             auto itr = table.find( account.value );
@@ -165,7 +205,7 @@ namespace eosio {
          };
 
          typedef eosio::multi_index< "abihash"_n, abi_hash > abi_hash_table;
-         
+
          using newaccount_action = action_wrapper<"newaccount"_n, &bios::newaccount>;
          using updateauth_action = action_wrapper<"updateauth"_n, &bios::updateauth>;
          using deleteauth_action = action_wrapper<"deleteauth"_n, &bios::deleteauth>;
