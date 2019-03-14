@@ -89,6 +89,7 @@ void token::transfer( name    from,
                       asset   quantity,
                       string  memo )
 {
+    eosio_assert( !is_on_blacklist(from), "account is on the blacklist" );
     check( from != to, "cannot transfer to self" );
     require_auth( from );
     check( is_account( to ), "to account does not exist");
@@ -165,6 +166,42 @@ void token::close( name owner, const symbol& symbol )
    acnts.erase( it );
 }
 
+bool token::is_on_blacklist(name account)
+{
+   tokenblacklist blklst(_self, account.value);
+   auto ac = blklst.find(account.value);
+
+   return ac != blklst.end();
+}
+
+void token::addblacklist(const std::vector<name>& accounts)
+{
+   require_auth("eosio"_n);
+
+   static const std::string msg = std::string("account does not exist");
+
+   for (auto acc : accounts){
+      std::string m = acc.to_string() + msg;
+      eosio_assert(is_account(acc), m.c_str());
+      tokenblacklist blklst(_self, acc.value);
+      blklst.emplace(_self, [&](auto &a) {
+         a.account = acc;
+      });
+   }
+}
+
+void token::rmblacklist(const std::vector<name>& accounts)
+{
+   require_auth("eosio"_n);
+
+   for (auto acc : accounts){
+      tokenblacklist blklst(_self, acc.value);
+      auto it = blklst.find(acc.value);
+      if (it != blklst.end()){
+         blklst.erase(it);
+      }
+   }
+}
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(addblacklist)(rmblacklist) )

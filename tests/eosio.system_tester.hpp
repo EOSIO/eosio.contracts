@@ -817,6 +817,40 @@ public:
       return msig_abi_ser;
    }
 
+   bool is_full_contains_subset(const shared_vector<account_name> &allblklst, const std::vector<account_name> &blklst)
+   {
+      std::vector<account_name> allblacklist = std::vector<account_name>(allblklst.begin(), allblklst.end());
+      std::sort(allblacklist.begin(), allblacklist.end());
+      std::vector<account_name> blacklist = std::vector<account_name>(blklst.begin(), blklst.end());
+      std::sort(blacklist.begin(), blacklist.end());
+
+      vector<account_name> blacklisted;
+     blacklisted.reserve(actors.size());
+     set_intersection(allblacklist.begin(), allblacklist.end(), blacklist.begin(),
+                      blacklist.end(), std::back_inserter(blacklisted));
+
+     std::sort(blacklisted.begin(), blacklisted.end());
+     vector<account_name> excluded;
+     excluded.reserve(blacklist.size());
+     std::set_difference( blacklist.begin(),
+                      blacklist.end(),blacklisted.begin(),blacklisted.end(),std::back_inserter(excluded));
+
+      return excluded.empty();
+   }
+
+   bool is_empty_intersection(const shared_vector<account_name> &allblklst, const std::vector<account_name> &blklst)
+   {
+      std::vector<account_name> allblacklist = std::vector<account_name>(allblklst.begin(), allblklst.end());
+      std::sort(allblacklist.begin(), allblacklist.end());
+      std::vector<account_name> blacklist = std::vector<account_name>(blklst.begin(), blklst.end());
+      std::sort(blacklist.begin(), blacklist.end());
+
+      vector<account_name> excluded;
+      excluded.reserve(blacklist.size());
+      std::set_intersection(blacklist.begin(), blacklist.end(), allblacklist.begin(), allblacklist.end(), std::back_inserter(excluded));
+
+      return excluded.empty();
+   }
    vector<name> active_and_vote_producers() {
       //stake more than 15% of total EOS supply to activate chain
       transfer( "eosio", "alice1111111", core_sym::from_string("650000000.0000"), "eosio" );
