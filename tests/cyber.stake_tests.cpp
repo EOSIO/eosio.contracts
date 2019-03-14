@@ -53,11 +53,11 @@ public:
     const account_name _carol = N(carol);
     const account_name _whale = N(whale);
     
-    void issuer_delegate_authority() {
-        delegate_authority(_issuer, {_code}, cfg::token_name, N(retire), cfg::amerce_name);
-        delegate_authority(_issuer, {_code}, cfg::token_name, N(issue), cfg::reward_name);
+    void issuer_delegate_authority(account_name account) {
+        delegate_authority(_issuer, {account}, cfg::token_name, N(retire), cfg::amerce_name);
+        delegate_authority(_issuer, {account}, cfg::token_name, N(issue), cfg::reward_name);
         produce_block();
-        delegate_authority(_issuer, {_code}, cfg::token_name, N(transfer), cfg::reward_name);
+        delegate_authority(_issuer, {account}, cfg::token_name, N(transfer), cfg::reward_name);
     }
     
     void deploy_sys_contracts() {
@@ -100,7 +100,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, cyber_stake_tester) try {
     BOOST_TEST_MESSAGE("Basic stake tests");
     auto purpose_str = "CPU";
     auto purpose = to_code(purpose_str);
-    issuer_delegate_authority();
+    issuer_delegate_authority(_code);
 
     std::vector<uint8_t> max_proxies = {30, 10, 3, 1};
     int64_t frame_length = 30;
@@ -234,7 +234,7 @@ BOOST_FIXTURE_TEST_CASE(increase_proxy_level_test, cyber_stake_tester) try {
     BOOST_TEST_MESSAGE("Increase proxy level test");
     auto purpose_str = "CPU";
     auto purpose = to_code(purpose_str);
-    issuer_delegate_authority();
+    issuer_delegate_authority(_code);
     
     std::vector<uint8_t> max_proxies = {30, 10, 3, 1};
     int64_t frame_length = 30;
@@ -294,11 +294,73 @@ BOOST_FIXTURE_TEST_CASE(increase_proxy_level_test, cyber_stake_tester) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(rewards_test, cyber_stake_tester) try {
+    BOOST_TEST_MESSAGE("Rewards test");
+    deploy_sys_contracts();
+    issuer_delegate_authority(govern_account_name);
+    stake.register_candidate(_alice, token._symbol.to_symbol_code());
+    stake.register_candidate(_bob, token._symbol.to_symbol_code());
+    produce_block();
+    auto lpu = head_block_time();
+    BOOST_CHECK_EQUAL(success(), stake.updatefunds(_alice, token._symbol.to_symbol_code(), to_code("RAM")));
+    BOOST_CHECK_EQUAL(success(), stake.updatefunds(_bob, token._symbol.to_symbol_code(), to_code("RAM")));
+    produce_block();
+    auto cur_block_num = 4;
+    auto sumup_to_staked = cfg::sum_up_interval / cfg::reward_for_staked_interval;
+    auto blocks_before_proposal = cfg::reward_for_staked_interval - cur_block_num % cfg::reward_for_staked_interval;
+    
+    BOOST_TEST_MESSAGE("producers registered on block " << cur_block_num
+        << "; blocks_before_proposal = " << blocks_before_proposal);
+    produce_blocks(blocks_before_proposal + 4);
+    produce_block();
+    cur_block_num += blocks_before_proposal + 5;
+    auto blocks_before_reward = cfg::reward_for_staked_interval - cur_block_num % cfg::reward_for_staked_interval;
+    auto blocks_before_sum_up = cfg::sum_up_interval - cur_block_num % cfg::sum_up_interval;
+    BOOST_TEST_MESSAGE("blocks_before_reward = " << blocks_before_reward << "; blocks_before_sum_up = " << blocks_before_sum_up);
+    produce_blocks(blocks_before_sum_up);
+    cur_block_num += blocks_before_sum_up;
+    BOOST_TEST_MESSAGE("cur_block_num = " << cur_block_num);
+    auto reward = ((blocks_before_sum_up + 1) * cfg::block_reward / 2) + (cfg::reward_of_elected * sumup_to_staked);
+    BOOST_TEST_MESSAGE("reward = " << reward);
+ 
+    BOOST_CHECK_EQUAL(stake.get_agent(_alice, token._symbol, to_code("RAM")),
+        stake.make_agent(_alice, token._symbol, to_code("RAM"), 0, lpu, reward, 0, reward, reward));
+    BOOST_CHECK_EQUAL(stake.get_agent(_bob, token._symbol, to_code("RAM")),
+        stake.make_agent(_bob, token._symbol, to_code("RAM"), 0, lpu, reward, 0, reward, reward));
+    
+    std::vector<account_name> ignored_producers = {_alice};
+    push_action(govern_account_name, N(setignored), govern_account_name, fc::mutable_variant_object()("ignored_producers", ignored_producers));
+    for (int i = 0; i < cfg::sum_up_interval - 5; i++) {
+        produce_block();
+        produce_block();
+        cur_block_num++;
+    }
+    
+    ignored_producers.clear();
+    push_action(govern_account_name, N(setignored), govern_account_name, fc::mutable_variant_object()("ignored_producers", ignored_producers));
+
+    for (int i = 0; i < 7; i++) {
+        produce_block();
+    }
+
+    auto reward2 = ((cfg::sum_up_interval - 2) * cfg::block_reward) + (cfg::reward_of_elected * sumup_to_staked);
+    BOOST_TEST_MESSAGE("reward2 = " << reward2);
+    
+    BOOST_CHECK_EQUAL(stake.get_agent(_alice, token._symbol, to_code("RAM")),
+        stake.make_agent(_alice, token._symbol, to_code("RAM"), 0, lpu, 0, 0, reward, reward));
+    BOOST_CHECK_EQUAL(stake.get_agent(_bob, token._symbol, to_code("RAM")),
+        stake.make_agent(_bob, token._symbol, to_code("RAM"), 0, lpu, reward + reward2, 0, reward, reward));
+
+    produce_block();
+} FC_LOG_AND_RETHROW()
+
+//TODO: producer schedule
+/*
 BOOST_FIXTURE_TEST_CASE(set_producers_test, cyber_stake_tester) try {
     BOOST_TEST_MESSAGE("Set producers test");
     deploy_sys_contracts();
     stake.register_candidate(_alice, token._symbol.to_symbol_code());
-    auto blocks_num = (cfg::govern_update_window * 1000) / cfg::block_interval_ms;
+    auto blocks_num = (cfg::reward_for_staked_interval * 1000) / cfg::block_interval_ms;
     
     produce_blocks(blocks_num - 1);
     BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers({_alice}));
@@ -309,7 +371,7 @@ BOOST_FIXTURE_TEST_CASE(set_producers_test, cyber_stake_tester) try {
     
     std::vector<account_name> producers;
     std::vector<account_name> crowd_of_bps;
-    for (int u = cfg::producers_num - 2; u >= 0; u--) {
+    for (int u = cfg::active_producers_num - 2; u >= 0; u--) {
         auto user = user_name(u);
         crowd_of_bps.emplace_back(user);
         create_accounts({user});
@@ -342,12 +404,13 @@ BOOST_FIXTURE_TEST_CASE(set_producers_test, cyber_stake_tester) try {
     BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers(crowd_and_bob));
     
 } FC_LOG_AND_RETHROW()
+*/
 
 BOOST_FIXTURE_TEST_CASE(bw_tests, cyber_stake_tester) try {
     BOOST_TEST_MESSAGE("Basic bw tests");
     auto purpose_str = "NET";
     auto purpose = to_code(purpose_str);
-    issuer_delegate_authority();
+    issuer_delegate_authority(_code);
 
     std::vector<uint8_t> max_proxies = {30, 10, 3, 1};
     int64_t frame_length = 30;
@@ -383,7 +446,7 @@ BOOST_FIXTURE_TEST_CASE(bw_tests, cyber_stake_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(ram_tests, cyber_stake_tester) try {
     BOOST_TEST_MESSAGE("Basic ram tests");
-    issuer_delegate_authority();
+    issuer_delegate_authority(_code);
     
     uint64_t aprox_user_ram_usage = 5000;
 
@@ -440,7 +503,7 @@ BOOST_FIXTURE_TEST_CASE(recursive_update_test, cyber_stake_tester) try {
     BOOST_TEST_MESSAGE("Recursive update test");
     auto purpose_str = "CPU"; 
     auto purpose = to_code(purpose_str);
-    issuer_delegate_authority();
+    issuer_delegate_authority(_code);
     
     std::vector<uint8_t> max_proxies = {50, 20, 5, 1};
     int64_t frame_length = 30;
