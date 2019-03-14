@@ -846,7 +846,7 @@ BOOST_FIXTURE_TEST_CASE( unregistered_producer_voting, eosio_system_tester, * bo
    REQUIRE_MATCHING_OBJECT( voter( "bob111111111", core_sym::from_string("13.5791") ), get_voter_info( "bob111111111" ) );
 
    //bob111111111 should not be able to vote for alice1111111 who is not a producer
-   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "producer is not registered" ),
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "producer alice1111111 is not registered" ),
                         vote( N(bob111111111), { N(alice1111111) } ) );
 
    //alice1111111 registers as a producer
@@ -869,7 +869,7 @@ BOOST_FIXTURE_TEST_CASE( unregistered_producer_voting, eosio_system_tester, * bo
    BOOST_REQUIRE_EQUAL( fc::crypto::public_key(), fc::crypto::public_key(prod["producer_key"].as_string()) );
 
    //bob111111111 should not be able to vote for alice1111111 who is an unregistered producer
-   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "producer is not currently registered" ),
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "producer alice1111111 is not currently registered" ),
                         vote( N(bob111111111), { N(alice1111111) } ) );
 
 } FC_LOG_AND_RETHROW()
