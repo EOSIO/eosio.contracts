@@ -824,16 +824,16 @@ public:
       std::vector<account_name> blacklist = std::vector<account_name>(blklst.begin(), blklst.end());
       std::sort(blacklist.begin(), blacklist.end());
 
-      vector<account_name> blacklisted;
-     blacklisted.reserve(actors.size());
-     set_intersection(allblacklist.begin(), allblacklist.end(), blacklist.begin(),
-                      blacklist.end(), std::back_inserter(blacklisted));
+   //    vector<account_name> blacklisted;
+   //   blacklisted.reserve(allblacklist.size());
+   //   set_intersection(allblacklist.begin(), allblacklist.end(), blacklist.begin(),
+   //                    blacklist.end(), std::back_inserter(blacklisted));
 
-     std::sort(blacklisted.begin(), blacklisted.end());
+   //   std::sort(blacklisted.begin(), blacklisted.end());
      vector<account_name> excluded;
      excluded.reserve(blacklist.size());
      std::set_difference( blacklist.begin(),
-                      blacklist.end(),blacklisted.begin(),blacklisted.end(),std::back_inserter(excluded));
+                      blacklist.end(),allblacklist.begin(),allblacklist.end(),std::back_inserter(excluded));
 
       return excluded.empty();
    }

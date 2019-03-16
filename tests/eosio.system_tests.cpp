@@ -3135,7 +3135,7 @@ try
    produce_blocks(250);
 
    const auto &active_cfg2 = control->get_global_properties2().cfg;
-   bool actor = contains_blacklist(active_cfg2.actor_blacklist, actor_blacklist);
+   bool actor = is_full_contains_subset(active_cfg2.actor_blacklist, actor_blacklist);
 
    BOOST_REQUIRE_EQUAL(actor, true);
 
@@ -3198,7 +3198,7 @@ try
       produce_blocks(250);
 
       const auto &active_cfg2 = control->get_global_properties2().cfg;
-      bool actor = not_contains_blacklist(active_cfg2.actor_blacklist, actor_blacklist);
+      bool actor = is_empty_intersection(active_cfg2.actor_blacklist, actor_blacklist);
 
       BOOST_REQUIRE_EQUAL(actor, true);
    }
@@ -3292,7 +3292,7 @@ try
 
    // make sure that changed parameters were applied
    const auto &active_cfg2 = control->get_global_properties2().cfg;
-   bool contract = contains_blacklist(active_cfg2.contract_blacklist, contract_blacklist);
+   bool contract = is_full_contains_subset(active_cfg2.contract_blacklist, contract_blacklist);
 
    BOOST_REQUIRE_EQUAL(contract, true);
 
@@ -3355,7 +3355,7 @@ try
       produce_blocks(250);
 
       const auto &active_cfg2 = control->get_global_properties2().cfg;
-      bool contract = not_contains_blacklist(active_cfg2.contract_blacklist, contract_blacklist);
+      bool contract = is_empty_intersection(active_cfg2.contract_blacklist, contract_blacklist);
 
       BOOST_REQUIRE_EQUAL(contract, true);
    }
@@ -3448,7 +3448,7 @@ try
    produce_blocks(250);
 
    const auto &active_cfg2 = control->get_global_properties2().cfg;
-   bool grey = contains_blacklist(active_cfg2.resource_greylist, resource_greylist);
+   bool grey = is_full_contains_subset(active_cfg2.resource_greylist, resource_greylist);
 
    BOOST_REQUIRE_EQUAL(grey, true);
 
@@ -3511,7 +3511,7 @@ try
       produce_blocks(250);
 
       const auto &active_cfg2 = control->get_global_properties2().cfg;
-      bool grey = not_contains_blacklist(active_cfg2.resource_greylist, resource_greylist);
+      bool grey = is_empty_intersection(active_cfg2.resource_greylist, resource_greylist);
 
       BOOST_REQUIRE_EQUAL(grey, true);
    }
