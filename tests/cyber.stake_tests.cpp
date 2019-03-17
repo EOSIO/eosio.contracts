@@ -1,6 +1,7 @@
 #include "golos_tester.hpp"
 #include "cyber.token_test_api.hpp"
 #include "cyber.stake_test_api.hpp"
+#include "cyber.govern_test_api.hpp"
 #include "contracts.hpp"
 #include "../cyber.stake/include/cyber.stake/config.hpp"
 #include "../cyber.govern/include/cyber.govern/config.hpp"
@@ -19,6 +20,7 @@ class cyber_stake_tester : public golos_tester {
 protected:
     cyber_token_api token;
     cyber_stake_api stake;
+    cyber_govern_api govern;
 
     time_point_sec head_block_time() { return time_point_sec(control->head_block_time().time_since_epoch().to_seconds()); };
     
@@ -37,6 +39,7 @@ public:
         : golos_tester(stake_account_name, false)
         , token({this, cfg::token_name, cfg::system_token})
         , stake({this, _code})
+        , govern({this, govern_account_name})
     { 
         create_accounts({_alice, _bob, _carol, _whale,
             cfg::token_name});
@@ -75,6 +78,13 @@ public:
         install_contract(config::system_account_name, contracts::bios_wasm(), contracts::bios_abi());
         produce_block();
         BOOST_TEST_MESSAGE("    ...done"); 
+    }
+    
+    uint32_t produce_blocks_to_proposal(uint32_t prev_block_num, uint8_t bps) {
+        uint32_t need_blocks = (bps * 3) + (cfg::reward_for_staked_interval - prev_block_num % cfg::reward_for_staked_interval);
+        produce_blocks(need_blocks);
+        BOOST_TEST_MESSAGE("--- produce " << need_blocks << " blocks");
+        return prev_block_num + need_blocks;
     }
 
     struct errors: contract_error_messages {
@@ -354,20 +364,19 @@ BOOST_FIXTURE_TEST_CASE(rewards_test, cyber_stake_tester) try {
     produce_block();
 } FC_LOG_AND_RETHROW()
 
-//TODO: producer schedule
-/*
 BOOST_FIXTURE_TEST_CASE(set_producers_test, cyber_stake_tester) try {
+    
     BOOST_TEST_MESSAGE("Set producers test");
     deploy_sys_contracts();
+    issuer_delegate_authority(govern_account_name);
+    produce_block();
+    uint32_t block_num = 0;
     stake.register_candidate(_alice, token._symbol.to_symbol_code());
-    auto blocks_num = (cfg::reward_for_staked_interval * 1000) / cfg::block_interval_ms;
-    
-    produce_blocks(blocks_num - 1);
-    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers({_alice}));
-    
+    block_num = produce_blocks_to_proposal(block_num, 1);
+    BOOST_CHECK_EQUAL(govern.get_producers_group(), govern.make_producers_group({_alice}));
     stake.register_candidate(_bob, token._symbol.to_symbol_code());
-    produce_blocks(blocks_num);
-    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers({_bob, _alice}));
+    block_num = produce_blocks_to_proposal(block_num, 1);
+    BOOST_CHECK_EQUAL(govern.get_producers_group(), govern.make_producers_group({_alice, _bob}));
     
     std::vector<account_name> producers;
     std::vector<account_name> crowd_of_bps;
@@ -376,17 +385,16 @@ BOOST_FIXTURE_TEST_CASE(set_producers_test, cyber_stake_tester) try {
         crowd_of_bps.emplace_back(user);
         create_accounts({user});
         stake.register_candidate(user, token._symbol.to_symbol_code());
-        BOOST_CHECK_EQUAL(success(), token.issue(_issuer, user, asset(u + 2, token._symbol), ""));
-        BOOST_CHECK_EQUAL(success(), token.transfer(user, _code, asset(u + 2, token._symbol), "CPU"));
+        BOOST_CHECK_EQUAL(success(), token.issue(_issuer, user, asset((u + 1) * 1000, token._symbol), ""));
+        BOOST_CHECK_EQUAL(success(), token.transfer(user, _code, asset((u + 1) * 1000, token._symbol), "CPU"));
     }
-    
     auto crowd_and_alice = crowd_of_bps;
     crowd_and_alice.emplace_back(_alice);
     auto crowd_and_bob = crowd_of_bps;
     crowd_and_bob.emplace_back(_bob);
 
-    produce_blocks(blocks_num);
-    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers(crowd_and_bob));
+    block_num = produce_blocks_to_proposal(block_num, 2);
+    BOOST_CHECK_EQUAL(govern.get_producers_group(), govern.make_producers_group(crowd_and_bob));
     
     BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _carol, asset(3, token._symbol), ""));
     BOOST_CHECK_EQUAL(success(), stake.setproxylvl(_carol, token._symbol.to_symbol_code(), to_code("CPU"), 1));
@@ -394,17 +402,42 @@ BOOST_FIXTURE_TEST_CASE(set_producers_test, cyber_stake_tester) try {
     BOOST_CHECK_EQUAL(success(), token.transfer(_carol, _code, asset(1, token._symbol), "CPU"));
     BOOST_CHECK_EQUAL(success(), stake.delegate(_carol, _alice, asset(1, token._symbol), to_code("CPU")));
     
-    produce_blocks(blocks_num);
-    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers(crowd_and_alice));
+    block_num = produce_blocks_to_proposal(block_num, 21);
+    BOOST_CHECK_EQUAL(govern.get_producers_group(), govern.make_producers_group(crowd_and_alice));
     
     BOOST_CHECK_EQUAL(success(), token.transfer(_carol, _code, asset(2, token._symbol), "CPU"));
     BOOST_CHECK_EQUAL(success(), stake.delegate(_carol, _bob, asset(2, token._symbol), to_code("CPU")));
     
-    produce_blocks(blocks_num);
-    BOOST_CHECK_EQUAL(stake.get_producers(), stake.make_producers(crowd_and_bob));
+    block_num = produce_blocks_to_proposal(block_num, 21);
+    BOOST_CHECK_EQUAL(govern.get_producers_group(), govern.make_producers_group(crowd_and_bob));
+    
+    stake.register_candidate(_whale, token._symbol.to_symbol_code());
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _whale, asset(100500, token._symbol), ""));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_whale, _code, asset(100500, token._symbol), "CPU"));
+    
+    block_num = produce_blocks_to_proposal(block_num, 21);
+    produce_blocks(4); //?
+    
+    crowd_of_bps.back() = _whale;
+    crowd_and_alice = crowd_of_bps;
+    crowd_and_alice.emplace_back(_alice);
+    crowd_and_bob = crowd_of_bps;
+    crowd_and_bob.emplace_back(_bob);
+    auto crowd_and_user = crowd_of_bps;
+    crowd_and_user.emplace_back(user_name(0));
+    
+    BOOST_CHECK_EQUAL(govern.get_producers_group(), govern.make_producers_group(crowd_and_alice));
+    block_num = produce_blocks_to_proposal(block_num, 21);
+    BOOST_CHECK_EQUAL(govern.get_producers_group(), govern.make_producers_group(crowd_and_bob));
+    block_num = produce_blocks_to_proposal(block_num, 21);
+    BOOST_CHECK_EQUAL(govern.get_producers_group(), govern.make_producers_group(crowd_and_user));
+    
+    block_num = produce_blocks_to_proposal(block_num, 21);
+    BOOST_CHECK_EQUAL(govern.get_producers_group(), govern.make_producers_group(crowd_and_alice));
+    block_num = produce_blocks_to_proposal(block_num, 21);
+    BOOST_CHECK_EQUAL(govern.get_producers_group(), govern.make_producers_group(crowd_and_bob));
     
 } FC_LOG_AND_RETHROW()
-*/
 
 BOOST_FIXTURE_TEST_CASE(bw_tests, cyber_stake_tester) try {
     BOOST_TEST_MESSAGE("Basic bw tests");
