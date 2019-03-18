@@ -24,12 +24,13 @@ endif(VERSION_OUTPUT STREQUAL "MATCH")
 configure_file(${CMAKE_SOURCE_DIR}/contracts.hpp.in ${CMAKE_BINARY_DIR}/contracts.hpp)
 
 include_directories(${CMAKE_BINARY_DIR})
-
+### UNIT TESTING ###
+include(ctest) # eliminates DartConfiguration.tcl errors at test runtime
 enable_testing()
-### BUILD UNIT TEST EXECUTABLE ###
+# build unit test executable
 file(GLOB UNIT_TESTS "*.cpp" "*.hpp") # find all unit test suites
 add_eosio_test(unit_test ${UNIT_TESTS}) # build unit tests as one executable
-### MARK TEST SUITES FOR EXECUTION ###
+# mark test suites for execution
 foreach(TEST_SUITE ${UNIT_TESTS}) # create an independent target for each test suite
   execute_process(COMMAND bash -c "grep -E 'BOOST_AUTO_TEST_SUITE\\s*[(]' ${TEST_SUITE} | grep -vE '//.*BOOST_AUTO_TEST_SUITE\\s*[(]' | cut -d ')' -f 1 | cut -d '(' -f 2" OUTPUT_VARIABLE SUITE_NAME OUTPUT_STRIP_TRAILING_WHITESPACE) # get the test suite name from the *.cpp file
   if (NOT "" STREQUAL "${SUITE_NAME}") # ignore empty lines
