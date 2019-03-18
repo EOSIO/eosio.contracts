@@ -19,8 +19,11 @@ namespace eosiosystem {
 
       check( amount.symbol == core_symbol(), "must deposit core token" );
       check( 0 < amount.amount, "must deposit a positive amount" );
-      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { owner, active_permission },
-                                                    { owner, rex_account, amount, "deposit to REX fund" } );
+      // inline transfer from owner's token balance
+      {
+         token::transfer_action transfer_act{ token_account, { owner, active_permission } };
+         transfer_act.send( owner, rex_account, amount, "deposit to REX fund" );
+      }
       transfer_to_fund( owner, amount );
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
@@ -39,8 +42,11 @@ namespace eosiosystem {
       check( 0 < amount.amount, "must withdraw a positive amount" );
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( owner, amount );
-      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { rex_account, active_permission },
-                                                    { rex_account, owner, amount, "withdraw from REX fund" } );
+      // inline transfer to owner's token balance
+      {
+         token::transfer_action transfer_act{ token_account, { rex_account, active_permission } };
+         transfer_act.send( rex_account, owner, amount, "withdraw from REX fund" );
+      }
    }
 
    /**
@@ -100,8 +106,11 @@ namespace eosiosystem {
       update_resource_limits( name(0), receiver, -from_net.amount, -from_cpu.amount );
 
       const asset payment = from_net + from_cpu;
-      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { stake_account, active_permission },
-                                                    { stake_account, rex_account, payment, "buy REX with staked tokens" } );
+      // inline transfer from stake_account to rex_account
+      {
+         token::transfer_action transfer_act{ token_account, { stake_account, active_permission } };
+         transfer_act.send( stake_account, rex_account, payment, "buy REX with staked tokens" );
+      }
       const asset rex_received = add_to_rex_pool( payment );
       add_to_rex_balance( owner, payment, rex_received );
       runrex(2);
@@ -961,9 +970,10 @@ namespace eosiosystem {
             rp.total_unlent.amount   += amount.amount;
             rp.total_lendable.amount += amount.amount;
          });
-
-         INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { from, active_permission },
-            { from, rex_account, amount, std::string("transfer from ") + name{from}.to_string() + " to eosio.rex"} );
+         // inline transfer to rex_account
+         token::transfer_action transfer_act{ token_account, { from, active_permission } };
+         transfer_act.send( from, rex_account, amount,
+                            std::string("transfer from ") + from.to_string() + " to eosio.rex" );
       }
 #endif
    }
