@@ -4,13 +4,13 @@
  */
 #pragma once
 
-#include <eosiolib/action.hpp>
-#include <eosiolib/public_key.hpp>
-#include <eosiolib/print.hpp>
-#include <eosiolib/privileged.h>
-#include <eosiolib/producer_schedule.hpp>
-#include <eosiolib/contract.hpp>
-#include <eosiolib/ignore.hpp>
+#include <eosio/action.hpp>
+#include <eosio/public_key.hpp>
+#include <eosio/print.hpp>
+#include <eosio/privileged.h>
+#include <eosio/producer_schedule.hpp>
+#include <eosio/contract.hpp>
+#include <eosio/ignore.hpp>
 
 namespace eosiosystem {
    using eosio::name;
