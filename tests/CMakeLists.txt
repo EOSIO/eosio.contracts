@@ -25,7 +25,7 @@ configure_file(${CMAKE_SOURCE_DIR}/contracts.hpp.in ${CMAKE_BINARY_DIR}/contract
 
 include_directories(${CMAKE_BINARY_DIR})
 ### UNIT TESTING ###
-include(ctest) # eliminates DartConfiguration.tcl errors at test runtime
+include(CTest) # eliminates DartConfiguration.tcl errors at test runtime
 enable_testing()
 # build unit test executable
 file(GLOB UNIT_TESTS "*.cpp" "*.hpp") # find all unit test suites
