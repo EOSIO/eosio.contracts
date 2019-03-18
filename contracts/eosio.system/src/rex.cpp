@@ -793,6 +793,8 @@ namespace eosiosystem {
          c.loan_num     = pool->loan_num;
       });
 
+      rex_results::rentresult_action rentresult_act{ rex_account, std::vector<eosio::permission_level>{ } };
+      rentresult_act.send( asset{ rented_tokens, core_symbol() } );
       return rented_tokens;
    }
 
