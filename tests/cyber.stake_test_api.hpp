@@ -26,6 +26,13 @@ public:
         );
     }
     
+    action_result enable(account_name issuer, symbol token_symbol, symbol_code purpose_code) {
+        return push(N(enable), issuer, args()
+            ("token_symbol", token_symbol)
+            ("purpose_code", purpose_code)
+        );
+    }
+    
     action_result delegate(account_name grantor_name, account_name agent_name, asset quantity, symbol_code purpose_code) {
         BOOST_TEST_MESSAGE("--- " << grantor_name <<  " delegates " << quantity 
             <<  "(" << purpose_code << ")" << " to " << agent_name);
@@ -200,11 +207,12 @@ public:
         return variant();
     }
     
-    variant make_stats(symbol token_symbol, symbol_code purpose_code, int64_t total_staked) {
+    variant make_stats(symbol token_symbol, symbol_code purpose_code, int64_t total_staked, bool enabled = false) {
         return mvo()
             ("token_code", token_symbol.to_symbol_code())
             ("purpose_code", purpose_code)
-            ("total_staked", total_staked);
+            ("total_staked", total_staked)
+            ("enabled", enabled);
     }
     
     variant get_producers() {
@@ -213,7 +221,6 @@ public:
     }
     
     variant make_producers(std::vector<account_name> accounts) {
-        std::sort(accounts.begin(), accounts.end());
         std::vector<producer_key> keys;
         keys.reserve(accounts.size());
         for (auto & a : accounts) {

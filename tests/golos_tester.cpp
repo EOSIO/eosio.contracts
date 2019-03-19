@@ -156,7 +156,8 @@ vector<variant> golos_tester::get_all_chaindb_rows(name code, uint64_t scope, na
 }
 
 void golos_tester::delegate_authority(account_name from, std::vector<account_name> to, 
-        account_name code, action_name type, permission_name req, permission_name parent, permission_name prov) {
+        account_name code, action_name type, permission_name req,
+        permission_name parent, permission_name prov) {
             
     authority auth(1, {});
     for (auto u : to) {
@@ -167,9 +168,10 @@ void golos_tester::delegate_authority(account_name from, std::vector<account_nam
             return std::tie(l.permission.actor, l.permission.permission) <
                 std::tie(r.permission.actor, r.permission.permission);
         });
-    set_authority(from, req, auth, parent);
+    set_authority(from, req, auth, parent, { { from, config::active_name } }, {
+        eosio::testing::base_tester::get_private_key(from, name{config::active_name}.to_string())
+    });
     link_authority(from, code, req, type);
-    
 }
 
 }} // eosio::tesing

@@ -106,12 +106,6 @@ namespace cyber {
          void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
 
          [[eosio::action]]
-         void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight ) {
-            require_auth( _self );
-            set_resource_limits( account.value, ram_bytes, net_weight, cpu_weight );
-         }
-
-         [[eosio::action]]
          void setglimits( uint64_t ram, uint64_t net, uint64_t cpu ) {
             (void)ram; (void)net; (void)cpu;
             require_auth( _self );

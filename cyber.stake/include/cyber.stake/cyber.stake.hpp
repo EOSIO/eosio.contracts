@@ -99,6 +99,7 @@ struct structures {
         symbol_code purpose_code;
         symbol_code token_code;
         int64_t total_staked;
+        bool enabled = false;
         uint64_t primary_key()const { return id; }
         using key_t = std::tuple<symbol_code, symbol_code>;
         key_t by_key()const { return std::make_tuple(purpose_code, token_code); }
@@ -146,6 +147,7 @@ struct structures {
         int16_t pct, int64_t share, int16_t break_fee = -1, int64_t break_min_own_staked = -1);
 
     void change_balance(name account, asset quantity, symbol_code purpose_code);
+    int64_t update_purpose_balance(agents_idx_t& agents_idx, name account, symbol_code token_code, symbol_code purpose_code, int64_t total_amount, int64_t total_balance = -1);
     void update_stats(const structures::stat& stat_arg, name payer = name());
     
     template<typename Lambda>
@@ -217,16 +219,15 @@ public:
 
         for (auto i = agents_vector.begin(); i != agents_mid; ++i)
             ret.emplace_back(std::make_pair(i->account, i->signing_key));
-        
-        std::sort(ret.begin(), ret.end(), [](const std::pair<name, public_key>& lhs, const std::pair<name, public_key>& rhs) {
-            return lhs.first < rhs.first;
-        });
+
         return ret;
     }
 
     using contract::contract;
     [[eosio::action]] void create(symbol token_symbol, std::vector<symbol_code> purpose_codes, std::vector<uint8_t> max_proxies, 
         int64_t frame_length, int64_t payout_step_lenght, uint16_t payout_steps_num);
+        
+    [[eosio::action]] void enable(symbol token_symbol, symbol_code purpose_code);
 
     [[eosio::action]] void delegate(name grantor_name, name agent_name, asset quantity, symbol_code purpose_code);
     

@@ -113,14 +113,6 @@ namespace eosiosystem {
       set_blockchain_parameters( params );
    }
 
-   void system_contract::setalimits( name account, int64_t ram, int64_t net, int64_t cpu ) {
-      require_auth( _self );
-      user_resources_table userres( _self, account.value );
-      auto ritr = userres.find( account.value );
-      eosio_assert( ritr == userres.end(), "only supports unlimited accounts" );
-      set_resource_limits( account.value, ram, net, cpu );
-   }
-
    void system_contract::rmvproducer( name producer ) {
       require_auth( _self );
       auto prod = _producers.find( producer.value );
@@ -303,7 +295,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in cyber.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // cyber.system.cpp
-     (init)(setram)(setramrate)(setparams)(setalimits)(rmvproducer)(updtrevision)(bidname)(bidrefund)
+     (init)(setram)(setramrate)(setparams)(rmvproducer)(updtrevision)(bidname)(bidrefund)
      // delegate_bandwidth.cpp
      (buyrambytes)(buyram)(sellram)(delegatebw)(undelegatebw)(refund)
      // voting.cpp

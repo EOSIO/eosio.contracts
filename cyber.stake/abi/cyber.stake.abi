@@ -24,6 +24,13 @@
                 { "type": "uint16",         "name": "payout_steps_num"  }
             ]
         },{
+            "name": "enable_args",
+            "base": "",
+            "fields": [
+                { "type": "symbol",         "name": "token_symbol" },
+                { "type": "symbol_code",    "name": "purpose_code" }
+            ]
+        },{
             "name": "delegate_args",
             "base": "",
             "fields": [
@@ -106,6 +113,10 @@
         {
             "name": "create",
             "type": "create_args",
+            "ricardian_contract": ""
+        },{
+            "name": "enable",
+            "type": "enable_args",
             "ricardian_contract": ""
         },{
             "name": "delegate",

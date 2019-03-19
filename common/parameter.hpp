@@ -3,7 +3,7 @@
 #include <eosiolib/eosio.hpp>
 #include <variant>
 
-namespace commun {
+namespace cyber {
 
 
 using namespace eosio;

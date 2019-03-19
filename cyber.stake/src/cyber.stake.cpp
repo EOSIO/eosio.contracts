@@ -10,6 +10,7 @@
 #include <cyber.token/cyber.token.hpp>
 #include <common/dispatchers.hpp>
 #include <common/parameter_ops.hpp>
+#include <common/util.hpp>
 
 namespace cyber {
     
@@ -25,8 +26,7 @@ int64_t stake::delegate_traversal(symbol_code purpose_code, symbol_code token_co
     auto agent = get_agent_itr(purpose_code, token_code, agents_idx, agent_name);
     auto total_funds = agent->get_total_funds();
     eosio_assert((total_funds == 0) == (agent->shares_sum == 0), "SYSTEM: incorrect total_funds or shares_sum");
-    auto own_funds = total_funds && agent->shares_sum ? 
-        static_cast<int64_t>((static_cast<int128_t>(agent->own_share) * total_funds) / agent->shares_sum) : 0;
+    auto own_funds = total_funds && agent->shares_sum ? safe_prop(total_funds, agent->own_share, agent->shares_sum) : 0;
     eosio_assert((own_funds >= agent->min_own_staked) || refill, "insufficient agent funds");
     if(amount == 0)
         return 0;
@@ -39,7 +39,7 @@ int64_t stake::delegate_traversal(symbol_code purpose_code, symbol_code token_co
            (grant_itr->token_code   == token_code) &&
            (grant_itr->grantor_name == agent_name))
     {
-        auto to_delegate = static_cast<int64_t>((static_cast<int128_t>(amount) * grant_itr->pct) / config::_100percent);
+        auto to_delegate = safe_pct(amount, grant_itr->pct);
         remaining_amount -= to_delegate;
         eosio_assert(remaining_amount >= 0, "SYSTEM: incorrect remaining_amount");
         auto delegated = delegate_traversal(purpose_code, token_code, agents_idx, grants_idx, grant_itr->agent_name, to_delegate, true);
@@ -48,8 +48,7 @@ int64_t stake::delegate_traversal(symbol_code purpose_code, symbol_code token_co
     }
     eosio_assert(remaining_amount <= amount, "SYSTEM: incorrect remaining_amount");
     
-    auto ret = total_funds && agent->shares_sum ?
-        static_cast<int64_t>((static_cast<int128_t>(amount) * agent->shares_sum) / total_funds) : amount;
+    auto ret = total_funds && agent->shares_sum ? safe_prop(agent->shares_sum, amount, total_funds) : amount;
     
     agents_idx.modify(agent, name(), [&](auto& a) {
         a.balance += remaining_amount;
@@ -290,11 +289,11 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
         eosio_assert(quantity.amount <= agent->balance, "insufficient funds");
 
         eosio_assert(total_funds > 0, "no funds to withdrawal");
-        auto own_funds = static_cast<int64_t>((static_cast<int128_t>(agent->own_share) * total_funds) / agent->shares_sum);
+        auto own_funds = safe_prop(total_funds, agent->own_share, agent->shares_sum);
         eosio_assert(own_funds - quantity.amount >= agent->min_own_staked, "insufficient agent funds");
 
         balance_diff = -quantity.amount;
-        shares_diff = -static_cast<int64_t>((static_cast<int128_t>(quantity.amount) * agent->shares_sum) / total_funds); 
+        shares_diff = -safe_prop(agent->shares_sum, quantity.amount, total_funds);
         eosio_assert(-shares_diff <= agent->own_share, "SYSTEM: incorrect shares_to_withdraw val");
         
         payouts_table.emplace(account, [&]( auto &item ) { item = structures::payout {
@@ -319,9 +318,7 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
         eosio_assert(amount_sum >= quantity.amount, "insufficient funds");
         
         while ((payout_itr != acc_index.end()) && (payout_itr->token_code == token_code) && (payout_itr->account == account)) {
-            auto cur_amount = quantity.amount ? 
-                static_cast<int64_t>((static_cast<int128_t>(payout_itr->balance) * quantity.amount) / amount_sum) : 
-                payout_itr->balance;
+            auto cur_amount = quantity.amount ? safe_prop(payout_itr->balance, quantity.amount, amount_sum) : payout_itr->balance;
             balance_diff += cur_amount;
             if (cur_amount < payout_itr->balance) {
                 acc_index.modify(payout_itr, name(), [&](auto& p) { p.balance -= cur_amount; });
@@ -331,7 +328,7 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
                 payout_itr = acc_index.erase(payout_itr);
         }
         //TODO:? due to rounding, balance_diff usually will be less than requested. should we do something about it?
-        shares_diff = total_funds ? static_cast<int64_t>((static_cast<int128_t>(balance_diff) * agent->shares_sum) / total_funds) : balance_diff; 
+        shares_diff = total_funds ? safe_prop(agent->shares_sum, balance_diff, total_funds) : balance_diff;
     }
     
     agents_idx.modify(agent, name(), [&](auto& a) {
@@ -358,7 +355,10 @@ void stake::update_stats(const structures::stat& stat_arg, name payer) {
         stats_table.emplace(payer, [&](auto& s) { s = stat_arg; s.id = stats_table.available_primary_key(); });
     }
     else if (stat != stat_index.end()) {
-        stat_index.modify(stat, name(), [&](auto& s) { s.total_staked += stat_arg.total_staked; });
+        stat_index.modify(stat, name(), [&](auto& s) { 
+            s.total_staked += stat_arg.total_staked; 
+            s.enabled = s.enabled || stat_arg.enabled;
+        });
     }
     else {
         eosio_assert(false, "stats doesn't exist");
@@ -378,7 +378,7 @@ void stake::send_scheduled_payout(payouts& payouts_table, name account, int64_t 
         auto steps_passed = std::min(seconds_passed / payout_step_lenght, static_cast<int64_t>(payout_itr->steps_left));
         if (steps_passed) {
             if(steps_passed != payout_itr->steps_left) {
-                auto cur_amount = static_cast<int64_t>((static_cast<int128_t>(payout_itr->balance) * steps_passed) / payout_itr->steps_left);
+                auto cur_amount = safe_prop(payout_itr->balance, steps_passed, payout_itr->steps_left);
                 acc_index.modify(payout_itr, name(), [&](auto& p) {
                     p.balance -= cur_amount;
                     p.steps_left -= steps_passed;
@@ -483,6 +483,21 @@ void stake::create(symbol token_symbol, std::vector<symbol_code> purpose_codes, 
         };});
 }
 
+void stake::enable(symbol token_symbol, symbol_code purpose_code) {
+    auto token_code = token_symbol.code();
+    auto issuer = eosio::token::get_issuer(config::token_name, token_code);
+    require_auth(issuer);
+    params params_table(table_owner, table_owner.value);
+    get_param(params_table, purpose_code, token_code);
+    update_stats(structures::stat {
+        .id = 0,
+        .token_code = token_code,
+        .purpose_code = purpose_code,
+        .total_staked = 0,
+        .enabled = true
+    }, issuer);
+}
+
 stake::agents_idx_t::const_iterator stake::get_agent_itr(symbol_code purpose_code, symbol_code token_code, stake::agents_idx_t& agents_idx, name agent_name, int16_t proxy_level_for_emplaced, agents* agents_table, bool* emplaced) {
     auto key = std::make_tuple(purpose_code, token_code, agent_name);
     auto agent = agents_idx.find(key);
@@ -524,28 +539,56 @@ void stake::updatefunds(name account, symbol_code token_code, symbol_code purpos
             update_stake_proxied(p, token_code, account, param.frame_length, false);
 }
 
+int64_t stake::update_purpose_balance(agents_idx_t& agents_idx, name account, symbol_code token_code, symbol_code purpose_code, int64_t total_amount, int64_t total_balance) {
+    if (!total_balance)
+        return 0;
+    
+    auto agent = get_agent_itr(purpose_code, token_code, agents_idx, account);
+
+    auto amount = total_balance < 0 ? total_amount : safe_prop(total_amount, agent->balance, total_balance);
+    if (amount < 0)
+        amount = std::max(amount, -agent->balance);
+    
+    agents_idx.modify(agent, name(), [&](auto& a) { a.balance += amount; });
+    
+    update_stats(structures::stat {
+        .id = 0,
+        .token_code = token_code,
+        .purpose_code = purpose_code,
+        .total_staked = amount
+    });
+    return amount;
+}
+
 void stake::change_balance(name account, asset quantity, symbol_code purpose_code) {
     eosio_assert(quantity.is_valid(), "invalid quantity");
     auto token_code = quantity.symbol.code();
     auto issuer = eosio::token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
     params params_table(table_owner, table_owner.value);
-    get_param(params_table, purpose_code, token_code);
+    const auto& param = get_param(params_table, purpose_code, token_code);
 
     agents agents_table(table_owner, table_owner.value);
     auto agents_idx = agents_table.get_index<"bykey"_n>();
-    auto agent = get_agent_itr(purpose_code, token_code, agents_idx, account);
-    if (quantity.amount < 0)
-        quantity.amount = std::max(quantity.amount, -agent->balance);
     
-    agents_idx.modify(agent, name(), [&](auto& a) { a.balance += quantity.amount; });
-    
-    update_stats(structures::stat {
-        .id = 0,
-        .token_code = token_code,
-        .purpose_code = purpose_code,
-        .total_staked = quantity.amount
-    });
+    if (static_cast<bool>(purpose_code))
+        update_purpose_balance(agents_idx, account, token_code, purpose_code, quantity.amount);
+    else {
+        int64_t total_balance = 0;
+        for (auto& p : param.purposes) {
+            total_balance += get_agent_itr(p, token_code, agents_idx, account)->balance;
+        }
+        
+        eosio_assert(param.purposes.size(), "no purpose");
+        auto last_purpose_itr = param.purposes.end();
+        --last_purpose_itr;
+        auto total_amount = quantity.amount;
+        auto left_amount = total_amount;
+        for (auto purpose_itr = param.purposes.begin(); purpose_itr != last_purpose_itr; ++purpose_itr) {
+            left_amount -= update_purpose_balance(agents_idx, account, token_code, *purpose_itr, total_amount, total_balance);
+        }
+        update_purpose_balance(agents_idx, account, token_code, param.purposes.back(), left_amount);
+    }
     
     if (quantity.amount < 0) {
         quantity.amount = -quantity.amount;
@@ -574,7 +617,7 @@ void stake::reward(name account, asset quantity, symbol_code purpose_code) {
 } /// namespace cyber
 
 DISPATCH_WITH_TRANSFER(cyber::stake, cyber::config::token_name, on_transfer,
-    (create)(delegate)(setgrntterms)(recall)(withdraw)(claim)(cancelwd)
+    (create)(enable)(delegate)(setgrntterms)(recall)(withdraw)(claim)(cancelwd)
     (setproxylvl)(setproxyfee)(setminstaked)(setkey)
     (updatefunds)(amerce)(reward)
 )
