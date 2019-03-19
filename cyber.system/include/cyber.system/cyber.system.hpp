@@ -14,6 +14,9 @@
 #include <string>
 
 namespace eosiosystem {
+    
+   void get_resource_limits( capi_name account, int64_t* ram_bytes, int64_t* net_weight, int64_t* cpu_weight ) {}
+   void set_resource_limits( capi_name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight ) {}
 
    using eosio::name;
    using eosio::asset;
