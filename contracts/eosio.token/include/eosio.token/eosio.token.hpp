@@ -19,7 +19,9 @@ namespace eosio {
 
    class [[eosio::contract("eosio.token")]] token : public contract {
       public:
-         using contract::contract;
+         token(name receiver, name code, datastream<const char*> ds)
+         : contract(receiver, code, ds)
+         {}
 
          [[eosio::action]]
          void create( name   issuer,
