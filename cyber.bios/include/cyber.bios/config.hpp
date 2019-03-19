@@ -3,8 +3,6 @@
 
 namespace cyber { namespace config {
 
-static const auto govern_update_window = 300;
-
 }
 
 } // cyber::config

@@ -5,22 +5,55 @@
             "name": "state_info",
             "base": "",
             "fields": [
-                {"type": "uint64",         "name": "id"},
-                {"type": "uint16",         "name": "last_producers_num"}
+                { "type": "uint64",         "name": "id" },
+                { "type": "uint32",         "name": "block_num" },
+                { "type": "uint16",         "name": "last_producers_num" },
+                { "type": "uint16",         "name": "active_producers_num" },
+                { "type": "name[]",         "name": "pending_active_producers" },
+                { "type": "name[]",         "name": "ignored_producers" }
             ]
         },{
-            "name": "update",
+            "name": "producer_struct",
             "base": "",
             "fields": [
-                {"type": "name",         "name": "producer"}
+                { "type": "name",          "name": "account" },
+                { "type": "bool",          "name": "elected" },
+                { "type": "uint32",        "name": "last_block_produced" },
+                { "type": "uint32",        "name": "commencement_block" },
+                { "type": "int64",         "name": "pending_balance" },
+                { "type": "int64",         "name": "confirmed_balance" }
+            ]
+        },{
+            "name": "onblock",
+            "base": "",
+            "fields": [
+                { "type": "name",          "name": "producer" }
+            ]
+        },{
+            "name": "setactprods",
+            "base": "",
+            "fields": [
+                { "type": "name[]",        "name": "pending_active_producers" }
+            ]
+        },{
+            "name": "setignored",
+            "base": "",
+            "fields": [
+                { "type": "name[]",        "name": "ignored_producers" }
             ]
         }
     ],
     "types": [],
     "actions": [
         {
-            "name": "update",
-            "type": "update"
+            "name": "onblock",
+            "type": "onblock"
+        },{
+            "name": "setactprods",
+            "type": "setactprods"
+        },{
+            "name": "setignored",
+            "type": "setignored"
         }
     ],
     "tables": [
@@ -34,6 +67,12 @@
                     {"field": "id", "order": "asc"}
                 ]
             }]
+        },{
+            "name": "producer",
+            "type": "producer_struct",
+            "indexes": [
+                { "name": "primary", "unique": "true", "orders": [ {"field": "account", "order": "asc"} ] }
+            ]
         }
     ],
     "variants": [],
