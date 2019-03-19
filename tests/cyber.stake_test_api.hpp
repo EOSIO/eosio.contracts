@@ -6,6 +6,12 @@ using eosio::chain::symbol_code;
 
 symbol_code to_code(const std::string& arg){return eosio::chain::symbol(0, arg.c_str()).to_symbol_code();};
 namespace eosio { namespace testing {
+    
+struct stake_purpose_param {
+    symbol_code code;
+    int64_t payout_step_lenght;
+    uint16_t payout_steps_num;
+};
 
 struct cyber_stake_api: base_contract_api {
 public:
@@ -15,10 +21,17 @@ public:
     ////actions
     action_result create(account_name issuer, symbol token_symbol, std::vector<symbol_code> purpose_codes, 
             std::vector<uint8_t> max_proxies, int64_t frame_length, int64_t payout_step_lenght, uint16_t payout_steps_num) {
-        
+        std::vector<stake_purpose_param> purposes;
+        for (auto p : purpose_codes) {
+            purposes.emplace_back(stake_purpose_param {
+                .code = p, 
+                .payout_step_lenght = payout_step_lenght,
+                .payout_steps_num = payout_steps_num
+            });
+        }
         return push(N(create), issuer, args()
             ("token_symbol", token_symbol)
-            ("purpose_codes", purpose_codes)
+            ("purposes", purposes)
             ("max_proxies", max_proxies)
             ("frame_length", frame_length)
             ("payout_step_lenght", payout_step_lenght)
@@ -217,3 +230,5 @@ public:
 };
 
 }} // eosio::testing
+
+FC_REFLECT(eosio::testing::stake_purpose_param, (code)(payout_step_lenght)(payout_steps_num) )

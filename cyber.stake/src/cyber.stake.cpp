@@ -14,10 +14,18 @@
 
 namespace cyber {
     
+const stake::structures::param::purpose& stake::structures::param::get_purpose(symbol_code purpose_code) const {
+    auto ret_itr = std::find_if(purposes.begin(), purposes.end(),
+                [purpose_code](const structures::param::purpose &p) { return p.code == purpose_code; });
+    eosio_assert(ret_itr != purposes.end(), ("unknown purpose: " + purpose_code.to_string()).c_str());
+    return *ret_itr;
+}
+    
 const auto& stake::get_param(const stake::params& params_table, symbol_code purpose_code, symbol_code token_code, bool strict) const {
     const auto& ret = params_table.get(token_code.raw(), "no staking for token");
-    eosio_assert(!strict || std::find(ret.purposes.begin(), ret.purposes.end(), purpose_code) != ret.purposes.end(), 
-        ("unknown purpose: " + purpose_code.to_string()).c_str());
+    if(strict) {
+        ret.check_purpose(purpose_code);
+    }
     return ret;
 }
     
@@ -216,7 +224,7 @@ void stake::setgrntterms(name grantor_name, name agent_name, symbol_code token_c
     else
         for (auto& p : param.purposes)
             changed = set_grant_terms(grantor_name, agent_name, pct, break_fee, break_min_own_staked, 
-                p, token_code, param) || changed;
+                p.code, token_code, param) || changed;
     
     eosio_assert(changed, "agent pct has not been changed");
 }
@@ -274,7 +282,8 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
     params params_table(table_owner, table_owner.value);
     const auto& param = get_param(params_table, purpose_code, token_code);
     payouts payouts_table(_self, purpose_code.raw());
-    send_scheduled_payout(payouts_table, account, param.payout_step_lenght, param.token_symbol);
+    auto& purpose_param = param.get_purpose(purpose_code);
+    send_scheduled_payout(payouts_table, account, purpose_param.payout_step_lenght, param.token_symbol);
     
     if(claim_mode)
         return;
@@ -309,7 +318,7 @@ void stake::update_payout(name account, asset quantity, symbol_code purpose_code
             .token_code = token_code,
             .account = account,
             .balance = quantity.amount,
-            .steps_left = param.payout_steps_num,
+            .steps_left = purpose_param.payout_steps_num,
             .last_step = time_point_sec(::now())
         };});
     }
@@ -432,7 +441,7 @@ void stake::setproxylvl(name account, symbol_code token_code, symbol_code purpos
         changed = set_proxy_level(account, purpose_code, token_code, param.max_proxies, level) || changed;
     else
         for (auto& p : param.purposes)
-            changed = set_proxy_level(account, p, token_code, param.max_proxies, level) || changed;
+            changed = set_proxy_level(account, p.code, token_code, param.max_proxies, level) || changed;
     eosio_assert(changed, "proxy level has not been changed");
 } 
  
@@ -465,7 +474,7 @@ bool stake::set_proxy_level(name account, symbol_code purpose_code, symbol_code 
     return changed;
 }
 
-void stake::create(symbol token_symbol, std::vector<symbol_code> purpose_codes, std::vector<uint8_t> max_proxies, 
+void stake::create(symbol token_symbol, std::vector<structures::param::purpose> purposes, std::vector<uint8_t> max_proxies, 
         int64_t frame_length, int64_t payout_step_lenght, uint16_t payout_steps_num)
 {
     eosio::print("create stake for ", token_symbol.code(), "\n");
@@ -483,11 +492,9 @@ void stake::create(symbol token_symbol, std::vector<symbol_code> purpose_codes, 
     params_table.emplace(issuer, [&](auto& p) { p = {
         .id = token_symbol.code().raw(),
         .token_symbol = token_symbol,
-        .purposes = purpose_codes,
+        .purposes = purposes,
         .max_proxies = max_proxies,
-        .frame_length = frame_length,
-        .payout_step_lenght = payout_step_lenght,
-        .payout_steps_num = payout_steps_num
+        .frame_length = frame_length
         };});
 }
 
@@ -544,7 +551,7 @@ void stake::updatefunds(name account, symbol_code token_code, symbol_code purpos
         update_stake_proxied(purpose_code, token_code, account, param.frame_length, false);
     else
         for (auto& p : param.purposes)
-            update_stake_proxied(p, token_code, account, param.frame_length, false);
+            update_stake_proxied(p.code, token_code, account, param.frame_length, false);
 }
 
 int64_t stake::update_purpose_balance(name issuer, agents_idx_t& agents_idx, name account, symbol_code token_code, symbol_code purpose_code, int64_t total_amount, int64_t total_balance) {
@@ -594,7 +601,7 @@ void stake::change_balance(name account, asset quantity, symbol_code purpose_cod
     else {
         int64_t total_balance = 0;
         for (auto& p : param.purposes) {
-            total_balance += get_agent_itr(p, token_code, agents_idx, account)->balance;
+            total_balance += get_agent_itr(p.code, token_code, agents_idx, account)->balance;
         }
         
         eosio_assert(param.purposes.size(), "no purpose");
@@ -603,11 +610,11 @@ void stake::change_balance(name account, asset quantity, symbol_code purpose_cod
         auto total_amount = quantity.amount;
         auto left_amount = total_amount;
         for (auto purpose_itr = param.purposes.begin(); purpose_itr != last_purpose_itr; ++purpose_itr) {
-            auto cur_actual_amount = update_purpose_balance(issuer, agents_idx, account, token_code, *purpose_itr, total_amount, total_balance);
+            auto cur_actual_amount = update_purpose_balance(issuer, agents_idx, account, token_code, purpose_itr->code, total_amount, total_balance);
             left_amount -= cur_actual_amount;
             actual_amount += cur_actual_amount;
         }
-        actual_amount += update_purpose_balance(issuer, agents_idx, account, token_code, param.purposes.back(), left_amount);
+        actual_amount += update_purpose_balance(issuer, agents_idx, account, token_code, param.purposes.back().code, left_amount);
     }
     
     if (quantity.amount < 0) {
