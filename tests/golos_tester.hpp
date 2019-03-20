@@ -49,7 +49,7 @@ protected:
     std::map<account_name, abi_serializer> _abis;
 
 public:
-    golos_tester(name code, bool push_genesis = true): tester(push_genesis), _code(code), _chaindb(control->chaindb()) {
+    golos_tester(name code, bool push_genesis = true): tester(base_tester::default_config(), push_genesis), _code(code), _chaindb(control->chaindb()) {
         std::cout << "golos_tester()" << std::endl;
     }
     ~golos_tester() {
