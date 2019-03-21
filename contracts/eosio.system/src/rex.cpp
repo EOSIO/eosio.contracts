@@ -777,7 +777,6 @@ namespace eosiosystem {
       check( payment.symbol == core_symbol() && fund.symbol == core_symbol(), "must use core token" );
       check( 0 < payment.amount && 0 <= fund.amount, "must use positive asset amount" );
 
-      update_rex_account( from, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( from, payment + fund );
 
       const auto& pool = _rexpool.begin(); /// already checked that _rexpool.begin() != _rexpool.end() in rex_loans_available()
