@@ -69,17 +69,21 @@ struct structures {
         key_t by_key()const { return std::make_tuple(purpose_code, token_code, grantor_name, agent_name); }
     };
     
-    //TODO: use parameter.hpp for this
     struct [[eosio::table]] param {
+        struct purpose {
+            symbol_code code;
+            int64_t payout_step_lenght;
+            uint16_t payout_steps_num;
+        };
+
         uint64_t id;
         symbol token_symbol;
-        std::vector<symbol_code> purposes;
+        std::vector<purpose> purposes;
         std::vector<uint8_t> max_proxies;
-        int64_t frame_length;
-        int64_t payout_step_lenght; //TODO: these parameters should
-        uint16_t payout_steps_num;  //--/--  depend on the purposes      
+        int64_t frame_length;     
         uint64_t primary_key()const { return id; }
-        void check_purpose(symbol_code purpose_code) const;
+        const purpose& get_purpose(symbol_code purpose_code) const;
+        void check_purpose(symbol_code purpose_code) const { get_purpose(purpose_code); };
     };
  
     struct [[eosio::table]] payout { 
@@ -158,7 +162,7 @@ struct structures {
         const auto& param = params_table.get(token_code.raw(), "no staking for token");
         if (!purpose_code) {
             eosio_assert(param.purposes.size(), "no purposes");
-            purpose_code = param.purposes[0];
+            purpose_code = param.purposes[0].code;
         }
         agents agents_table(table_owner, table_owner.value);
         auto agents_idx = agents_table.get_index<"bykey"_n>();
@@ -186,9 +190,9 @@ public:
         };
         std::set<agent_info> agents_set;
         for (auto& p : param.purposes) {
-            auto agent_itr = agents_idx.lower_bound(std::make_tuple(p, token_code, true, name()));
+            auto agent_itr = agents_idx.lower_bound(std::make_tuple(p.code, token_code, true, name()));
             while ((agent_itr != agents_idx.end()) &&
-                   (agent_itr->purpose_code == p) &&
+                   (agent_itr->purpose_code == p.code) &&
                    (agent_itr->token_code   == token_code) &&
                     agent_itr->ultimate)
             {
@@ -225,7 +229,8 @@ public:
     }
 
     using contract::contract;
-    [[eosio::action]] void create(symbol token_symbol, std::vector<symbol_code> purpose_codes, std::vector<uint8_t> max_proxies, 
+
+    [[eosio::action]] void create(symbol token_symbol, std::vector<structures::param::purpose> purposes, std::vector<uint8_t> max_proxies, 
         int64_t frame_length, int64_t payout_step_lenght, uint16_t payout_steps_num);
         
     [[eosio::action]] void enable(symbol token_symbol, symbol_code purpose_code);
