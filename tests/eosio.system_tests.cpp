@@ -4838,6 +4838,88 @@ BOOST_FIXTURE_TEST_CASE( set_rex, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+
+BOOST_FIXTURE_TEST_CASE( b1_vesting, eosio_system_tester ) try {
+
+   cross_15_percent_threshold();
+
+   produce_block( fc::days(14) );
+
+   const asset init_balance = core_sym::from_string("25000.0000");
+   const std::vector<account_name> accounts = { N(aliceaccount), N(bobbyaccount) };
+   account_name alice = accounts[0], bob = accounts[1];
+   setup_rex_accounts( accounts, init_balance );
+
+   const name b1{ N(b1) };
+
+   issue( alice, core_sym::from_string("20000.0000"), config::system_account_name );
+   issue( bob,   core_sym::from_string("20000.0000"), config::system_account_name );
+   BOOST_REQUIRE_EQUAL( success(), bidname( bob,   b1, core_sym::from_string( "0.5000" ) ) );
+   BOOST_REQUIRE_EQUAL( success(), bidname( alice, b1, core_sym::from_string( "1.0000" ) ) );
+
+   produce_block( fc::days(1) );
+
+   create_accounts_with_resources( { b1 }, alice );
+
+   const asset stake_amount = core_sym::from_string("50000000.0000");
+   const asset half_stake   = core_sym::from_string("25000000.0000");
+   const asset small_amount = core_sym::from_string("1000.0000");
+   issue( b1, stake_amount + stake_amount + stake_amount, config::system_account_name );
+
+   stake( b1, b1, stake_amount, stake_amount );
+
+   BOOST_REQUIRE_EQUAL( 2 * stake_amount.get_amount(), get_voter_info( b1 )["staked"].as<int64_t>() );
+
+   BOOST_REQUIRE_EQUAL( success(), unstake( b1, b1, small_amount, small_amount ) );
+
+   produce_block( fc::days(4) );
+
+   BOOST_REQUIRE_EQUAL( success(), push_action( b1, N(refund), mvo()("owner", b1) ) );
+
+   BOOST_REQUIRE_EQUAL( 2 * ( stake_amount.get_amount() - small_amount.get_amount() ),
+                        get_voter_info( b1 )["staked"].as<int64_t>() );
+
+   produce_block( fc::days( 3 * 364 ) );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("b1 can only claim their tokens over 10 years"),
+                        unstake( b1, b1, half_stake, half_stake ) );
+
+   BOOST_REQUIRE_EQUAL( success(), vote( b1, { }, N(proxyaccount) ) );
+   BOOST_REQUIRE_EQUAL( success(), unstaketorex( b1, b1, half_stake, half_stake ) );
+
+   produce_block( fc::days(5) );
+   produce_blocks(1);
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("b1 can only claim their tokens over 10 years"),
+                        sellrex( b1, get_rex_balance( b1 ) ) );
+
+   produce_block( fc::days( 2 * 364 ) );
+
+   BOOST_REQUIRE_EQUAL( success(), rentcpu( bob, bob, core_sym::from_string("10000.0000") ) );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("b1 sellrex orders should not be queued"),
+                        sellrex( b1, get_rex_balance( b1 ) ) );
+
+   produce_block( fc::days( 30 ) );
+
+   BOOST_REQUIRE_EQUAL( success(), sellrex( b1, get_rex_balance( b1 ) ) );
+
+   produce_block( fc::days( 3 * 364 ) );
+
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("b1 can only claim their tokens over 10 years"),
+                        unstake( b1, b1, half_stake - small_amount, half_stake - small_amount ) );
+
+   produce_block( fc::days( 1 * 364 ) );
+
+   BOOST_REQUIRE_EQUAL( success(),
+                        unstake( b1, b1, half_stake - small_amount, half_stake - small_amount ) );
+
+   produce_block( fc::days(4) );
+   BOOST_REQUIRE_EQUAL( success(), push_action( b1, N(refund), mvo()("owner", b1) ) );
+
+} FC_LOG_AND_RETHROW()
+
+
 BOOST_AUTO_TEST_CASE( setabi_bios ) try {
    validating_tester t( validating_tester::default_config() );
    abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::bios_abi().data()).template as<abi_def>(), base_tester::abi_serializer_max_time);
