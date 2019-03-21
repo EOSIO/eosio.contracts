@@ -17,13 +17,14 @@ unlockTimeout = 999999999
 fastUnstakeSystem = './fast.refund/cyber.system/cyber.system.wasm'
 
 systemAccounts = [
-    'cyber.bpay',
-    'cyber.names',
-    'cyber.ram',
-    'cyber.ramfee',
-    'cyber.saving',
-    'cyber.token',
-    'cyber.vpay',
+    # account inGenesis
+    ('cyber.bpay', False),
+    ('cyber.names', False),
+    ('cyber.ram', False),
+    ('cyber.ramfee', False),
+    ('cyber.saving', False),
+    ('cyber.token', True),
+    ('cyber.vpay', False),
 ]
 
 def jsonArg(a):
@@ -134,8 +135,11 @@ def startProducers(b, e):
         startNode(i - b + 1, accounts[i])
 
 def createSystemAccounts():
-    for a in systemAccounts:
-        retry(args.cleos + 'create account cyber ' + a + ' ' + args.public_key)
+    print("Golos-genesis: ", args.golos_genesis)
+    for (a,inGenesis) in systemAccounts:
+        print("Account: ", a, " inGenesis: ", inGenesis)
+        if not (args.golos_genesis and inGenesis):
+            retry(args.cleos + 'create account cyber ' + a + ' ' + args.public_key)
 
 def intToCurrency(i):
     return '%d.%04d %s' % (i // 10000, i % 10000, args.symbol)
@@ -296,7 +300,7 @@ def stepCreateTokens():
     retry(args.cleos + 'push action cyber.token issue \'["cyber", "%s", "memo"]\' -p cyber' % intToCurrency(totalAllocation))
     sleep(1)
 def stepConfigureSystem():
-    retry(args.cleos + 'push action cyber.stake create \'["4,%s", ["CPU","NET","RAM"], [30, 10, 3, 1], 1800, 43200, 12]\' -p cyber' % (args.symbol))
+    retry(args.cleos + 'push action cyber.stake create \'["4,%s", [["CPU",43200,12],["NET",43200,12],["RAM",43200,12]], [30, 10, 3, 1], 1800, 43200, 12]\' -p cyber' % (args.symbol))
     retry(args.cleos + 'push action cyber.stake setproxylvl \'{"account":"cyber", "token_code":"%s", "purpose_code":"", "level":0}\' -p cyber' % (args.symbol))
     # Stake half of total supply for guaranteed election to the block producers
     retry(args.cleos + 'push action cyber.token issue \'["cyber", "5000000000.0000 %s", ""]\' -p cyber' % (args.symbol))
@@ -321,7 +325,7 @@ def stepProxyVotes():
     proxyVotes(0, 0 + args.num_voters)
 def stepResign():
     resign('cyber', 'cyber.prods')
-    for a in systemAccounts:
+    for (a,inGenesis) in systemAccounts:
         resign(a, 'cyber')
 def stepTransfer():
     while True:
@@ -379,6 +383,7 @@ parser.add_argument('--num-voters', metavar='', help="Number of voters", type=in
 parser.add_argument('--num-senders', metavar='', help="Number of users to transfer funds randomly", type=int, default=10)
 parser.add_argument('--producer-sync-delay', metavar='', help="Time (s) to sleep to allow producers to sync", type=int, default=80)
 parser.add_argument('--docker', action='store_true', help='Run actions only for Docker (used with -a)')
+parser.add_argument('--golos-genesis', action='store_true', help='Run action only for nodeos with golos-genesis')
 parser.add_argument('-a', '--all', action='store_true', help="Do everything marked with (*)")
 parser.add_argument('-H', '--http-port', type=int, default=8000, metavar='', help='HTTP port for cleos')
 
