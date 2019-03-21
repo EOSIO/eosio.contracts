@@ -564,7 +564,7 @@ namespace eosiosystem {
          void setparams( const eosio::blockchain_parameters& params );
 
          [[eosio::action]]
-         void namelist(std::string list, std::string action, const std::vector<name>& names );
+         void setblacklist(std::string list, std::string action, const std::vector<name>& names );
 		 
          // functions defined in producer_pay.cpp
          [[eosio::action]]
