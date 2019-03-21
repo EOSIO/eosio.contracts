@@ -43,7 +43,10 @@ int64_t stake::delegate_traversal(symbol_code purpose_code, symbol_code token_co
         remaining_amount -= to_delegate;
         eosio_assert(remaining_amount >= 0, "SYSTEM: incorrect remaining_amount");
         auto delegated = delegate_traversal(purpose_code, token_code, agents_idx, grants_idx, grant_itr->agent_name, to_delegate, true);
-        grants_idx.modify(grant_itr, name(), [&](auto& g) { g.share += delegated; });
+        grants_idx.modify(grant_itr, name(), [&](auto& g) {
+            g.share += delegated;
+            g.granted += to_delegate;
+        });
         ++grant_itr;
     }
     eosio_assert(remaining_amount <= amount, "SYSTEM: incorrect remaining_amount");
@@ -60,7 +63,7 @@ int64_t stake::delegate_traversal(symbol_code purpose_code, symbol_code token_co
 }
 
 void stake::add_proxy(symbol_code purpose_code, symbol_code token_code, grants& grants_table, const structures::agent& grantor_as_agent, const structures::agent& agent, 
-        int16_t pct, int64_t share, int16_t break_fee, int64_t break_min_own_staked) {
+        int16_t pct, int64_t share, int64_t granted, int16_t break_fee, int64_t break_min_own_staked) {
 
     auto now = ::now();
     eosio_assert(agent.last_proxied_update == time_point_sec(now), 
@@ -78,6 +81,7 @@ void stake::add_proxy(symbol_code purpose_code, symbol_code token_code, grants& 
         .agent_name = agent.account,
         .pct = pct,
         .share = share,
+        .granted = granted,
         .break_fee = break_fee < 0 ? agent.fee : break_fee,
         .break_min_own_staked = break_min_own_staked < 0 ? agent.min_own_staked : break_min_own_staked
     };});
@@ -85,6 +89,7 @@ void stake::add_proxy(symbol_code purpose_code, symbol_code token_code, grants& 
  
 void stake::delegate(name grantor_name, name agent_name, asset quantity, symbol_code purpose_code) {
     require_auth(grantor_name);
+    eosio_assert(quantity.amount > 0, "quantity must be positive");
     params params_table(table_owner, table_owner.value);
     const auto& param = get_param(params_table, purpose_code, quantity.symbol.code());
     
@@ -104,13 +109,16 @@ void stake::delegate(name grantor_name, name agent_name, asset quantity, symbol_
     uint8_t proxies_num = 0;
     auto grant_itr = grants_idx.lower_bound(std::make_tuple(purpose_code, token_code, grantor_name, name()));
     while ((grant_itr != grants_idx.end()) &&
-           (grant_itr->purpose_code   == purpose_code) &&
+           (grant_itr->purpose_code == purpose_code) &&
            (grant_itr->token_code   == token_code) &&
            (grant_itr->grantor_name == grantor_name))
     {
         ++proxies_num;
         if (grant_itr->agent_name == agent_name) {
-            grants_idx.modify(grant_itr, name(), [&](auto& g) { g.share += delegated; });
+            grants_idx.modify(grant_itr, name(), [&](auto& g) {
+                g.share += delegated;
+                g.granted += quantity.amount; 
+            });
             delegated = 0;
         }
         ++grant_itr;
@@ -118,7 +126,7 @@ void stake::delegate(name grantor_name, name agent_name, asset quantity, symbol_
     
     if (delegated) {
         eosio_assert(proxies_num < param.max_proxies[grantor_as_agent->proxy_level - 1], "proxy cannot be added");
-        add_proxy(purpose_code, token_code, grants_table, *grantor_as_agent, *agent, 0, delegated);
+        add_proxy(purpose_code, token_code, grants_table, *grantor_as_agent, *agent, 0, delegated, quantity.amount);
     }
     
     agents_idx.modify(grantor_as_agent, name(), [&](auto& a) {
@@ -186,7 +194,7 @@ bool stake::set_grant_terms(name grantor_name, name agent_name, int16_t pct, int
         check_grant_terms(*agent, break_fee, break_min_own_staked);
         update_stake_proxied(purpose_code, token_code, agent_name, param.frame_length, true);
     
-        add_proxy(purpose_code, token_code, grants_table, *grantor_as_agent, *agent, pct, 0, break_fee, break_min_own_staked);
+        add_proxy(purpose_code, token_code, grants_table, *grantor_as_agent, *agent, pct, 0, 0, break_fee, break_min_own_staked);
         changed = true;
     }
     return changed;

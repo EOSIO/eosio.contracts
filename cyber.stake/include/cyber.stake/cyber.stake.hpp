@@ -60,6 +60,7 @@ struct structures {
         name agent_name;
         int16_t pct = 0;
         int64_t share = 0;
+        int64_t granted = 0;
         int16_t break_fee = config::_100percent;
         int64_t break_min_own_staked = 0;
         
@@ -144,7 +145,7 @@ struct structures {
     
     agents_idx_t::const_iterator get_agent_itr(symbol_code purpose_code, symbol_code token_code, agents_idx_t& agents_idx, name agent_name, int16_t proxy_level_for_emplaced = -1, agents* agents_table = nullptr, bool* emplaced = nullptr);
     void add_proxy(symbol_code purpose_code, symbol_code token_code, grants& grants_table, const structures::agent& grantor_as_agent, const structures::agent& agent, 
-        int16_t pct, int64_t share, int16_t break_fee = -1, int64_t break_min_own_staked = -1);
+        int16_t pct, int64_t share, int64_t granted, int16_t break_fee = -1, int64_t break_min_own_staked = -1);
 
     void change_balance(name account, asset quantity, symbol_code purpose_code);
     int64_t update_purpose_balance(name issuer, agents_idx_t& agents_idx, name account, symbol_code token_code, symbol_code purpose_code, int64_t total_amount, int64_t total_balance = -1);
