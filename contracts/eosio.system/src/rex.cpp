@@ -25,7 +25,6 @@ namespace eosiosystem {
          transfer_act.send( owner, rex_account, amount, "deposit to REX fund" );
       }
       transfer_to_fund( owner, amount );
-      update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
 
    /**
