@@ -8,8 +8,11 @@ using eosio::name;
 using eosio::asset;
 using eosio::action_wrapper;
 
-class [[eosio::contract("rex.results")]] rex_results {
+class [[eosio::contract("rex.results")]] rex_results : eosio::contract {
    public:
+
+      using eosio::contract::contract;
+
       [[eosio::action]]
       void buyresult( const asset& rex_received );
 
