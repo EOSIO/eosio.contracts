@@ -167,14 +167,6 @@ void token::close( name owner, const symbol& symbol )
    acnts.erase( it );
 }
 
-bool token::is_on_blacklist(name account)
-{
-   tokenblacklist blklst(_self, account.value);
-   auto ac = blklst.find(account.value);
-
-   return ac != blklst.end();
-}
-
 void token::addblacklist(const std::vector<name>& accounts)
 {
    require_auth("eosio"_n);
