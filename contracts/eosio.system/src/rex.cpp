@@ -739,7 +739,7 @@ namespace eosiosystem {
       }
 
       /// process sellrex orders
-      {
+      if ( _rexorders.begin() != _rexorders.end() ) {
          auto idx  = _rexorders.get_index<"bytime"_n>();
          auto oitr = idx.begin();
          for ( uint16_t i = 0; i < max; ++i ) {
@@ -1045,7 +1045,7 @@ namespace eosiosystem {
             total += rb.rex_maturities.front().second;
             rb.rex_maturities.pop_front();
          }
-         if (total > 0 ) {
+         if ( total > 0 ) {
             rb.rex_maturities.emplace_back( get_rex_maturity(), total );
          }
       });
