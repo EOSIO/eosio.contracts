@@ -394,26 +394,19 @@ BOOST_FIXTURE_TEST_CASE( transfer_blacklist_tests, eosio_token_tester ) try {
        transfer( N(boblacklist), N(bob), asset::from_string("100 CERO"), "hola" )
     );
 
-    BOOST_CHECK_EXCEPTION( transfer( N(boblacklist), N(bob), asset::from_string("100 CERO"), "hola" ) , asset_type_exception, [](const asset_type_exception& e) {
-       return expect_assert_message(e, "account is on the blacklist");
-    });
-
    rmblacklist(list);
    produce_blocks(250);
    transfer(N(boblacklist), N(bob), asset::from_string("100 CERO"), "hola");
 
+   produce_blocks(250);
    auto boblklst_balance = get_account(N(boblacklist), "0,CERO");
    REQUIRE_MATCHING_OBJECT( boblklst_balance, mvo()
       ("balance", "200 CERO")
-      ("frozen", 0)
-      ("whitelist", 1)
    );
 
    auto bob_balance = get_account(N(bob), "0,CERO");
    REQUIRE_MATCHING_OBJECT( bob_balance, mvo()
       ("balance", "100 CERO")
-      ("frozen", 0)
-      ("whitelist", 1)
    );
 
 
