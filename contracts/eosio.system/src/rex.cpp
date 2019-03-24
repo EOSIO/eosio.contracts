@@ -137,7 +137,10 @@ namespace eosiosystem {
       process_rex_maturities( bitr );
       check( rex.amount <= bitr->matured_rex, "insufficient available rex" );
 
-      auto current_order = fill_rex_order( bitr, rex );
+      const auto current_order = fill_rex_order( bitr, rex );
+      if ( current_order.success && current_order.proceeds.amount == 0 ) {
+         check( false, "proceeds are negligible" );
+      }
       asset pending_sell_order = update_rex_account( from, current_order.proceeds, current_order.stake_change );
       if ( !current_order.success ) {
          if ( from == "b1"_n ) {
@@ -827,8 +830,6 @@ namespace eosiosystem {
       asset stake_change( 0, core_symbol() );
       bool  success = false;
 
-      check( proceeds.amount > 0, "proceeds are negligible" );
-
       const int64_t unlent_lower_bound = ( uint128_t(2) * rexitr->total_lent.amount ) / 10;
       const int64_t available_unlent   = rexitr->total_unlent.amount - unlent_lower_bound; // available_unlent <= 0 is possible
       if ( proceeds.amount <= available_unlent ) {
@@ -892,7 +893,7 @@ namespace eosiosystem {
    {
       check( 0 < amount.amount && amount.symbol == core_symbol(), "must transfer positive amount from REX fund" );
       auto itr = _rexfunds.require_find( owner.value, "must deposit to REX fund first" );
-      check( amount <= itr->balance, "insufficient funds");
+      check( amount <= itr->balance, "insufficient funds" );
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
          fund.balance.amount -= amount.amount;
       });
