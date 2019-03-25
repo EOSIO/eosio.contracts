@@ -3,6 +3,8 @@
 
 namespace cyber { namespace config {
     
+static const auto issuer_name = internal_name;
+    
 static const auto sum_up_interval = 701;
 static const auto reward_for_staked_interval = 113;
 
