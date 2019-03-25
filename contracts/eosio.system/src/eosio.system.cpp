@@ -125,7 +125,7 @@ namespace eosiosystem {
    {
       const int blacklist_type_string_limit_length = 30;
       const int blacklist_limit_size = 20;
-      const int blacklist_action_limit_length = 10;
+      const int blacklist_action_string_limit_length = 10;
       enum  class blacklist_type:int64_t{
          actor_blacklist_type = 1,
          contract_blacklist_type,
@@ -156,7 +156,7 @@ namespace eosiosystem {
       check(3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3");
       check(list.length() < blacklist_type_string_limit_length, "the length of list type string must be less than 30");
       check(names.size() < blacklist_limit_size, "the size of list must be less than 20");
-      check(action.length() < blacklist_action_limit_length, " the length of action string must be less than 10");
+      check(action.length() < blacklist_action_string_limit_length, " the length of action string must be less than 10");
       check(itlt != list_type_string_to_enum.end(), " unknown list type string, support 'actor_blacklist' ,'contract_blacklist', 'resource_greylist'");
       check(itlat != list_action_type_string_to_enum.end(), " unknown list type string, support 'insert' or 'remove'");
 
