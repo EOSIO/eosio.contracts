@@ -123,8 +123,9 @@ namespace eosiosystem {
    
    void system_contract::setblacklist(std::string list, std::string action, const std::vector<name>& names)
    {
-      const int MAX_LIST_LENGTH = 30;
-      const int MAX_ACTION_LENGTH = 10;
+      const int max_list_length = 30;
+      const int max_list_size = 20;
+      const int max_action_length = 10;
       enum  class blacklist_type:int64_t{
          actor_blacklist_type = 1,
          contract_blacklist_type,
@@ -153,10 +154,11 @@ namespace eosiosystem {
 
       require_auth(_self);
       check(3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3");
-      check(list.length() < MAX_LIST_LENGTH, "list string is greater than max length 30");
-      check(action.length() < MAX_ACTION_LENGTH, " action string is greater than max length 10");
-      check(itlt != list_type_string_to_enum.end(), " unknown list type string  support 'actor_blacklist' ,'contract_blacklist', 'resource_greylist'");
-      check(itlat != list_action_type_string_to_enum.end(), " unknown list type string support 'insert' or 'remove'");
+      check(list.length() < max_list_length, "list string must be less than 30");
+      check(names.size() < max_list_size, "list's size must be less than 20");
+      check(action.length() < max_action_length, " action string must be less than 10");
+      check(itlt != list_type_string_to_enum.end(), " unknown list type string, support 'actor_blacklist' ,'contract_blacklist', 'resource_greylist'");
+      check(itlat != list_action_type_string_to_enum.end(), " unknown list type string, support 'insert' or 'remove'");
 
       auto packed_names = pack(names);
 
