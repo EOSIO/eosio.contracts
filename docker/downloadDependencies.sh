@@ -1,5 +1,6 @@
 #!/bin/bash
 CONTRACTS_PATH='/eosio.contracts' # location in Docker container, not your local machine
+CONTRACTS_PATH="${CONTRACTS_PATH/#\~/$HOME}" # perform parameter expansion for paths including '~'
 # get EOSIO
 echo "downloadDependencies.sh - Cloning EOSIO source from GitHub..."
 EOSIO_VERSION=$(cat $CONTRACTS_PATH/dependencies | sed 's,//,#,g' | cut -d '#' -f 1 | grep -v 'eos.*cdt.*=' | grep -v 'eos.*contracts.*=' | grep '.*eos.*=' | cut -d '=' -f 2 | awk '{print $1}')
