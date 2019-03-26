@@ -134,6 +134,28 @@ def startProducers(b, e):
     for i in range(b, e):
         startNode(i - b + 1, accounts[i])
 
+def updateAuthority(account, permission, parent, keys, accounts):
+    retry(args.cleos + 'push action cyber updateauth' + jsonArg({
+        'account': account,
+        'permission': permission,
+        'parent': parent,
+        'auth': createAuthority(keys, accounts)
+    }) + '-p ' + account)
+
+def createAuthority(keys, accounts):
+    keys.sort()
+    accounts.sort()
+    keysList = []
+    accountsList = []
+    for k in keys:
+        keysList.extend([{'weight':1,'key':k}])
+    for a in accounts:
+        d = a.split('@',2)
+        if len(d) == 1:
+            d.extend(['active'])
+        accountsList.extend([{'weight':1,'permission':{'actor':d[0],'permission':d[1]}}])
+    return {'threshold': 1, 'keys': keysList, 'accounts': accountsList, 'waits':[]}
+
 def createSystemAccounts():
     print("Golos-genesis: ", args.golos_genesis)
     for (a,inGenesis) in systemAccounts:
@@ -288,6 +310,8 @@ def stepStartBoot():
     startNode(0, {'name': 'cyber', 'pvt': args.private_key, 'pub': args.public_key})
     sleep(9)
 def stepInstallSystemContracts():
+    updateAuthority('cyber', 'reward', 'active', [args.public_key], [])
+    updateAuthority('cyber', 'amerce', 'active', [args.public_key], [])
     retry(args.cleos + 'set contract cyber.domain ' + args.contracts_dir + 'cyber.domain/')
     retry(args.cleos + 'set contract cyber.token ' + args.contracts_dir + 'cyber.token/')
     retry(args.cleos + 'set contract cyber.msig ' + args.contracts_dir + 'cyber.msig/')
