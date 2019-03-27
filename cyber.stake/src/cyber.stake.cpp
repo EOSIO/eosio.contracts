@@ -617,13 +617,13 @@ void stake::change_balance(name account, asset quantity, symbol_code purpose_cod
         actual_amount += update_purpose_balance(issuer, agents_idx, account, token_code, param.purposes.back().code, left_amount);
     }
     
-    if (quantity.amount < 0) {
+    if (quantity.amount < 0 && actual_amount) {
         quantity.amount = -actual_amount;
         INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {_self, config::active_name},
             {_self, issuer, quantity, ""});
         INLINE_ACTION_SENDER(eosio::token, retire)(config::token_name, {issuer, config::amerce_name}, {quantity, ""});
     }
-    else {
+    else if (quantity.amount > 0) {
         //we don't need actual_amount in this case
         INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {issuer, config::reward_name}, {issuer, quantity, ""});
         INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {issuer, config::reward_name},
