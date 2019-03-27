@@ -50,7 +50,7 @@ public:
     }
     static const std::vector<symbol_code> res_purposes;
     
-    const account_name _issuer = govern_account_name;
+    const account_name _issuer = cfg::issuer_name;
     const account_name _alice = N(alice);
     const account_name _bob = N(bob);
     const account_name _carol = N(carol);
