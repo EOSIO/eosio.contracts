@@ -91,7 +91,7 @@ namespace eosio {
          };
 
          typedef eosio::multi_index<"blacklist"_n, account_blacklist> blacklist;
-         static const uint8_t blacklist_limit_size = 20 ;
+         static const uint8_t blacklist_limit_size = 100 ;
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 

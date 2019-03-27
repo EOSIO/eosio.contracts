@@ -3049,7 +3049,7 @@ BOOST_FIXTURE_TEST_CASE( namebid_pending_winner, eosio_system_tester ) try {
    //despite "perfa" account hasn't been created, we should be able to create "perfb" account
    create_account_with_resources( N(prefb), N(bob111111111) );
 } FC_LOG_AND_RETHROW()
-BOOST_FIXTURE_TEST_CASE(actor_namelist, eosio_system_tester)
+BOOST_FIXTURE_TEST_CASE(actor_blacklist, eosio_system_tester)
 try
 {
    //install multisig contract
@@ -3092,7 +3092,7 @@ try
          ("name", "namelist")
          ("authorization", vector<permission_level>{ { config::system_account_name, config::active_name}})
          ("data", fc::mutable_variant_object()
-         ("list", "actor_blacklist")
+         ("list", "actor")
          ("action", "insert")
          ("names", actor_blacklist)
          )
@@ -3156,7 +3156,7 @@ try
             ("name", "namelist")
             ("authorization", vector<permission_level>{ { config::system_account_name, config::active_name}})
             ("data", fc::mutable_variant_object()
-            ("list", "actor_blacklist")
+            ("list", "actor")
             ("action", "remove")
             ("names", actor_blacklist)
             )
@@ -3205,7 +3205,7 @@ try
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(contract_namelist, eosio_system_tester)
+BOOST_FIXTURE_TEST_CASE(contract_blacklist, eosio_system_tester)
 try
 {
    //install multisig contract
@@ -3248,7 +3248,7 @@ try
          ("name", "namelist")
          ("authorization", vector<permission_level>{ { config::system_account_name, config::active_name}})
          ("data", fc::mutable_variant_object()
-         ("list", "contract_blacklist")
+         ("list", "contract")
          ("action", "insert")
          ("names", contract_blacklist)
          )
@@ -3313,7 +3313,7 @@ try
             ("name", "namelist")
             ("authorization", vector<permission_level>{ { config::system_account_name, config::active_name}})
             ("data", fc::mutable_variant_object()
-            ("list", "contract_blacklist")
+            ("list", "contract")
             ("action", "remove")
             ("names", contract_blacklist)
             )
@@ -3362,7 +3362,7 @@ try
 }
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(resource_namelist, eosio_system_tester)
+BOOST_FIXTURE_TEST_CASE(resource_greylist, eosio_system_tester)
 try
 {
    //install multisig contract
@@ -3405,7 +3405,7 @@ try
          ("name", "namelist")
          ("authorization", vector<permission_level>{ { config::system_account_name, config::active_name}})
          ("data", fc::mutable_variant_object()
-         ("list", "resource_greylist")
+         ("list", "resource")
          ("action", "insert")
          ("names", resource_greylist)
          )
@@ -3469,7 +3469,7 @@ try
             ("name", "namelist")
             ("authorization", vector<permission_level>{ { config::system_account_name, config::active_name}})
             ("data", fc::mutable_variant_object()
-            ("list", "resource_greylist")
+            ("list", "resource")
             ("action", "remove")
             ("names", resource_greylist)
             )

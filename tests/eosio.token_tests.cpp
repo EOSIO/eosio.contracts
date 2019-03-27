@@ -120,7 +120,7 @@ public:
 
    fc::variant get_blacklist( account_name acc)
    {
-      vector<char> data = get_row_by_account( N(eosio.token), acc, N(blacklist), acc );
+      vector<char> data = get_row_by_account( N(eosio.token), N(eosio.token), N(blacklist), acc );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "account_blacklist", data, abi_serializer_max_time );
    }
 

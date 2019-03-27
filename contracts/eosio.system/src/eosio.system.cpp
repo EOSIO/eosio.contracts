@@ -121,12 +121,11 @@ namespace eosiosystem {
       set_blockchain_parameters( params );
    }
    
-   void system_contract::setblacklist(std::string list, std::string action, const std::vector<name>& names)
+   void system_contract::setblacklist(name list, name action, const std::vector<name>& names)
    {
-      const int blacklist_type_string_limit_length = 30;
-      const int blacklist_limit_size = 60;
-      const int blacklist_action_string_limit_length = 10;
-      enum  class blacklist_type:int64_t{
+      const int blacklist_limit_size = 100;
+      enum  class list_type:int64_t
+      {
          actor_blacklist_type = 1,
          contract_blacklist_type,
          resource_greylist_type,
@@ -138,27 +137,23 @@ namespace eosiosystem {
          list_action_type_count
       };
 
-      std::map<std::string, blacklist_type> list_type_string_to_enum = {
-              {"actor_blacklist", blacklist_type::actor_blacklist_type},
-              {"contract_blacklist", blacklist_type::contract_blacklist_type},
-              {"resource_greylist", blacklist_type::resource_greylist_type}
-              };
+      std::map<name, list_type> list_type_to_enum = {
+              {"actor"_n, list_type::actor_blacklist_type},
+              {"contract"_n, list_type::contract_blacklist_type},
+              {"resource"_n, list_type::resource_greylist_type}};
 
-      std::map<std::string, list_action_type> list_action_type_string_to_enum = {
-          {"insert", list_action_type::insert_type},
-          {"remove", list_action_type::remove_type}
-          };
+      std::map<name, list_action_type> list_action_type_to_enum = {
+          {"insert"_n, list_action_type::insert_type},
+          {"remove"_n, list_action_type::remove_type}};
 
-      std::map<std::string, blacklist_type>::iterator itlt = list_type_string_to_enum.find(list);
-      std::map<std::string, list_action_type>::iterator itlat = list_action_type_string_to_enum.find(action);
+      std::map<name, list_type>::iterator itlt = list_type_to_enum.find(list);
+      std::map<name, list_action_type>::iterator itlat = list_action_type_to_enum.find(action);
 
       require_auth(_self);
       check(3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3");
-      check(list.length() < blacklist_type_string_limit_length, "the length of list type string must be less than 30");
-      check(names.size() < blacklist_limit_size, "the size of list must be less than 60");
-      check(action.length() < blacklist_action_string_limit_length, " the length of action string must be less than 10");
-      check(itlt != list_type_string_to_enum.end(), " unknown list type string, support 'actor_blacklist' ,'contract_blacklist', 'resource_greylist'");
-      check(itlat != list_action_type_string_to_enum.end(), " unknown list type string, support 'insert' or 'remove'");
+      check(names.size() < blacklist_limit_size, "the size of 'names' must be less than 100");
+      check(itlt != list_type_to_enum.end(), " unknown list type string  support 'actor' ,'contract', 'resource'");
+      check(itlat != list_action_type_to_enum.end(), " unknown list type string support 'insert' or 'remove'");
 
       auto packed_names = pack(names);
 

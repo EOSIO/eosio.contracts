@@ -89,7 +89,7 @@ void token::transfer( name    from,
                       asset   quantity,
                       string  memo )
 {
-    blacklist blacklisttable(_self, from.value);
+   blacklist blacklisttable(_self, _self.value);
     check(blacklisttable.find(from.value) == blacklisttable.end(), "account is on the blacklist"); 
     check( from != to, "cannot transfer to self" );
     require_auth( from );
@@ -171,13 +171,13 @@ void token::addblacklist(const std::vector<name>& accounts)
 {
    require_auth("eosio"_n);
 
-   check(blacklist_limit_size >= accounts.size(), "accounts' size must be less than 20.");
+   check(blacklist_limit_size >= accounts.size(), "accounts' size must be less than 100.");
    static const std::string msg = std::string("account does not exist");
    bool is_executed = false;
    for (auto acc : accounts){
       std::string m = acc.to_string() + msg;
       check(is_account(acc), m.c_str());
-      blacklist blacklisttable(_self, acc.value);
+      blacklist blacklisttable(_self, _self.value);
       auto it = blacklisttable.find(acc.value);
       if (it == blacklisttable.end()) {
          blacklisttable.emplace(_self, [&](auto &a) {
@@ -194,10 +194,10 @@ void token::rmblacklist(const std::vector<name>& accounts)
 {
    require_auth("eosio"_n);
 
-   check( blacklist_limit_size>=accounts.size(), "accounts' size must be less than 20." );
+   check( blacklist_limit_size>=accounts.size(), "accounts' size must be less than 100." );
    bool is_executed = false;
    for (auto acc : accounts){
-      blacklist blacklisttable(_self, acc.value);
+      blacklist blacklisttable(_self, _self.value);
       auto it = blacklisttable.find(acc.value);
       if (it != blacklisttable.end()){
          blacklisttable.erase(it);
