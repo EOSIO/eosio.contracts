@@ -19,10 +19,12 @@ namespace eosiosystem {
 
       check( amount.symbol == core_symbol(), "must deposit core token" );
       check( 0 < amount.amount, "must deposit a positive amount" );
-      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { owner, active_permission },
-                                                    { owner, rex_account, amount, "deposit to REX fund" } );
+      // inline transfer from owner's token balance
+      {
+         token::transfer_action transfer_act{ token_account, { owner, active_permission } };
+         transfer_act.send( owner, rex_account, amount, "deposit to REX fund" );
+      }
       transfer_to_fund( owner, amount );
-      update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
    }
 
    /**
@@ -39,8 +41,11 @@ namespace eosiosystem {
       check( 0 < amount.amount, "must withdraw a positive amount" );
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( owner, amount );
-      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { rex_account, active_permission },
-                                                    { rex_account, owner, amount, "withdraw from REX fund" } );
+      // inline transfer to owner's token balance
+      {
+         token::transfer_action transfer_act{ token_account, { rex_account, active_permission } };
+         transfer_act.send( rex_account, owner, amount, "withdraw from REX fund" );
+      }
    }
 
    /**
@@ -100,8 +105,11 @@ namespace eosiosystem {
       update_resource_limits( name(0), receiver, -from_net.amount, -from_cpu.amount );
 
       const asset payment = from_net + from_cpu;
-      INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { stake_account, active_permission },
-                                                    { stake_account, rex_account, payment, "buy REX with staked tokens" } );
+      // inline transfer from stake_account to rex_account
+      {
+         token::transfer_action transfer_act{ token_account, { stake_account, active_permission } };
+         transfer_act.send( stake_account, rex_account, payment, "buy REX with staked tokens" );
+      }
       const asset rex_received = add_to_rex_pool( payment );
       add_to_rex_balance( owner, payment, rex_received );
       runrex(2);
@@ -129,9 +137,15 @@ namespace eosiosystem {
       process_rex_maturities( bitr );
       check( rex.amount <= bitr->matured_rex, "insufficient available rex" );
 
-      auto current_order = fill_rex_order( bitr, rex );
+      const auto current_order = fill_rex_order( bitr, rex );
+      if ( current_order.success && current_order.proceeds.amount == 0 ) {
+         check( false, "proceeds are negligible" );
+      }
       asset pending_sell_order = update_rex_account( from, current_order.proceeds, current_order.stake_change );
       if ( !current_order.success ) {
+         if ( from == "b1"_n ) {
+            check( false, "b1 sellrex orders should not be queued" );
+         }
          /**
           * REX order couldn't be filled and is added to queue.
           * If account already has an open order, requested rex is added to existing order.
@@ -728,7 +742,7 @@ namespace eosiosystem {
       }
 
       /// process sellrex orders
-      {
+      if ( _rexorders.begin() != _rexorders.end() ) {
          auto idx  = _rexorders.get_index<"bytime"_n>();
          auto oitr = idx.begin();
          for ( uint16_t i = 0; i < max; ++i ) {
@@ -765,7 +779,6 @@ namespace eosiosystem {
       check( payment.symbol == core_symbol() && fund.symbol == core_symbol(), "must use core token" );
       check( 0 < payment.amount && 0 <= fund.amount, "must use positive asset amount" );
 
-      update_rex_account( from, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
       transfer_from_fund( from, payment + fund );
 
       const auto& pool = _rexpool.begin(); /// already checked that _rexpool.begin() != _rexpool.end() in rex_loans_available()
@@ -784,6 +797,8 @@ namespace eosiosystem {
          c.loan_num     = pool->loan_num;
       });
 
+      rex_results::rentresult_action rentresult_act{ rex_account, std::vector<eosio::permission_level>{ } };
+      rentresult_act.send( asset{ rented_tokens, core_symbol() } );
       return rented_tokens;
    }
 
@@ -814,8 +829,6 @@ namespace eosiosystem {
       asset proceeds( p, core_symbol() );
       asset stake_change( 0, core_symbol() );
       bool  success = false;
-
-      check( proceeds.amount > 0, "proceeds are negligible" );
 
       const int64_t unlent_lower_bound = ( uint128_t(2) * rexitr->total_lent.amount ) / 10;
       const int64_t available_unlent   = rexitr->total_unlent.amount - unlent_lower_bound; // available_unlent <= 0 is possible
@@ -880,7 +893,7 @@ namespace eosiosystem {
    {
       check( 0 < amount.amount && amount.symbol == core_symbol(), "must transfer positive amount from REX fund" );
       auto itr = _rexfunds.require_find( owner.value, "must deposit to REX fund first" );
-      check( amount <= itr->balance, "insufficient funds");
+      check( amount <= itr->balance, "insufficient funds" );
       _rexfunds.modify( itr, same_payer, [&]( auto& fund ) {
          fund.balance.amount -= amount.amount;
       });
@@ -961,9 +974,10 @@ namespace eosiosystem {
             rp.total_unlent.amount   += amount.amount;
             rp.total_lendable.amount += amount.amount;
          });
-
-         INLINE_ACTION_SENDER(eosio::token, transfer)( token_account, { from, active_permission },
-            { from, rex_account, amount, std::string("transfer from ") + name{from}.to_string() + " to eosio.rex"} );
+         // inline transfer to rex_account
+         token::transfer_action transfer_act{ token_account, { from, active_permission } };
+         transfer_act.send( from, rex_account, amount,
+                            std::string("transfer from ") + from.to_string() + " to eosio.rex" );
       }
 #endif
    }
@@ -1032,7 +1046,7 @@ namespace eosiosystem {
             total += rb.rex_maturities.front().second;
             rb.rex_maturities.pop_front();
          }
-         if (total > 0 ) {
+         if ( total > 0 ) {
             rb.rex_maturities.emplace_back( get_rex_maturity(), total );
          }
       });
