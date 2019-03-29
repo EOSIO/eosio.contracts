@@ -349,7 +349,7 @@ public:
    }
 
    asset get_buyrex_result( const account_name& from, const asset& amount ) {
-      auto trace = base_tester::push_action( N(eosio), N(buyrex), from, mvo()("from", from)("amount", amount) );
+      auto trace = base_tester::push_action( config::system_account_name, N(buyrex), from, mvo()("from", from)("amount", amount) );
       asset rex_received;
       for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
          for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
@@ -362,7 +362,7 @@ public:
          }
       }
       return rex_received;
-   }   
+   }
 
    action_result unstaketorex( const account_name& owner, const account_name& receiver, const asset& from_net, const asset& from_cpu ) {
       return push_action( name(owner), N(unstaketorex), mvo()
@@ -374,7 +374,7 @@ public:
    }
 
    asset get_unstaketorex_result( const account_name& owner, const account_name& receiver, const asset& from_net, const asset& from_cpu ) {
-      auto trace = base_tester::push_action( N(eosio), N(unstaketorex), owner, mvo()
+      auto trace = base_tester::push_action( config::system_account_name, N(unstaketorex), owner, mvo()
                                              ("owner", owner)
                                              ("receiver", receiver)
                                              ("from_net", from_net)
@@ -402,7 +402,7 @@ public:
    }
 
    asset get_sellrex_result( const account_name& from, const asset& rex ) {
-      auto trace = base_tester::push_action( N(eosio), N(sellrex), from, mvo()("from", from)("rex", rex) );
+      auto trace = base_tester::push_action( config::system_account_name, N(sellrex), from, mvo()("from", from)("rex", rex) );
       asset proceeds;
       for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
          for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
@@ -416,7 +416,7 @@ public:
       } 
       return proceeds;
    }
-   
+
    auto get_rexorder_result( const transaction_trace_ptr& trace ) {
       std::vector<std::pair<account_name, asset>> output;
       for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
@@ -453,6 +453,37 @@ public:
                           ("loan_payment", payment)
                           ("loan_fund",    fund)
       );
+   }
+
+   asset _get_rentrex_result( const account_name& from, const account_name& receiver, const asset& payment, bool cpu ) {
+      const name act = cpu ? N(rentcpu) : N(rentnet);
+      auto trace = base_tester::push_action( config::system_account_name, act, from, mvo()
+                                             ("from",         from)
+                                             ("receiver",     receiver)
+                                             ("loan_payment", payment)
+                                             ("loan_fund",    core_sym::from_string("0.0000") )
+      );
+
+      asset rented_tokens = core_sym::from_string("0.0000");
+      for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
+         for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
+            if ( trace->action_traces[i].inline_traces[j].act.name == N(rentresult) ) {
+               fc::raw::unpack( trace->action_traces[i].inline_traces[j].act.data.data(),
+                                trace->action_traces[i].inline_traces[j].act.data.size(),
+                                rented_tokens );
+               return rented_tokens;
+            }
+         }
+      }
+      return rented_tokens;
+   }
+
+   asset get_rentcpu_result( const account_name& from, const account_name& receiver, const asset& payment ) {
+      return _get_rentrex_result( from, receiver, payment, true );
+   }
+
+   asset get_rentnet_result( const account_name& from, const account_name& receiver, const asset& payment ) {
+      return _get_rentrex_result( from, receiver, payment, false );
    }
 
    action_result fundcpuloan( const account_name& from, const uint64_t loan_num, const asset& payment ) {
