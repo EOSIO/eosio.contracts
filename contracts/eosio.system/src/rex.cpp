@@ -759,7 +759,7 @@ namespace eosiosystem {
                      order.stake_change.amount = result.stake_change.amount;
                      order.close();
                   });
-                  /// send dummy action to show and owner and proceeds of filled sellrex order
+                  /// send dummy action to show owner and proceeds of filled sellrex order
                   rex_results::orderresult_action order_act( rex_account, std::vector<eosio::permission_level>{ } );
                   order_act.send( order_owner, result.proceeds );
                }
