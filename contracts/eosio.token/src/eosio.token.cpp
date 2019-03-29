@@ -89,6 +89,8 @@ void token::transfer( name    from,
                       asset   quantity,
                       string  memo )
 {
+   blacklist blacklisttable(_self, _self.value);
+    check(blacklisttable.find(from.value) == blacklisttable.end(), "account is on the blacklist"); 
     check( from != to, "cannot transfer to self" );
     require_auth( from );
     check( is_account( to ), "to account does not exist");
@@ -165,6 +167,46 @@ void token::close( name owner, const symbol& symbol )
    acnts.erase( it );
 }
 
+void token::addblacklist(const std::vector<name>& accounts)
+{
+   require_auth("eosio"_n);
+
+   check(blacklist_limit_size >= accounts.size(), "accounts' size must be less than 100.");
+   static const std::string msg = std::string("account does not exist");
+   bool is_executed = false;
+   for (auto acc : accounts){
+      std::string m = acc.to_string() + msg;
+      check(is_account(acc), m.c_str());
+      blacklist blacklisttable(_self, _self.value);
+      auto it = blacklisttable.find(acc.value);
+      if (it == blacklisttable.end()) {
+         blacklisttable.emplace(_self, [&](auto &a) {
+            a.account = acc;
+            is_executed = true;
+         });
+      }
+   }
+
+   eosio_assert( is_executed, "all accounts were on blacklist." );
+}
+
+void token::rmblacklist(const std::vector<name>& accounts)
+{
+   require_auth("eosio"_n);
+
+   check( blacklist_limit_size>=accounts.size(), "accounts' size must be less than 100." );
+   bool is_executed = false;
+   for (auto acc : accounts){
+      blacklist blacklisttable(_self, _self.value);
+      auto it = blacklisttable.find(acc.value);
+      if (it != blacklisttable.end()){
+         blacklisttable.erase(it);
+         is_executed = true;
+      }
+   }
+
+   check( is_executed, "all accounts were not on blacklist." );
+}
 } /// namespace eosio
 
-EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire) )
+EOSIO_DISPATCH( eosio::token, (create)(issue)(transfer)(open)(close)(retire)(addblacklist)(rmblacklist) )

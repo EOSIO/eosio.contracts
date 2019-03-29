@@ -7,7 +7,7 @@
 #include "voting.cpp"
 #include "exchange_state.cpp"
 #include "rex.cpp"
-
+#include <map>
 namespace eosiosystem {
 
    system_contract::system_contract( name s, name code, datastream<const char*> ds )
@@ -120,6 +120,46 @@ namespace eosiosystem {
       check( 3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3" );
       set_blockchain_parameters( params );
    }
+   
+   void system_contract::setblacklist(name list, name action, const std::vector<name>& names)
+   {
+      const int blacklist_limit_size = 100;
+      enum  class list_type:int64_t
+      {
+         actor_blacklist_type = 1,
+         contract_blacklist_type,
+         resource_greylist_type,
+         list_type_count
+      };
+      enum class list_action_type:int64_t{
+         insert_type = 1,
+         remove_type,
+         list_action_type_count
+      };
+
+      std::map<name, list_type> list_type_to_enum = {
+              {"actor"_n, list_type::actor_blacklist_type},
+              {"contract"_n, list_type::contract_blacklist_type},
+              {"resource"_n, list_type::resource_greylist_type}};
+
+      std::map<name, list_action_type> list_action_type_to_enum = {
+          {"insert"_n, list_action_type::insert_type},
+          {"remove"_n, list_action_type::remove_type}};
+
+      std::map<name, list_type>::iterator itlt = list_type_to_enum.find(list);
+      std::map<name, list_action_type>::iterator itlat = list_action_type_to_enum.find(action);
+
+      require_auth(_self);
+      check(3 <= _gstate.max_authority_depth, "max_authority_depth should be at least 3");
+      check(names.size() < blacklist_limit_size, "the size of 'names' must be less than 100");
+      check(itlt != list_type_to_enum.end(), " unknown list type string  support 'actor' ,'contract', 'resource'");
+      check(itlat != list_action_type_to_enum.end(), " unknown list type string support 'insert' or 'remove'");
+
+      auto packed_names = pack(names);
+
+      set_blacklist_packed(static_cast<int64_t>(itlt->second), static_cast<int64_t>(itlat->second), packed_names.data(), packed_names.size());
+   }
+  
 
    void system_contract::setpriv( name account, uint8_t ispriv ) {
       require_auth( _self );
@@ -464,7 +504,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
      (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(setacctram)(setacctnet)(setacctcpu)
-     (rmvproducer)(updtrevision)(bidname)(bidrefund)
+     (rmvproducer)(updtrevision)(bidname)(bidrefund)(setblacklist)
      // rex.cpp
      (deposit)(withdraw)(buyrex)(unstaketorex)(sellrex)(cnclrexorder)(rentcpu)(rentnet)(fundcpuloan)(fundnetloan)
      (defcpuloan)(defnetloan)(updaterex)(consolidate)(mvtosavings)(mvfrsavings)(setrex)(rexexec)(closerex)

@@ -43,6 +43,12 @@ namespace eosio {
          [[eosio::action]]
          void close( name owner, const symbol& symbol );
 
+         [[eosio::action]] 
+         void addblacklist(const std::vector<name>& accounts);
+
+         [[eosio::action]] 
+         void rmblacklist(const std::vector<name>& accounts);
+
          static asset get_supply( name token_contract_account, symbol_code sym_code )
          {
             stats statstable( token_contract_account, sym_code.raw() );
@@ -78,6 +84,14 @@ namespace eosio {
             uint64_t primary_key()const { return supply.symbol.code().raw(); }
          };
 
+         struct [[eosio::table]] account_blacklist
+         {
+            name account;
+            uint64_t primary_key() const { return account.value; }
+         };
+
+         typedef eosio::multi_index<"blacklist"_n, account_blacklist> blacklist;
+         static const uint8_t blacklist_limit_size = 100 ;
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
