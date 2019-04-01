@@ -4,7 +4,7 @@ namespace eosiosystem {
    asset exchange_state::convert_to_exchange( connector& c, asset in ) {
 
       real_type R(supply.amount);
-      real_type C(c.balance.amount+in.amount);
+      real_type C(c.balance.amount/* + in.amount*/);
       real_type F(c.weight);
       real_type T(in.amount);
       real_type ONE(1.0);
@@ -21,7 +21,7 @@ namespace eosiosystem {
    asset exchange_state::convert_from_exchange( connector& c, asset in ) {
       check( in.symbol== supply.symbol, "unexpected asset symbol input" );
 
-      real_type R(supply.amount - in.amount);
+      real_type R(supply.amount /*- in.amount*/);
       real_type C(c.balance.amount);
       real_type F(1.0/c.weight);
       real_type E(in.amount);
@@ -78,6 +78,39 @@ namespace eosiosystem {
       return from;
    }
 
+   asset exchange_state::direct_convert( const asset& from, const symbol& to ) {
+      const auto& sell_symbol  = from.symbol;
+      const auto& base_symbol  = base.balance.symbol;
+      const auto& quote_symbol = quote.balance.symbol;
+      check( sell_symbol != to, "cannot convert to the same symbol" );
+      asset out( 0, to );
+      if ( from.symbol == base_symbol && to == quote_symbol ) {
+         out = get_bancor_output( base.balance, quote.balance, from );
+         base.balance  += from;
+         quote.balance -= out;
+      } else if ( from.symbol == quote_symbol && to == base_symbol ) {
+         out = get_bancor_output( quote.balance, base.balance, from );
+         quote.balance += from;
+         base.balance  -= out;
+      } else {
+         check( false, "invalid conversion" );
+      }
+      return out;
+   }
 
+   asset exchange_state::get_bancor_output( const asset& inp_balance,
+                                            const asset& out_balance,
+                                            const asset& inp )
+   {
+      const double ib = double(inp_balance.amount);
+      const double ob = double(out_balance.amount);
+      const double in = double(inp.amount);
+
+      int64_t out = int64_t( (in * ob) / (ib + in) );
+
+      if ( out < 0 ) out = 0;
+
+      return asset( out, out_balance.symbol );
+   }
 
 } /// namespace eosiosystem

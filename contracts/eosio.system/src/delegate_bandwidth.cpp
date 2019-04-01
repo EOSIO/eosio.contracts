@@ -90,7 +90,7 @@ namespace eosiosystem {
 
       auto itr = _rammarket.find(ramcore_symbol.raw());
       auto tmp = *itr;
-      auto eosout = tmp.convert( asset(bytes, ram_symbol), core_symbol() );
+      auto eosout = tmp.direct_convert( asset(bytes, ram_symbol), core_symbol() );
 
       buyram( payer, receiver, eosout );
    }
@@ -139,7 +139,7 @@ namespace eosiosystem {
 
       const auto& market = _rammarket.get(ramcore_symbol.raw(), "ram market does not exist");
       _rammarket.modify( market, same_payer, [&]( auto& es ) {
-          bytes_out = es.convert( quant_after_fee,  ram_symbol ).amount;
+         bytes_out = es.direct_convert( quant_after_fee,  ram_symbol ).amount; 
       });
 
       check( bytes_out > 0, "must reserve a positive amount" );
@@ -190,8 +190,8 @@ namespace eosiosystem {
       asset tokens_out;
       auto itr = _rammarket.find(ramcore_symbol.raw());
       _rammarket.modify( itr, same_payer, [&]( auto& es ) {
-          /// the cast to int64_t of bytes is safe because we certify bytes is <= quota which is limited by prior purchases
-          tokens_out = es.convert( asset(bytes, ram_symbol), core_symbol());
+         /// the cast to int64_t of bytes is safe because we certify bytes is <= quota which is limited by prior purchases
+         tokens_out = es.direct_convert( asset(bytes, ram_symbol), core_symbol());
       });
 
       check( tokens_out.amount > 1, "token amount received from selling ram is too low" );

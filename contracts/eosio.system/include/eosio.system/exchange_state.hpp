@@ -31,6 +31,10 @@ namespace eosiosystem {
       asset convert_to_exchange( connector& c, asset in );
       asset convert_from_exchange( connector& c, asset in );
       asset convert( asset from, const symbol& to );
+      asset direct_convert( const asset& from, const symbol& to );
+      static asset get_bancor_output( const asset& inp_balance,
+                                      const asset& out_balance,
+                                      const asset& inp );
 
       EOSLIB_SERIALIZE( exchange_state, (supply)(base)(quote) )
    };
