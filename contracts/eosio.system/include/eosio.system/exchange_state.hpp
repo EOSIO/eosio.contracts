@@ -6,8 +6,6 @@ namespace eosiosystem {
    using eosio::asset;
    using eosio::symbol;
 
-   typedef double real_type;
-
    /**
     *  Uses Bancor math to create a 50/50 relay between two asset types. The state of the
     *  bancor exchange is entirely contained within this struct. There are no external
@@ -28,13 +26,13 @@ namespace eosiosystem {
 
       uint64_t primary_key()const { return supply.symbol.raw(); }
 
-      asset convert_to_exchange( connector& c, asset in );
-      asset convert_from_exchange( connector& c, asset in );
-      asset convert( asset from, const symbol& to );
+      asset convert_to_exchange( connector& c, const asset& in );
+      asset convert_from_exchange( connector& c, const asset& in );
+      asset convert( const asset& from, const symbol& to );
       asset direct_convert( const asset& from, const symbol& to );
-      static asset get_bancor_output( const asset& inp_balance,
-                                      const asset& out_balance,
-                                      const asset& inp );
+      static asset get_direct_bancor_output( const asset& inp_reserve,
+                                             const asset& out_reserve,
+                                             const asset& inp );
 
       EOSLIB_SERIALIZE( exchange_state, (supply)(base)(quote) )
    };
