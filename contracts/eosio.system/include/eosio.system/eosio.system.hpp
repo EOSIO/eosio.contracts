@@ -413,7 +413,7 @@ namespace eosiosystem {
    /**
     * Rex cpu loan table
     * 
-    * @details The rex cpu loan table is storing all the `rex_load`s instances for cpu, indexed by loan number, expiration and owner.
+    * @details The rex cpu loan table is storing all the `rex_loan`s instances for cpu, indexed by loan number, expiration and owner.
     */
    typedef eosio::multi_index< "cpuloan"_n, rex_loan,
                                indexed_by<"byexpr"_n,  const_mem_fun<rex_loan, uint64_t, &rex_loan::by_expr>>,
@@ -423,7 +423,7 @@ namespace eosiosystem {
    /**
     * Rex net loan table
     * 
-    * @details The rex net loan table is storing all the `rex_load`s instances for net, indexed by loan number,expiration and owner.
+    * @details The rex net loan table is storing all the `rex_loan`s instances for net, indexed by loan number, expiration and owner.
     */
    typedef eosio::multi_index< "netloan"_n, rex_loan,
                                indexed_by<"byexpr"_n,  const_mem_fun<rex_loan, uint64_t, &rex_loan::by_expr>>,
@@ -502,9 +502,9 @@ namespace eosiosystem {
           * 
           * @details Constructs a system contract based on self account, code account and data.
           * 
-          * @params s    - The current code account that is executing the action,
-          * @params code - The original code account that executed the action,
-          * @params ds   - The contract data represented as an `eosio::datastream`.
+          * @param s    - The current code account that is executing the action,
+          * @param code - The original code account that executed the action,
+          * @param ds   - The contract data represented as an `eosio::datastream`.
           */
          system_contract( name s, name code, datastream<const char*> ds );
          ~system_contract();
@@ -512,7 +512,7 @@ namespace eosiosystem {
          /**
           * Returns the core symbol by system account name
           * 
-          * @params system_account - the system account to get the core symbol for.
+          * @param system_account - the system account to get the core symbol for.
           */
          static symbol get_core_symbol( name system_account = "eosio"_n ) {
             rammarket rm(system_account, system_account.value);
@@ -775,7 +775,7 @@ namespace eosiosystem {
           * be used for loan renewal at expiry.
           * 
           * @param from - loan creator account,
-          * @param loan_num - load id,
+          * @param loan_num - loan id,
           * @param payment - tokens transfered from REX fund to loan fund.
           */
          [[eosio::action]]
@@ -788,19 +788,19 @@ namespace eosiosystem {
           * be used for loan renewal at expiry.
           * 
           * @param from - loan creator account,
-          * @param loan_num - load id,
+          * @param loan_num - loan id,
           * @param payment - tokens transfered from REX fund to loan fund.
           */
          [[eosio::action]]
          void fundnetloan( const name& from, uint64_t loan_num, const asset& payment );
 
          /**
-          * Defcpuload action.
+          * Defcpuloan action.
           * 
           * @details Withdraws tokens from the fund of a specific CPU loan and adds them to REX fund.
           * 
           * @param from - loan creator account,
-          * @param loan_num - load id,
+          * @param loan_num - loan id,
           * @param amount - tokens transfered from CPU loan fund to REX fund.
           */
          [[eosio::action]]
@@ -812,7 +812,7 @@ namespace eosiosystem {
           * @details Withdraws tokens from the fund of a specific NET loan and adds them to REX fund.
           * 
           * @param from - loan creator account,
-          * @param loan_num - load id,
+          * @param loan_num - loan id,
           * @param amount - tokens transfered from NET loan fund to REX fund.
           */
          [[eosio::action]]
@@ -823,7 +823,7 @@ namespace eosiosystem {
           * 
           * @details Updates REX owner vote weight to current value of held REX tokens.
           * 
-          * @params owner - REX owner account.
+          * @param owner - REX owner account.
           */
          [[eosio::action]]
          void updaterex( const name& owner );
@@ -843,12 +843,39 @@ namespace eosiosystem {
          /**
           * Consolidate action.
           * 
-          * @details Consolidate REX maturity buckets into one bucket that can be sold after 4 days.
+          * @details Consolidates REX maturity buckets into one bucket that can be sold after 4 days
+          * starting from the end of the day.
           * 
           * @param owner - REX owner account name.
           */
          [[eosio::action]]
          void consolidate( const name& owner );
+
+         /**
+          * Mvtosavings action.
+          * 
+          * @details Moves a specified amount of REX into savings bucket. REX savings bucket
+          * never matures. In order for it to be sold, it has to be moved explicitly
+          * out of that bucket. Then the moved amount will have the regular maturity
+          * period of 4 days starting from the end of the day.
+          * 
+          * @param owner - REX owner account name.
+          * @param rex - amount of REX to be moved.
+          */
+         [[eosio::action]]
+         void mvtosavings( const name& owner, const asset& rex );
+
+         /**
+          * Mvfrsavings action.
+          * 
+          * @details Moves a specified amount of REX out of savings bucket. The moved amount
+          * will have the regular REX maturity period of 4 days.
+          * 
+          * @param owner - REX owner account name.
+          * @param rex - amount of REX to be moved.
+          */
+         [[eosio::action]]
+         void mvfrsavings( const name& owner, const asset& rex );
 
          /**
           * Closerex action.
@@ -1008,9 +1035,9 @@ namespace eosiosystem {
           * proxy updates their own vote. Voter can vote for a proxy __or__ a list of at most 30 producers. 
           * Storage change is billed to `voter`.
           * 
-          * @params voter - the account to change the voted producers for,
-          * @params proxy - the proxy to change the voted producers for,
-          * @params producers - the list of producers to vote for, a maximum of 30 producers is allowed.
+          * @param voter - the account to change the voted producers for,
+          * @param proxy - the proxy to change the voted producers for,
+          * @param producers - the list of producers to vote for, a maximum of 30 producers is allowed.
           * 
           * @pre Producers must be sorted from lowest to highest and must be registered and active
           * @pre If proxy is set then no producers can be voted for
@@ -1179,6 +1206,7 @@ namespace eosiosystem {
          using voteproducer_action = eosio::action_wrapper<"voteproducer"_n, &system_contract::voteproducer>;
          using regproxy_action = eosio::action_wrapper<"regproxy"_n, &system_contract::regproxy>;
          using claimrewards_action = eosio::action_wrapper<"claimrewards"_n, &system_contract::claimrewards>;
+
          using rmvproducer_action = eosio::action_wrapper<"rmvproducer"_n, &system_contract::rmvproducer>;
          using updtrevision_action = eosio::action_wrapper<"updtrevision"_n, &system_contract::updtrevision>;
          using bidname_action = eosio::action_wrapper<"bidname"_n, &system_contract::bidname>;
@@ -1188,7 +1216,6 @@ namespace eosiosystem {
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
 
       private:
-
          // Implementation details:
 
          static symbol get_core_symbol( const rammarket& rm ) {
