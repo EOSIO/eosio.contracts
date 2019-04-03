@@ -4922,6 +4922,7 @@ BOOST_FIXTURE_TEST_CASE( b1_vesting, eosio_system_tester ) try {
 
 BOOST_AUTO_TEST_CASE( setabi_bios ) try {
    validating_tester t( validating_tester::default_config() );
+   t.execute_setup_policy( setup_policy::preactivate_feature_only );
    abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::bios_abi().data()).template as<abi_def>(), base_tester::abi_serializer_max_time);
    t.set_code( config::system_account_name, contracts::bios_wasm() );
    t.set_abi( config::system_account_name, contracts::bios_abi().data() );
