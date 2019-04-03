@@ -79,7 +79,7 @@ public:
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
       abi_ser.set_abi(abi, abi_serializer_max_time);
 
-      while( control->pending_block_state()->header.producer.to_string() == "eosio" ) {
+      while( control->pending_block_producer().to_string() == "eosio" ) {
          produce_block();
       }
    }
@@ -299,7 +299,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig_producers_change, eosio_wrap_tester ) tr
 
    set_producers( {N(prod1), N(prod2), N(prod3), N(prod4), N(prod5), N(newprod1)} ); // With 6 producers, the 2/3+1 threshold becomes 5
 
-   while( control->pending_block_state()->active_schedule.producers.size() != 6 ) {
+   while( control->active_producers().producers.size() != 6 ) {
       produce_block();
    }
 
