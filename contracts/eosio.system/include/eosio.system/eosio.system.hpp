@@ -360,6 +360,9 @@ namespace eosiosystem {
          [[eosio::action]]
          void setacctcpu( name account, std::optional<int64_t> cpu_weight );
 
+         [[eosio::action]]
+         void preactivate( const eosio::checksum256& feature_digest );
+
          // functions defined in delegate_bandwidth.cpp
 
          /**
@@ -481,10 +484,10 @@ namespace eosiosystem {
           */
          [[eosio::action]]
          void mvtosavings( const name& owner, const asset& rex );
-         
+
          /**
           * Moves a specified amount of REX out of savings bucket. The moved amount
-          * will have the regular REX maturity period of 4 days.  
+          * will have the regular REX maturity period of 4 days.
           */
          [[eosio::action]]
          void mvfrsavings( const name& owner, const asset& rex );

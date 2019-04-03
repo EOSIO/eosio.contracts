@@ -277,6 +277,11 @@ namespace eosiosystem {
       set_resource_limits( account.value, current_ram, current_net, cpu );
    }
 
+   void system_contract::preactivate( const eosio::checksum256& feature_digest ) {
+      require_auth( get_self() );
+      preactivate_feature( feature_digest );
+   }
+
    void system_contract::rmvproducer( name producer ) {
       require_auth( _self );
       auto prod = _producers.find( producer.value );
@@ -463,7 +468,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      // native.hpp (newaccount definition is actually in eosio.system.cpp)
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
-     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(setacctram)(setacctnet)(setacctcpu)
+     (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(setacctram)(setacctnet)(setacctcpu)(preactivate)
      (rmvproducer)(updtrevision)(bidname)(bidrefund)
      // rex.cpp
      (deposit)(withdraw)(buyrex)(unstaketorex)(sellrex)(cnclrexorder)(rentcpu)(rentnet)(fundcpuloan)(fundnetloan)
