@@ -484,29 +484,6 @@ namespace eosiosystem {
    }
 
    /**
-    * Given two connector balances (conin, and conout), and an incoming amount of
-    * in, this function calculates the delta out using Banacor equation.
-    *
-    * @param in - input amount, same units as conin
-    * @param conin - the input connector balance
-    * @param conout - the output connector balance
-    *
-    * @return int64_t - conversion output amount
-    */
-   int64_t get_bancor_output( int64_t conin, int64_t conout, int64_t in )
-   {
-      const double F0 = double(conin);
-      const double T0 = double(conout);
-      const double I  = double(in);
-
-      auto out = int64_t((I*T0) / (I+F0));
-
-      if ( out < 0 ) out = 0;
-
-      return out;
-   }
-
-   /**
     * @brief Updates account NET and CPU resource limits
     *
     * @param from - account charged for RAM if there is a need
@@ -630,9 +607,9 @@ namespace eosiosystem {
    void system_contract::remove_loan_from_rex_pool( const rex_loan& loan )
    {
       const auto& pool = _rexpool.begin();
-      const int64_t delta_total_rent = get_bancor_output( pool->total_unlent.amount,
-                                                          pool->total_rent.amount,
-                                                          loan.total_staked.amount );
+      const int64_t delta_total_rent = exchange_state::get_bancor_output( pool->total_unlent.amount,
+                                                                          pool->total_rent.amount,
+                                                                          loan.total_staked.amount );
       _rexpool.modify( pool, same_payer, [&]( auto& rt ) {
          // deduct calculated delta_total_rent from total_rent
          rt.total_rent.amount    -= delta_total_rent;
@@ -675,9 +652,9 @@ namespace eosiosystem {
          bool    delete_loan   = false;
          int64_t delta_stake   = 0;
          /// calculate rented tokens at current price
-         int64_t rented_tokens = get_bancor_output( pool->total_rent.amount,
-                                                    pool->total_unlent.amount,
-                                                    itr->payment.amount );
+         int64_t rented_tokens = exchange_state::get_bancor_output( pool->total_rent.amount,
+                                                                    pool->total_unlent.amount,
+                                                                    itr->payment.amount );
          /// conditions for loan renewal
          bool renew_loan = itr->payment <= itr->balance        /// loan has sufficient balance 
                         && itr->payment.amount < rented_tokens /// loan has favorable return 
@@ -783,7 +760,9 @@ namespace eosiosystem {
 
       const auto& pool = _rexpool.begin(); /// already checked that _rexpool.begin() != _rexpool.end() in rex_loans_available()
 
-      int64_t rented_tokens = get_bancor_output( pool->total_rent.amount, pool->total_unlent.amount, payment.amount );
+      int64_t rented_tokens = exchange_state::get_bancor_output( pool->total_rent.amount,
+                                                                 pool->total_unlent.amount,
+                                                                 payment.amount );
       check( payment.amount < rented_tokens, "loan price does not favor renting" );
       add_loan_to_rex_pool( payment, rented_tokens, true );
 
