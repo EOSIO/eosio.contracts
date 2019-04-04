@@ -7,9 +7,15 @@ namespace eosiosystem {
    using eosio::symbol;
 
    /**
-    *  Uses Bancor math to create a 50/50 relay between two asset types. The state of the
-    *  bancor exchange is entirely contained within this struct. There are no external
-    *  side effects associated with using this API.
+    * @addtogroup eosiosystem
+    * @{
+    */
+
+   /**
+    * Uses Bancor math to create a 50/50 relay between two asset types.
+    *  
+    * @details The state of the bancor exchange is entirely contained within this struct. 
+    * There are no external side effects associated with using this API.
     */
    struct [[eosio::table, eosio::contract("eosio.system")]] exchange_state {
       asset    supply;
@@ -38,5 +44,5 @@ namespace eosiosystem {
    };
 
    typedef eosio::multi_index< "rammarket"_n, exchange_state > rammarket;
-
+   /** @}*/ // enf of @addtogroup eosiosystem
 } /// namespace eosiosystem
