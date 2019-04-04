@@ -20,10 +20,10 @@ namespace eosiosystem {
    {
       const double R0 = reserve.balance.amount;
       const double S0 = supply.amount;
-      const double dS = -tokens.amount; // tokens are subtracted from supply
+      const double dS = -tokens.amount; // dS < 0, tokens are subtracted from supply
       const double Fi = double(1) / reserve.weight;
 
-      double dR = R0 * ( std::pow(1. + dS / S0, Fi) - 1. ); // dR < 0
+      double dR = R0 * ( std::pow(1. + dS / S0, Fi) - 1. ); // dR < 0 since dS < 0
       if ( dR > 0 ) dR = 0; // rounding errors 
       reserve.balance.amount -= int64_t(-dR);
       supply                 -= tokens;
@@ -50,7 +50,8 @@ namespace eosiosystem {
       return out;
    }
 
-   asset exchange_state::direct_convert( const asset& from, const symbol& to ) {
+   asset exchange_state::direct_convert( const asset& from, const symbol& to )
+   {
       const auto& sell_symbol  = from.symbol;
       const auto& base_symbol  = base.balance.symbol;
       const auto& quote_symbol = quote.balance.symbol;
@@ -58,11 +59,11 @@ namespace eosiosystem {
 
       asset out( 0, to );
       if ( sell_symbol == base_symbol && to == quote_symbol ) {
-         out = get_direct_bancor_output( base.balance, quote.balance, from );
+         out.amount = get_bancor_output( base.balance.amount, quote.balance.amount, from.amount );
          base.balance  += from;
          quote.balance -= out;
       } else if ( sell_symbol == quote_symbol && to == base_symbol ) {
-         out = get_direct_bancor_output( quote.balance, base.balance, from );
+         out.amount = get_bancor_output( quote.balance.amount, base.balance.amount, from.amount );
          quote.balance += from;
          base.balance  -= out;
       } else {
@@ -71,19 +72,19 @@ namespace eosiosystem {
       return out;
    }
 
-   asset exchange_state::get_direct_bancor_output( const asset& inp_reserve,
-                                                   const asset& out_reserve,
-                                                   const asset& inp )
+   int64_t exchange_state::get_bancor_output( int64_t inp_reserve,
+                                              int64_t out_reserve,
+                                              int64_t inp )
    {
-      const double ib = inp_reserve.amount;
-      const double ob = out_reserve.amount;
-      const double in = inp.amount;
+      const double ib = inp_reserve;
+      const double ob = out_reserve;
+      const double in = inp;
 
       int64_t out = int64_t( (in * ob) / (ib + in) );
 
       if ( out < 0 ) out = 0;
 
-      return asset( out, out_reserve.symbol );
+      return out;
    }
 
 } /// namespace eosiosystem
