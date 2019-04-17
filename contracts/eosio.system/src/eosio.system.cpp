@@ -100,13 +100,6 @@ namespace eosiosystem {
       _gstate2.last_ram_increase = cbt;
    }
 
-   /**
-    *  Sets the rate of increase of RAM in bytes per block. It is capped by the uint16_t to
-    *  a maximum rate of 3 TB per year.
-    *
-    *  If update_ram_supply hasn't been called for the most recent block, then new ram will
-    *  be allocated at the old rate up to the present block before switching the rate.
-    */
    void system_contract::setramrate( uint16_t bytes_per_block ) {
       require_auth( _self );
 
