@@ -597,6 +597,14 @@ namespace eosiosystem {
          [[eosio::action]]
          void setacctcpu( name account, std::optional<int64_t> cpu_weight );
 
+
+         /**
+          * Activates a protocol feature.
+          *
+          * @details Activates a protocol feature
+          *
+          * @param feature_digest - hash of the protocol feature to activate.
+          */
          [[eosio::action]]
          void activate( const eosio::checksum256& feature_digest );
 
@@ -882,7 +890,7 @@ namespace eosiosystem {
 
          /**
           * Closerex action.
-          * 
+          *
           * @details Deletes owner records from REX tables and frees used RAM. Owner must not have
           * an outstanding REX balance.
           *
