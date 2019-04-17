@@ -72,9 +72,9 @@ public:
       );
    }
 
-   action_result issue( account_name issuer, account_name to, asset quantity, string memo ) {
+   action_result issue( account_name issuer, asset quantity, string memo ) {
       return push_action( issuer, N(issue), mvo()
-           ( "to", to)
+           ( "to", issuer)
            ( "quantity", quantity)
            ( "memo", memo)
       );
@@ -214,7 +214,7 @@ BOOST_FIXTURE_TEST_CASE( issue_tests, eosio_token_tester ) try {
    auto token = create( N(alice), asset::from_string("1000.000 TKN"));
    produce_blocks(1);
 
-   issue( N(alice), N(alice), asset::from_string("500.000 TKN"), "hola" );
+   issue( N(alice), asset::from_string("500.000 TKN"), "hola" );
 
    auto stats = get_stats("3,TKN");
    REQUIRE_MATCHING_OBJECT( stats, mvo()
@@ -229,15 +229,15 @@ BOOST_FIXTURE_TEST_CASE( issue_tests, eosio_token_tester ) try {
    );
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "quantity exceeds available supply" ),
-      issue( N(alice), N(alice), asset::from_string("500.001 TKN"), "hola" )
+      issue( N(alice), asset::from_string("500.001 TKN"), "hola" )
    );
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "must issue positive quantity" ),
-      issue( N(alice), N(alice), asset::from_string("-1.000 TKN"), "hola" )
+      issue( N(alice), asset::from_string("-1.000 TKN"), "hola" )
    );
 
    BOOST_REQUIRE_EQUAL( success(),
-      issue( N(alice), N(alice), asset::from_string("1.000 TKN"), "hola" )
+      issue( N(alice), asset::from_string("1.000 TKN"), "hola" )
    );
 
 
@@ -248,7 +248,7 @@ BOOST_FIXTURE_TEST_CASE( retire_tests, eosio_token_tester ) try {
    auto token = create( N(alice), asset::from_string("1000.000 TKN"));
    produce_blocks(1);
 
-   BOOST_REQUIRE_EQUAL( success(), issue( N(alice), N(alice), asset::from_string("500.000 TKN"), "hola" ) );
+   BOOST_REQUIRE_EQUAL( success(), issue( N(alice), asset::from_string("500.000 TKN"), "hola" ) );
 
    auto stats = get_stats("3,TKN");
    REQUIRE_MATCHING_OBJECT( stats, mvo()
@@ -305,7 +305,7 @@ BOOST_FIXTURE_TEST_CASE( transfer_tests, eosio_token_tester ) try {
    auto token = create( N(alice), asset::from_string("1000 CERO"));
    produce_blocks(1);
 
-   issue( N(alice), N(alice), asset::from_string("1000 CERO"), "hola" );
+   issue( N(alice), asset::from_string("1000 CERO"), "hola" );
 
    auto stats = get_stats("0,CERO");
    REQUIRE_MATCHING_OBJECT( stats, mvo()
@@ -353,7 +353,7 @@ BOOST_FIXTURE_TEST_CASE( open_tests, eosio_token_tester ) try {
    auto alice_balance = get_account(N(alice), "0,CERO");
    BOOST_REQUIRE_EQUAL(true, alice_balance.is_null() );
 
-   BOOST_REQUIRE_EQUAL( success(), issue( N(alice), N(alice), asset::from_string("1000 CERO"), "issue" ) );
+   BOOST_REQUIRE_EQUAL( success(), issue( N(alice), asset::from_string("1000 CERO"), "issue" ) );
 
    alice_balance = get_account(N(alice), "0,CERO");
    REQUIRE_MATCHING_OBJECT( alice_balance, mvo()
@@ -392,7 +392,7 @@ BOOST_FIXTURE_TEST_CASE( close_tests, eosio_token_tester ) try {
    auto alice_balance = get_account(N(alice), "0,CERO");
    BOOST_REQUIRE_EQUAL(true, alice_balance.is_null() );
 
-   BOOST_REQUIRE_EQUAL( success(), issue( N(alice), N(alice), asset::from_string("1000 CERO"), "hola" ) );
+   BOOST_REQUIRE_EQUAL( success(), issue( N(alice), asset::from_string("1000 CERO"), "hola" ) );
 
    alice_balance = get_account(N(alice), "0,CERO");
    REQUIRE_MATCHING_OBJECT( alice_balance, mvo()

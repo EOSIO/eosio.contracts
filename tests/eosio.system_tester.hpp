@@ -753,11 +753,31 @@ public:
    }
 
    void issue( name to, const asset& amount, name manager = config::system_account_name ) {
-      base_tester::push_action( N(eosio.token), N(issue), manager, mutable_variant_object()
-                                ("to",      to )
-                                ("quantity", amount )
-                                ("memo", "")
-                                );
+      signed_transaction trx;
+      trx.actions.emplace_back(
+         get_action( N(eosio.token), N(issue),
+                     vector<permission_level>{{manager, config::active_name}},
+                     mutable_variant_object()
+                        ("to",       manager )
+                        ("quantity", amount )
+                        ("memo",     "")
+         )
+      );
+      if( to != manager ) {
+         trx.actions.emplace_back(
+            get_action( N(eosio.token), N(transfer),
+                        vector<permission_level>{{manager, config::active_name}},
+                        mutable_variant_object()
+                           ("from",     manager)
+                           ("to",       to )
+                           ("quantity", amount )
+                           ("memo",     "")
+            )
+         );
+      }
+      set_transaction_headers( trx );
+      trx.sign( get_private_key( manager, "active" ), control->get_chain_id()  );
+      push_transaction( trx );
    }
    void transfer( name from, name to, const asset& amount, name manager = config::system_account_name ) {
       base_tester::push_action( N(eosio.token), N(transfer), manager, mutable_variant_object()
