@@ -170,7 +170,7 @@ namespace eosio {
          }
 
          [[eosio::action]]
-         void preactivate( const eosio::checksum256& feature_digest ) {
+         void activate( const eosio::checksum256& feature_digest ) {
             require_auth( get_self() );
             preactivate_feature( feature_digest );
          }

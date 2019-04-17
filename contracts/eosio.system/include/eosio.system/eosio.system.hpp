@@ -361,7 +361,7 @@ namespace eosiosystem {
          void setacctcpu( name account, std::optional<int64_t> cpu_weight );
 
          [[eosio::action]]
-         void preactivate( const eosio::checksum256& feature_digest );
+         void activate( const eosio::checksum256& feature_digest );
 
          // functions defined in delegate_bandwidth.cpp
 
