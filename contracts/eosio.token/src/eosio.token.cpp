@@ -39,6 +39,7 @@ void token::issue( name to, asset quantity, string memo )
     auto existing = statstable.find( sym.code().raw() );
     check( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
     const auto& st = *existing;
+    check( to == st.issuer, "tokens can only be issued to issuer account" );
 
     require_auth( st.issuer );
     check( quantity.is_valid(), "invalid quantity" );
@@ -52,12 +53,6 @@ void token::issue( name to, asset quantity, string memo )
     });
 
     add_balance( st.issuer, quantity, st.issuer );
-
-    if( to != st.issuer ) {
-      SEND_INLINE_ACTION( *this, transfer, { {st.issuer, "active"_n} },
-                          { st.issuer, to, quantity, memo }
-      );
-    }
 }
 
 void token::retire( asset quantity, string memo )
