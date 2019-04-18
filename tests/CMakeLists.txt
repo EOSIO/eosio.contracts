@@ -1,7 +1,7 @@
 cmake_minimum_required( VERSION 3.5 )
 
-set(EOSIO_VERSION_MIN "1.6")
-set(EOSIO_VERSION_SOFT_MAX "1.7")
+set(EOSIO_VERSION_MIN "1.8")
+set(EOSIO_VERSION_SOFT_MAX "1.8")
 #set(EOSIO_VERSION_HARD_MAX "")
 
 find_package(eosio)
