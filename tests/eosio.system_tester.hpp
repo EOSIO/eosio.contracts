@@ -762,17 +762,32 @@ public:
       base_tester::push_action(contract, N(create), contract, act );
    }
 
-   void issue( name to, const asset& amount, name manager = config::system_account_name ) {
+   void issue( const name& to, const asset& amount, const name& manager = config::system_account_name ) {
       base_tester::push_action( N(eosio.token), N(issue), manager, mutable_variant_object()
                                 ("to",      to )
                                 ("quantity", amount )
                                 ("memo", "")
                                 );
    }
-   void transfer( name from, name to, const asset& amount, name manager = config::system_account_name ) {
+
+   void transfer( const name& from, const name& to, const asset& amount, const name& manager = config::system_account_name ) {
       base_tester::push_action( N(eosio.token), N(transfer), manager, mutable_variant_object()
                                 ("from",    from)
                                 ("to",      to )
+                                ("quantity", amount)
+                                ("memo", "")
+                                );
+   }
+
+   void issue_and_transfer( const name& to, const asset& amount, const name& manager = config::system_account_name ) {
+      base_tester::push_action( N(eosio.token), N(issue), manager, mutable_variant_object()
+                                ("to",       manager )
+                                ("quantity", amount )
+                                ("memo",     "")
+                                );
+      base_tester::push_action( N(eosio.token), N(transfer), manager, mutable_variant_object()
+                                ("from",     manager)
+                                ("to",       to )
                                 ("quantity", amount)
                                 ("memo", "")
                                 );
