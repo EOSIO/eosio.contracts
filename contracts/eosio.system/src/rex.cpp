@@ -528,7 +528,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Performs maintenance operations on expired NET and CPU loans and sellrex oders
+    * @brief Performs maintenance operations on expired NET and CPU loans and sellrex orders
     *
     * @param max - maximum number of each of the three categories to be processed
     */
