@@ -79,7 +79,7 @@ public:
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
       abi_ser.set_abi(abi, abi_serializer_max_time);
 
-      while( control->pending_block_state()->header.producer.to_string() == "eosio" ) {
+      while( control->pending_block_producer().to_string() == "eosio" ) {
          produce_block();
       }
    }
@@ -166,7 +166,11 @@ BOOST_FIXTURE_TEST_CASE( wrap_exec_direct, eosio_wrap_tester ) try {
    auto trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
 
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
 
    {
       signed_transaction wrap_trx( wrap_exec( N(alice), trx ), {}, {} );
@@ -214,8 +218,10 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
    approve( N(carol), N(first), N(prod4) );
 
    vector<transaction_trace_ptr> traces;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) {
-      if (t->scheduled) {
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) {
          traces.push_back( t );
       }
    } );
@@ -299,7 +305,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig_producers_change, eosio_wrap_tester ) tr
 
    set_producers( {N(prod1), N(prod2), N(prod3), N(prod4), N(prod5), N(newprod1)} ); // With 6 producers, the 2/3+1 threshold becomes 5
 
-   while( control->pending_block_state()->active_schedule.producers.size() != 6 ) {
+   while( control->active_producers().producers.size() != 6 ) {
       produce_block();
    }
 
@@ -328,8 +334,10 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig_producers_change, eosio_wrap_tester ) tr
    approve( N(carol), N(first), N(prod5) );
 
    vector<transaction_trace_ptr> traces;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) {
-      if (t->scheduled) {
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) {
          traces.push_back( t );
       }
    } );

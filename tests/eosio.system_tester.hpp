@@ -352,13 +352,11 @@ public:
       auto trace = base_tester::push_action( config::system_account_name, N(buyrex), from, mvo()("from", from)("amount", amount) );
       asset rex_received;
       for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
-         for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
-            if ( trace->action_traces[i].inline_traces[j].act.name == N(buyresult) ) {
-               fc::raw::unpack( trace->action_traces[i].inline_traces[j].act.data.data(),
-                                trace->action_traces[i].inline_traces[j].act.data.size(),
-                                rex_received );
-               return rex_received;
-            }
+         if ( trace->action_traces[i].act.name == N(buyresult) ) {
+            fc::raw::unpack( trace->action_traces[i].act.data.data(),
+                             trace->action_traces[i].act.data.size(),
+                             rex_received );
+            return rex_received;
          }
       }
       return rex_received;
@@ -382,13 +380,11 @@ public:
       );
       asset rex_received;
       for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
-         for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
-            if ( trace->action_traces[i].inline_traces[j].act.name == N(buyresult) ) {
-               fc::raw::unpack( trace->action_traces[i].inline_traces[j].act.data.data(),
-                                trace->action_traces[i].inline_traces[j].act.data.size(),
-                                rex_received );
-               return rex_received;
-            }
+         if ( trace->action_traces[i].act.name == N(buyresult) ) {
+            fc::raw::unpack( trace->action_traces[i].act.data.data(),
+                             trace->action_traces[i].act.data.size(),
+                             rex_received );
+            return rex_received;
          }
       }
       return rex_received;
@@ -405,29 +401,25 @@ public:
       auto trace = base_tester::push_action( config::system_account_name, N(sellrex), from, mvo()("from", from)("rex", rex) );
       asset proceeds;
       for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
-         for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
-            if ( trace->action_traces[i].inline_traces[j].act.name == N(sellresult) ) {
-               fc::raw::unpack( trace->action_traces[i].inline_traces[j].act.data.data(),
-                                trace->action_traces[i].inline_traces[j].act.data.size(),
-                                proceeds );
-               return proceeds;
-            }
+         if ( trace->action_traces[i].act.name == N(sellresult) ) {
+            fc::raw::unpack( trace->action_traces[i].act.data.data(),
+                             trace->action_traces[i].act.data.size(),
+                             proceeds );
+            return proceeds;
          }
-      } 
+      }
       return proceeds;
    }
 
    auto get_rexorder_result( const transaction_trace_ptr& trace ) {
       std::vector<std::pair<account_name, asset>> output;
       for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
-         for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
-            if ( trace->action_traces[i].inline_traces[j].act.name == N(orderresult) ) {
-               fc::datastream<const char*> ds( trace->action_traces[i].inline_traces[j].act.data.data(),
-                                               trace->action_traces[i].inline_traces[j].act.data.size() );
-               account_name owner; fc::raw::unpack( ds, owner );
-               asset proceeds; fc::raw::unpack( ds, proceeds );
-               output.emplace_back( owner, proceeds );
-            }
+         if ( trace->action_traces[i].act.name == N(orderresult) ) {
+            fc::datastream<const char*> ds( trace->action_traces[i].act.data.data(),
+                                            trace->action_traces[i].act.data.size() );
+            account_name owner; fc::raw::unpack( ds, owner );
+            asset proceeds; fc::raw::unpack( ds, proceeds );
+            output.emplace_back( owner, proceeds );
          }
       }
       return output;
@@ -466,13 +458,11 @@ public:
 
       asset rented_tokens = core_sym::from_string("0.0000");
       for ( size_t i = 0; i < trace->action_traces.size(); ++i ) {
-         for ( size_t j = 0; j < trace->action_traces[i].inline_traces.size(); ++j ) {
-            if ( trace->action_traces[i].inline_traces[j].act.name == N(rentresult) ) {
-               fc::raw::unpack( trace->action_traces[i].inline_traces[j].act.data.data(),
-                                trace->action_traces[i].inline_traces[j].act.data.size(),
-                                rented_tokens );
-               return rented_tokens;
-            }
+         if ( trace->action_traces[i].act.name == N(rentresult) ) {
+            fc::raw::unpack( trace->action_traces[i].act.data.data(),
+                             trace->action_traces[i].act.data.size(),
+                             rented_tokens );
+            return rented_tokens;
          }
       }
       return rented_tokens;
@@ -595,7 +585,7 @@ public:
       vector<char> data = get_row_by_account( config::system_account_name, from, N(delband), receiver );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("delegated_bandwidth", data, abi_serializer_max_time);
    }
-      
+
    asset get_rex_balance( const account_name& act ) const {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexbal), act );
       return data.empty() ? asset(0, symbol(SY(4, REX))) : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["rex_balance"].as<asset>();
