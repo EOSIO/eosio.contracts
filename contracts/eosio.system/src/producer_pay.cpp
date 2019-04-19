@@ -16,7 +16,7 @@ namespace eosiosystem {
    const int64_t  useconds_per_day      = 24 * 3600 * int64_t(1000000);
    const int64_t  useconds_per_year     = seconds_per_year*1000000ll;
 
-   void system_contract::onblock( const ignore<block_header>& ) {
+   void system_contract::onblock( ignore<block_header> ) {
       using namespace eosio;
 
       require_auth(_self);

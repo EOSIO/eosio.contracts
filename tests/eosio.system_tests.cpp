@@ -189,7 +189,6 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake, eosio_system_tester ) try {
 BOOST_FIXTURE_TEST_CASE( stake_unstake_with_transfer, eosio_system_tester ) try {
    cross_15_percent_threshold();
 
-   issue_and_transfer( "eosio.stake", core_sym::from_string("1000.0000"), config::system_account_name );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000"), get_balance( "alice1111111" ) );
 
    //eosio stakes for alice with transfer flag
@@ -4860,7 +4859,7 @@ BOOST_FIXTURE_TEST_CASE( b1_vesting, eosio_system_tester ) try {
 
    const name b1{ N(b1) };
 
-   issue_and_transfer( alice, core_sym::from_string("10000.0000"), config::system_account_name );
+   issue_and_transfer( alice, core_sym::from_string("20000.0000"), config::system_account_name );
    issue_and_transfer( bob,   core_sym::from_string("20000.0000"), config::system_account_name );
    BOOST_REQUIRE_EQUAL( success(), bidname( bob,   b1, core_sym::from_string( "0.5000" ) ) );
    BOOST_REQUIRE_EQUAL( success(), bidname( alice, b1, core_sym::from_string( "1.0000" ) ) );

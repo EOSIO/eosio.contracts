@@ -187,10 +187,10 @@ namespace eosiosystem {
           * an amount equal to the current new account creation fee.
           */
          [[eosio::action]]
-         void newaccount( const name&              creator,
-                          const name&              name,
-                          const ignore<authority>& owner,
-                          const ignore<authority>& active);
+         void newaccount( const name&       creator,
+                          const name&       name,
+                          ignore<authority> owner,
+                          ignore<authority> active);
 
          /**
           * Update authorization action.
@@ -203,10 +203,10 @@ namespace eosiosystem {
           * @param aut - the json describing the permission authorization
           */
          [[eosio::action]]
-         void updateauth( const ignore<name>&      account,
-                          const ignore<name>&      permission,
-                          const ignore<name>&      parent,
-                          const ignore<authority>& auth ) {}
+         void updateauth( ignore<name>      account,
+                          ignore<name>      permission,
+                          ignore<name>      parent,
+                          ignore<authority> auth ) {}
 
          /**
           * Delete authorization action.
@@ -217,8 +217,8 @@ namespace eosiosystem {
           * @param permission - the permission name been deleted.
           */
          [[eosio::action]]
-         void deleteauth( const ignore<name>& account,
-                          const ignore<name>& permission ) {}
+         void deleteauth( ignore<name> account,
+                          ignore<name> permission ) {}
 
          /**
           * Link authorization action.
@@ -238,10 +238,10 @@ namespace eosiosystem {
           * @param requirement - the permission to be linked.
           */
          [[eosio::action]]
-         void linkauth( const ignore<name>&    account,
-                        const ignore<name>&    code,
-                        const ignore<name>&    type,
-                        const ignore<name>&    requirement  ) {}
+         void linkauth( ignore<name> account,
+                        ignore<name> code,
+                        ignore<name> type,
+                        ignore<name> requirement  ) {}
 
          /**
           * Unlink authorization action.
@@ -253,9 +253,9 @@ namespace eosiosystem {
           * @param type - the action to be unlinked.
           */
          [[eosio::action]]
-         void unlinkauth( const ignore<name>&  account,
-                          const ignore<name>&  code,
-                          const ignore<name>&  type ) {}
+         void unlinkauth( ignore<name> account,
+                          ignore<name> code,
+                          ignore<name> type ) {}
 
          /**
           * Cancel delay action.
@@ -266,7 +266,7 @@ namespace eosiosystem {
           * @param trx_id - the deferred transaction id to be cancelled.
           */
          [[eosio::action]]
-         void canceldelay( const ignore<permission_level>& canceling_auth, const ignore<capi_checksum256>& trx_id ) {}
+         void canceldelay( ignore<permission_level> canceling_auth, ignore<capi_checksum256> trx_id ) {}
 
          /**
           * On error action.
@@ -277,7 +277,7 @@ namespace eosiosystem {
           * @param sent_trx - the transaction that failed.
           */
          [[eosio::action]]
-         void onerror( const ignore<uint128_t>& sender_id, const ignore<std::vector<char>>& sent_trx ) {}
+         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {}
 
          /**
           * Set abi action.

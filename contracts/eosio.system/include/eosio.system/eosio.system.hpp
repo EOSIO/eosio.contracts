@@ -549,7 +549,7 @@ namespace eosiosystem {
           * @param header - the block header produced.
           */
          [[eosio::action]]
-         void onblock( const ignore<block_header>& header );
+         void onblock( ignore<block_header> header );
 
          /**
           * Set account limits action.

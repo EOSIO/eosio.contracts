@@ -371,10 +371,10 @@ namespace eosiosystem {
     *  who can create accounts with the creator's name as a suffix.
     *
     */
-   void native::newaccount( const name&              creator,
-                            const name&              newact,
-                            const ignore<authority>& owner,
-                            const ignore<authority>& active ) {
+   void native::newaccount( const name&       creator,
+                            const name&       newact,
+                            ignore<authority> owner,
+                            ignore<authority> active ) {
 
       if( creator != _self ) {
          uint64_t tmp = newact.value >> 4;
