@@ -7,8 +7,8 @@
 
 namespace eosio {
 
-void token::create( name   issuer,
-                    asset  maximum_supply )
+void token::create( const name&   issuer,
+                    const asset&  maximum_supply )
 {
     require_auth( _self );
 
@@ -29,7 +29,7 @@ void token::create( name   issuer,
 }
 
 
-void token::issue( name to, asset quantity, string memo )
+void token::issue( const name& to, const asset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
     check( sym.is_valid(), "invalid symbol name" );
@@ -39,6 +39,7 @@ void token::issue( name to, asset quantity, string memo )
     auto existing = statstable.find( sym.code().raw() );
     check( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
     const auto& st = *existing;
+    check( to == st.issuer, "tokens can only be issued to issuer account" );
 
     require_auth( st.issuer );
     check( quantity.is_valid(), "invalid quantity" );
@@ -52,15 +53,9 @@ void token::issue( name to, asset quantity, string memo )
     });
 
     add_balance( st.issuer, quantity, st.issuer );
-
-    if( to != st.issuer ) {
-      SEND_INLINE_ACTION( *this, transfer, { {st.issuer, "active"_n} },
-                          { st.issuer, to, quantity, memo }
-      );
-    }
 }
 
-void token::retire( asset quantity, string memo )
+void token::retire( const asset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
     check( sym.is_valid(), "invalid symbol name" );
@@ -84,10 +79,10 @@ void token::retire( asset quantity, string memo )
     sub_balance( st.issuer, quantity );
 }
 
-void token::transfer( name    from,
-                      name    to,
-                      asset   quantity,
-                      string  memo )
+void token::transfer( const name&    from,
+                      const name&    to,
+                      const asset&   quantity,
+                      const string&  memo )
 {
     check( from != to, "cannot transfer to self" );
     require_auth( from );
@@ -110,7 +105,7 @@ void token::transfer( name    from,
     add_balance( to, quantity, payer );
 }
 
-void token::sub_balance( name owner, asset value ) {
+void token::sub_balance( const name& owner, const asset& value ) {
    accounts from_acnts( _self, owner.value );
 
    const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
@@ -121,7 +116,7 @@ void token::sub_balance( name owner, asset value ) {
       });
 }
 
-void token::add_balance( name owner, asset value, name ram_payer )
+void token::add_balance( const name& owner, const asset& value, const name& ram_payer )
 {
    accounts to_acnts( _self, owner.value );
    auto to = to_acnts.find( value.symbol.code().raw() );
@@ -136,7 +131,7 @@ void token::add_balance( name owner, asset value, name ram_payer )
    }
 }
 
-void token::open( name owner, const symbol& symbol, name ram_payer )
+void token::open( const name& owner, const symbol& symbol, const name& ram_payer )
 {
    require_auth( ram_payer );
 
@@ -155,7 +150,7 @@ void token::open( name owner, const symbol& symbol, name ram_payer )
    }
 }
 
-void token::close( name owner, const symbol& symbol )
+void token::close( const name& owner, const symbol& symbol )
 {
    require_auth( owner );
    accounts acnts( _self, owner.value );

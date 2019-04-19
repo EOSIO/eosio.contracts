@@ -54,7 +54,7 @@ public:
    void create_core_token( symbol core_symbol = symbol{CORE_SYM} ) {
       FC_ASSERT( core_symbol.precision() != 4, "create_core_token assumes precision of core token is 4" );
       create_currency( N(eosio.token), config::system_account_name, asset(100000000000000, core_symbol) );
-      issue(config::system_account_name, asset(10000000000000, core_symbol) );
+      issue( asset(10000000000000, core_symbol) );
       BOOST_REQUIRE_EQUAL( asset(10000000000000, core_symbol), get_balance( "eosio", core_symbol ) );
    }
 
@@ -752,40 +752,47 @@ public:
       base_tester::push_action(contract, N(create), contract, act );
    }
 
-   void issue( name to, const asset& amount, name manager = config::system_account_name ) {
-      signed_transaction trx;
-      trx.actions.emplace_back(
-         get_action( N(eosio.token), N(issue),
-                     vector<permission_level>{{manager, config::active_name}},
-                     mutable_variant_object()
-                        ("to",       manager )
-                        ("quantity", amount )
-                        ("memo",     "")
-         )
-      );
-      if( to != manager ) {
-         trx.actions.emplace_back(
-            get_action( N(eosio.token), N(transfer),
-                        vector<permission_level>{{manager, config::active_name}},
-                        mutable_variant_object()
-                           ("from",     manager)
-                           ("to",       to )
-                           ("quantity", amount )
-                           ("memo",     "")
-            )
-         );
-      }
-      set_transaction_headers( trx );
-      trx.sign( get_private_key( manager, "active" ), control->get_chain_id()  );
-      push_transaction( trx );
+   void issue( const asset& amount, const name& manager = config::system_account_name ) {
+      base_tester::push_action( N(eosio.token), N(issue), manager, mutable_variant_object()
+                                ("to",       manager )
+                                ("quantity", amount )
+                                ("memo",     "")
+                                );
    }
-   void transfer( name from, name to, const asset& amount, name manager = config::system_account_name ) {
+
+   void transfer( const name& from, const name& to, const asset& amount, const name& manager = config::system_account_name ) {
       base_tester::push_action( N(eosio.token), N(transfer), manager, mutable_variant_object()
                                 ("from",    from)
                                 ("to",      to )
                                 ("quantity", amount)
                                 ("memo", "")
                                 );
+   }
+
+   void issue_and_transfer( const name& to, const asset& amount, const name& manager = config::system_account_name ) {
+      signed_transaction trx;
+      trx.actions.emplace_back( get_action( N(eosio.token), N(issue),
+                                            vector<permission_level>{{manager, config::active_name}},
+                                            mutable_variant_object()
+                                            ("to",       manager )
+                                            ("quantity", amount )
+                                            ("memo",     "")
+                                            )
+                                );
+      if ( to != manager ) {
+         trx.actions.emplace_back( get_action( N(eosio.token), N(transfer),
+                                               vector<permission_level>{{manager, config::active_name}},
+                                               mutable_variant_object()
+                                               ("from",     manager)
+                                               ("to",       to )
+                                               ("quantity", amount )
+                                               ("memo",     "")
+                                               )
+                                   );
+      }
+      set_transaction_headers( trx );
+      trx.sign( get_private_key( manager, "active" ), control->get_chain_id()  );
+      push_transaction( trx );
    }
 
    double stake2votes( asset stake ) {

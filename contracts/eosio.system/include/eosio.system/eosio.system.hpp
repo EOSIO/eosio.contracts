@@ -535,7 +535,7 @@ namespace eosiosystem {
           * @param core - the system symbol.
           */
          [[eosio::action]]
-         void init( unsigned_int version, symbol core );
+         void init( unsigned_int version, const symbol& core );
 
          /**
           * On block action.
@@ -562,7 +562,7 @@ namespace eosiosystem {
           * @param cpu_weight - fractionally proportionate cpu limit of available resources based on (weight / total_weight_of_all_accounts).
           */
          [[eosio::action]]
-         void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
+         void setalimits( const name& account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
 
          /**
           * Set account RAM limits action.
@@ -573,7 +573,7 @@ namespace eosiosystem {
           * @param ram_bytes - ram limit in absolute bytes.
           */
          [[eosio::action]]
-         void setacctram( name account, std::optional<int64_t> ram_bytes );
+         void setacctram( const name& account, const std::optional<int64_t>& ram_bytes );
 
          /**
           * Set account NET limits action.
@@ -584,7 +584,7 @@ namespace eosiosystem {
           * @param net_weight - fractionally proportionate net limit of available resources based on (weight / total_weight_of_all_accounts).
           */
          [[eosio::action]]
-         void setacctnet( name account, std::optional<int64_t> net_weight );
+         void setacctnet( const name& account, const std::optional<int64_t>& net_weight );
 
          /**
           * Set account CPU limits action.
@@ -595,7 +595,7 @@ namespace eosiosystem {
           * @param cpu_weight - fractionally proportionate cpu limit of available resources based on (weight / total_weight_of_all_accounts).
           */
          [[eosio::action]]
-         void setacctcpu( name account, std::optional<int64_t> cpu_weight );
+         void setacctcpu( const name& account, const std::optional<int64_t>& cpu_weight );
 
 
          /**
@@ -626,8 +626,8 @@ namespace eosiosystem {
           * @post All producers `from` account has voted for will have their votes updated immediately.
           */
          [[eosio::action]]
-         void delegatebw( name from, name receiver,
-                          asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
+         void delegatebw( const name& from, const name& receiver,
+                          const asset& stake_net_quantity, const asset& stake_cpu_quantity, bool transfer );
 
          /**
           * Setrex action.
@@ -934,8 +934,8 @@ namespace eosiosystem {
           * @post Bandwidth and storage for the deferred transaction are billed to `from`.
           */
          [[eosio::action]]
-         void undelegatebw( name from, name receiver,
-                            asset unstake_net_quantity, asset unstake_cpu_quantity );
+         void undelegatebw( const name& from, const name& receiver,
+                            const asset& unstake_net_quantity, const asset& unstake_cpu_quantity );
 
          /**
           * Buy ram action.
@@ -949,7 +949,7 @@ namespace eosiosystem {
           * @param quant - the quntity of tokens to buy ram with.
           */
          [[eosio::action]]
-         void buyram( name payer, name receiver, asset quant );
+         void buyram( const name& payer, const name& receiver, const asset& quant );
 
          /**
           * Buy a specific amount of ram bytes action.
@@ -962,7 +962,7 @@ namespace eosiosystem {
           * @param bytes - the quntity of ram to buy specified in bytes.
           */
          [[eosio::action]]
-         void buyrambytes( name payer, name receiver, uint32_t bytes );
+         void buyrambytes( const name& payer, const name& receiver, uint32_t bytes );
 
          /**
           * Sell ram action.
@@ -974,7 +974,7 @@ namespace eosiosystem {
           * @param bytes - the amount of ram to sell in bytes.
           */
          [[eosio::action]]
-         void sellram( name account, int64_t bytes );
+         void sellram( const name& account, int64_t bytes );
 
          /**
           * Refund action.
@@ -985,7 +985,7 @@ namespace eosiosystem {
           * @param owner - the owner of the tokens claimed.
           */
          [[eosio::action]]
-         void refund( name owner );
+         void refund( const name& owner );
 
          // functions defined in voting.cpp
 
@@ -1006,7 +1006,7 @@ namespace eosiosystem {
           * @pre Authority of producer to register
           */
          [[eosio::action]]
-         void regproducer( const name producer, const public_key& producer_key, const std::string& url, uint16_t location );
+         void regproducer( const name& producer, const public_key& producer_key, const std::string& url, uint16_t location );
 
          /**
           * Unregister producer action.
@@ -1015,7 +1015,7 @@ namespace eosiosystem {
           * @param producer - the block producer account to unregister.
           */
          [[eosio::action]]
-         void unregprod( const name producer );
+         void unregprod( const name& producer );
 
          /**
           * Set ram action.
@@ -1064,7 +1064,7 @@ namespace eosiosystem {
           * @post New proxy will proxied_vote_weight incremented by new vote weight
           */
          [[eosio::action]]
-         void voteproducer( const name voter, const name proxy, const std::vector<name>& producers );
+         void voteproducer( const name& voter, const name& proxy, const std::vector<name>& producers );
 
          /**
           * Register proxy action.
@@ -1082,7 +1082,7 @@ namespace eosiosystem {
           * @pre New state must be different than current state
           */
          [[eosio::action]]
-         void regproxy( const name proxy, bool isproxy );
+         void regproxy( const name& proxy, bool isproxy );
 
          /**
           * Set the blockchain parameters
@@ -1102,7 +1102,7 @@ namespace eosiosystem {
           * @param owner - producer account claiming per-block and per-vote rewards.
           */
          [[eosio::action]]
-         void claimrewards( const name owner );
+         void claimrewards( const name& owner );
 
          /**
           * Set privilege status for an account.
@@ -1112,7 +1112,7 @@ namespace eosiosystem {
           * @param is_priv - 0 for false, > 0 for true.
           */
          [[eosio::action]]
-         void setpriv( name account, uint8_t is_priv );
+         void setpriv( const name& account, uint8_t is_priv );
 
          /**
           * Remove producer action.
@@ -1121,7 +1121,7 @@ namespace eosiosystem {
           * @param producer - the producer account to deactivate.
           */
          [[eosio::action]]
-         void rmvproducer( name producer );
+         void rmvproducer( const name& producer );
 
          /**
           * Update revision action.
@@ -1154,7 +1154,7 @@ namespace eosiosystem {
           * @pre Auction must still be opened.
           */
          [[eosio::action]]
-         void bidname( name bidder, name newname, asset bid );
+         void bidname( const name& bidder, const name& newname, const asset& bid );
 
          /**
           * Bid refund action.
@@ -1165,7 +1165,7 @@ namespace eosiosystem {
           * @param newname - the name for which the bid was placed and now it gets refunded for.
           */
          [[eosio::action]]
-         void bidrefund( name bidder, name newname );
+         void bidrefund( const name& bidder, const name& newname );
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
@@ -1279,18 +1279,18 @@ namespace eosiosystem {
          int64_t update_renewed_loan( Index& idx, const Iterator& itr, int64_t rented_tokens );
 
          // defined in delegate_bandwidth.cpp
-         void changebw( name from, name receiver,
-                        asset stake_net_quantity, asset stake_cpu_quantity, bool transfer );
+         void changebw( name from, const name& receiver,
+                        const asset& stake_net_quantity, const asset& stake_cpu_quantity, bool transfer );
          void update_voting_power( const name& voter, const asset& total_update );
 
          // defined in voting.hpp
-         void update_elected_producers( block_timestamp timestamp );
-         void update_votes( const name voter, const name proxy, const std::vector<name>& producers, bool voting );
+         void update_elected_producers( const block_timestamp& timestamp );
+         void update_votes( const name& voter, const name& proxy, const std::vector<name>& producers, bool voting );
          void propagate_weight_change( const voter_info& voter );
          double update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
-                                               time_point ct,
+                                               const time_point& ct,
                                                double shares_rate, bool reset_to_zero = false );
-         double update_total_votepay_share( time_point ct,
+         double update_total_votepay_share( const time_point& ct,
                                             double additional_shares_delta = 0.0, double shares_rate_delta = 0.0 );
 
          template <auto system_contract::*...Ptrs>

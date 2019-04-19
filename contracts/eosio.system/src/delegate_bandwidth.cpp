@@ -86,7 +86,7 @@ namespace eosiosystem {
    /**
     *  This action will buy an exact amount of ram and bill the payer the current market price.
     */
-   void system_contract::buyrambytes( name payer, name receiver, uint32_t bytes ) {
+   void system_contract::buyrambytes( const name& payer, const name& receiver, uint32_t bytes ) {
 
       auto itr = _rammarket.find(ramcore_symbol.raw());
       auto tmp = *itr;
@@ -104,7 +104,7 @@ namespace eosiosystem {
     *  RAM is a scarce resource whose supply is defined by global properties max_ram_size. RAM is
     *  priced using the bancor algorithm such that price-per-byte with a constant reserve ratio of 100:1.
     */
-   void system_contract::buyram( name payer, name receiver, asset quant )
+   void system_contract::buyram( const name& payer, const name& receiver, const asset& quant )
    {
       require_auth( payer );
       update_ram_supply();
@@ -121,20 +121,16 @@ namespace eosiosystem {
       quant_after_fee.amount -= fee.amount;
       // quant_after_fee.amount should be > 0 if quant.amount > 1.
       // If quant.amount == 1, then quant_after_fee.amount == 0 and the next inline transfer will fail causing the buyram action to fail.
-
-      INLINE_ACTION_SENDER(eosio::token, transfer)(
-         token_account, { {payer, active_permission}, {ram_account, active_permission} },
-         { payer, ram_account, quant_after_fee, std::string("buy ram") }
-      );
-
-      if( fee.amount > 0 ) {
-         INLINE_ACTION_SENDER(eosio::token, transfer)(
-            token_account, { {payer, active_permission} },
-            { payer, ramfee_account, fee, std::string("ram fee") }
-         );
+      {
+         token::transfer_action transfer_act{ token_account, { {payer, active_permission}, {ram_account, active_permission} } };
+         transfer_act.send( payer, ram_account, quant_after_fee, "buy ram" );
+      }
+      if ( fee.amount > 0 ) {
+         token::transfer_action transfer_act{ token_account, { {payer, active_permission} } };
+         transfer_act.send( payer, ramfee_account, fee, "ram fee" );
          channel_to_rex( ramfee_account, fee );
       }
-      
+
       int64_t bytes_out;
 
       const auto& market = _rammarket.get(ramcore_symbol.raw(), "ram market does not exist");
@@ -176,7 +172,7 @@ namespace eosiosystem {
     *  tomorrow. Overall this will result in the market balancing the supply and demand
     *  for RAM over time.
     */
-   void system_contract::sellram( name account, int64_t bytes ) {
+   void system_contract::sellram( const name& account, int64_t bytes ) {
       require_auth( account );
       update_ram_supply();
 
@@ -212,19 +208,16 @@ namespace eosiosystem {
          get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
          set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
       }
-
-      INLINE_ACTION_SENDER(eosio::token, transfer)(
-         token_account, { {ram_account, active_permission}, {account, active_permission} },
-         { ram_account, account, asset(tokens_out), std::string("sell ram") }
-      );
-
+      
+      {
+         token::transfer_action transfer_act{ token_account, { {ram_account, active_permission}, {account, active_permission} } };
+         transfer_act.send( ram_account, account, asset(tokens_out), "sell ram" );
+      }
       auto fee = ( tokens_out.amount + 199 ) / 200; /// .5% fee (round up)
       // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
-      if( fee > 0 ) {
-         INLINE_ACTION_SENDER(eosio::token, transfer)(
-            token_account, { {account, active_permission} },
-            { account, ramfee_account, asset(fee, core_symbol()), std::string("sell ram fee") }
-         );
+      if ( fee > 0 ) {
+         token::transfer_action transfer_act{ token_account, { {account, active_permission} } };
+         transfer_act.send( account, ramfee_account, asset(fee, core_symbol()), "sell ram fee" );
          channel_to_rex( ramfee_account, asset(fee, core_symbol() ));
       }
    }
@@ -237,8 +230,8 @@ namespace eosiosystem {
       check( max_claimable - claimable <= stake, "b1 can only claim their tokens over 10 years" );
    }
 
-   void system_contract::changebw( name from, name receiver,
-                                   const asset stake_net_delta, const asset stake_cpu_delta, bool transfer )
+   void system_contract::changebw( name from, const name& receiver,
+                                   const asset& stake_net_delta, const asset& stake_cpu_delta, bool transfer )
    {
       require_auth( from );
       check( stake_net_delta.amount != 0 || stake_cpu_delta.amount != 0, "should stake non-zero amount" );
@@ -406,10 +399,8 @@ namespace eosiosystem {
 
          auto transfer_amount = net_balance + cpu_balance;
          if ( 0 < transfer_amount.amount ) {
-            INLINE_ACTION_SENDER(eosio::token, transfer)(
-               token_account, { {source_stake_from, active_permission} },
-               { source_stake_from, stake_account, asset(transfer_amount), std::string("stake bandwidth") }
-            );
+            token::transfer_action transfer_act{ token_account, { {source_stake_from, active_permission} } };
+            transfer_act.send( source_stake_from, stake_account, asset(transfer_amount), "stake bandwidth" );
          }
       }
 
@@ -442,9 +433,9 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::delegatebw( name from, name receiver,
-                                     asset stake_net_quantity,
-                                     asset stake_cpu_quantity, bool transfer )
+   void system_contract::delegatebw( const name& from, const name& receiver,
+                                     const asset& stake_net_quantity,
+                                     const asset& stake_cpu_quantity, bool transfer )
    {
       asset zero_asset( 0, core_symbol() );
       check( stake_cpu_quantity >= zero_asset, "must stake a positive amount" );
@@ -455,8 +446,8 @@ namespace eosiosystem {
       changebw( from, receiver, stake_net_quantity, stake_cpu_quantity, transfer);
    } // delegatebw
 
-   void system_contract::undelegatebw( name from, name receiver,
-                                       asset unstake_net_quantity, asset unstake_cpu_quantity )
+   void system_contract::undelegatebw( const name& from, const name& receiver,
+                                       const asset& unstake_net_quantity, const asset& unstake_cpu_quantity )
    {
       asset zero_asset( 0, core_symbol() );
       check( unstake_cpu_quantity >= zero_asset, "must unstake a positive amount" );
@@ -469,7 +460,7 @@ namespace eosiosystem {
    } // undelegatebw
 
 
-   void system_contract::refund( const name owner ) {
+   void system_contract::refund( const name& owner ) {
       require_auth( owner );
 
       refunds_table refunds_tbl( _self, owner.value );
@@ -477,12 +468,8 @@ namespace eosiosystem {
       check( req != refunds_tbl.end(), "refund request not found" );
       check( req->request_time + seconds(refund_delay_sec) <= current_time_point(),
              "refund is not available yet" );
-
-      INLINE_ACTION_SENDER(eosio::token, transfer)(
-         token_account, { {stake_account, active_permission}, {req->owner, active_permission} },
-         { stake_account, req->owner, req->net_amount + req->cpu_amount, std::string("unstake") }
-      );
-
+      token::transfer_action transfer_act{ token_account, { {stake_account, active_permission}, {req->owner, active_permission} } };
+      transfer_act.send( stake_account, req->owner, req->net_amount + req->cpu_amount, "unstake" );
       refunds_tbl.erase( req );
    }
 

@@ -23,7 +23,7 @@ namespace eosiosystem {
    using eosio::singleton;
    using eosio::transaction;
 
-   void system_contract::regproducer( const name producer, const eosio::public_key& producer_key, const std::string& url, uint16_t location ) {
+   void system_contract::regproducer( const name& producer, const eosio::public_key& producer_key, const std::string& url, uint16_t location ) {
       check( url.size() < 512, "url too long" );
       check( producer_key != eosio::public_key(), "public key should not be the default value" );
       require_auth( producer );
@@ -68,7 +68,7 @@ namespace eosiosystem {
 
    }
 
-   void system_contract::unregprod( const name producer ) {
+   void system_contract::unregprod( const name& producer ) {
       require_auth( producer );
 
       const auto& prod = _producers.get( producer.value, "producer not found" );
@@ -77,7 +77,7 @@ namespace eosiosystem {
       });
    }
 
-   void system_contract::update_elected_producers( block_timestamp block_time ) {
+   void system_contract::update_elected_producers( const block_timestamp& block_time ) {
       _gstate.last_producer_schedule_update = block_time;
 
       auto idx = _producers.get_index<"prototalvote"_n>();
@@ -115,7 +115,7 @@ namespace eosiosystem {
       return double(staked) * std::pow( 2, weight );
    }
 
-   double system_contract::update_total_votepay_share( time_point ct,
+   double system_contract::update_total_votepay_share( const time_point& ct,
                                                        double additional_shares_delta,
                                                        double shares_rate_delta )
    {
@@ -144,7 +144,7 @@ namespace eosiosystem {
    }
 
    double system_contract::update_producer_votepay_share( const producers_table2::const_iterator& prod_itr,
-                                                          time_point ct,
+                                                          const time_point& ct,
                                                           double shares_rate,
                                                           bool reset_to_zero )
    {
@@ -166,7 +166,7 @@ namespace eosiosystem {
       return new_votepay_share;
    }
 
-   void system_contract::voteproducer( const name voter_name, const name proxy, const std::vector<name>& producers ) {
+   void system_contract::voteproducer( const name& voter_name, const name& proxy, const std::vector<name>& producers ) {
       require_auth( voter_name );
       vote_stake_updater( voter_name );
       update_votes( voter_name, proxy, producers, true );
@@ -176,7 +176,7 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::update_votes( const name voter_name, const name proxy, const std::vector<name>& producers, bool voting ) {
+   void system_contract::update_votes( const name& voter_name, const name& proxy, const std::vector<name>& producers, bool voting ) {
       //validate input
       if ( proxy ) {
          check( producers.size() == 0, "cannot vote for producers and proxy at same time" );
@@ -301,7 +301,7 @@ namespace eosiosystem {
       });
    }
 
-   void system_contract::regproxy( const name proxy, bool isproxy ) {
+   void system_contract::regproxy( const name& proxy, bool isproxy ) {
       require_auth( proxy );
 
       auto pitr = _voters.find( proxy.value );

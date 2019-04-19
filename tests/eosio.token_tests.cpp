@@ -64,7 +64,7 @@ public:
    }
 
    action_result create( account_name issuer,
-                asset        maximum_supply ) {
+                         asset        maximum_supply ) {
 
       return push_action( N(eosio.token), N(create), mvo()
            ( "issuer", issuer)
@@ -229,15 +229,15 @@ BOOST_FIXTURE_TEST_CASE( issue_tests, eosio_token_tester ) try {
    );
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "quantity exceeds available supply" ),
-      issue( N(alice), asset::from_string("500.001 TKN"), "hola" )
+                        issue( N(alice), asset::from_string("500.001 TKN"), "hola" )
    );
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "must issue positive quantity" ),
-      issue( N(alice), asset::from_string("-1.000 TKN"), "hola" )
+                        issue( N(alice), asset::from_string("-1.000 TKN"), "hola" )
    );
 
    BOOST_REQUIRE_EQUAL( success(),
-      issue( N(alice), asset::from_string("1.000 TKN"), "hola" )
+                        issue( N(alice), asset::from_string("1.000 TKN"), "hola" )
    );
 
 
@@ -352,7 +352,11 @@ BOOST_FIXTURE_TEST_CASE( open_tests, eosio_token_tester ) try {
 
    auto alice_balance = get_account(N(alice), "0,CERO");
    BOOST_REQUIRE_EQUAL(true, alice_balance.is_null() );
-
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("tokens can only be issued to issuer account"),
+                        push_action( N(alice), N(issue), mvo()
+                                     ( "to",       "bob")
+                                     ( "quantity", asset::from_string("1000 CERO") )
+                                     ( "memo",     "") ) );
    BOOST_REQUIRE_EQUAL( success(), issue( N(alice), asset::from_string("1000 CERO"), "issue" ) );
 
    alice_balance = get_account(N(alice), "0,CERO");
