@@ -10,7 +10,6 @@ namespace eosiosystem {
     * @addtogroup eosiosystem
     * @{
     */
-   typedef double real_type;
 
    /**
     * Uses Bancor math to create a 50/50 relay between two asset types.
@@ -33,9 +32,23 @@ namespace eosiosystem {
 
       uint64_t primary_key()const { return supply.symbol.raw(); }
 
-      asset convert_to_exchange( connector& c, asset in );
-      asset convert_from_exchange( connector& c, asset in );
-      asset convert( asset from, const symbol& to );
+      asset convert_to_exchange( connector& reserve, const asset& payment );
+      asset convert_from_exchange( connector& reserve, const asset& tokens );
+      asset convert( const asset& from, const symbol& to );
+      asset direct_convert( const asset& from, const symbol& to );
+      /**
+       * Given two connector balances (inp_reserve and out_reserve), and an incoming amount
+       * of inp, this function calculates the delta out using Banacor equation.
+       *
+       * @param inp - input amount, same units as inp_reserve
+       * @param inp_reserve - the input connector balance
+       * @param out_reserve - the output connector balance
+       *
+       * @return int64_t - conversion output amount
+       */
+      static int64_t get_bancor_output( int64_t inp_reserve,
+                                        int64_t out_reserve,
+                                        int64_t inp );
 
       EOSLIB_SERIALIZE( exchange_state, (supply)(base)(quote) )
    };
