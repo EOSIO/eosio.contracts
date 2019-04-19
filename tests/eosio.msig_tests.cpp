@@ -208,7 +208,11 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {
    );
 
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
    push_action( N(alice), N(exec), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
@@ -290,7 +294,11 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_by_two, eosio_msig_tester ) try {
    );
 
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
 
    push_action( N(alice), N(exec), mvo()
                   ("proposer",      "alice")
@@ -369,7 +377,11 @@ BOOST_FIXTURE_TEST_CASE( big_transaction, eosio_msig_tester ) try {
    );
 
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
 
    push_action( N(alice), N(exec), mvo()
                   ("proposer",      "alice")
@@ -485,7 +497,11 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
    );
    // execute by alice to replace the eosio system contract
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
 
    push_action( N(alice), N(exec), mvo()
                   ("proposer",      "alice")
@@ -611,7 +627,11 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
    );
    // execute by alice to replace the eosio system contract
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
 
    // execute by another producer different from proposer
    push_action( N(apple), N(exec), mvo()
@@ -709,7 +729,11 @@ BOOST_FIXTURE_TEST_CASE( propose_invalidate_approve, eosio_msig_tester ) try {
 
    //successfully execute
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
 
    push_action( N(bob), N(exec), mvo()
                   ("proposer",      "alice")
@@ -748,7 +772,12 @@ BOOST_FIXTURE_TEST_CASE( approve_execute_old, eosio_msig_tester ) try {
    );
 
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
+
    push_action( N(alice), N(exec), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
@@ -847,7 +876,11 @@ BOOST_FIXTURE_TEST_CASE( approve_by_two_old, eosio_msig_tester ) try {
    );
 
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
 
    push_action( N(alice), N(exec), mvo()
                   ("proposer",      "alice")
@@ -893,7 +926,12 @@ BOOST_FIXTURE_TEST_CASE( approve_with_hash, eosio_msig_tester ) try {
    );
 
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
+
    push_action( N(alice), N(exec), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")

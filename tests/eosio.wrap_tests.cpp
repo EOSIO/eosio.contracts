@@ -166,7 +166,11 @@ BOOST_FIXTURE_TEST_CASE( wrap_exec_direct, eosio_wrap_tester ) try {
    auto trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
 
    transaction_trace_ptr trace;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) { if (t->scheduled) { trace = t; } } );
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
 
    {
       signed_transaction wrap_trx( wrap_exec( N(alice), trx ), {}, {} );
@@ -214,8 +218,10 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
    approve( N(carol), N(first), N(prod4) );
 
    vector<transaction_trace_ptr> traces;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) {
-      if (t->scheduled) {
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) {
          traces.push_back( t );
       }
    } );
@@ -328,8 +334,10 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig_producers_change, eosio_wrap_tester ) tr
    approve( N(carol), N(first), N(prod5) );
 
    vector<transaction_trace_ptr> traces;
-   control->applied_transaction.connect([&]( const transaction_trace_ptr& t) {
-      if (t->scheduled) {
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) {
          traces.push_back( t );
       }
    } );
