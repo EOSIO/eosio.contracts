@@ -114,12 +114,12 @@ namespace eosiosystem {
       set_blockchain_parameters( params );
    }
 
-   void system_contract::setpriv( name account, uint8_t ispriv ) {
+   void system_contract::setpriv( const name& account, uint8_t ispriv ) {
       require_auth( _self );
       set_privileged( account.value, ispriv );
    }
 
-   void system_contract::setalimits( name account, int64_t ram, int64_t net, int64_t cpu ) {
+   void system_contract::setalimits( const name& account, int64_t ram, int64_t net, int64_t cpu ) {
       require_auth( _self );
 
       user_resources_table userres( _self, account.value );
@@ -137,7 +137,7 @@ namespace eosiosystem {
       set_resource_limits( account.value, ram, net, cpu );
    }
 
-   void system_contract::setacctram( name account, std::optional<int64_t> ram_bytes ) {
+   void system_contract::setacctram( const name& account, const std::optional<int64_t>& ram_bytes ) {
       require_auth( _self );
 
       int64_t current_ram, current_net, current_cpu;
@@ -182,7 +182,7 @@ namespace eosiosystem {
       set_resource_limits( account.value, ram, current_net, current_cpu );
    }
 
-   void system_contract::setacctnet( name account, std::optional<int64_t> net_weight ) {
+   void system_contract::setacctnet( const name& account, const std::optional<int64_t>& net_weight ) {
       require_auth( _self );
 
       int64_t current_ram, current_net, current_cpu;
@@ -226,7 +226,7 @@ namespace eosiosystem {
       set_resource_limits( account.value, current_ram, net, current_cpu );
    }
 
-   void system_contract::setacctcpu( name account, std::optional<int64_t> cpu_weight ) {
+   void system_contract::setacctcpu( const name& account, const std::optional<int64_t>& cpu_weight ) {
       require_auth( _self );
 
       int64_t current_ram, current_net, current_cpu;
@@ -275,7 +275,7 @@ namespace eosiosystem {
       preactivate_feature( feature_digest );
    }
 
-   void system_contract::rmvproducer( name producer ) {
+   void system_contract::rmvproducer( const name& producer ) {
       require_auth( _self );
       auto prod = _producers.find( producer.value );
       check( prod != _producers.end(), "producer not found" );
@@ -293,7 +293,7 @@ namespace eosiosystem {
       _gstate2.revision = revision;
    }
 
-   void system_contract::bidname( name bidder, name newname, asset bid ) {
+   void system_contract::bidname( const name& bidder, const name& newname, const asset& bid ) {
       require_auth( bidder );
       check( newname.suffix() == newname, "you can only bid on top-level suffix" );
 
@@ -352,7 +352,7 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::bidrefund( name bidder, name newname ) {
+   void system_contract::bidrefund( const name& bidder, const name& newname ) {
       bid_refund_table refunds_table(_self, newname.value);
       auto it = refunds_table.find( bidder.value );
       check( it != refunds_table.end(), "refund not found" );
@@ -371,10 +371,10 @@ namespace eosiosystem {
     *  who can create accounts with the creator's name as a suffix.
     *
     */
-   void native::newaccount( name              creator,
-                            name              newact,
-                            ignore<authority> owner,
-                            ignore<authority> active ) {
+   void native::newaccount( const name&              creator,
+                            const name&              newact,
+                            const ignore<authority>& owner,
+                            const ignore<authority>& active ) {
 
       if( creator != _self ) {
          uint64_t tmp = newact.value >> 4;
@@ -410,7 +410,7 @@ namespace eosiosystem {
       set_resource_limits( newact.value, 0, 0, 0 );
    }
 
-   void native::setabi( name acnt, const std::vector<char>& abi ) {
+   void native::setabi( const name& acnt, const std::vector<char>& abi ) {
       eosio::multi_index< "abihash"_n, abi_hash >  table(_self, _self.value);
       auto itr = table.find( acnt.value );
       if( itr == table.end() ) {
@@ -425,7 +425,7 @@ namespace eosiosystem {
       }
    }
 
-   void system_contract::init( unsigned_int version, symbol core ) {
+   void system_contract::init( unsigned_int version, const symbol& core ) {
       require_auth( _self );
       check( version.value == 0, "unsupported version for init action" );
 
