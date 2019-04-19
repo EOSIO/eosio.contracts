@@ -298,12 +298,8 @@ namespace eosiosystem {
       check( !is_account( newname ), "account already exists" );
       check( bid.symbol == core_symbol(), "asset must be system token" );
       check( bid.amount > 0, "insufficient bid" );
-
-      INLINE_ACTION_SENDER(eosio::token, transfer)(
-         token_account, { {bidder, active_permission} },
-         { bidder, names_account, bid, std::string("bid name ")+ newname.to_string() }
-      );
-
+      token::transfer_action transfer_act{ token_account, { {bidder, active_permission} } };
+      transfer_act.send( bidder, names_account, bid, std::string("bid name ")+ newname.to_string() );
       name_bid_table bids(_self, _self.value);
       print( name{bidder}, " bid ", bid, " on ", name{newname}, "\n" );
       auto current = bids.find( newname.value );
@@ -355,10 +351,9 @@ namespace eosiosystem {
       bid_refund_table refunds_table(_self, newname.value);
       auto it = refunds_table.find( bidder.value );
       check( it != refunds_table.end(), "refund not found" );
-      INLINE_ACTION_SENDER(eosio::token, transfer)(
-         token_account, { {names_account, active_permission}, {bidder, active_permission} },
-         { names_account, bidder, asset(it->amount), std::string("refund bid on name ")+(name{newname}).to_string() }
-      );
+
+      token::transfer_action transfer_act{ token_account, { {names_account, active_permission}, {bidder, active_permission} } };
+      transfer_act.send( names_account, bidder, asset(it->amount), std::string("refund bid on name ")+(name{newname}).to_string() );
       refunds_table.erase( it );
    }
 
@@ -445,8 +440,8 @@ namespace eosiosystem {
          m.quote.balance.symbol = core;
       });
 
-      INLINE_ACTION_SENDER(eosio::token, open)( token_account, { _self, active_permission },
-                                                { rex_account, core, _self } );
+      token::open_action open_act{ token_account, { {_self, active_permission} } };
+      open_act.send( rex_account, core, _self );
    }
 
 } /// eosio.system

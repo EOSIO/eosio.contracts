@@ -121,20 +121,16 @@ namespace eosiosystem {
       quant_after_fee.amount -= fee.amount;
       // quant_after_fee.amount should be > 0 if quant.amount > 1.
       // If quant.amount == 1, then quant_after_fee.amount == 0 and the next inline transfer will fail causing the buyram action to fail.
-
-      INLINE_ACTION_SENDER(eosio::token, transfer)(
-         token_account, { {payer, active_permission}, {ram_account, active_permission} },
-         { payer, ram_account, quant_after_fee, std::string("buy ram") }
-      );
-
-      if( fee.amount > 0 ) {
-         INLINE_ACTION_SENDER(eosio::token, transfer)(
-            token_account, { {payer, active_permission} },
-            { payer, ramfee_account, fee, std::string("ram fee") }
-         );
+      {
+         token::transfer_action transfer_act{ token_account, { {payer, active_permission}, {ram_account, active_permission} } };
+         transfer_act.send( payer, ram_account, quant_after_fee, "buy ram" );
+      }
+      if ( fee.amount > 0 ) {
+         token::transfer_action transfer_act{ token_account, { {payer, active_permission} } };
+         transfer_act.send( payer, ramfee_account, fee, "ram fee" );
          channel_to_rex( ramfee_account, fee );
       }
-      
+
       int64_t bytes_out;
 
       const auto& market = _rammarket.get(ramcore_symbol.raw(), "ram market does not exist");
@@ -212,19 +208,16 @@ namespace eosiosystem {
          get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
          set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
       }
-
-      INLINE_ACTION_SENDER(eosio::token, transfer)(
-         token_account, { {ram_account, active_permission}, {account, active_permission} },
-         { ram_account, account, asset(tokens_out), std::string("sell ram") }
-      );
-
+      
+      {
+         token::transfer_action transfer_act{ token_account, { {ram_account, active_permission}, {account, active_permission} } };
+         transfer_act.send( ram_account, account, asset(tokens_out), "sell ram" );
+      }
       auto fee = ( tokens_out.amount + 199 ) / 200; /// .5% fee (round up)
       // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
-      if( fee > 0 ) {
-         INLINE_ACTION_SENDER(eosio::token, transfer)(
-            token_account, { {account, active_permission} },
-            { account, ramfee_account, asset(fee, core_symbol()), std::string("sell ram fee") }
-         );
+      if ( fee > 0 ) {
+         token::transfer_action transfer_act{ token_account, { {account, active_permission} } };
+         transfer_act.send( account, ramfee_account, asset(fee, core_symbol()), "sell ram fee" );
          channel_to_rex( ramfee_account, asset(fee, core_symbol() ));
       }
    }
@@ -406,10 +399,8 @@ namespace eosiosystem {
 
          auto transfer_amount = net_balance + cpu_balance;
          if ( 0 < transfer_amount.amount ) {
-            INLINE_ACTION_SENDER(eosio::token, transfer)(
-               token_account, { {source_stake_from, active_permission} },
-               { source_stake_from, stake_account, asset(transfer_amount), std::string("stake bandwidth") }
-            );
+            token::transfer_action transfer_act{ token_account, { {source_stake_from, active_permission} } };
+            transfer_act.send( source_stake_from, stake_account, asset(transfer_amount), "stake bandwidth" );
          }
       }
 
@@ -477,12 +468,8 @@ namespace eosiosystem {
       check( req != refunds_tbl.end(), "refund request not found" );
       check( req->request_time + seconds(refund_delay_sec) <= current_time_point(),
              "refund is not available yet" );
-
-      INLINE_ACTION_SENDER(eosio::token, transfer)(
-         token_account, { {stake_account, active_permission}, {req->owner, active_permission} },
-         { stake_account, req->owner, req->net_amount + req->cpu_amount, std::string("unstake") }
-      );
-
+      token::transfer_action transfer_act{ token_account, { {stake_account, active_permission}, {req->owner, active_permission} } };
+      transfer_act.send( stake_account, req->owner, req->net_amount + req->cpu_amount, "unstake" );
       refunds_tbl.erase( req );
    }
 

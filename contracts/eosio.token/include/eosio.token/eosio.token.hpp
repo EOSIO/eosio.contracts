@@ -46,8 +46,8 @@ namespace eosio {
           * If validation is successful a new entry in statstable for token symbol scope gets created.
           */
          [[eosio::action]]
-         void create( name   issuer,
-                      asset  maximum_supply);
+         void create( const name&   issuer,
+                      const asset&  maximum_supply);
          /**
           * Issue action.
           * 
@@ -58,7 +58,7 @@ namespace eosio {
           * @memo - the memo string that accompanies the token issue transaction.
           */
          [[eosio::action]]
-         void issue( name to, asset quantity, string memo );
+         void issue( const name& to, const asset& quantity, const string& memo );
 
          /**
           * Retire action.
@@ -70,7 +70,7 @@ namespace eosio {
           * @param memo - the memo string to accompany the transaction.
           */
          [[eosio::action]]
-         void retire( asset quantity, string memo );
+         void retire( const asset& quantity, const string& memo );
 
          /**
           * Transfer action.
@@ -84,10 +84,10 @@ namespace eosio {
           * @param memo - the memo string to accompany the transaction.
           */
          [[eosio::action]]
-         void transfer( name    from,
-                        name    to,
-                        asset   quantity,
-                        string  memo );
+         void transfer( const name&    from,
+                        const name&    to,
+                        const asset&   quantity,
+                        const string&  memo );
          /**
           * Open action.
           * 
@@ -102,7 +102,7 @@ namespace eosio {
           * and [here](https://github.com/EOSIO/eosio.contracts/issues/61).
           */
          [[eosio::action]]
-         void open( name owner, const symbol& symbol, name ram_payer );
+         void open( const name& owner, const symbol& symbol, const name& ram_payer );
 
          /**
           * Close action.
@@ -117,7 +117,7 @@ namespace eosio {
           * @pre If the pair of owner plus symbol exists, the balance has to be zero.
           */
          [[eosio::action]]
-         void close( name owner, const symbol& symbol );
+         void close( const name& owner, const symbol& symbol );
 
          /**
           * Get supply method.
@@ -127,7 +127,7 @@ namespace eosio {
           * @param token_contract_account - the account to get the supply for,
           * @param sym_code - the symbol to get the supply for.
           */
-         static asset get_supply( name token_contract_account, symbol_code sym_code )
+         static asset get_supply( const name& token_contract_account, const symbol_code& sym_code )
          {
             stats statstable( token_contract_account, sym_code.raw() );
             const auto& st = statstable.get( sym_code.raw() );
@@ -144,7 +144,7 @@ namespace eosio {
           * @param owner - the account for which the token balance is returned,
           * @param sym_code - the token for which the balance is returned.
           */
-         static asset get_balance( name token_contract_account, name owner, symbol_code sym_code )
+         static asset get_balance( const name& token_contract_account, const name& owner, const symbol_code& sym_code )
          {
             accounts accountstable( token_contract_account, owner.value );
             const auto& ac = accountstable.get( sym_code.raw() );
@@ -175,8 +175,8 @@ namespace eosio {
          typedef eosio::multi_index< "accounts"_n, account > accounts;
          typedef eosio::multi_index< "stat"_n, currency_stats > stats;
 
-         void sub_balance( name owner, asset value );
-         void add_balance( name owner, asset value, name ram_payer );
+         void sub_balance( const name& owner, const asset& value );
+         void add_balance( const name& owner, const asset& value, const name& ram_payer );
    };
    /** @}*/ // end of @defgroup eosiotoken eosio.token
 } /// namespace eosio

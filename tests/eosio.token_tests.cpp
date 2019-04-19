@@ -353,6 +353,8 @@ BOOST_FIXTURE_TEST_CASE( open_tests, eosio_token_tester ) try {
    auto alice_balance = get_account(N(alice), "0,CERO");
    BOOST_REQUIRE_EQUAL(true, alice_balance.is_null() );
 
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg("tokens can only be issued to issuer account"),
+                        issue( N(alice), N(bob), asset::from_string("1000 CERO"), "issue" ) );
    BOOST_REQUIRE_EQUAL( success(), issue( N(alice), N(alice), asset::from_string("1000 CERO"), "issue" ) );
 
    alice_balance = get_account(N(alice), "0,CERO");
