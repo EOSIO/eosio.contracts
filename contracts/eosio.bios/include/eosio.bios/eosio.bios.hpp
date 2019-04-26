@@ -1,19 +1,19 @@
 #pragma once
-#include <eosiolib/action.hpp>
-#include <eosiolib/crypto.h>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/privileged.hpp>
-#include <eosiolib/producer_schedule.hpp>
-#include <eosiolib/fixed_bytes.hpp>
+#include <eosio/action.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/fixed_bytes.hpp>
+#include <eosio/privileged.hpp>
+#include <eosio/producer_schedule.hpp>
 
 namespace eosio {
    namespace internal_use_do_not_use {
       extern "C" {
          __attribute__((eosio_wasm_import))
-         bool is_feature_activated( const ::capi_checksum256* feature_digest );
+         bool is_feature_activated( const checksum256* feature_digest );
 
          __attribute__((eosio_wasm_import))
-         void preactivate_feature( const ::capi_checksum256* feature_digest );
+         void preactivate_feature( const checksum256* feature_digest );
       }
    }
 }
@@ -22,14 +22,14 @@ namespace eosio {
    bool is_feature_activated( const eosio::checksum256& feature_digest ) {
       auto feature_digest_data = feature_digest.extract_as_byte_array();
       return internal_use_do_not_use::is_feature_activated(
-         reinterpret_cast<const ::capi_checksum256*>( feature_digest_data.data() )
+         reinterpret_cast<const checksum256*>( feature_digest_data.data() )
       );
    }
 
    void preactivate_feature( const eosio::checksum256& feature_digest ) {
       auto feature_digest_data = feature_digest.extract_as_byte_array();
       internal_use_do_not_use::preactivate_feature(
-         reinterpret_cast<const ::capi_checksum256*>( feature_digest_data.data() )
+         reinterpret_cast<const checksum256*>( feature_digest_data.data() )
       );
    }
 }
@@ -137,9 +137,9 @@ namespace eosio {
       uint32_t                                  timestamp;
       name                                      producer;
       uint16_t                                  confirmed = 0;
-      capi_checksum256                          previous;
-      capi_checksum256                          transaction_mroot;
-      capi_checksum256                          action_mroot;
+      checksum256                          previous;
+      checksum256                          transaction_mroot;
+      checksum256                          action_mroot;
       uint32_t                                  schedule_version = 0;
       std::optional<eosio::producer_schedule>   new_producers;
 
@@ -261,7 +261,7 @@ namespace eosio {
           * @param trx_id - the deferred transaction id to be cancelled.
           */
          [[eosio::action]]
-         void canceldelay( ignore<permission_level> canceling_auth, ignore<capi_checksum256> trx_id ) {}
+         void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
 
          /**
           * On error action.
@@ -299,7 +299,7 @@ namespace eosio {
          [[eosio::action]]
          void setpriv( name account, uint8_t is_priv ) {
             require_auth( _self );
-            set_privileged( account.value, is_priv );
+            set_privileged( account, is_priv );
          }
 
          /**
@@ -315,7 +315,7 @@ namespace eosio {
          [[eosio::action]]
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight ) {
             require_auth( _self );
-            set_resource_limits( account.value, ram_bytes, net_weight, cpu_weight );
+            set_resource_limits( account, ram_bytes, net_weight, cpu_weight );
          }
 
          /**
@@ -440,7 +440,7 @@ namespace eosio {
           */
          struct [[eosio::table]] abi_hash {
             name              owner;
-            capi_checksum256  hash;
+            checksum256  hash;
             uint64_t primary_key()const { return owner.value; }
 
             EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
