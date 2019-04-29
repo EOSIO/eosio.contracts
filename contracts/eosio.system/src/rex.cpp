@@ -396,9 +396,9 @@ namespace eosiosystem {
 
          if( !(net_managed && cpu_managed) ) {
             int64_t ram_bytes = 0, net = 0, cpu = 0;
-            get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+            get_resource_limits( receiver, ram_bytes, net, cpu );
 
-            set_resource_limits( receiver.value,
+            set_resource_limits( receiver,
                                  ram_bytes,
                                  net_managed ? net : tot_itr->net_weight.amount,
                                  cpu_managed ? cpu : tot_itr->cpu_weight.amount );

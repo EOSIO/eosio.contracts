@@ -1,8 +1,8 @@
 #pragma once
 
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/name.hpp>
-#include <eosiolib/asset.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/name.hpp>
+#include <eosio/asset.hpp>
 
 using eosio::name;
 using eosio::asset;

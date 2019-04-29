@@ -4,14 +4,14 @@
  */
 #include <eosio.system/eosio.system.hpp>
 
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/crypto.h>
-#include <eosiolib/datastream.hpp>
-#include <eosiolib/serialize.hpp>
-#include <eosiolib/multi_index.hpp>
-#include <eosiolib/privileged.hpp>
-#include <eosiolib/singleton.hpp>
-#include <eosiolib/transaction.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/datastream.hpp>
+#include <eosio/serialize.hpp>
+#include <eosio/multi_index.hpp>
+#include <eosio/privileged.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/transaction.hpp>
 #include <eosio.token/eosio.token.hpp>
 
 #include <algorithm>
@@ -102,16 +102,14 @@ namespace eosiosystem {
       for( const auto& item : top_producers )
          producers.push_back(item.first);
 
-      auto packed_schedule = pack(producers);
-
-      if( set_proposed_producers( packed_schedule.data(),  packed_schedule.size() ) >= 0 ) {
+      if( set_proposed_producers( producers ) >= 0 ) {
          _gstate.last_producer_schedule_size = static_cast<decltype(_gstate.last_producer_schedule_size)>( top_producers.size() );
       }
    }
 
    double stake2vote( int64_t staked ) {
       /// TODO subtract 2080 brings the large numbers closer to this decade
-      double weight = int64_t( (now() - (block_timestamp::block_timestamp_epoch / 1000)) / (seconds_per_day * 7) )  / double( 52 );
+      double weight = int64_t( ( current_block_time().to_time_point().time_since_epoch().count() - (block_timestamp::block_timestamp_epoch / 1000)) / (seconds_per_day * 7) )  / double( 52 );
       return double(staked) * std::pow( 2, weight );
    }
 

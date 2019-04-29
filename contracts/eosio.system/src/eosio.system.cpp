@@ -1,6 +1,6 @@
 #include <eosio.system/eosio.system.hpp>
-#include <eosiolib/dispatcher.hpp>
-#include <eosiolib/crypto.h>
+#include <eosio/dispatcher.hpp>
+#include <eosio/crypto.hpp>
 
 #include "producer_pay.cpp"
 #include "delegate_bandwidth.cpp"
@@ -37,7 +37,7 @@ namespace eosiosystem {
    }
 
    time_point system_contract::current_time_point() {
-      const static time_point ct{ microseconds{ static_cast<int64_t>( current_time() ) } };
+      const static time_point ct{ current_time_point() };
       return ct;
    }
 
@@ -116,7 +116,7 @@ namespace eosiosystem {
 
    void system_contract::setpriv( const name& account, uint8_t ispriv ) {
       require_auth( _self );
-      set_privileged( account.value, ispriv );
+      set_privileged( account, ispriv );
    }
 
    void system_contract::setalimits( const name& account, int64_t ram, int64_t net, int64_t cpu ) {
@@ -134,14 +134,14 @@ namespace eosiosystem {
          check( !(ram_managed || net_managed || cpu_managed), "cannot use setalimits on an account with managed resources" );
       }
 
-      set_resource_limits( account.value, ram, net, cpu );
+      set_resource_limits( account, ram, net, cpu );
    }
 
    void system_contract::setacctram( const name& account, const std::optional<int64_t>& ram_bytes ) {
       require_auth( _self );
 
       int64_t current_ram, current_net, current_cpu;
-      get_resource_limits( account.value, &current_ram, &current_net, &current_cpu );
+      get_resource_limits( account, current_ram, current_net, current_cpu );
 
       int64_t ram = 0;
 
@@ -179,14 +179,14 @@ namespace eosiosystem {
          ram = *ram_bytes;
       }
 
-      set_resource_limits( account.value, ram, current_net, current_cpu );
+      set_resource_limits( account, ram, current_net, current_cpu );
    }
 
    void system_contract::setacctnet( const name& account, const std::optional<int64_t>& net_weight ) {
       require_auth( _self );
 
       int64_t current_ram, current_net, current_cpu;
-      get_resource_limits( account.value, &current_ram, &current_net, &current_cpu );
+      get_resource_limits( account, current_ram, current_net, current_cpu );
 
       int64_t net = 0;
 
@@ -223,14 +223,14 @@ namespace eosiosystem {
          net = *net_weight;
       }
 
-      set_resource_limits( account.value, current_ram, net, current_cpu );
+      set_resource_limits( account, current_ram, net, current_cpu );
    }
 
    void system_contract::setacctcpu( const name& account, const std::optional<int64_t>& cpu_weight ) {
       require_auth( _self );
 
       int64_t current_ram, current_net, current_cpu;
-      get_resource_limits( account.value, &current_ram, &current_net, &current_cpu );
+      get_resource_limits( account, current_ram, current_net, current_cpu );
 
       int64_t cpu = 0;
 
@@ -267,7 +267,7 @@ namespace eosiosystem {
          cpu = *cpu_weight;
       }
 
-      set_resource_limits( account.value, current_ram, current_net, cpu );
+      set_resource_limits( account, current_ram, current_net, cpu );
    }
 
    void system_contract::activate( const eosio::checksum256& feature_digest ) {
@@ -407,7 +407,7 @@ namespace eosiosystem {
         res.cpu_weight = asset( 0, system_contract::get_core_symbol() );
       });
 
-      set_resource_limits( newact.value, 0, 0, 0 );
+      set_resource_limits( newact, 0, 0, 0 );
    }
 
    void native::setabi( const name& acnt, const std::vector<char>& abi ) {
@@ -416,11 +416,11 @@ namespace eosiosystem {
       if( itr == table.end() ) {
          table.emplace( acnt, [&]( auto& row ) {
             row.owner= acnt;
-            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+            sha256( const_cast<char*>(abi.data()), abi.size() );
          });
       } else {
          table.modify( itr, same_payer, [&]( auto& row ) {
-            sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+            sha256( const_cast<char*>(abi.data()), abi.size() );
          });
       }
    }

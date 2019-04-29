@@ -4,12 +4,12 @@
  */
 #include <eosio.system/eosio.system.hpp>
 
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/datastream.hpp>
-#include <eosiolib/serialize.hpp>
-#include <eosiolib/multi_index.hpp>
-#include <eosiolib/privileged.h>
-#include <eosiolib/transaction.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/datastream.hpp>
+#include <eosio/serialize.hpp>
+#include <eosio/multi_index.hpp>
+#include <eosio/privileged.hpp>
+#include <eosio/transaction.hpp>
 
 #include <eosio.token/eosio.token.hpp>
 
@@ -161,8 +161,11 @@ namespace eosiosystem {
       auto voter_itr = _voters.find( res_itr->owner.value );
       if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
          int64_t ram_bytes, net, cpu;
-         get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
-         set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+      // get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
+         get_resource_limits( res_itr->owner, ram_bytes, net, cpu );
+         
+      // set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+         set_resource_limits( res_itr->owner, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
       }
    }
 
@@ -205,8 +208,10 @@ namespace eosiosystem {
       auto voter_itr = _voters.find( res_itr->owner.value );
       if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
          int64_t ram_bytes, net, cpu;
-         get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
-         set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+      // get_resource_limits( res_itr->owner.value, &ram_bytes, &net, &cpu );
+         get_resource_limits( res_itr->owner, ram_bytes, net, cpu );
+      // set_resource_limits( res_itr->owner.value, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
+         set_resource_limits( res_itr->owner, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
       }
       
       {
@@ -225,7 +230,7 @@ namespace eosiosystem {
    void validate_b1_vesting( int64_t stake ) {
       const int64_t base_time = 1527811200; /// 2018-06-01
       const int64_t max_claimable = 100'000'000'0000ll;
-      const int64_t claimable = int64_t(max_claimable * double(now()-base_time) / (10*seconds_per_year) );
+      const int64_t claimable = int64_t(max_claimable * double(current_block_time().to_time_point().time_since_epoch().count()-base_time) / (10*seconds_per_year) );
 
       check( max_claimable - claimable <= stake, "b1 can only claim their tokens over 10 years" );
    }
@@ -302,9 +307,15 @@ namespace eosiosystem {
 
             if( !(net_managed && cpu_managed) ) {
                int64_t ram_bytes, net, cpu;
-               get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+            // get_resource_limits( receiver.value, &ram_bytes, &net, &cpu );
+               get_resource_limits( receiver, ram_bytes, net, cpu );
 
-               set_resource_limits( receiver.value,
+            // set_resource_limits( receiver.value,
+            //                      ram_managed ? ram_bytes : std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ),
+            //                      net_managed ? net : tot_itr->net_weight.amount,
+            //                      cpu_managed ? cpu : tot_itr->cpu_weight.amount );
+
+               set_resource_limits( receiver,
                                     ram_managed ? ram_bytes : std::max( tot_itr->ram_bytes + ram_gift_bytes, ram_bytes ),
                                     net_managed ? net : tot_itr->net_weight.amount,
                                     cpu_managed ? cpu : tot_itr->cpu_weight.amount );

@@ -5,10 +5,10 @@
 #pragma once
 
 #include <eosio.system/native.hpp>
-#include <eosiolib/asset.hpp>
-#include <eosiolib/time.hpp>
-#include <eosiolib/privileged.hpp>
-#include <eosiolib/singleton.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/time.hpp>
+#include <eosio/privileged.hpp>
+#include <eosio/singleton.hpp>
 #include <eosio.system/exchange_state.hpp>
 
 #include <string>
@@ -38,6 +38,7 @@ namespace eosiosystem {
    using eosio::microseconds;
    using eosio::datastream;
    using eosio::check;
+   using eosio::unsigned_int;
 
    template<typename E, typename F>
    static inline auto has_field( F flags, E field )
