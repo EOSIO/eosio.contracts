@@ -348,12 +348,7 @@ namespace eosio {
          void setprods( std::vector<eosio::producer_key> schedule ) {
             (void)schedule; // schedule argument just forces the deserialization of the action data into vector<producer_key> (necessary check)
             require_auth( _self );
-
-            constexpr size_t max_stack_buffer_size = 512;
-            size_t size = action_data_size();
-            char* buffer = (char*)( max_stack_buffer_size < size ? malloc(size) : alloca(size) );
-            read_action_data( buffer, size );
-            set_proposed_producers(buffer, size);
+            set_proposed_producers( schedule );
          }
 
          /**
@@ -424,11 +419,11 @@ namespace eosio {
             if( itr == table.end() ) {
                table.emplace( account, [&]( auto& row ) {
                   row.owner = account;
-                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+                  sha256( const_cast<char*>( abi.data()), abi.size() );
                });
             } else {
                table.modify( itr, same_payer, [&]( auto& row ) {
-                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+                  sha256( const_cast<char*>( abi.data()), abi.size() );
                });
             }
          }

@@ -1,7 +1,7 @@
 #include <eosio.msig/eosio.msig.hpp>
-#include <eosiolib/action.hpp>
-#include <eosiolib/permission.hpp>
-#include <eosiolib/crypto.hpp>
+#include <eosio/action.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/permission.hpp>
 
 namespace eosio {
 
@@ -14,7 +14,7 @@ namespace eosio {
  * from 1970 until the current time.
  */
 time_point current_time_point() {
-   const static time_point ct{ microseconds{ static_cast<int64_t>( current_time() ) } };
+   const static time_point ct{ current_time_point() };
    return ct;
 }
 
@@ -42,10 +42,10 @@ void multisig::propose( ignore<name> proposer,
    check( proptable.find( _proposal_name.value ) == proptable.end(), "proposal with the same name exists" );
 
    auto packed_requested = pack(_requested);
-   auto res = ::check_transaction_authorization( trx_pos, size,
-                                                 (const char*)0, 0,
-                                                 packed_requested.data(), packed_requested.size()
-                                               );
+   auto res = check_transaction_authorization( trx_pos, size,
+                                               (const char*)0, 0,
+                                               packed_requested.data(), packed_requested.size()
+                                             );
    check( res > 0, "transaction authorization failed" );
 
    std::vector<char> pkd_trans;
@@ -184,13 +184,13 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
       old_apptable.erase(apps);
    }
    auto packed_provided_approvals = pack(approvals);
-   auto res = ::check_transaction_authorization( prop.packed_transaction.data(), prop.packed_transaction.size(),
-                                                 (const char*)0, 0,
-                                                 packed_provided_approvals.data(), packed_provided_approvals.size()
-                                                 );
+   auto res = check_transaction_authorization( prop.packed_transaction.data(), prop.packed_transaction.size(),
+                                               (const char*)0, 0,
+                                               packed_provided_approvals.data(), packed_provided_approvals.size()
+                                               );
    check( res > 0, "transaction authorization failed" );
 
-   send_deferred( (uint128_t(proposer.value) << 64) | proposal_name.value, executer.value,
+   send_deferred( (uint128_t(proposer.value) << 64) | proposal_name.value, executer,
                   prop.packed_transaction.data(), prop.packed_transaction.size() );
 
    proptable.erase(prop);
