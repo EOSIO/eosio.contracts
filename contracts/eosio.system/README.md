@@ -159,8 +159,8 @@ The naming convention is codeaccount::actionname followed by a list of paramters
    - **loan_num** loan id
    - **amount** tokens transfered from CPU loan fund to REX fund
 
-## eosio::defcpuloan from loan\_num amount
-   - Withdraws tokens from the fund of a specific CPU loan and adds them to REX fund
+## eosio::defnetloan from loan\_num amount
+   - Withdraws tokens from the fund of a specific NET loan and adds them to REX fund
    - **from** loan creator account
    - **loan_num** loan id
    - **amount** tokens transfered from NET loan fund to REX fund
