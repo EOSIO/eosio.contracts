@@ -1,0 +1,25 @@
+{
+    "eosio-dot-contracts":
+    {
+        "pipeline-branch": "master",
+        "dependencies": // dependencies to pull for a build of contracts, by branch, tag, or commit hash
+        {
+            "eosio": "release/1.8.x",
+            "eosio.cdt": "release/1.6.x"
+        }
+    },
+    "eosio-dot-contracts-dot-beta":
+    {
+        "pipeline-branch": "zach-pipeline-config",
+        "dependencies": // dependencies to pull for a build of contracts, by branch, tag, or commit hash
+        {
+            "eosio": "release/1.8.x",
+            "eosio.cdt": "release/1.6.x"
+        },
+        "environment":
+        {
+            "TEST": "true",
+            "DEBUG": "false"
+        }
+    }
+}
