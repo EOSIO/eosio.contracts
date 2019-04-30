@@ -15,11 +15,6 @@
         {
             "eosio": "release/1.8.x",
             "eosio.cdt": "release/1.6.x"
-        },
-        "environment":
-        {
-            "TEST": "true",
-            "DEBUG": "false"
         }
     }
 }
