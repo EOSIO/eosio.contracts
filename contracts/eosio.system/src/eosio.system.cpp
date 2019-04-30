@@ -1,6 +1,7 @@
 #include <eosio.system/eosio.system.hpp>
 #include <eosio/dispatcher.hpp>
 #include <eosio/crypto.hpp>
+#include <eosio/system.hpp>
 
 #include "producer_pay.cpp"
 #include "delegate_bandwidth.cpp"
@@ -36,20 +37,23 @@ namespace eosiosystem {
       return dp;
    }
 
-   time_point system_contract::current_time_point() {
-      const static time_point ct{ current_time_point() };
-      return ct;
-   }
+   // time_point system_contract::current_time_point() {
+   //    const static time_point ct{ current_time_point() };
+   //    return ct;
+   // }
 
    time_point_sec system_contract::current_time_point_sec() {
-      const static time_point_sec cts{ current_time_point() };
+      // const static time_point_sec cts{ current_time_point().time_since_epoch().count() / 1000000LL };
+      const static time_point_sec cts{current_time_point()};
       return cts;
    }
 
-   block_timestamp system_contract::current_block_time() {
-      const static block_timestamp cbt{ current_time_point() };
-      return cbt;
-   }
+   // uint32_t(t.time_since_epoch().count() / 1000000ll)
+
+   // block_timestamp system_contract::current_block_time() {
+   //    const static block_timestamp cbt{ current_time_point() };
+   //    return cbt;
+   // }
 
    symbol system_contract::core_symbol()const {
       const static auto sym = get_core_symbol( _rammarket );

@@ -13,10 +13,11 @@ namespace eosio {
  * @details Returns a high resolution time_point which represents the number of microseconds 
  * from 1970 until the current time.
  */
-time_point current_time_point() {
-   const static time_point ct{ current_time_point() };
-   return ct;
-}
+   
+// time_point current_time_point() {
+//    const static time_point ct{ current_time_point() };
+//    return ct;
+// }
 
 void multisig::propose( ignore<name> proposer,
                         ignore<name> proposal_name,

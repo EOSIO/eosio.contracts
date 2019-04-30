@@ -207,7 +207,7 @@ namespace eosiosystem {
          new_vote_weight += voter->proxied_vote_weight;
       }
 
-      boost::container::flat_map<name, pair<double, bool /*new*/> > producer_deltas;
+      std::map<name, pair<double, bool /*new*/> > producer_deltas;
       if ( voter->last_vote_weight > 0 ) {
          if( voter->proxy ) {
             auto old_proxy = _voters.find( voter->proxy.value );

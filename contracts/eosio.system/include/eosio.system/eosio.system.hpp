@@ -1238,9 +1238,9 @@ namespace eosiosystem {
 
          //defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
-         static time_point current_time_point();
+         // static time_point current_time_point();
          static time_point_sec current_time_point_sec();
-         static block_timestamp current_block_time();
+         // static block_timestamp current_block_time();
          symbol core_symbol()const;
          void update_ram_supply();
 
