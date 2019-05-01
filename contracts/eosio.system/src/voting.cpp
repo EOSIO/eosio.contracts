@@ -109,7 +109,8 @@ namespace eosiosystem {
 
    double stake2vote( int64_t staked ) {
       /// TODO subtract 2080 brings the large numbers closer to this decade
-      double weight = int64_t( (current_time_point().time_since_epoch().count() - (block_timestamp::block_timestamp_epoch / 1000)) / (seconds_per_day * 7) )  / double( 52 );
+      double weight = int64_t( (current_time_point().time_since_epoch().count() - (block_timestamp::block_timestamp_epoch / 1)) / (2000000ULL*seconds_per_day * 7) )  / double( 52 );
+      // double weight = int64_t( (now() - (block_timestamp::block_timestamp_epoch / 1000)) / (seconds_per_day * 7) )  / double( 52 );
       return double(staked) * std::pow( 2, weight );
    }
 
