@@ -855,7 +855,8 @@ namespace eosiosystem {
    time_point_sec system_contract::get_rex_maturity()
    {
       const uint32_t num_of_maturity_buckets = 5;
-      static const uint32_t now = current_time_point_sec().utc_seconds;
+      // static const uint32_t now = current_time_point_sec().utc_seconds;
+      static const uint32_t now = current_time_point().sec_since_epoch();
       static const uint32_t r   = now % seconds_per_day;
       static const time_point_sec rms{ now - r + num_of_maturity_buckets * seconds_per_day };
       return rms;
@@ -868,7 +869,7 @@ namespace eosiosystem {
     */
    void system_contract::process_rex_maturities( const rex_balance_table::const_iterator& bitr )
    {
-      const time_point_sec now = current_time_point_sec();
+      const time_point_sec now = current_time_point();
       _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
          while ( !rb.rex_maturities.empty() && rb.rex_maturities.front().first <= now ) {
             rb.matured_rex += rb.rex_maturities.front().second;
