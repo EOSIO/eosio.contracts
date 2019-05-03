@@ -142,9 +142,9 @@ namespace eosio {
       uint32_t                                  timestamp;
       name                                      producer;
       uint16_t                                  confirmed = 0;
-      checksum256                          previous;
-      checksum256                          transaction_mroot;
-      checksum256                          action_mroot;
+      checksum256                               previous;
+      checksum256                               transaction_mroot;
+      checksum256                               action_mroot;
       uint32_t                                  schedule_version = 0;
       std::optional<eosio::producer_schedule>   new_producers;
 
@@ -440,7 +440,7 @@ namespace eosio {
           */
          struct [[eosio::table]] abi_hash {
             name              owner;
-            checksum256  hash;
+            checksum256       hash;
             uint64_t primary_key()const { return owner.value; }
 
             EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )

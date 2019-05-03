@@ -36,8 +36,8 @@ void multisig::propose( ignore<name> proposer,
    auto packed_requested = pack(_requested);
    auto res = check_transaction_authorization( trx_pos, size,
                                                (const char*)0, 0,
-                                               packed_requested.data(), packed_requested.size()
-                                             );
+                                               packed_requested.data(), packed_requested.size());
+   
    check( res > 0, "transaction authorization failed" );
 
    std::vector<char> pkd_trans;
@@ -178,8 +178,8 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    auto packed_provided_approvals = pack(approvals);
    auto res = check_transaction_authorization( prop.packed_transaction.data(), prop.packed_transaction.size(),
                                                (const char*)0, 0,
-                                               packed_provided_approvals.data(), packed_provided_approvals.size()
-                                               );
+                                               packed_provided_approvals.data(), packed_provided_approvals.size());
+   
    check( res > 0, "transaction authorization failed" );
 
    send_deferred( (uint128_t(proposer.value) << 64) | proposal_name.value, executer,
