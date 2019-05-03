@@ -1,3 +1,0 @@
-# dependencies to pull for a build of contracts, by branch, tag, or commit hash
-eosio=9dfd8e2e1b2ab9acc9087b5c6a0bb878b4ad1d0f
-cdt=release/1.6.x
