@@ -1,3 +1,7 @@
+/**
+ *  @copyright defined in eosio.cdt/LICENSE.txt
+ */
+
 #pragma once
 
 #include <eosio/eosio.hpp>

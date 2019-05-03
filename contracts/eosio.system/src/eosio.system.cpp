@@ -1,7 +1,11 @@
-#include <eosio.system/eosio.system.hpp>
-#include <eosio/dispatcher.hpp>
+/**
+ *  @copyright defined in eos/LICENSE.txt
+ */
+
 #include <eosio/crypto.hpp>
-#include <eosio/system.hpp>
+#include <eosio/dispatcher.hpp>
+
+#include <eosio.system/eosio.system.hpp>
 
 #include "producer_pay.cpp"
 #include "delegate_bandwidth.cpp"
@@ -406,17 +410,17 @@ namespace eosiosystem {
       set_resource_limits( newact, 0, 0, 0 );
    }
 
-   void native::setabi( const name& acnt, const std::vector<char>& abi ) {
+   void native::setabi( const name& account, const std::vector<char>& abi ) {
       eosio::multi_index< "abihash"_n, abi_hash >  table(_self, _self.value);
-      auto itr = table.find( acnt.value );
+      auto itr = table.find( account.value );
       if( itr == table.end() ) {
-         table.emplace( acnt, [&]( auto& row ) {
-            row.owner= acnt;
-            sha256( const_cast<char*>(abi.data()), abi.size() );
+         table.emplace( account, [&]( auto& row ) {
+            row.owner = account;
+            row.hash  = sha256(const_cast<char*>(abi.data()), abi.size());
          });
       } else {
          table.modify( itr, same_payer, [&]( auto& row ) {
-            sha256( const_cast<char*>(abi.data()), abi.size() );
+            row.hash = sha256(const_cast<char*>(abi.data()), abi.size());
          });
       }
    }

@@ -1,25 +1,26 @@
 /**
- *  @file
  *  @copyright defined in eos/LICENSE.txt
  */
-#include <eosio.system/eosio.system.hpp>
 
-#include <eosio/eosio.hpp>
 #include <eosio/crypto.hpp>
 #include <eosio/datastream.hpp>
-#include <eosio/serialize.hpp>
+#include <eosio/eosio.hpp>
 #include <eosio/multi_index.hpp>
 #include <eosio/privileged.hpp>
+#include <eosio/serialize.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/transaction.hpp>
+
+#include <eosio.system/eosio.system.hpp>
 #include <eosio.token/eosio.token.hpp>
 
 #include <algorithm>
 #include <cmath>
 
 namespace eosiosystem {
-   using eosio::indexed_by;
+   
    using eosio::const_mem_fun;
+   using eosio::indexed_by;
    using eosio::singleton;
    using eosio::transaction;
 
@@ -109,8 +110,7 @@ namespace eosiosystem {
 
    double stake2vote( int64_t staked ) {
       /// TODO subtract 2080 brings the large numbers closer to this decade
-      double weight = int64_t( (current_time_point().time_since_epoch().count() - (block_timestamp::block_timestamp_epoch / 1)) / (2000000ULL*seconds_per_day * 7) )  / double( 52 );
-      // double weight = int64_t( (now() - (block_timestamp::block_timestamp_epoch / 1000)) / (seconds_per_day * 7) )  / double( 52 );
+      double weight = int64_t( (current_time_point().time_since_epoch().count()/1000000 - (block_timestamp::block_timestamp_epoch / 1000)) / (seconds_per_day * 7) )  / double( 52 );
       return double(staked) * std::pow( 2, weight );
    }
 

@@ -1,3 +1,7 @@
+/**
+ *  @copyright defined in eos/LICENSE.txt
+ */
+
 #include <eosio.system/exchange_state.hpp>
 
 namespace eosiosystem {

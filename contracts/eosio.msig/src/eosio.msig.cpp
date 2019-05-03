@@ -1,23 +1,14 @@
-#include <eosio.msig/eosio.msig.hpp>
+/**
+ *  @copyright defined in eosio.cdt/LICENSE.txt
+ */
+
 #include <eosio/action.hpp>
 #include <eosio/crypto.hpp>
 #include <eosio/permission.hpp>
 
-namespace eosio {
+#include <eosio.msig/eosio.msig.hpp>
 
-/**
- * @ingroup eosiocontracts
- * 
- * Returns a high resolution time_point 
- * 
- * @details Returns a high resolution time_point which represents the number of microseconds 
- * from 1970 until the current time.
- */
-   
-// time_point current_time_point() {
-//    const static time_point ct{ current_time_point() };
-//    return ct;
-// }
+namespace eosio {
 
 void multisig::propose( ignore<name> proposer,
                         ignore<name> proposal_name,

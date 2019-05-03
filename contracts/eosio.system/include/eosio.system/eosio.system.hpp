@@ -1,21 +1,22 @@
 /**
- *  @file
  *  @copyright defined in eos/LICENSE.txt
  */
+
 #pragma once
 
-#include <eosio.system/native.hpp>
 #include <eosio/asset.hpp>
-#include <eosio/time.hpp>
 #include <eosio/privileged.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
-#include <eosio.system/exchange_state.hpp>
+#include <eosio/time.hpp>
 
-#include <string>
+#include <eosio.system/exchange_state.hpp>
+#include <eosio.system/native.hpp>
+
 #include <deque>
-#include <type_traits>
 #include <optional>
+#include <string>
+#include <type_traits>
 
 #ifdef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
 #undef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
@@ -27,18 +28,18 @@
 
 namespace eosiosystem {
 
-   using eosio::name;
    using eosio::asset;
+   using eosio::block_timestamp;
+   using eosio::check;
+   using eosio::const_mem_fun;
+   using eosio::datastream;
+   using eosio::indexed_by;
+   using eosio::microseconds;
+   using eosio::name;
    using eosio::symbol;
    using eosio::symbol_code;
-   using eosio::indexed_by;
-   using eosio::const_mem_fun;
-   using eosio::block_timestamp;
    using eosio::time_point;
    using eosio::time_point_sec;
-   using eosio::microseconds;
-   using eosio::datastream;
-   using eosio::check;
    using eosio::unsigned_int;
 
    template<typename E, typename F>

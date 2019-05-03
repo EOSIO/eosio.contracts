@@ -1,12 +1,16 @@
+/**
+ *  @copyright defined in eos/LICENSE.txt
+ */
+
 #pragma once
 
+#include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
 #include <eosio/name.hpp>
-#include <eosio/asset.hpp>
 
-using eosio::name;
-using eosio::asset;
 using eosio::action_wrapper;
+using eosio::asset;
+using eosio::name;
 
 class [[eosio::contract("rex.results")]] rex_results : eosio::contract {
    public:

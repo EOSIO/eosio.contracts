@@ -1,4 +1,9 @@
+/**
+ *  @copyright defined in eosio.cdt/LICENSE.txt
+ */
+
 #pragma once
+
 #include <eosio/action.hpp>
 #include <eosio/crypto.hpp>
 #include <eosio/eosio.hpp>
@@ -55,9 +60,9 @@ namespace eosio {
 
 namespace eosio {
 
+   using eosio::ignore;
    using eosio::permission_level;
    using eosio::public_key;
-   using eosio::ignore;
 
    /**
     * A weighted permission.
@@ -419,11 +424,11 @@ namespace eosio {
             if( itr == table.end() ) {
                table.emplace( account, [&]( auto& row ) {
                   row.owner = account;
-                  sha256( const_cast<char*>( abi.data()), abi.size() );
+                  row.hash  = sha256(const_cast<char*>(abi.data()), abi.size());
                });
             } else {
                table.modify( itr, same_payer, [&]( auto& row ) {
-                  sha256( const_cast<char*>( abi.data()), abi.size() );
+                  row.hash = sha256(const_cast<char*>(abi.data()), abi.size());
                });
             }
          }
