@@ -400,12 +400,12 @@ namespace eosiosystem {
       set_resource_limits( newact, 0, 0, 0 );
    }
 
-   void native::setabi( const name& account, const std::vector<char>& abi ) {
+   void native::setabi( const name& acnt, const std::vector<char>& abi ) {
       eosio::multi_index< "abihash"_n, abi_hash >  table(_self, _self.value);
-      auto itr = table.find( account.value );
+      auto itr = table.find( acnt.value );
       if( itr == table.end() ) {
-         table.emplace( account, [&]( auto& row ) {
-            row.owner = account;
+         table.emplace( acnt, [&]( auto& row ) {
+            row.owner = acnt;
             row.hash  = sha256(const_cast<char*>(abi.data()), abi.size());
          });
       } else {

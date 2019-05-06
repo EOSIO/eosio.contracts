@@ -1,3 +1,13 @@
+<h1 class="contract">activate</h1>
+
+---
+title: TITLE
+summary: SUMMARY
+icon: ICON
+---
+
+BODY
+
 <h1 class="contract">canceldelay</h1>
 
 ---
@@ -39,6 +49,16 @@ icon: ICON
 BODY
 
 <h1 class="contract">onerror</h1>
+
+---
+title: TITLE
+summary: SUMMARY
+icon: ICON
+---
+
+BODY
+
+<h1 class="contract">reqactivated</h1>
 
 ---
 title: TITLE

@@ -38,6 +38,16 @@ icon: ICON
 
 BODY
 
+<h1 class="contract">buyresult</h1>
+
+---
+title: TITLE
+summary: SUMMARY
+icon: ICON
+---
+
+BODY
+
 <h1 class="contract">buyrex</h1>
 
 ---
@@ -237,6 +247,16 @@ icon: ICON
 ---
 
 BODY
+
+<h1 class="contract">orderresult</h1>
+
+---
+title: TITLE
+summary: SUMMARY
+icon: ICON
+---
+
+BODY
 	
 <h1 class="contract">refund</h1>
 
@@ -288,6 +308,16 @@ icon: ICON
 
 BODY
 
+<h1 class="contract">rentresult</h1>
+
+---
+title: TITLE
+summary: SUMMARY
+icon: ICON
+---
+
+BODY
+
 <h1 class="contract">rexexec</h1>
 
 ---
@@ -309,6 +339,16 @@ icon: ICON
 BODY
 
 <h1 class="contract">sellram</h1>
+
+---
+title: TITLE
+summary: SUMMARY
+icon: ICON
+---
+
+BODY
+
+<h1 class="contract">sellresult</h1>
 
 ---
 title: TITLE

@@ -225,7 +225,7 @@ namespace eosiosystem {
    void validate_b1_vesting( int64_t stake ) {
       const int64_t base_time = 1527811200; /// 2018-06-01
       const int64_t max_claimable = 100'000'000'0000ll;
-      const int64_t claimable = int64_t(max_claimable * double(current_time_point().time_since_epoch().count()/1000000 - base_time) / (10*seconds_per_year) );
+      const int64_t claimable = int64_t(max_claimable * double(current_time_point().sec_since_epoch() - base_time) / (10*seconds_per_year) );
 
       check( max_claimable - claimable <= stake, "b1 can only claim their tokens over 10 years" );
    }
