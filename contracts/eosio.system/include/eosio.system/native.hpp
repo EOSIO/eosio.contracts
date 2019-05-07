@@ -13,7 +13,7 @@
 #include <eosio/privileged.hpp>
 #include <eosio/producer_schedule.hpp>
 
-// This header is needed until `capi_checksum256` is added to `eosio.cdt`
+// This header is needed until `is_feature_activiated` and `preactivate_feature` are added to `eosio.cdt`
 #include <eosio/../../capi/eosio/crypto.h>
 
 namespace eosio {
