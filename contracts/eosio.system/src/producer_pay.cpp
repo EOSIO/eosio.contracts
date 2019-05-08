@@ -99,7 +99,7 @@ namespace eosiosystem {
 
          INLINE_ACTION_SENDER(eosio::token, issue)(
             token_account, { {_self, active_permission} },
-            { _self, asset(to_producers, core_symbol()), std::string("issue tokens for producer pay and savings") }
+            { _self, asset(to_producers, core_symbol()), std::string("issue tokens for producer pay") }
          );
 
          INLINE_ACTION_SENDER(eosio::token, transfer)(
