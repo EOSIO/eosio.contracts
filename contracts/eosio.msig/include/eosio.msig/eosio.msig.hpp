@@ -1,7 +1,13 @@
+/**
+ *  @copyright defined in eosio.cdt/LICENSE.txt
+ */
+
 #pragma once
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/ignore.hpp>
-#include <eosiolib/transaction.hpp>
+
+#include <eosio/binary_extension.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/ignore.hpp>
+#include <eosio/transaction.hpp>
 
 namespace eosio {
    /**
@@ -122,6 +128,7 @@ namespace eosio {
          using cancel_action = eosio::action_wrapper<"cancel"_n, &multisig::cancel>;
          using exec_action = eosio::action_wrapper<"exec"_n, &multisig::exec>;
          using invalidate_action = eosio::action_wrapper<"invalidate"_n, &multisig::invalidate>;
+         
       private:
          struct [[eosio::table]] proposal {
             name                            proposal_name;

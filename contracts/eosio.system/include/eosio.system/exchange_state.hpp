@@ -1,8 +1,13 @@
+/**
+ *  @copyright defined in eos/LICENSE.txt
+ */
+
 #pragma once
 
-#include <eosiolib/asset.hpp>
+#include <eosio/asset.hpp>
 
 namespace eosiosystem {
+   
    using eosio::asset;
    using eosio::symbol;
 

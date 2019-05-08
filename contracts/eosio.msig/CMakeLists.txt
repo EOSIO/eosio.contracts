@@ -7,3 +7,5 @@ target_include_directories(eosio.msig
 set_target_properties(eosio.msig
    PROPERTIES
    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+target_compile_options( eosio.msig PUBLIC -R${CMAKE_CURRENT_SOURCE_DIR}/ricardian )

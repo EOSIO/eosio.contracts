@@ -1,10 +1,18 @@
+/**
+ *  @copyright defined in eosio.cdt/LICENSE.txt
+ */
+
 #pragma once
-#include <eosiolib/action.hpp>
-#include <eosiolib/crypto.h>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/privileged.hpp>
-#include <eosiolib/producer_schedule.hpp>
-#include <eosiolib/fixed_bytes.hpp>
+
+#include <eosio/action.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/fixed_bytes.hpp>
+#include <eosio/privileged.hpp>
+#include <eosio/producer_schedule.hpp>
+
+// This header is needed until `is_feature_activiated` and `preactivate_feature` are added to `eosio.cdt`
+#include <eosio/../../capi/eosio/crypto.h>
 
 namespace eosio {
    namespace internal_use_do_not_use {
@@ -55,9 +63,9 @@ namespace eosio {
 
 namespace eosio {
 
+   using eosio::ignore;
    using eosio::permission_level;
    using eosio::public_key;
-   using eosio::ignore;
 
    /**
     * A weighted permission.
@@ -137,9 +145,9 @@ namespace eosio {
       uint32_t                                  timestamp;
       name                                      producer;
       uint16_t                                  confirmed = 0;
-      capi_checksum256                          previous;
-      capi_checksum256                          transaction_mroot;
-      capi_checksum256                          action_mroot;
+      checksum256                               previous;
+      checksum256                               transaction_mroot;
+      checksum256                               action_mroot;
       uint32_t                                  schedule_version = 0;
       std::optional<eosio::producer_schedule>   new_producers;
 
@@ -261,7 +269,7 @@ namespace eosio {
           * @param trx_id - the deferred transaction id to be cancelled.
           */
          [[eosio::action]]
-         void canceldelay( ignore<permission_level> canceling_auth, ignore<capi_checksum256> trx_id ) {}
+         void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
 
          /**
           * On error action.
@@ -299,7 +307,7 @@ namespace eosio {
          [[eosio::action]]
          void setpriv( name account, uint8_t is_priv ) {
             require_auth( _self );
-            set_privileged( account.value, is_priv );
+            set_privileged( account, is_priv );
          }
 
          /**
@@ -315,7 +323,7 @@ namespace eosio {
          [[eosio::action]]
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight ) {
             require_auth( _self );
-            set_resource_limits( account.value, ram_bytes, net_weight, cpu_weight );
+            set_resource_limits( account, ram_bytes, net_weight, cpu_weight );
          }
 
          /**
@@ -346,14 +354,8 @@ namespace eosio {
           */
          [[eosio::action]]
          void setprods( std::vector<eosio::producer_key> schedule ) {
-            (void)schedule; // schedule argument just forces the deserialization of the action data into vector<producer_key> (necessary check)
             require_auth( _self );
-
-            constexpr size_t max_stack_buffer_size = 512;
-            size_t size = action_data_size();
-            char* buffer = (char*)( max_stack_buffer_size < size ? malloc(size) : alloca(size) );
-            read_action_data( buffer, size );
-            set_proposed_producers(buffer, size);
+            set_proposed_producers( schedule );
          }
 
          /**
@@ -424,11 +426,11 @@ namespace eosio {
             if( itr == table.end() ) {
                table.emplace( account, [&]( auto& row ) {
                   row.owner = account;
-                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+                  row.hash  = sha256(const_cast<char*>(abi.data()), abi.size());
                });
             } else {
                table.modify( itr, same_payer, [&]( auto& row ) {
-                  sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+                  row.hash = sha256(const_cast<char*>(abi.data()), abi.size());
                });
             }
          }
@@ -440,7 +442,7 @@ namespace eosio {
           */
          struct [[eosio::table]] abi_hash {
             name              owner;
-            capi_checksum256  hash;
+            checksum256       hash;
             uint64_t primary_key()const { return owner.value; }
 
             EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )

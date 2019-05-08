@@ -1,11 +1,11 @@
 /**
- *  @file
  *  @copyright defined in eos/LICENSE.txt
  */
+
 #pragma once
 
-#include <eosiolib/asset.hpp>
-#include <eosiolib/eosio.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/eosio.hpp>
 
 #include <string>
 
