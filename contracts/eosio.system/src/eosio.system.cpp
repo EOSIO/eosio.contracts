@@ -23,6 +23,7 @@ namespace eosiosystem {
     _global(_self, _self.value),
     _global2(_self, _self.value),
     _global3(_self, _self.value),
+    _global4(_self, _self.value),
     _rammarket(_self, _self.value),
     _rexpool(_self, _self.value),
     _rexfunds(_self, _self.value),
@@ -33,12 +34,25 @@ namespace eosiosystem {
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
       _gstate3 = _global3.exists() ? _global3.get() : eosio_global_state3{};
+      _gstate4 = _global4.exists() ? _global4.get() : get_default_inflation_parameters();
    }
 
    eosio_global_state system_contract::get_default_parameters() {
       eosio_global_state dp;
       get_blockchain_parameters(dp);
       return dp;
+   }
+
+   eosio_global_state4 system_contract::get_default_inflation_parameters() {
+      const double   default_continuous_rate       = 0.04879; // 5% annual rate
+      const int64_t  default_inflation_pay_factor  = 5;       // 20% of the inflation
+      const int64_t  default_votepay_factor        = 4;       // 25% of the producer pay
+
+      eosio_global_state4 gs4;
+      gs4.continuous_rate      = default_continuous_rate;
+      gs4.inflation_pay_factor = default_inflation_pay_factor;
+      gs4.votepay_factor       = default_votepay_factor;
+      return gs4;
    }
 
    symbol system_contract::core_symbol()const {
@@ -50,6 +64,7 @@ namespace eosiosystem {
       _global.set( _gstate, _self );
       _global2.set( _gstate2, _self );
       _global3.set( _gstate3, _self );
+      _global4.set( _gstate4, _self );
    }
 
    void system_contract::setram( uint64_t max_ram_size ) {
@@ -352,6 +367,18 @@ namespace eosiosystem {
       refunds_table.erase( it );
    }
 
+   void system_contract::setinflation( double continuous_rate, int64_t inflation_pay_factor, int64_t votepay_factor ) {
+      require_auth(_self);
+      check(continuous_rate >= 0, "continuous_rate can't be negative");
+      check(inflation_pay_factor > 0, "inflation_pay_factor must be positive");
+      check(votepay_factor > 0, "votepay_factor must be positive");
+
+      _gstate4.continuous_rate      = continuous_rate;
+      _gstate4.inflation_pay_factor = inflation_pay_factor;
+      _gstate4.votepay_factor       = votepay_factor;
+      _global4.set( _gstate4, _self );
+   }
+
    /**
     *  Called after a new account is created. This code enforces resource-limits rules
     *  for new accounts as well as new account naming conventions.
@@ -447,7 +474,7 @@ EOSIO_DISPATCH( eosiosystem::system_contract,
      (newaccount)(updateauth)(deleteauth)(linkauth)(unlinkauth)(canceldelay)(onerror)(setabi)
      // eosio.system.cpp
      (init)(setram)(setramrate)(setparams)(setpriv)(setalimits)(setacctram)(setacctnet)(setacctcpu)(activate)
-     (rmvproducer)(updtrevision)(bidname)(bidrefund)
+     (rmvproducer)(updtrevision)(bidname)(bidrefund)(setinflation)
      // rex.cpp
      (deposit)(withdraw)(buyrex)(unstaketorex)(sellrex)(cnclrexorder)(rentcpu)(rentnet)(fundcpuloan)(fundnetloan)
      (defcpuloan)(defnetloan)(updaterex)(consolidate)(mvtosavings)(mvfrsavings)(setrex)(rexexec)(closerex)

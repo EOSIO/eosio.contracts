@@ -1378,6 +1378,77 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
    }
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(change_inflation, eosio_system_tester) try {
+
+   {
+      const asset large_asset = core_sym::from_string("80.0000");
+      create_account_with_resources( N(defproducera), config::system_account_name, core_sym::from_string("1.0000"), false, large_asset, large_asset );
+      create_account_with_resources( N(defproducerb), config::system_account_name, core_sym::from_string("1.0000"), false, large_asset, large_asset );
+      create_account_with_resources( N(defproducerc), config::system_account_name, core_sym::from_string("1.0000"), false, large_asset, large_asset );
+
+      create_account_with_resources( N(producvotera), config::system_account_name, core_sym::from_string("1.0000"), false, large_asset, large_asset );
+      create_account_with_resources( N(producvoterb), config::system_account_name, core_sym::from_string("1.0000"), false, large_asset, large_asset );
+
+      BOOST_REQUIRE_EQUAL(success(), regproducer(N(defproducera)));
+      BOOST_REQUIRE_EQUAL(success(), regproducer(N(defproducerb)));
+      BOOST_REQUIRE_EQUAL(success(), regproducer(N(defproducerc)));
+
+      produce_block(fc::hours(24));
+
+      transfer( config::system_account_name, "producvotera", core_sym::from_string("400000000.0000"), config::system_account_name);
+      BOOST_REQUIRE_EQUAL(success(), stake("producvotera", core_sym::from_string("100000000.0000"), core_sym::from_string("100000000.0000")));
+      BOOST_REQUIRE_EQUAL(success(), vote( N(producvotera), { N(defproducera),N(defproducerb),N(defproducerc) }));
+
+      auto run_for_1year = [this](double inflation, int64_t inflation_pay_factor, int64_t votepay_factor) {
+         
+         double continuous_rate = std::log(double(1)+inflation);
+
+         BOOST_REQUIRE_EQUAL(success(), setinflation(
+            continuous_rate,
+            inflation_pay_factor,
+            votepay_factor
+         ));
+
+         produce_block(fc::hours(24));
+         const asset   initial_supply  = get_token_supply();
+         const int64_t initial_savings = get_balance(N(eosio.saving)).get_amount();
+         for (uint32_t i = 0; i < 7 * 52; ++i) {
+            produce_block(fc::seconds(8 * 3600));
+            BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducerc), N(claimrewards), mvo()("owner", "defproducerc")));
+            produce_block(fc::seconds(8 * 3600));
+            BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducerb), N(claimrewards), mvo()("owner", "defproducerb")));
+            produce_block(fc::seconds(8 * 3600));
+            BOOST_REQUIRE_EQUAL(success(), push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
+         }
+         const asset   final_supply  = get_token_supply();
+         const int64_t final_savings = get_balance(N(eosio.saving)).get_amount();
+         
+         double computed_new_tokens = double(final_supply.get_amount() - initial_supply.get_amount());
+         double theoretical_new_tokens = double(initial_supply.get_amount())*inflation;
+         double diff_new_tokens = std::abs(theoretical_new_tokens-computed_new_tokens);
+
+         //Error should be less than 0.3%
+         BOOST_REQUIRE( diff_new_tokens/theoretical_new_tokens < double(0.003) );
+
+         double savings_inflation = inflation*double(inflation_pay_factor-1)/double(inflation_pay_factor);
+
+         double computed_savings_tokens = double(final_savings-initial_savings);
+         double theoretical_savings_tokens = double(initial_supply.get_amount())*savings_inflation;
+
+         double diff_savings_tokens = std::abs(theoretical_savings_tokens-computed_savings_tokens);
+         
+         //Error should be less than 0.3%
+         BOOST_REQUIRE( diff_savings_tokens/theoretical_savings_tokens < double(0.003) );
+      };
+
+      //1% inflation for 1 year => 50% saving / 50% bp reward
+      run_for_1year(double(1)/double(100), 2, 5);
+
+      //3% inflation for 1 year => 66.6% savings / 33.33 bp reward
+      run_for_1year(double(3)/double(100), 3, 5);
+   }
+
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
 

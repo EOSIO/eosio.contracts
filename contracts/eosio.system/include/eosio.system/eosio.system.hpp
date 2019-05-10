@@ -182,6 +182,18 @@ namespace eosiosystem {
    };
 
    /**
+    * Defines new global state parameters to store inflation rate and distribution
+    */
+   struct [[eosio::table("global4"), eosio::contract("eosio.system")]] eosio_global_state4 {
+      eosio_global_state4() { }
+      double   continuous_rate;
+      int64_t  inflation_pay_factor;
+      int64_t  votepay_factor;
+
+      EOSLIB_SERIALIZE( eosio_global_state4, (continuous_rate)(inflation_pay_factor)(votepay_factor) )
+   };
+
+   /**
     * Defines `producer_info` structure to be stored in `producer_info` table, added after version 1.0
     */
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
@@ -295,6 +307,10 @@ namespace eosiosystem {
     * Global state singleton added in version 1.3
     */
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
+   /**
+    * Global state singleton added in version 1.6.x
+    */
+   typedef eosio::singleton< "global4"_n, eosio_global_state4 > global_state4_singleton;
 
    //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
    static constexpr uint32_t     seconds_per_day = 24 * 3600;
@@ -475,9 +491,11 @@ namespace eosiosystem {
          global_state_singleton  _global;
          global_state2_singleton _global2;
          global_state3_singleton _global3;
+         global_state4_singleton _global4;
          eosio_global_state      _gstate;
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
+         eosio_global_state4     _gstate4;
          rammarket               _rammarket;
          rex_pool_table          _rexpool;
          rex_fund_table          _rexfunds;
@@ -1170,6 +1188,42 @@ namespace eosiosystem {
          [[eosio::action]]
          void bidrefund( const name& bidder, const name& newname );
 
+         /**
+          * Set inflation action.
+          *
+          * @details Change the annual inflation rate of the core token supply and specify how 
+          *          the new issued tokens will be distributed based on the following structure.
+          * 
+          *    +----+                          +----------------+
+          *    +rate|               +--------->|per vote reward |
+          *    +--+-+               |          +----------------+
+          *       |            +-----+------+
+          *       |     +----->| bp rewards |
+          *       v     |      +-----+------+
+          *    +-+--+---+-+         |          +----------------+
+          *    |new tokens|         +--------->|per block reward|
+          *    +----+-----+                    +----------------+
+          *             |      +------------+
+          *             +----->|  savings   |
+          *                    +------------+
+          *
+          * @param continuous_rate - Annual inflation rate of the core token supply.
+          *     (eg. For 5% Annual inflation => continuous_rate=0.04879 ~= ln(1+0.05)
+          *          For 1% Annual inflation => continuous_rate=0.00995 ~= ln(1+0.01)
+          *
+          * @param inflation_pay_factor - Percentage of the inflation used to reward block producers.
+          *     The remaining inflation will be sent to the `eosio.saving` account.
+          *     (eg. For 20%  => inflation_pay_factor=5
+          *          For 100% => inflation_pay_factor=1).
+          *
+          * @param votepay_factor - Percentage of the block producer rewards to be distributed proportional to votes received.
+          *     The remaining rewards will be distributed proportional to blocks produced.
+          *     (eg. For 25%  => votepay_factor=4
+          *          For 50%  => votepay_factor=2).
+          */
+         [[eosio::action]]
+         void setinflation( double continuous_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
+
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
          using setacctnet_action = eosio::action_wrapper<"setacctnet"_n, &system_contract::setacctnet>;
@@ -1240,6 +1294,7 @@ namespace eosiosystem {
 
          //defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
+         static eosio_global_state4 get_default_inflation_parameters();
          symbol core_symbol()const;
          void update_ram_supply();
 
