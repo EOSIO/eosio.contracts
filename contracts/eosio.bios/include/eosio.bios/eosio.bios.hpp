@@ -84,19 +84,6 @@ namespace eosio {
    };
 
    /**
-    * Weighted key.
-    *
-    * @details A weighted key is defined by a public key and an associated weight.
-    */
-   struct key_weight {
-      eosio::public_key  key;
-      uint16_t           weight;
-
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( key_weight, (key)(weight) )
-   };
-
-   /**
     * Wait weight.
     *
     * @details A wait weight is defined by a number of seconds to wait for and a weight.
@@ -353,7 +340,7 @@ namespace eosio {
           * @param schedule - New list of active producers to set
           */
          [[eosio::action]]
-         void setprods( std::vector<eosio::producer_key> schedule ) {
+         void setprods( std::vector<eosio::producer_authority> schedule ) {
             require_auth( _self );
             set_proposed_producers( schedule );
          }
