@@ -9,9 +9,6 @@ namespace eosiosystem {
 
    const int64_t  min_pervote_daily_pay = 100'0000;
    const int64_t  min_activated_stake   = 150'000'000'0000;
-   const double   continuous_rate       = 0.04879;          // 5% annual rate
-   const int64_t  inflation_pay_factor  = 5;                // 20% of the inflation
-   const int64_t  votepay_factor        = 4;                // 25% of the producer pay
    const uint32_t blocks_per_year       = 52*7*24*2*3600;   // half seconds per year
    const uint32_t seconds_per_year      = 52*7*24*3600;
    const uint32_t blocks_per_day        = 2 * 24 * 3600;
@@ -95,21 +92,30 @@ namespace eosiosystem {
       const auto usecs_since_last_fill = (ct - _gstate.last_pervote_bucket_fill).count();
 
       if( usecs_since_last_fill > 0 && _gstate.last_pervote_bucket_fill > time_point() ) {
-         auto new_tokens = static_cast<int64_t>( (continuous_rate * double(token_supply.amount) * double(usecs_since_last_fill)) / double(useconds_per_year) );
+         auto new_tokens = static_cast<int64_t>( (_gstate4.continuous_rate * double(token_supply.amount) * double(usecs_since_last_fill)) / double(useconds_per_year) );
 
-         auto to_producers     = new_tokens / inflation_pay_factor;
+         auto to_producers     = new_tokens / _gstate4.inflation_pay_factor;
          auto to_savings       = new_tokens - to_producers;
-         auto to_per_block_pay = to_producers / votepay_factor;
+         auto to_per_block_pay = to_producers / _gstate4.votepay_factor;
          auto to_per_vote_pay  = to_producers - to_per_block_pay;
-         {
-            token::issue_action issue_act{ token_account, { {_self, active_permission} } };
-            issue_act.send( _self, asset(new_tokens, core_symbol()), "issue tokens for producer pay and savings" );
-         }
-         {
-            token::transfer_action transfer_act{ token_account, { {_self, active_permission} } };
-            transfer_act.send( _self, saving_account, asset(to_savings, core_symbol()), "unallocated inflation" );
-            transfer_act.send( _self, bpay_account, asset(to_per_block_pay, core_symbol()), "fund per-block bucket" );
-            transfer_act.send( _self, vpay_account, asset(to_per_vote_pay, core_symbol()), "fund per-vote bucket" );
+
+         if( new_tokens > 0 ) {
+            {
+               token::issue_action issue_act{ token_account, { {_self, active_permission} } };
+               issue_act.send( _self, asset(new_tokens, core_symbol()), "issue tokens for producer pay and savings" );
+            }
+            {
+               token::transfer_action transfer_act{ token_account, { {_self, active_permission} } };
+               if( to_savings > 0 ) {
+                  transfer_act.send( _self, saving_account, asset(to_savings, core_symbol()), "unallocated inflation" );
+               }
+               if( to_per_block_pay > 0 ) {
+                  transfer_act.send( _self, bpay_account, asset(to_per_block_pay, core_symbol()), "fund per-block bucket" );
+               }
+               if( to_per_vote_pay > 0 ) {
+                  transfer_act.send( _self, vpay_account, asset(to_per_vote_pay, core_symbol()), "fund per-vote bucket" );
+               }
+            }
          }
 
          _gstate.pervote_bucket          += to_per_vote_pay;
