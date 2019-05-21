@@ -962,9 +962,9 @@ public:
       }
    }
 
-   action_result setinflation( double continuous_rate, int64_t inflation_pay_factor, int64_t votepay_factor ) {
+   action_result setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor ) {
       return push_action( N(eosio), N(setinflation), mvo()
-               ("continuous_rate",     continuous_rate)
+               ("annual_rate",     annual_rate)
                ("inflation_pay_factor", inflation_pay_factor)
                ("votepay_factor", votepay_factor)
       );

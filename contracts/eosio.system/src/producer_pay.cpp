@@ -98,15 +98,24 @@ namespace eosiosystem {
          auto to_savings       = new_tokens - to_producers;
          auto to_per_block_pay = to_producers / _gstate4.votepay_factor;
          auto to_per_vote_pay  = to_producers - to_per_block_pay;
-         {
-            token::issue_action issue_act{ token_account, { {_self, active_permission} } };
-            issue_act.send( _self, asset(new_tokens, core_symbol()), "issue tokens for producer pay and savings" );
-         }
-         {
-            token::transfer_action transfer_act{ token_account, { {_self, active_permission} } };
-            transfer_act.send( _self, saving_account, asset(to_savings, core_symbol()), "unallocated inflation" );
-            transfer_act.send( _self, bpay_account, asset(to_per_block_pay, core_symbol()), "fund per-block bucket" );
-            transfer_act.send( _self, vpay_account, asset(to_per_vote_pay, core_symbol()), "fund per-vote bucket" );
+
+         if( new_tokens > 0 ) {
+            {
+               token::issue_action issue_act{ token_account, { {_self, active_permission} } };
+               issue_act.send( _self, asset(new_tokens, core_symbol()), "issue tokens for producer pay and savings" );
+            }
+            {
+               token::transfer_action transfer_act{ token_account, { {_self, active_permission} } };
+               if( to_savings > 0 ) {
+                  transfer_act.send( _self, saving_account, asset(to_savings, core_symbol()), "unallocated inflation" );
+               }
+               if( to_per_block_pay > 0 ) {
+                  transfer_act.send( _self, bpay_account, asset(to_per_block_pay, core_symbol()), "fund per-block bucket" );
+               }
+               if( to_per_vote_pay > 0 ) {
+                  transfer_act.send( _self, vpay_account, asset(to_per_vote_pay, core_symbol()), "fund per-vote bucket" );
+               }
+            }
          }
 
          _gstate.pervote_bucket          += to_per_vote_pay;

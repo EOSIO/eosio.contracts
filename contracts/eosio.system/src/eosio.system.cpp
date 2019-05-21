@@ -15,6 +15,15 @@
 
 namespace eosiosystem {
 
+   const int64_t  inflation_precision           = 100;     // 2 decimals
+   const int64_t  default_annual_rate           = 500;     // 5% annual rate
+   const int64_t  default_inflation_pay_factor  = 5;       // 20% of the inflation
+   const int64_t  default_votepay_factor        = 4;       // 25% of the producer pay
+
+   double get_continuous_rate(int64_t annual_rate) {
+      return std::log(double(1)+double(annual_rate)/double(100*inflation_precision));
+   }
+
    system_contract::system_contract( name s, name code, datastream<const char*> ds )
    :native(s,code,ds),
     _voters(_self, _self.value),
@@ -44,12 +53,8 @@ namespace eosiosystem {
    }
 
    eosio_global_state4 system_contract::get_default_inflation_parameters() {
-      const double   default_continuous_rate       = 0.04879; // 5% annual rate
-      const int64_t  default_inflation_pay_factor  = 5;       // 20% of the inflation
-      const int64_t  default_votepay_factor        = 4;       // 25% of the producer pay
-
       eosio_global_state4 gs4;
-      gs4.continuous_rate      = default_continuous_rate;
+      gs4.continuous_rate      = get_continuous_rate(default_annual_rate);
       gs4.inflation_pay_factor = default_inflation_pay_factor;
       gs4.votepay_factor       = default_votepay_factor;
       return gs4;
@@ -367,13 +372,13 @@ namespace eosiosystem {
       refunds_table.erase( it );
    }
 
-   void system_contract::setinflation( double continuous_rate, int64_t inflation_pay_factor, int64_t votepay_factor ) {
+   void system_contract::setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor ) {
       require_auth(_self);
-      check(continuous_rate >= 0, "continuous_rate can't be negative");
+      check(annual_rate >= 0, "annual_rate can't be negative");
       check(inflation_pay_factor > 0, "inflation_pay_factor must be positive");
       check(votepay_factor > 0, "votepay_factor must be positive");
 
-      _gstate4.continuous_rate      = continuous_rate;
+      _gstate4.continuous_rate      = get_continuous_rate(annual_rate);
       _gstate4.inflation_pay_factor = inflation_pay_factor;
       _gstate4.votepay_factor       = votepay_factor;
       _global4.set( _gstate4, _self );

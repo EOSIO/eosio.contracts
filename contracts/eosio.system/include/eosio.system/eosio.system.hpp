@@ -1207,9 +1207,9 @@ namespace eosiosystem {
           *             +----->|  savings   |
           *                    +------------+
           *
-          * @param continuous_rate - Annual inflation rate of the core token supply.
-          *     (eg. For 5% Annual inflation => continuous_rate=0.04879 ~= ln(1+0.05)
-          *          For 1% Annual inflation => continuous_rate=0.00995 ~= ln(1+0.01)
+          * @param annual_rate - Annual inflation rate of the core token supply.
+          *     (eg. For 5% Annual inflation => annual_rate=500
+          *          For 1.5% Annual inflation => annual_rate=150
           *
           * @param inflation_pay_factor - Percentage of the inflation used to reward block producers.
           *     The remaining inflation will be sent to the `eosio.saving` account.
@@ -1222,7 +1222,7 @@ namespace eosiosystem {
           *          For 50%  => votepay_factor=2).
           */
          [[eosio::action]]
-         void setinflation( double continuous_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
+         void setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;

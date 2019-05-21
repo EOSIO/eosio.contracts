@@ -1399,12 +1399,12 @@ BOOST_FIXTURE_TEST_CASE(change_inflation, eosio_system_tester) try {
       BOOST_REQUIRE_EQUAL(success(), stake("producvotera", core_sym::from_string("100000000.0000"), core_sym::from_string("100000000.0000")));
       BOOST_REQUIRE_EQUAL(success(), vote( N(producvotera), { N(defproducera),N(defproducerb),N(defproducerc) }));
 
-      auto run_for_1year = [this](double inflation, int64_t inflation_pay_factor, int64_t votepay_factor) {
+      auto run_for_1year = [this](int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor) {
          
-         double continuous_rate = std::log(double(1)+inflation);
+         double inflation = double(annual_rate)/double(10000);
 
          BOOST_REQUIRE_EQUAL(success(), setinflation(
-            continuous_rate,
+            annual_rate,
             inflation_pay_factor,
             votepay_factor
          ));
@@ -1427,25 +1427,37 @@ BOOST_FIXTURE_TEST_CASE(change_inflation, eosio_system_tester) try {
          double theoretical_new_tokens = double(initial_supply.get_amount())*inflation;
          double diff_new_tokens = std::abs(theoretical_new_tokens-computed_new_tokens);
 
-         //Error should be less than 0.3%
-         BOOST_REQUIRE( diff_new_tokens/theoretical_new_tokens < double(0.003) );
+         if( annual_rate > 0 ) {
+            //Error should be less than 0.3%
+            BOOST_REQUIRE( diff_new_tokens/theoretical_new_tokens < double(0.003) );
+         } else {
+            BOOST_REQUIRE_EQUAL( computed_new_tokens, 0 );
+            BOOST_REQUIRE_EQUAL( theoretical_new_tokens, 0 );
+         }
 
          double savings_inflation = inflation*double(inflation_pay_factor-1)/double(inflation_pay_factor);
 
          double computed_savings_tokens = double(final_savings-initial_savings);
          double theoretical_savings_tokens = double(initial_supply.get_amount())*savings_inflation;
-
          double diff_savings_tokens = std::abs(theoretical_savings_tokens-computed_savings_tokens);
-         
-         //Error should be less than 0.3%
-         BOOST_REQUIRE( diff_savings_tokens/theoretical_savings_tokens < double(0.003) );
+
+         if( annual_rate > 0 ) {
+            //Error should be less than 0.3%
+            BOOST_REQUIRE( diff_savings_tokens/theoretical_savings_tokens < double(0.003) );
+         } else {
+            BOOST_REQUIRE_EQUAL( computed_savings_tokens, 0 );
+            BOOST_REQUIRE_EQUAL( theoretical_savings_tokens, 0 );
+         }
       };
 
       //1% inflation for 1 year => 50% saving / 50% bp reward
-      run_for_1year(double(1)/double(100), 2, 5);
+      run_for_1year(100, 2, 5);
 
       //3% inflation for 1 year => 66.6% savings / 33.33 bp reward
-      run_for_1year(double(3)/double(100), 3, 5);
+      run_for_1year(300, 3, 5);
+
+      //0% inflation for 1 year
+      run_for_1year(0, 3, 5);
    }
 
 } FC_LOG_AND_RETHROW()
