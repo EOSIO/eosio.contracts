@@ -149,7 +149,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
 
    const int64_t fee = (payment.get_amount() + 199) / 200;
    const double net_payment = payment.get_amount() - fee;
-   const int64_t expected_delta = net_payment * r0.get_amount() / ( net_payment + double(e0.get_amount()) );
+   const int64_t expected_delta = net_payment * r0.get_amount() / ( net_payment + e0.get_amount() );
 
    BOOST_REQUIRE_EQUAL( expected_delta, bytes1 -  bytes0 );
 
@@ -1222,7 +1222,9 @@ BOOST_FIXTURE_TEST_CASE( proxy_actions_affect_producers, eosio_system_tester, * 
 
 BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
 
-   const double continuous_rate = 4.879 / 100.;
+   auto within_one = [](int64_t a, int64_t b) -> bool { return std::abs( a - b ) <= 1; };
+
+   const double continuous_rate = std::log1p(double(0.05));
    const double usecs_per_year  = 52 * 7 * 24 * 3600 * 1000000ll;
    const double secs_per_year   = 52 * 7 * 24 * 3600;
 
@@ -1291,10 +1293,10 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
 
       BOOST_REQUIRE_EQUAL(int64_t( ( initial_supply.get_amount() * double(secs_between_fills) * continuous_rate ) / secs_per_year ),
                           supply.get_amount() - initial_supply.get_amount());
-      BOOST_REQUIRE_EQUAL(int64_t( ( initial_supply.get_amount() * double(secs_between_fills) * (4.   * continuous_rate/ 5.) / secs_per_year ) ),
-                          savings - initial_savings);
-      BOOST_REQUIRE_EQUAL(int64_t( ( initial_supply.get_amount() * double(secs_between_fills) * (0.25 * continuous_rate/ 5.) / secs_per_year ) ),
-                          balance.get_amount() - initial_balance.get_amount());
+      BOOST_REQUIRE(within_one(int64_t( ( initial_supply.get_amount() * double(secs_between_fills) * (4.   * continuous_rate/ 5.) / secs_per_year ) ),
+                               savings - initial_savings));
+      BOOST_REQUIRE(within_one(int64_t( ( initial_supply.get_amount() * double(secs_between_fills) * (0.25 * continuous_rate/ 5.) / secs_per_year ) ),
+                               balance.get_amount() - initial_balance.get_amount()));
 
       int64_t from_perblock_bucket = int64_t( initial_supply.get_amount() * double(secs_between_fills) * (0.25 * continuous_rate/ 5.) / secs_per_year ) ;
       int64_t from_pervote_bucket  = int64_t( initial_supply.get_amount() * double(secs_between_fills) * (0.75 * continuous_rate/ 5.) / secs_per_year ) ;
@@ -1502,7 +1504,7 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::uni
 
    const int64_t secs_per_year  = 52 * 7 * 24 * 3600;
    const double  usecs_per_year = secs_per_year * 1000000;
-   const double  cont_rate      = 4.879/100.;
+   const double  cont_rate      = std::log1p(double(0.05));
 
    const asset net = core_sym::from_string("80.0000");
    const asset cpu = core_sym::from_string("80.0000");
@@ -1642,8 +1644,8 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::uni
 
       BOOST_REQUIRE_EQUAL( int64_t(expected_supply_growth) - int64_t(expected_supply_growth)/5, savings - initial_savings );
 
-      const int64_t expected_perblock_bucket = int64_t( double(initial_supply.get_amount()) * double(usecs_between_fills) * (0.25 * cont_rate/ 5.) / usecs_per_year );
-      const int64_t expected_pervote_bucket  = int64_t( double(initial_supply.get_amount()) * double(usecs_between_fills) * (0.75 * cont_rate/ 5.) / usecs_per_year );
+      const int64_t expected_perblock_bucket = initial_supply.get_amount() * double(usecs_between_fills) * (0.25 * cont_rate/ 5.) / usecs_per_year;
+      const int64_t expected_pervote_bucket  = initial_supply.get_amount() * double(usecs_between_fills) * (0.75 * cont_rate/ 5.) / usecs_per_year;
 
       const int64_t from_perblock_bucket = initial_unpaid_blocks * expected_perblock_bucket / initial_tot_unpaid_blocks ;
       const int64_t from_pervote_bucket  = int64_t( vote_shares[prod_index] * expected_pervote_bucket);
