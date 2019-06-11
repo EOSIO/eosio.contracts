@@ -30,6 +30,8 @@ BOOST_AUTO_TEST_SUITE(eosio_system_tests)
 
 BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
 
+   auto within_one = [](int64_t a, int64_t b) -> bool { return std::abs( a - b ) <= 1; };
+
    BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000"), get_balance( "alice1111111" ) );
 
    transfer( "eosio", "alice1111111", core_sym::from_string("1000.0000"), "eosio" );
@@ -134,24 +136,41 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
       return abi_ser.binary_to_variant("exchange_state", data, abi_serializer_max_time);
    };
 
-   transfer( "eosio", "alice1111111", core_sym::from_string("10000000.0000"), "eosio" );
-   uint64_t bytes0 = get_total_stake( "alice1111111" )["ram_bytes"].as_uint64();
+   {
+      transfer( config::system_account_name, "alice1111111", core_sym::from_string("10000000.0000"), config::system_account_name );
+      uint64_t bytes0 = get_total_stake( "alice1111111" )["ram_bytes"].as_uint64();
 
-   auto market = get_ram_market();
-   const asset r0 = market["base"].as<connector>().balance;
-   const asset e0 = market["quote"].as<connector>().balance;
-   BOOST_REQUIRE_EQUAL( asset::from_string("0 RAM").get_symbol(),     r0.get_symbol() );
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000").get_symbol(), e0.get_symbol() );
+      auto market = get_ram_market();
+      const asset r0 = market["base"].as<connector>().balance;
+      const asset e0 = market["quote"].as<connector>().balance;
+      BOOST_REQUIRE_EQUAL( asset::from_string("0 RAM").get_symbol(),     r0.get_symbol() );
+      BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000").get_symbol(), e0.get_symbol() );
 
-   const asset payment = core_sym::from_string("10000000.0000");
-   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", payment ) );
-   uint64_t bytes1 = get_total_stake( "alice1111111" )["ram_bytes"].as_uint64();
+      const asset payment = core_sym::from_string("10000000.0000");
+      BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", payment ) );
+      uint64_t bytes1 = get_total_stake( "alice1111111" )["ram_bytes"].as_uint64();
 
-   const int64_t fee = (payment.get_amount() + 199) / 200;
-   const double net_payment = payment.get_amount() - fee;
-   const int64_t expected_delta = net_payment * r0.get_amount() / ( net_payment + double(e0.get_amount()) );
+      const int64_t fee = (payment.get_amount() + 199) / 200;
+      const double net_payment = payment.get_amount() - fee;
+      const int64_t expected_delta = net_payment * r0.get_amount() / ( net_payment + e0.get_amount() );
 
-   BOOST_REQUIRE_EQUAL( expected_delta, bytes1 -  bytes0 );
+      BOOST_REQUIRE_EQUAL( expected_delta, bytes1 -  bytes0 );
+   }
+
+   {
+      transfer( config::system_account_name, "bob111111111", core_sym::from_string("100000.0000"), config::system_account_name );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("must reserve a positive amount"),
+                           buyrambytes( "bob111111111", "bob111111111", 1 ) );
+
+      uint64_t bytes0 = get_total_stake( "bob111111111" )["ram_bytes"].as_uint64();
+      BOOST_REQUIRE_EQUAL( success(), buyrambytes( "bob111111111", "bob111111111", 1024 ) );
+      uint64_t bytes1 = get_total_stake( "bob111111111" )["ram_bytes"].as_uint64();
+      BOOST_REQUIRE( within_one( 1024, bytes1 - bytes0 ) );
+
+      BOOST_REQUIRE_EQUAL( success(), buyrambytes( "bob111111111", "bob111111111", 1024 * 1024) );
+      uint64_t bytes2 = get_total_stake( "bob111111111" )["ram_bytes"].as_uint64();
+      BOOST_REQUIRE( within_one( 1024 * 1024, bytes2 - bytes1 ) );
+   }
 
 } FC_LOG_AND_RETHROW()
 
@@ -1563,7 +1582,7 @@ BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::uni
       const int64_t expected_pervote_bucket  = int64_t( double(initial_supply.get_amount()) * double(usecs_between_fills) * (0.75 * cont_rate/ 5.) / usecs_per_year );
 
       const int64_t from_perblock_bucket = initial_unpaid_blocks * expected_perblock_bucket / initial_tot_unpaid_blocks ;
-      const int64_t from_pervote_bucket  = int64_t( vote_shares[prod_index] * expected_pervote_bucket);
+      const int64_t from_pervote_bucket  = vote_shares[prod_index] * expected_pervote_bucket;
 
       BOOST_REQUIRE( 1 >= abs(int32_t(initial_tot_unpaid_blocks - tot_unpaid_blocks) - int32_t(initial_unpaid_blocks - unpaid_blocks)) );
 
