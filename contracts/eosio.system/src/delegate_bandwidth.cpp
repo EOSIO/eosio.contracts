@@ -87,12 +87,12 @@ namespace eosiosystem {
     *  This action will buy an exact amount of ram and bill the payer the current market price.
     */
    void system_contract::buyrambytes( const name& payer, const name& receiver, uint32_t bytes ) {
-
       auto itr = _rammarket.find(ramcore_symbol.raw());
-      auto tmp = *itr;
-      auto eosout = tmp.direct_convert( asset(bytes, ram_symbol), core_symbol() );
-
-      buyram( payer, receiver, eosout );
+      const int64_t ram_reserve   = itr->base.balance.amount;
+      const int64_t eos_reserve   = itr->quote.balance.amount;
+      const int64_t cost          = exchange_state::get_bancor_input( ram_reserve, eos_reserve, bytes );
+      const int64_t cost_plus_fee = cost / double(0.995);
+      buyram( payer, receiver, asset{ cost_plus_fee, core_symbol() } );
    }
 
 
