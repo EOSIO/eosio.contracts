@@ -17,9 +17,16 @@ struct _abi_hash {
 };
 FC_REFLECT( _abi_hash, (owner)(hash) );
 
+struct connector {
+   asset balance;
+   double weight = .5;
+};
+FC_REFLECT( connector, (balance)(weight) );
+
 using namespace eosio_system;
 
 BOOST_AUTO_TEST_SUITE(eosio_system_tests)
+
 
 BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
 
@@ -117,7 +124,34 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
 
    BOOST_REQUIRE_EQUAL( success(), sellram( "alice1111111", bought_bytes ) );
 
-   BOOST_REQUIRE_EQUAL( core_sym::from_string("99396507.4158"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EQUAL( false, get_row_by_account( config::system_account_name, config::system_account_name,
+                                                   N(rammarket), symbol{SY(4,RAMCORE)}.value() ).empty() );
+
+   auto get_ram_market = [this]() -> fc::variant {
+      vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name,
+                                              N(rammarket), symbol{SY(4,RAMCORE)}.value() );
+      BOOST_REQUIRE( !data.empty() );
+      return abi_ser.binary_to_variant("exchange_state", data, abi_serializer_max_time);
+   };
+
+   transfer( "eosio", "alice1111111", core_sym::from_string("10000000.0000"), "eosio" );
+   uint64_t bytes0 = get_total_stake( "alice1111111" )["ram_bytes"].as_uint64();
+
+   auto market = get_ram_market();
+   const asset r0 = market["base"].as<connector>().balance;
+   const asset e0 = market["quote"].as<connector>().balance;
+   BOOST_REQUIRE_EQUAL( asset::from_string("0 RAM").get_symbol(),     r0.get_symbol() );
+   BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000").get_symbol(), e0.get_symbol() );
+
+   const asset payment = core_sym::from_string("10000000.0000");
+   BOOST_REQUIRE_EQUAL( success(), buyram( "alice1111111", "alice1111111", payment ) );
+   uint64_t bytes1 = get_total_stake( "alice1111111" )["ram_bytes"].as_uint64();
+
+   const int64_t fee = (payment.get_amount() + 199) / 200;
+   const double net_payment = payment.get_amount() - fee;
+   const int64_t expected_delta = net_payment * r0.get_amount() / ( net_payment + double(e0.get_amount()) );
+
+   BOOST_REQUIRE_EQUAL( expected_delta, bytes1 -  bytes0 );
 
 } FC_LOG_AND_RETHROW()
 
