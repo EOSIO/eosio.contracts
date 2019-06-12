@@ -93,7 +93,6 @@ namespace eosiosystem {
    {
       const double ob = out_reserve;
       const double ib = inp_reserve;
-      //      const double ou = out;
 
       int64_t inp = (ib * out) / (ob - out);
 
