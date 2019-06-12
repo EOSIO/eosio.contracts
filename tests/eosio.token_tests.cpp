@@ -387,6 +387,9 @@ BOOST_FIXTURE_TEST_CASE( open_tests, eosio_token_tester ) try {
    BOOST_REQUIRE_EQUAL( wasm_assert_msg( "symbol precision mismatch" ),
                         open( N(carol), "1,CERO", N(alice) ) );
 
+   BOOST_REQUIRE_EQUAL( wasm_assert_msg( "owner account does not exist" ),
+                        open( N(nonexistent), "4,EOS", N(alice) ) );
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( close_tests, eosio_token_tester ) try {
