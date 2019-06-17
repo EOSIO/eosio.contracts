@@ -1,7 +1,3 @@
-/**
- *  @copyright defined in eos/LICENSE.txt
- */
-
 #include <eosio/datastream.hpp>
 #include <eosio/eosio.hpp>
 #include <eosio/multi_index.hpp>
@@ -16,13 +12,13 @@
 #include <map>
 
 namespace eosiosystem {
-   
+
    using eosio::asset;
    using eosio::const_mem_fun;
    using eosio::indexed_by;
    using eosio::permission_level;
    using eosio::time_point_sec;
-   
+
    using std::map;
    using std::pair;
 
@@ -135,7 +131,7 @@ namespace eosiosystem {
 
       const auto& market = _rammarket.get(ramcore_symbol.raw(), "ram market does not exist");
       _rammarket.modify( market, same_payer, [&]( auto& es ) {
-         bytes_out = es.direct_convert( quant_after_fee,  ram_symbol ).amount; 
+         bytes_out = es.direct_convert( quant_after_fee,  ram_symbol ).amount;
       });
 
       check( bytes_out > 0, "must reserve a positive amount" );
@@ -208,7 +204,7 @@ namespace eosiosystem {
          get_resource_limits( res_itr->owner, ram_bytes, net, cpu );
          set_resource_limits( res_itr->owner, res_itr->ram_bytes + ram_gift_bytes, net, cpu );
       }
-      
+
       {
          token::transfer_action transfer_act{ token_account, { {ram_account, active_permission}, {account, active_permission} } };
          transfer_act.send( ram_account, account, asset(tokens_out), "sell ram" );
