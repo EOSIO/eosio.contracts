@@ -47,7 +47,9 @@ printf "\t=========== Building eosio.contracts ===========\n\n"
 # Load helper functions.
 . ./scripts/helper.sh
 
+# Prompt user for installation of eosio.
 eosio-directory-prompt
+# Prompt user for installation of eosio.cdt.
 cdt-directory-prompt
 
 exit 1;
