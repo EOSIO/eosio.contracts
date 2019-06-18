@@ -52,7 +52,6 @@ eosio-directory-prompt
 # Prompt user for installation of eosio.cdt.
 cdt-directory-prompt
 
-exit 1;
 RED='\033[0;31m'
 NC='\033[0m'
 
