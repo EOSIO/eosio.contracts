@@ -61,6 +61,9 @@ CORES=`getconf _NPROCESSORS_ONLN`
 mkdir -p build
 pushd build &> /dev/null
 # TODO: Add EOSIO and EOSIO.CDT directories to variable passed to CMAKE.
-cmake ../
+echo $CMAKE_PREFIX_PATHS
+echo $EOSIO_INSTALL_DIR
+echo $CDT_INSTALL_DIR
+cmake -DCMAKE_PREFIX_PATH='${CMAKE_PREFIX_PATHS}' ../
 make -j${CORES}
 popd &> /dev/null
