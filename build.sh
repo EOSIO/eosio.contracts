@@ -15,10 +15,10 @@ if [ $# -ne 0 ]; then
   while getopts "e:c:yh" opt; do
     case "${opt}" in
       e )
-        EOSIO_INSTALL_DIR=$OPTARG
+        EOSIO_DIR_PROMPT=$OPTARG
       ;;
       c )
-        CDT_INSTALL_DIR=$OPTARG
+        CDT_DIR_PROMPT=$OPTARG
       ;;
       y )
         NONINTERACTIVE=true
@@ -44,13 +44,15 @@ fi
 
 printf "\t=========== Building eosio.contracts ===========\n\n"
 
-# Load helper functions.
+# Source helper functions and variables.
 . ./scripts/helper.sh
-
-# Prompt user for installation of eosio.
+. ./scripts/.environment
+# Prompt user for location of eosio.
 eosio-directory-prompt
-# Prompt user for installation of eosio.cdt.
+# Prompt user for location of eosio.cdt.
 cdt-directory-prompt
+# Ensure eosio version is appropriate.
+eosio-version-check
 
 RED='\033[0;31m'
 NC='\033[0m'
@@ -58,9 +60,7 @@ NC='\033[0m'
 CORES=`getconf _NPROCESSORS_ONLN`
 mkdir -p build
 pushd build &> /dev/null
+# TODO: Add EOSIO and EOSIO.CDT directories to variable passed to CMAKE.
 cmake ../
 make -j${CORES}
 popd &> /dev/null
-
-# TODO: Test cases of multiple EOSIO installations.
-# TODO: Test custom EOSIO installation.

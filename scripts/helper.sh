@@ -1,12 +1,19 @@
 function default-eosio-directories() {
-  DEFAULT_EOSIO_DIRECTORIES=($(echo $(ls ${HOME}/eosio)))
+  # Handles choosing which EOSIO directory to select when the default location is used.
+  ALL_EOSIO_SUBDIRS=($(echo $(ls ${HOME}/eosio)))
+  PROMPT_EOSIO_DIRS=()
+  for ITEM in "${ALL_EOSIO_SUBDIRS[@]}"; do
+    if [[ "$ITEM" > "$EOSIO_MIN_VERSION" && "$ITEM" < "$EOSIO_MAX_VERSION" ]]; then
+      PROMPT_EOSIO_DIRS+=($ITEM)
+    fi
+  done
   CONTINUE=true
   if [[ $NONINTERACTIVE != true ]]; then
     while $CONTINUE -eq true; do
       echo "We detected the following items in the default EOSIO path:"
-      printf '%s\n' "${DEFAULT_EOSIO_DIRECTORIES[@]}"
+      printf '%s\n' "${PROMPT_EOSIO_DIRS[@]}"
       printf "Enter the EOSIO version number/directory to use:" && read -p " " EOSIO_VERSION
-      for ITEM in "${DEFAULT_EOSIO_DIRECTORIES[@]}"; do
+      for ITEM in "${PROMPT_EOSIO_DIRS[@]}"; do
         if [[ "$ITEM" = "$EOSIO_VERSION" ]]; then
           CONTINUE=false
         fi
@@ -14,17 +21,37 @@ function default-eosio-directories() {
     done
   else
     REGEX='^[0-9]+([.][0-9]+)?$'
-    for ITEM in "${DEFAULT_EOSIO_DIRECTORIES[@]}"; do
+    for ITEM in "${PROMPT_EOSIO_DIRS[@]}"; do
       if [[ "$ITEM" =~ $REGEX ]]; then
         EOSIO_VERSION=$ITEM
       fi
-    done   
+    done
   fi
 }
 
 
+function eosio-version-check() {
+  # TODO: Better version comparison. Cut anything off second period, even if doesn't exist. Supports 1.7.x format.
+  INSTALLED_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f1,2 -d '.' | sed 's/v//g' )
+  if [[ -z $INSTALLED_VERSION ]]; then
+    echo "Could not determine EOSIO version. Exiting..."
+    exit 1;
+  elif [[ $INSTALLED_VERSION < $EOSIO_MIN_VERSION || $INSTALLED_VERSION > $EOSIO_MAX_VERSION ]]; then 
+    echo "Detected unsupported EOSIO version $INSTALLED_VERSION. Versions supported are from $EOSIO_MIN_VERSION to $EOSIO_MAX_VERSION."
+    exit 1;
+  elif [[ $INSTALLED_VERSION > $EOSIO_SOFT_MAX_VERSION ]]; then
+    echo "Detected EOSIO version is greater than recommand max of $EOSIO_SOFT_MAX_VERSION. Proceed with caution."
+  fi
+  echo "Using EOSIO installation at: $EOSIO_INSTALL_DIR"
+  echo "Using EOSIO.CDT installation at: $CDT_INSTALL_DIR"
+  export CMAKE_PREFIX_PATH="${EOSIO_INSTALL_DIR};${CDT_INSTALL_DIR}"
+  echo $CMAKE_PREFIX_PATH
+}
+
+
 function eosio-directory-prompt() {
-  if [[ -z $EOSIO_INSTALL_DIR ]]; then
+  # Handles prompts and default behavior for choosing EOSIO directory.
+  if [[ -z $EOSIO_DIR_PROMPT ]]; then
     echo 'No EOSIO location was specified.'
     while true; do
       if [[ $NONINTERACTIVE != true ]]; then
@@ -38,26 +65,20 @@ function eosio-directory-prompt() {
           default-eosio-directories;
           break;;
         1 | false | [Nn]* )
-          printf "Enter the installation location of EOSIO:" && read -p " " EOSIO_INSTALL_DIR;
+          printf "Enter the installation location of EOSIO:" && read -p " " EOSIO_DIR_PROMPT;
           break;;
         * )
           echo "Please type 'y' for yes or 'n' for no.";;
       esac
     done
   fi
-  # TODO: Update appropriate info in CMAKE files related to EOSIO installation location. eosio_DIR
-  . ./scripts/.environment
-  INSTALLED_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f1,2 -d '.' | sed 's/v//g' )
-  if [[ $INSTALLED_VERSION < $EOSIO_MIN_SUPPORTED_VERSION ]]; then 
-    echo "Detected EOSIO version $INSTALLED_VERSION. Miniumum required version is $EOSIO_MIN_SUPPORTED_VERSION."
-    exit 1;
-  fi
-  echo "Using EOSIO installation at: $EOSIO_INSTALL_DIR"
+  export EOSIO_INSTALL_DIR="${EOSIO_DIR_PROMPT:-${HOME}/eosio/${EOSIO_VERSION}}"
 }
 
 
 function cdt-directory-prompt() {
-  if [[ -z $CDT_INSTALL_DIR ]]; then
+  # Handles prompts and default behavior for choosing EOSIO.CDT directory.
+  if [[ -z $CDT_DIR_PROMPT ]]; then
     echo 'No EOSIO.CDT location was specified.'
     while true; do
       if [[ $NONINTERACTIVE != true ]]; then
@@ -70,14 +91,12 @@ function cdt-directory-prompt() {
         0 | true | [Yy]* )
           break;;
         1 | false | [Nn]* )
-          printf "Enter the installation location of EOSIO.CDT:" && read -p " " CDT_INSTALL_DIR;
+          printf "Enter the installation location of EOSIO.CDT:" && read -p " " CDT_DIR_PROMPT;
           break;;
         * )
           echo "Please type 'y' for yes or 'n' for no.";;
       esac
     done
-    # TODO: Update appropriate info in CMAKE files related to EOSIO.CDT installation location. eosio.cdt_DIR
   fi
-  export CDT_INSTALL_DIR="${CDT_INSTALL_DIR:-/usr/local/eosio.cdt}"
-  echo "Using EOSIO.CDT installation at: $CDT_INSTALL_DIR"
+  export CDT_INSTALL_DIR="${CDT_DIR_PROMPT:-/usr/local/eosio.cdt}"
 }

@@ -3,17 +3,7 @@ export REPO_ROOT="${SCRIPT_DIR}/.."
 export BUILD_DIR="${REPO_ROOT}/build"
 export TEST_DIR="${REPO_ROOT}/tests"
 
-# TODO: Replace version exports below. EOSIO installation will not have CMake files...
-# export EOSIO_VERSION_MAJOR=$(cat $EOSIO_INSTALL_DIR/CMakeLists.txt | grep -E "^[[:blank:]]*set[[:blank:]]*\([[:blank:]]*VERSION_MAJOR" | tail -1 | sed 's/.*VERSION_MAJOR //g' | sed 's/ //g' | cut -d\) -f1)
-# export EOSIO_VERSION_MINOR=$(cat $EOSIO_INSTALL_DIR/CMakeLists.txt | grep -E "^[[:blank:]]*set[[:blank:]]*\([[:blank:]]*VERSION_MINOR" | tail -1 | sed 's/.*VERSION_MINOR //g' | sed 's/ //g' | cut -d\) -f1)
-# export EOSIO_VERSION_PATCH=$(cat $EOSIO_INSTALL_DIR/CMakeLists.txt | grep -E "^[[:blank:]]*set[[:blank:]]*\([[:blank:]]*VERSION_PATCH" | tail -1 | sed 's/.*VERSION_PATCH //g' | sed 's/ //g' | cut -d\) -f1)
-# export EOSIO_VERSION_SUFFIX=$(cat $EOSIO_INSTALL_DIR/CMakeLists.txt | grep -E "^[[:blank:]]*set[[:blank:]]*\([[:blank:]]*VERSION_SUFFIX" | tail -1 | sed 's/.*VERSION_SUFFIX //g' | sed 's/ //g' | cut -d\) -f1)
-# export EOSIO_VERSION="${EOSIO_VERSION:-${EOSIO_VERSION_MAJOR}.${EOSIO_VERSION_MINOR}}"
-
-export EOSIO_INSTALL_DIR="${EOSIO_INSTALL_DIR:-${HOME}/eosio/${EOSIO_VERSION}}"
-export EOSIO_MIN_SUPPORTED_VERSION=$(cat $TEST_DIR/CMakeLists.txt | grep -E "^[[:blank:]]*set[[:blank:]]*\([[:blank:]]*EOSIO_VERSION_MIN" | tail -1 | sed 's/.*EOSIO_VERSION_MIN //g' | sed 's/ //g' | sed 's/"//g' | cut -d\) -f1)
-# if [[ -z $EOSIO_VERSION_SUFFIX ]]; then
-#     export EOSIO_VERSION_FULL="${EOSIO_VERSION_MAJOR}.${EOSIO_VERSION_MINOR}.${EOSIO_VERSION_PATCH}"
-# else
-#     export EOSIO_VERSION_FULL="${EOSIO_VERSION_MAJOR}.${EOSIO_VERSION_MINOR}.${EOSIO_VERSION_PATCH}-${EOSIO_VERSION_SUFFIX}"
-# fi
+export EOSIO_MIN_VERSION=$(cat $TEST_DIR/CMakeLists.txt | grep -E "^[[:blank:]]*set[[:blank:]]*\([[:blank:]]*EOSIO_VERSION_MIN" | tail -1 | sed 's/.*EOSIO_VERSION_MIN //g' | sed 's/ //g' | sed 's/"//g' | cut -d\) -f1)
+export EOSIO_SOFT_MAX_VERSION=$(cat $TEST_DIR/CMakeLists.txt | grep -E "^[[:blank:]]*set[[:blank:]]*\([[:blank:]]*EOSIO_VERSION_SOFT_MAX" | tail -1 | sed 's/.*EOSIO_VERSION_SOFT_MAX //g' | sed 's/ //g' | sed 's/"//g' | cut -d\) -f1)
+export EOSIO_MAX_VERSION=$(cat $TEST_DIR/CMakeLists.txt | grep -E "^[[:blank:]]*set[[:blank:]]*\([[:blank:]]*EOSIO_VERSION_HARD_MAX" | tail -1 | sed 's/.*EOSIO_VERSION_HARD_MAX //g' | sed 's/ //g' | sed 's/"//g' | cut -d\) -f1)
+export EOSIO_MAX_VERSION="${EOSIO_MAX_VERSION:-$(echo $EOSIO_SOFT_MAX_VERSION | awk '{print int($1+1)}')}"
