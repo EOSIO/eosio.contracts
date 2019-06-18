@@ -3,9 +3,9 @@ function default-eosio-directories() {
   ALL_EOSIO_SUBDIRS=($(echo $(ls ${HOME}/eosio)))
   PROMPT_EOSIO_DIRS=()
   for ITEM in "${ALL_EOSIO_SUBDIRS[@]}"; do
-    if [[ "$ITEM" > "$EOSIO_MIN_VERSION" && "$ITEM" < "$EOSIO_MAX_VERSION" ]]; then
+    # if [[ "$ITEM" > "$EOSIO_MIN_VERSION" && "$ITEM" < "$EOSIO_MAX_VERSION" ]]; then
       PROMPT_EOSIO_DIRS+=($ITEM)
-    fi
+    # fi
   done
   CONTINUE=true
   if [[ $NONINTERACTIVE != true ]]; then
@@ -85,14 +85,20 @@ function cdt-directory-prompt() {
 
 function eosio-version-check() {
   # TODO: Better version comparison. Cut anything off second period, even if doesn't exist. Supports 1.7.x format.
-  INSTALLED_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f1,2 -d '.' | sed 's/v//g' )
-  if [[ -z $INSTALLED_VERSION ]]; then
+  INSTALLED_MAJOR_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f1,1 -d '.' | sed 's/v//g' )
+  INSTALLED_MINOR_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f2,2 -d '.' | sed 's/v//g' )
+  if [[ -z $INSTALLED_MAJOR_VERSION || -z $INSTALLED_MINOR_VERSION ]]; then
     echo "Could not determine EOSIO version. Exiting..."
     exit 1;
-  elif [[ $INSTALLED_VERSION < $EOSIO_MIN_VERSION || $INSTALLED_VERSION > $EOSIO_MAX_VERSION ]]; then 
-    echo "Detected unsupported EOSIO version $INSTALLED_VERSION. Versions supported are from $EOSIO_MIN_VERSION to $EOSIO_MAX_VERSION."
+  elif [[ $INSTALLED_MAJOR_VERSION < $EOSIO_MIN_VERSION_MAJOR || $INSTALLED_MAJOR_VERSION > $EOSIO_MAX_VERSION_MAJOR ]]; then 
+    echo "Detected unsupported EOSIO major version $INSTALLED_MAJOR_VERSION.$INSTALLED_MINOR_VERSION."
+    echo "Versions supported are from $EOSIO_MIN_VERSION_MAJOR.$EOSIO_MIN_VERSION_MAJOR to $EOSIO_MAX_VERSION."
     exit 1;
-  elif [[ $INSTALLED_VERSION > $EOSIO_SOFT_MAX_VERSION ]]; then
+  elif [[ $INSTALLED_MINOR_VERSION < $EOSIO_MIN_VERSION_MAJOR || $INSTALLED_MINOR_VERSION > $EOSIO_MAX_VERSION_MAJOR ]]; then
+    echo "Detected unsupported EOSIO minor version $INSTALLED_MAJOR_VERSION.$INSTALLED_MINOR_VERSION."
+    echo "Versions supported are from $EOSIO_MIN_VERSION_MAJOR.$EOSIO_MIN_VERSION_MINOR to $EOSIO_MAX_VERSION."
+    exit 1;
+  elif [[ $INSTALLED_MINOR_VERSION > $EOSIO_SOFT_MAX_MINOR ]]; then
     echo "Detected EOSIO version is greater than recommand max of $EOSIO_SOFT_MAX_VERSION. Proceed with caution."
   fi
   echo "Using EOSIO installation at: $EOSIO_INSTALL_DIR"
