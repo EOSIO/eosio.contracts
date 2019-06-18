@@ -62,3 +62,6 @@ pushd build &> /dev/null
 cmake ../
 make -j${CORES}
 popd &> /dev/null
+
+# TODO: Test cases of multiple EOSIO installations.
+# TODO: Test custom EOSIO installation.

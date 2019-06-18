@@ -1,9 +1,10 @@
 function default-eosio-directories() {
-  EOSIO_DIRECTORIES=("$(echo $(ls ${HOME}/eosio))")
+  EOSIO_DIRECTORIES=($(echo $(ls ${HOME}/eosio)))
   CONTINUE=true
   if [[ $NONINTERACTIVE != true ]]; then
     while $CONTINUE -eq true; do
-      echo "We detected the following directories: ${EOSIO_DIRECTORIES}"
+      echo "We detected the following items in the default EOSIO path:"
+      printf '%s\n' "${EOSIO_DIRECTORIES[@]}"
       printf "Enter the EOSIO version number/directory to use:" && read -p " " EOSIO_VERSION
       for ITEM in "${EOSIO_DIRECTORIES[@]}"; do
         if [[ "$ITEM" = "$EOSIO_VERSION" ]]; then
@@ -12,8 +13,13 @@ function default-eosio-directories() {
       done
     done
   else
-    echo "NONINTERACTIVE MODE"
-    # TODO: Determine version number of default EOSIO. Max number? First occurance in array?
+    REG='^[0-9]+([.][0-9]+)?$'
+    for ITEM in "${EOSIO_DIRECTORIES[@]}"; do
+      if [[ "$ITEM" =~ $REG ]]; then
+        EOSIO_VERSION=$ITEM
+      fi
+    done   
+    # TODO: Determine which EOSIO is default if multiple exist. Use highest version.
   fi
 }
 
@@ -22,7 +28,7 @@ function eosio-directory-prompt() {
     echo 'No EOSIO location was specified.'
     while true; do
       if [[ $NONINTERACTIVE != true ]]; then
-        printf "Is EOSIO installed in the default location: $HOME/eosio/ (y/n)" && read -p " " PROCEED
+        printf "Is EOSIO installed in the default location: $HOME/eosio/X.Y (y/n)" && read -p " " PROCEED
       fi
       echo ""
       case $PROCEED in
@@ -39,12 +45,14 @@ function eosio-directory-prompt() {
       esac
     done
   fi
-  # TODO: Determine which version of EOSIO is installed. Grep output of command --version?
-  # TODO: Ensure that minimum supported version of EOSIO is installed. Compare with tests/CMakeLists.txt.
-  # TODO: Update appropriate variables in CMAKE files related to EOSIO installation location.
-  # TODO: Test cases of multiple EOSIO installations.
-  # TODO: Test custom EOSIO installation.
+  # TODO: Update appropriate info in CMAKE files related to EOSIO installation location.
   . ./scripts/.environment
+
+  INSTALLED_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f1,2 -d '.' | sed 's/v//g' )
+  if [[ $INSTALLED_VERSION < $EOSIO_MIN_SUPPORTED_VERSION ]]; then 
+    echo "Detected EOSIO version $INSTALLED_VERSION. Miniumum required version is $EOSIO_MIN_SUPPORTED_VERSION."
+    exit 1;
+  fi
   echo $EOSIO_INSTALL_DIR
 }
 
@@ -53,7 +61,7 @@ function cdt-directory-prompt() {
     echo 'No EOSIO.CDT location was specified.'
     while true; do
       if [[ $NONINTERACTIVE != true ]]; then
-        printf "Is EOSIO.CDT installed in the default location? (y/n)" && read -p " " PROCEED
+        printf "Is EOSIO.CDT installed in the default location? /usr/local/eosio.cdt (y/n)" && read -p " " PROCEED
       fi
       echo ""
       case $PROCEED in
@@ -69,7 +77,8 @@ function cdt-directory-prompt() {
           echo "Please type 'y' for yes or 'n' for no.";;
       esac
     done
-    # TODO: Update appropriate variables in CMAKE files related to EOSIO.CDT installation location.
+    # TODO: Update appropriate info in CMAKE files related to EOSIO.CDT installation location.
   fi
+  export CDT_INSTALL_DIR="${CDT_INSTALL_DIR:-/usr/local/eosio.cdt}"
   echo $CDT_INSTALL_DIR
 }

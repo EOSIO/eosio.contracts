@@ -12,7 +12,6 @@ export TEST_DIR="${REPO_ROOT}/tests"
 
 export EOSIO_INSTALL_DIR="${EOSIO_INSTALL_DIR:-${HOME}/eosio/${EOSIO_VERSION}}"
 export EOSIO_MIN_SUPPORTED_VERSION=$(cat $TEST_DIR/CMakeLists.txt | grep -E "^[[:blank:]]*set[[:blank:]]*\([[:blank:]]*EOSIO_VERSION_MIN" | tail -1 | sed 's/.*EOSIO_VERSION_MIN //g' | sed 's/ //g' | sed 's/"//g' | cut -d\) -f1)
-
 # if [[ -z $EOSIO_VERSION_SUFFIX ]]; then
 #     export EOSIO_VERSION_FULL="${EOSIO_VERSION_MAJOR}.${EOSIO_VERSION_MINOR}.${EOSIO_VERSION_PATCH}"
 # else
