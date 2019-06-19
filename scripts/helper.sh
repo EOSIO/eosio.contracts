@@ -3,9 +3,9 @@ function default-eosio-directories() {
   ALL_EOSIO_SUBDIRS=($(echo $(ls ${HOME}/eosio)))
   PROMPT_EOSIO_DIRS=()
   for ITEM in "${ALL_EOSIO_SUBDIRS[@]}"; do
-    # if [[ "$ITEM" > "$EOSIO_MIN_VERSION" && "$ITEM" < "$EOSIO_MAX_VERSION" ]]; then
+    if [[ "$ITEM" > "$EOSIO_MIN_VERSION_MAJOR.$EOSIO_MIN_VERSION_MINOR" && "$ITEM" < "$EOSIO_MAX_VERSION_MAJOR.$EOSIO_MAX_VERSION_MINOR" ]]; then
       PROMPT_EOSIO_DIRS+=($ITEM)
-    # fi
+    fi
   done
   CONTINUE=true
   if [[ $NONINTERACTIVE != true ]]; then
@@ -84,26 +84,46 @@ function cdt-directory-prompt() {
 
 
 function eosio-version-check() {
-  # TODO: Better version comparison. Cut anything off second period, even if doesn't exist. Supports 1.7.x format.
-  INSTALLED_MAJOR_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f1,1 -d '.' | sed 's/v//g' )
-  INSTALLED_MINOR_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f2,2 -d '.' | sed 's/v//g' )
-  if [[ -z $INSTALLED_MAJOR_VERSION || -z $INSTALLED_MINOR_VERSION ]]; then
+  INSTALLED_VERSION_MAJOR=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f1,1 -d '.' | sed 's/v//g' )
+  INSTALLED_VERSION_MINOR=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f2,2 -d '.' | sed 's/v//g' )
+  VALID_VERSION=false
+  if [[ -z $INSTALLED_VERSION_MAJOR || -z $INSTALLED_VERSION_MINOR ]]; then
     echo "Could not determine EOSIO version. Exiting..."
     exit 1;
-  elif [[ $INSTALLED_MAJOR_VERSION < $EOSIO_MIN_VERSION_MAJOR || $INSTALLED_MAJOR_VERSION > $EOSIO_MAX_VERSION_MAJOR ]]; then 
-    echo "Detected unsupported EOSIO major version $INSTALLED_MAJOR_VERSION.$INSTALLED_MINOR_VERSION."
-    echo "Versions supported are from $EOSIO_MIN_VERSION_MAJOR.$EOSIO_MIN_VERSION_MAJOR to $EOSIO_MAX_VERSION."
-    exit 1;
-  elif [[ $INSTALLED_MINOR_VERSION < $EOSIO_MIN_VERSION_MAJOR || $INSTALLED_MINOR_VERSION > $EOSIO_MAX_VERSION_MAJOR ]]; then
-    echo "Detected unsupported EOSIO minor version $INSTALLED_MAJOR_VERSION.$INSTALLED_MINOR_VERSION."
-    echo "Versions supported are from $EOSIO_MIN_VERSION_MAJOR.$EOSIO_MIN_VERSION_MINOR to $EOSIO_MAX_VERSION."
-    exit 1;
-  elif [[ $INSTALLED_MINOR_VERSION > $EOSIO_SOFT_MAX_MINOR ]]; then
-    echo "Detected EOSIO version is greater than recommand max of $EOSIO_SOFT_MAX_VERSION. Proceed with caution."
   fi
-  echo "Using EOSIO installation at: $EOSIO_INSTALL_DIR"
-  echo "Using EOSIO.CDT installation at: $CDT_INSTALL_DIR"
-  export CMAKE_PREFIX_PATH="${EOSIO_INSTALL_DIR};${CDT_INSTALL_DIR}"
-  export eosio_ROOT=${EOSIO_INSTALL_DIR}
-  export EOSIO_CDT_DIR=${CDT_INSTALL_DIR}
+
+  # Installed major between min and max majors.
+  if [[ $INSTALLED_VERSION_MAJOR -gt $EOSIO_MIN_VERSION_MAJOR && $INSTALLED_VERSION_MAJOR -lt $EOSIO_MAX_VERSION_MAJOR ]]; then
+    VALID_VERSION=true
+  # Installed major same as minimum major.
+  elif [[ $INSTALLED_VERSION_MAJOR -eq $EOSIO_MIN_VERSION_MAJOR && $INSTALLED_VERSION_MAJOR -lt $EOSIO_MAX_VERSION_MAJOR ]]; then
+    if [[ $INSTALLED_VERSION_MINOR -ge $EOSIO_MIN_VERSION_MINOR ]]; then
+      VALID_VERSION=true
+    fi
+  # Installed major same as maximum major.
+  elif [[ $INSTALLED_VERSION_MAJOR -eq $EOSIO_MAX_VERSION_MAJOR && $INSTALLED_VERSION_MAJOR -gt $EOSIO_MIN_VERSION_MAJOR ]]; then
+    if [[ $INSTALLED_VERSION_MINOR -le $EOSIO_MAX_VERSION_MINOR ]]; then
+      VALID_VERSION=true
+    fi
+  # Installed major same as both.
+  else
+    if [[ $INSTALLED_VERSION_MINOR -ge $EOSIO_MIN_VERSION_MINOR && $INSTALLED_VERSION_MINOR -le $EOSIO_MAX_VERSION_MINOR ]]; then
+      VALID_VERSION=true
+    fi
+  fi
+
+  if [[ $VALID_VERSION -eq true ]]; then
+    if [[ $INSTALLED_VERSION_MINOR -gt $EOSIO_SOFT_MAX_MINOR || $INSTALLED_VERSION_MAJOR -gt $EOSIO_SOFT_MAX_MAJOR ]]; then
+      echo "Detected EOSIO version is greater than recommand soft max of $EOSIO_SOFT_MAX_MAJOR.$EOSIO_SOFT_MAX_MINOR. Proceed with caution."
+    fi
+    echo "Using EOSIO installation at: $EOSIO_INSTALL_DIR"
+    echo "Using EOSIO.CDT installation at: $CDT_INSTALL_DIR"
+  else
+    echo "Supported versions are: $EOSIO_MIN_VERSION_MAJOR.$EOSIO_MIN_VERSION_MINOR - $EOSIO_MAX_VERSION_MAJOR.$EOSIO_MAX_VERSION_MINOR"
+    echo "Invalid EOSIO installation. Exiting..."
+    exit 1;
+fi
+  # export CMAKE_PREFIX_PATH="${EOSIO_INSTALL_DIR};${CDT_INSTALL_DIR}"
+  # export eosio_ROOT=${EOSIO_INSTALL_DIR}
+  # export EOSIO_CDT_DIR=${CDT_INSTALL_DIR}
 }
