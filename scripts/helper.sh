@@ -80,13 +80,14 @@ function cdt-directory-prompt() {
     done
   fi
   export CDT_INSTALL_DIR="${CDT_DIR_PROMPT:-/usr/local/eosio.cdt}"
+  # TODO: Confirm EOSIO.CDT installation.
 }
 
 
 function eosio-version-check() {
   INSTALLED_VERSION_MAJOR=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f1,1 -d '.' | sed 's/v//g' )
   INSTALLED_VERSION_MINOR=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f2,2 -d '.' | sed 's/v//g' )
-  VALID_VERSION=false
+
   if [[ -z $INSTALLED_VERSION_MAJOR || -z $INSTALLED_VERSION_MINOR ]]; then
     echo "Could not determine EOSIO version. Exiting..."
     exit 1;
@@ -111,8 +112,8 @@ function eosio-version-check() {
       VALID_VERSION=true
     fi
   fi
-
-  if [[ $VALID_VERSION -eq true ]]; then
+  
+  if $VALID_VERSION; then
     if [[ $INSTALLED_VERSION_MINOR -gt $EOSIO_SOFT_MAX_MINOR || $INSTALLED_VERSION_MAJOR -gt $EOSIO_SOFT_MAX_MAJOR ]]; then
       echo "Detected EOSIO version is greater than recommand soft max of $EOSIO_SOFT_MAX_MAJOR.$EOSIO_SOFT_MAX_MINOR. Proceed with caution."
     fi
@@ -122,8 +123,9 @@ function eosio-version-check() {
     echo "Supported versions are: $EOSIO_MIN_VERSION_MAJOR.$EOSIO_MIN_VERSION_MINOR - $EOSIO_MAX_VERSION_MAJOR.$EOSIO_MAX_VERSION_MINOR"
     echo "Invalid EOSIO installation. Exiting..."
     exit 1;
-fi
+  fi
   # export CMAKE_PREFIX_PATH="${EOSIO_INSTALL_DIR};${CDT_INSTALL_DIR}"
   # export eosio_ROOT=${EOSIO_INSTALL_DIR}
   # export EOSIO_CDT_DIR=${CDT_INSTALL_DIR}
+  exit 0;
 }
