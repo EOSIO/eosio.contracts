@@ -1,27 +1,36 @@
+# Handles choosing which EOSIO directory to select when the default location is used.
 function default-eosio-directories() {
-  # Handles choosing which EOSIO directory to select when the default location is used.
-  ALL_EOSIO_SUBDIRS=($(echo $(ls ${HOME}/eosio)))
-  PROMPT_EOSIO_DIRS=()
+  REGEX='^[0-9]+([.][0-9]+)?$'
+  ALL_EOSIO_SUBDIRS=($(ls ${HOME}/eosio))
+  CONTINUE=true
+
   for ITEM in "${ALL_EOSIO_SUBDIRS[@]}"; do
-    if [[ "$ITEM" > "$EOSIO_MIN_VERSION_MAJOR.$EOSIO_MIN_VERSION_MINOR" && "$ITEM" < "$EOSIO_MAX_VERSION_MAJOR.$EOSIO_MAX_VERSION_MINOR" ]]; then
-      PROMPT_EOSIO_DIRS+=($ITEM)
+    if [[ "$ITEM" =~ $REGEX ]]; then
+      DEFAULT_EOSIO_SUBDIRS+=($ITEM)
+      # DEFAULT_EOSIO_MAJOR+=($(echo $ITEM | cut -f1 -d '.'))
+      # DEFAULT_EOSIO_MINOR+=($(echo $ITEM | cut -f1 -d '.'))
     fi
   done
-  CONTINUE=true
+
+  # for ITEM in "${DEFAULT_EOSIO_SUBDIRS[@]}"; do
+  #   if [[ $ITEM > "$EOSIO_MIN_VERSION_MAJOR.$EOSIO_MIN_VERSION_MINOR" && $ITEM < "$EOSIO_MAX_VERSION_MAJOR.$EOSIO_MAX_VERSION_MINOR" ]]; then
+  #     PROMPT_EOSIO_DIRS+=($ITEM)
+  #   fi
+  # done
+
   if [[ $NONINTERACTIVE != true ]]; then
     while $CONTINUE -eq true; do
-      echo "We detected the following items in the default EOSIO path:"
-      printf '%s\n' "${PROMPT_EOSIO_DIRS[@]}"
+      echo "The following installations are compatible in the default EOSIO path:"
+      printf '%s\n' "${DEFAULT_EOSIO_SUBDIRS[@]}"
       printf "Enter the EOSIO version number/directory to use:" && read -p " " EOSIO_VERSION
-      for ITEM in "${PROMPT_EOSIO_DIRS[@]}"; do
+      for ITEM in "${DEFAULT_EOSIO_SUBDIRS[@]}"; do
         if [[ "$ITEM" = "$EOSIO_VERSION" ]]; then
           CONTINUE=false
         fi
       done
     done
   else
-    REGEX='^[0-9]+([.][0-9]+)?$'
-    for ITEM in "${PROMPT_EOSIO_DIRS[@]}"; do
+    for ITEM in "${DEFAULT_EOSIO_SUBDIRS[@]}"; do
       if [[ "$ITEM" =~ $REGEX ]]; then
         EOSIO_VERSION=$ITEM
       fi
@@ -30,13 +39,13 @@ function default-eosio-directories() {
 }
 
 
+# Handles prompts and default behavior for choosing EOSIO directory.
 function eosio-directory-prompt() {
-  # Handles prompts and default behavior for choosing EOSIO directory.
   if [[ -z $EOSIO_DIR_PROMPT ]]; then
     echo 'No EOSIO location was specified.'
     while true; do
       if [[ $NONINTERACTIVE != true ]]; then
-        printf "Is EOSIO installed in the default location: $HOME/eosio/X.Y (y/n)" && read -p " " PROCEED
+        printf "Is EOSIO installed in a default location: ''$HOME/eosio/X.Y (y/n)" && read -p " " PROCEED
       fi
       echo ""
       case $PROCEED in
@@ -57,8 +66,8 @@ function eosio-directory-prompt() {
 }
 
 
+# Handles prompts and default behavior for choosing EOSIO.CDT directory.
 function cdt-directory-prompt() {
-  # Handles prompts and default behavior for choosing EOSIO.CDT directory.
   if [[ -z $CDT_DIR_PROMPT ]]; then
     echo 'No EOSIO.CDT location was specified.'
     while true; do
@@ -83,9 +92,10 @@ function cdt-directory-prompt() {
 }
 
 
+# Ensures EOSIO is installed and compatible via version listed in tests/CMakeLists.txt.
 function eosio-version-check() {
-  INSTALLED_VERSION_MAJOR=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f1,1 -d '.' | sed 's/v//g' )
-  INSTALLED_VERSION_MINOR=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f2,2 -d '.' | sed 's/v//g' )
+  INSTALLED_VERSION_MAJOR=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f1 -d '.' | sed 's/v//g' )
+  INSTALLED_VERSION_MINOR=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f2 -d '.' | sed 's/v//g' )
 
   if [[ -z $INSTALLED_VERSION_MAJOR || -z $INSTALLED_VERSION_MINOR ]]; then
     echo "Could not determine EOSIO version. Exiting..."
@@ -123,5 +133,5 @@ function eosio-version-check() {
     echo "Invalid EOSIO installation. Exiting..."
     exit 1;
   fi
-  export CMAKE_PREFIX_PATH="${EOSIO_INSTALL_DIR}:${CDT_INSTALL_DIR}"
+  export CMAKE_FRAMEWORK_PATH="${EOSIO_INSTALL_DIR}:${CDT_INSTALL_DIR}:${CMAKE_PREFIX_PATH}"
 }
