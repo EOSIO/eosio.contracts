@@ -80,7 +80,6 @@ function cdt-directory-prompt() {
     done
   fi
   export CDT_INSTALL_DIR="${CDT_DIR_PROMPT:-/usr/local/eosio.cdt}"
-  # TODO: Confirm EOSIO.CDT installation.
 }
 
 
@@ -112,7 +111,7 @@ function eosio-version-check() {
       VALID_VERSION=true
     fi
   fi
-  
+
   if $VALID_VERSION; then
     if [[ $INSTALLED_VERSION_MINOR -gt $EOSIO_SOFT_MAX_MINOR || $INSTALLED_VERSION_MAJOR -gt $EOSIO_SOFT_MAX_MAJOR ]]; then
       echo "Detected EOSIO version is greater than recommand soft max of $EOSIO_SOFT_MAX_MAJOR.$EOSIO_SOFT_MAX_MINOR. Proceed with caution."
@@ -124,8 +123,5 @@ function eosio-version-check() {
     echo "Invalid EOSIO installation. Exiting..."
     exit 1;
   fi
-  # export CMAKE_PREFIX_PATH="${EOSIO_INSTALL_DIR};${CDT_INSTALL_DIR}"
-  # export eosio_ROOT=${EOSIO_INSTALL_DIR}
-  # export EOSIO_CDT_DIR=${CDT_INSTALL_DIR}
-  exit 0;
+  export CMAKE_PREFIX_PATH="${EOSIO_INSTALL_DIR}:${CDT_INSTALL_DIR}"
 }
