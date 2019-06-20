@@ -1,7 +1,3 @@
-/**
- *  @copyright defined in eosio.cdt/LICENSE.txt
- */
-
 #include <eosio/action.hpp>
 #include <eosio/crypto.hpp>
 #include <eosio/permission.hpp>
@@ -35,7 +31,7 @@ void multisig::propose( ignore<name> proposer,
 
    auto packed_requested = pack(_requested);
    // TODO: Remove internal_use_do_not_use namespace after minimum eosio.cdt dependency becomes 1.7.x
-   auto res =  internal_use_do_not_use::check_transaction_authorization( 
+   auto res =  internal_use_do_not_use::check_transaction_authorization(
                   trx_pos, size,
                   (const char*)0, 0,
                   packed_requested.data(), packed_requested.size()

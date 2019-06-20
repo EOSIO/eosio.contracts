@@ -1,7 +1,3 @@
-/**
- *  @copyright defined in eos/LICENSE.txt
- */
-
 #include <eosio.system/eosio.system.hpp>
 #include <eosio.token/eosio.token.hpp>
 

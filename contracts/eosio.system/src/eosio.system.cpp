@@ -1,7 +1,3 @@
-/**
- *  @copyright defined in eos/LICENSE.txt
- */
-
 #include <eosio/crypto.hpp>
 #include <eosio/dispatcher.hpp>
 
