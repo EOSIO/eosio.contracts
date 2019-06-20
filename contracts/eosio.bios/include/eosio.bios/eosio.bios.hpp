@@ -319,22 +319,6 @@ namespace eosio {
          }
 
          /**
-          * Set global resource limits.
-          *
-          * @details Not implemented yet.
-          * Set global resource limits
-          *
-          * @param ram - ram limit
-          * @param net - net limit
-          * @param cpu - cpu limit
-          */
-         [[eosio::action]]
-         void setglimits( uint64_t ram, uint64_t net, uint64_t cpu ) {
-            (void)ram; (void)net; (void)cpu;
-            require_auth( _self );
-         }
-
-         /**
           * Set a new list of active producers, that is, a new producers' schedule.
           *
           * @details Set a new list of active producers, by proposing a schedule change, once the block that
@@ -460,7 +444,6 @@ namespace eosio {
          using setcode_action = action_wrapper<"setcode"_n, &bios::setcode>;
          using setpriv_action = action_wrapper<"setpriv"_n, &bios::setpriv>;
          using setalimits_action = action_wrapper<"setalimits"_n, &bios::setalimits>;
-         using setglimits_action = action_wrapper<"setglimits"_n, &bios::setglimits>;
          using setprods_action = action_wrapper<"setprods"_n, &bios::setprods>;
          using setparams_action = action_wrapper<"setparams"_n, &bios::setparams>;
          using reqauth_action = action_wrapper<"reqauth"_n, &bios::reqauth>;
