@@ -2,7 +2,7 @@
 function check-version-numbers() {
   CHECK_VERSION_MAJOR=$1
   CHECK_VERSION_MINOR=$2
-  
+
   if [[ $CHECK_VERSION_MAJOR -lt $EOSIO_MIN_VERSION_MAJOR ]]; then
     exit 1
   fi
@@ -118,8 +118,10 @@ function nodeos-version-check() {
   fi
 
   if $(check-version-numbers $INSTALLED_VERSION_MAJOR $INSTALLED_VERSION_MINOR); then
-    # TODO: Fix
-    if [[ $INSTALLED_VERSION_MINOR -gt $EOSIO_SOFT_MAX_MINOR || $INSTALLED_VERSION_MAJOR -gt $EOSIO_SOFT_MAX_MAJOR ]]; then
+    if [[ $INSTALLED_VERSION_MAJOR -gt $EOSIO_SOFT_MAX_MAJOR ]]; then
+      echo "Detected EOSIO version is greater than recommended soft max: $EOSIO_SOFT_MAX_MAJOR.$EOSIO_SOFT_MAX_MINOR. Proceed with caution."
+    fi
+    if [[ $INSTALLED_VERSION_MAJOR -eq $EOSIO_SOFT_MAX_MAJOR && $INSTALLED_VERSION_MINOR -gt $EOSIO_SOFT_MAX_MINOR ]]; then
       echo "Detected EOSIO version is greater than recommended soft max: $EOSIO_SOFT_MAX_MAJOR.$EOSIO_SOFT_MAX_MINOR. Proceed with caution."
     fi
     echo "Using EOSIO installation at: $EOSIO_INSTALL_DIR"
