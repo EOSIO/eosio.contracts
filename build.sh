@@ -53,7 +53,7 @@ eosio-directory-prompt
 cdt-directory-prompt
 
 # Ensure eosio version is appropriate.
-eosio-version-check
+nodeos-version-check
 
 printf "\t=========== Building eosio.contracts ===========\n\n"
 RED='\033[0;31m'

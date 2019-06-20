@@ -1,5 +1,5 @@
 # Ensures passed in version values are supported.
-function version-check() {
+function check-version-numbers() {
   CHECK_VERSION_MAJOR=$1
   CHECK_VERSION_MINOR=$2
   VALID_VERSION=1
@@ -35,7 +35,7 @@ function default-eosio-directories() {
     if [[ "$ITEM" =~ $REGEX ]]; then
       DIR_MAJOR=$(echo $ITEM | cut -f1 -d '.')
       DIR_MINOR=$(echo $ITEM | cut -f2 -d '.')
-      if $(version-check $DIR_MAJOR $DIR_MINOR); then
+      if $(check-version-numbers $DIR_MAJOR $DIR_MINOR); then
         PROMPT_EOSIO_DIRS+=($ITEM)
       fi
     fi
@@ -111,8 +111,7 @@ function cdt-directory-prompt() {
 
 
 # Ensures EOSIO is installed and compatible via version listed in tests/CMakeLists.txt.
-# TODO: Rename this function, too similar to version-check.
-function eosio-version-check() {
+function nodeos-version-check() {
   INSTALLED_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version))
   INSTALLED_VERSION_MAJOR=$(echo $INSTALLED_VERSION | cut -f1 -d '.' | sed 's/v//g')
   INSTALLED_VERSION_MINOR=$(echo $INSTALLED_VERSION | cut -f2 -d '.' | sed 's/v//g')
@@ -122,7 +121,7 @@ function eosio-version-check() {
     exit 1;
   fi
 
-  if $(version-check $INSTALLED_VERSION_MAJOR $INSTALLED_VERSION_MINOR); then
+  if $(check-version-numbers $INSTALLED_VERSION_MAJOR $INSTALLED_VERSION_MINOR); then
     if [[ $INSTALLED_VERSION_MINOR -gt $EOSIO_SOFT_MAX_MINOR || $INSTALLED_VERSION_MAJOR -gt $EOSIO_SOFT_MAX_MAJOR ]]; then
       echo "Detected EOSIO version is greater than recommended soft max: $EOSIO_SOFT_MAX_MAJOR.$EOSIO_SOFT_MAX_MINOR. Proceed with caution."
     fi
