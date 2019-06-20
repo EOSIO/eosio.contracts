@@ -1,7 +1,3 @@
-/**
- *  @file
- *  @copyright defined in eos/LICENSE.txt
- */
 #pragma once
 
 #include <eosiolib/action.hpp>
@@ -52,9 +48,9 @@ namespace eosiosystem {
     * @{
     */
    /**
-    * A weighted permission. 
-    * 
-    * @details Defines a weighted permission, that is a permission which has a weight associated. 
+    * A weighted permission.
+    *
+    * @details Defines a weighted permission, that is a permission which has a weight associated.
     * A permission is defined by an account name plus a permission name.
     */
    struct permission_level_weight {
@@ -67,7 +63,7 @@ namespace eosiosystem {
 
    /**
     * Weighted key.
-    * 
+    *
     * @details A weighted key is defined by a public key and an associated weight.
     */
    struct key_weight {
@@ -80,7 +76,7 @@ namespace eosiosystem {
 
    /**
     * Wait weight.
-    * 
+    *
     * @details A wait weight is defined by a number of seconds to wait for and a weight.
     */
    struct wait_weight {
@@ -93,7 +89,7 @@ namespace eosiosystem {
 
    /**
     * Blockchain authority.
-    * 
+    *
     * @details An authority is defined by:
     * - a vector of key_weights (a key_weight is a public key plus a wieght),
     * - a vector of permission_level_weights, (a permission_level is an account name plus a permission name)
@@ -112,7 +108,7 @@ namespace eosiosystem {
 
    /**
     * Blockchain block header.
-    * 
+    *
     * @details A block header is defined by:
     * - a timestamp,
     * - the producer that created it,
@@ -140,7 +136,7 @@ namespace eosiosystem {
 
    /**
     * abi_hash
-    * 
+    *
     * @details abi_hash is the structure underlying the abihash table and consists of:
     * - `owner`: the account owner of the contract's abi
     * - `hash`: is the sha256 hash of the abi/binary
@@ -156,7 +152,7 @@ namespace eosiosystem {
    // Method parameters commented out to prevent generation of code that parses input data.
    /**
     * The EOSIO core native contract that governs authorization and contracts' abi.
-    * 
+    *
     * @details
     */
    class [[eosio::contract("eosio.system")]] native : public eosio::contract {
@@ -166,15 +162,15 @@ namespace eosiosystem {
 
          /**
           * @{
-          * These actions map one-on-one with the ones defined in 
+          * These actions map one-on-one with the ones defined in
           * [Native Action Handlers](@ref native_action_handlers) section.
           * They are present here so they can show up in the abi file and thus user can send them
-          * to this contract, but they have no specific implementation at this contract level, 
+          * to this contract, but they have no specific implementation at this contract level,
           * they will execute the implementation at the core level and nothing else.
           */
          /**
-          * New account action 
-          * 
+          * New account action
+          *
           * @details Called after a new account is created. This code enforces resource-limits rules
           * for new accounts as well as new account naming conventions.
           *
@@ -194,9 +190,9 @@ namespace eosiosystem {
 
          /**
           * Update authorization action.
-          * 
+          *
           * @details Updates pemission for an account
-          * 
+          *
           * @param account - the account for which the permission is updated
           * @param pemission - the permission name which is updated
           * @param parem - the parent of the permission which is updated
@@ -210,9 +206,9 @@ namespace eosiosystem {
 
          /**
           * Delete authorization action.
-          * 
+          *
           * @details Deletes the authorization for an account's permision.
-          * 
+          *
           * @param account - the account for which the permission authorization is deleted,
           * @param permission - the permission name been deleted.
           */
@@ -222,16 +218,16 @@ namespace eosiosystem {
 
          /**
           * Link authorization action.
-          * 
-          * @details Assigns a specific action from a contract to a permission you have created. Five system 
+          *
+          * @details Assigns a specific action from a contract to a permission you have created. Five system
           * actions can not be linked `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, and `canceldelay`.
-          * This is useful because when doing authorization checks, the EOSIO based blockchain starts with the 
-          * action needed to be authorized (and the contract belonging to), and looks up which permission 
-          * is needed to pass authorization validation. If a link is set, that permission is used for authoraization 
+          * This is useful because when doing authorization checks, the EOSIO based blockchain starts with the
+          * action needed to be authorized (and the contract belonging to), and looks up which permission
+          * is needed to pass authorization validation. If a link is set, that permission is used for authoraization
           * validation otherwise then active is the default, with the exception of `eosio.any`.
           * `eosio.any` is an implicit permission which exists on every account; you can link actions to `eosio.any`
-          * and that will make it so linked actions are accessible to any permissions defined for the account. 
-          * 
+          * and that will make it so linked actions are accessible to any permissions defined for the account.
+          *
           * @param account - the permission's owner to be linked and the payer of the RAM needed to store this link,
           * @param code - the owner of the action to be linked,
           * @param type - the action to be linked,
@@ -245,9 +241,9 @@ namespace eosiosystem {
 
          /**
           * Unlink authorization action.
-          * 
+          *
           * @details It's doing the reverse of linkauth action, by unlinking the given action.
-          * 
+          *
           * @param account - the owner of the permission to be unlinked and the receiver of the freed RAM,
           * @param code - the owner of the action to be unlinked,
           * @param type - the action to be unlinked.
@@ -259,9 +255,9 @@ namespace eosiosystem {
 
          /**
           * Cancel delay action.
-          * 
+          *
           * @details Cancels a deferred transaction.
-          * 
+          *
           * @param canceling_auth - the permission that authorizes this action,
           * @param trx_id - the deferred transaction id to be cancelled.
           */
@@ -270,9 +266,9 @@ namespace eosiosystem {
 
          /**
           * On error action.
-          * 
+          *
           * @details Called every time an error occurs while a transaction was processed.
-          * 
+          *
           * @param sender_id - the id of the sender,
           * @param sent_trx - the transaction that failed.
           */
@@ -281,9 +277,9 @@ namespace eosiosystem {
 
          /**
           * Set abi action.
-          * 
+          *
           * @details Sets the contract abi for an account.
-          * 
+          *
           * @param account - the account for which to set the contract abi.
           * @param abi - the abi content to be set, in the form of a blob binary.
           */
@@ -292,9 +288,9 @@ namespace eosiosystem {
 
          /**
           * Set code action.
-          * 
+          *
           * @details Sets the contract code for an account.
-          * 
+          *
           * @param account - the account for which to set the contract code.
           * @param vmtype - reserved, set it to zero.
           * @param vmversion - reserved, set it to zero.

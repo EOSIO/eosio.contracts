@@ -1,7 +1,3 @@
-/**
- *  @copyright defined in eos/LICENSE.txt
- */
-
 #include <eosio.system/eosio.system.hpp>
 #include <eosio.system/rex.results.hpp>
 
@@ -48,7 +44,7 @@ namespace eosiosystem {
       const asset delta_rex_stake = add_to_rex_balance( from, amount, rex_received );
       runrex(2);
       update_rex_account( from, asset( 0, core_symbol() ), delta_rex_stake );
-      // dummy action added so that amount of REX tokens purchased shows up in action trace 
+      // dummy action added so that amount of REX tokens purchased shows up in action trace
       rex_results::buyresult_action buyrex_act( rex_account, std::vector<eosio::permission_level>{ } );
       buyrex_act.send( rex_received );
    }
@@ -525,11 +521,11 @@ namespace eosiosystem {
                                                                     pool->total_unlent.amount,
                                                                     itr->payment.amount );
          /// conditions for loan renewal
-         bool renew_loan = itr->payment <= itr->balance        /// loan has sufficient balance 
-                        && itr->payment.amount < rented_tokens /// loan has favorable return 
+         bool renew_loan = itr->payment <= itr->balance        /// loan has sufficient balance
+                        && itr->payment.amount < rented_tokens /// loan has favorable return
                         && rex_loans_available();              /// no pending sell orders
          if ( renew_loan ) {
-            /// update rex_pool in order to account for renewed loan 
+            /// update rex_pool in order to account for renewed loan
             add_loan_to_rex_pool( itr->payment, rented_tokens, false );
             /// update renewed loan fields
             delta_stake = update_renewed_loan( idx, itr, rented_tokens );
@@ -1010,7 +1006,7 @@ namespace eosiosystem {
     * @brief Reads amount of REX in savings bucket and removes the bucket from maturities
     *
     * Reads and (temporarily) removes REX savings bucket from REX maturities in order to
-    * allow uniform processing of remaining buckets as savings is a special case. This 
+    * allow uniform processing of remaining buckets as savings is a special case. This
     * function is used in conjunction with put_rex_savings.
     *
     * @param bitr - iterator pointing to rex_balance object
@@ -1064,7 +1060,7 @@ namespace eosiosystem {
          current_vote_stake.amount = ( uint128_t(bitr->rex_balance.amount) * _rexpool.begin()->total_lendable.amount )
                                      / _rexpool.begin()->total_rex.amount;
          _rexbalance.modify( bitr, same_payer, [&]( auto& rb ) {
-            rb.vote_stake.amount = current_vote_stake.amount; 
+            rb.vote_stake.amount = current_vote_stake.amount;
          });
          delta_stake = current_vote_stake.amount - init_vote_stake.amount;
       }
