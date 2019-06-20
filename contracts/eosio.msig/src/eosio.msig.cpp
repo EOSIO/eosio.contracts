@@ -30,9 +30,12 @@ void multisig::propose( ignore<name> proposer,
    check( proptable.find( _proposal_name.value ) == proptable.end(), "proposal with the same name exists" );
 
    auto packed_requested = pack(_requested);
-   auto res = check_transaction_authorization( trx_pos, size,
-                                               (const char*)0, 0,
-                                               packed_requested.data(), packed_requested.size());
+   // TODO: Remove internal_use_do_not_use namespace after minimum eosio.cdt dependency becomes 1.7.x
+   auto res =  internal_use_do_not_use::check_transaction_authorization(
+                  trx_pos, size,
+                  (const char*)0, 0,
+                  packed_requested.data(), packed_requested.size()
+               );
 
    check( res > 0, "transaction authorization failed" );
 
@@ -172,9 +175,12 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
       old_apptable.erase(apps);
    }
    auto packed_provided_approvals = pack(approvals);
-   auto res = check_transaction_authorization( prop.packed_transaction.data(), prop.packed_transaction.size(),
-                                               (const char*)0, 0,
-                                               packed_provided_approvals.data(), packed_provided_approvals.size());
+   // TODO: Remove internal_use_do_not_use namespace after minimum eosio.cdt dependency becomes 1.7.x
+   auto res =  internal_use_do_not_use::check_transaction_authorization(
+                  prop.packed_transaction.data(), prop.packed_transaction.size(),
+                  (const char*)0, 0,
+                  packed_provided_approvals.data(), packed_provided_approvals.size()
+               );
 
    check( res > 0, "transaction authorization failed" );
 
