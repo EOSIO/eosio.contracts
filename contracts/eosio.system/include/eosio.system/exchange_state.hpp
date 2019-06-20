@@ -54,6 +54,9 @@ namespace eosiosystem {
       static int64_t get_bancor_output( int64_t inp_reserve,
                                         int64_t out_reserve,
                                         int64_t inp );
+      static int64_t get_bancor_input( int64_t out_reserve,
+                                       int64_t inp_reserve,
+                                       int64_t out );
 
       EOSLIB_SERIALIZE( exchange_state, (supply)(base)(quote) )
    };
