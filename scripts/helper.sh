@@ -2,28 +2,24 @@
 function check-version-numbers() {
   CHECK_VERSION_MAJOR=$1
   CHECK_VERSION_MINOR=$2
-  VALID_VERSION=1
-
-  # Installed major between min and max major.
-  if [[ $CHECK_VERSION_MAJOR -gt $EOSIO_MIN_VERSION_MAJOR && $CHECK_VERSION_MAJOR -lt $EOSIO_MAX_VERSION_MAJOR ]]; then
-    VALID_VERSION=0
-  # Installed major same as minimum major. Check if minor is greater.
-  elif [[ $CHECK_VERSION_MAJOR -eq $EOSIO_MIN_VERSION_MAJOR && $CHECK_VERSION_MAJOR -lt $EOSIO_MAX_VERSION_MAJOR ]]; then
-    if [[ $CHECK_VERSION_MINOR -ge $EOSIO_MIN_VERSION_MINOR ]]; then
-      VALID_VERSION=0
-    fi
-  # Installed major same as maximum major. Check if minor is less.
-  elif [[ $CHECK_VERSION_MAJOR -eq $EOSIO_MAX_VERSION_MAJOR && $CHECK_VERSION_MAJOR -gt $EOSIO_MIN_VERSION_MAJOR ]]; then
-    if [[ $CHECK_VERSION_MINOR -le $EOSIO_MAX_VERSION_MINOR ]]; then
-      VALID_VERSION=0
-    fi
-  # Installed major same as both. Ensure minor is between both.
-  else
-    if [[ $CHECK_VERSION_MINOR -ge $EOSIO_MIN_VERSION_MINOR && $CHECK_VERSION_MINOR -le $EOSIO_MAX_VERSION_MINOR ]]; then
-      VALID_VERSION=0
+  
+  if [[ $CHECK_VERSION_MAJOR -lt $EOSIO_MIN_VERSION_MAJOR ]]; then
+    exit 1
+  fi
+  if [[ $CHECK_VERSION_MAJOR -gt $EOSIO_MAX_VERSION_MAJOR ]]; then
+    exit 1
+  fi
+  if [[ $CHECK_VERSION_MAJOR -eq $EOSIO_MIN_VERSION_MAJOR ]]; then 
+    if [[ $CHECK_VERSION_MINOR -lt $EOSIO_MIN_VERSION_MINOR ]]; then
+      exit 1
     fi
   fi
-  exit $VALID_VERSION
+  if [[ $CHECK_VERSION_MAJOR -eq $EOSIO_MAX_VERSION_MAJOR ]]; then 
+    if [[ $CHECK_VERSION_MINOR -gt $EOSIO_MAX_VERSION_MINOR ]]; then
+      exit 1
+    fi
+  fi
+  exit 0
 }
 
 
@@ -122,6 +118,7 @@ function nodeos-version-check() {
   fi
 
   if $(check-version-numbers $INSTALLED_VERSION_MAJOR $INSTALLED_VERSION_MINOR); then
+    # TODO: Fix
     if [[ $INSTALLED_VERSION_MINOR -gt $EOSIO_SOFT_MAX_MINOR || $INSTALLED_VERSION_MAJOR -gt $EOSIO_SOFT_MAX_MAJOR ]]; then
       echo "Detected EOSIO version is greater than recommended soft max: $EOSIO_SOFT_MAX_MAJOR.$EOSIO_SOFT_MAX_MINOR. Proceed with caution."
     fi
