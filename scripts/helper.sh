@@ -30,9 +30,7 @@ function version-check() {
 # Handles choosing which EOSIO directory to select when the default location is used.
 function default-eosio-directories() {
   REGEX='^[0-9]+([.][0-9]+)?$'
-  ALL_EOSIO_SUBDIRS=($(ls ${HOME}/eosio))
-  CONTINUE=true
-
+  ALL_EOSIO_SUBDIRS=($(ls ${HOME}/eosio | sort -V))
   for ITEM in "${ALL_EOSIO_SUBDIRS[@]}"; do
     if [[ "$ITEM" =~ $REGEX ]]; then
       DIR_MAJOR=$(echo $ITEM | cut -f1 -d '.')
@@ -42,45 +40,40 @@ function default-eosio-directories() {
       fi
     fi
   done
-
-  if [[ $NONINTERACTIVE != true ]]; then
-    while $CONTINUE -eq true; do
-      echo "The following installations are compatible in the default EOSIO path:"
-      printf '%s\n' "${PROMPT_EOSIO_DIRS[@]}"
-      printf "Enter the EOSIO version number/directory to use:" && read -p " " EOSIO_VERSION
-      for ITEM in "${PROMPT_EOSIO_DIRS[@]}"; do
-        if [[ "$ITEM" = "$EOSIO_VERSION" ]]; then
-          CONTINUE=false
-        fi
-      done
-    done
-  else
-    for ITEM in "${ALL_EOSIO_SUBDIRS[@]}"; do
-      if [[ "$ITEM" =~ $REGEX ]]; then
-        EOSIO_VERSION=$ITEM
-      fi
-    done
-  fi
+  for ITEM in "${PROMPT_EOSIO_DIRS[@]}"; do
+    if [[ "$ITEM" =~ $REGEX ]]; then
+      EOSIO_VERSION=$ITEM
+    fi
+  done
 }
 
 
 # Prompts or sets default behavior for choosing EOSIO directory.
 function eosio-directory-prompt() {
   if [[ -z $EOSIO_DIR_PROMPT ]]; then
+    default-eosio-directories;
     echo 'No EOSIO location was specified.'
     while true; do
       if [[ $NONINTERACTIVE != true ]]; then
-        printf "Is EOSIO installed in a default location: $HOME/eosio/X.Y (y/n)" && read -p " " PROCEED
+        if [[ -z $EOSIO_VERSION ]]; then
+          echo "No default EOSIO installations detected..."
+          PROCEED=n
+        else
+          printf "Is EOSIO installed in the default location: $HOME/eosio/$EOSIO_VERSION (y/n)" && read -p " " PROCEED
+        fi
       fi
       echo ""
       case $PROCEED in
         "" )
           echo "Is EOSIO installed in the default location?";;
         0 | true | [Yy]* )
-          default-eosio-directories;
           break;;
         1 | false | [Nn]* )
-          printf "Enter the installation location of EOSIO:" && read -p " " EOSIO_DIR_PROMPT;
+          if [[ $PROMPT_EOSIO_DIRS ]]; then
+            echo "Found these compatible EOSIO versions in the default location."
+            printf "$HOME/eosio/%s\n" "${PROMPT_EOSIO_DIRS[@]}"
+          fi
+          printf "Enter the installation location of EOSIO:" && read -e -p " " EOSIO_DIR_PROMPT;
           break;;
         * )
           echo "Please type 'y' for yes or 'n' for no.";;
@@ -106,7 +99,7 @@ function cdt-directory-prompt() {
         0 | true | [Yy]* )
           break;;
         1 | false | [Nn]* )
-          printf "Enter the installation location of EOSIO.CDT:" && read -p " " CDT_DIR_PROMPT;
+          printf "Enter the installation location of EOSIO.CDT:" && read -e -p " " CDT_DIR_PROMPT;
           break;;
         * )
           echo "Please type 'y' for yes or 'n' for no.";;
@@ -118,9 +111,11 @@ function cdt-directory-prompt() {
 
 
 # Ensures EOSIO is installed and compatible via version listed in tests/CMakeLists.txt.
+# TODO: Rename this function, too similar to version-check.
 function eosio-version-check() {
-  INSTALLED_VERSION_MAJOR=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f1 -d '.' | sed 's/v//g' )
-  INSTALLED_VERSION_MINOR=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version) | cut -f2 -d '.' | sed 's/v//g' )
+  INSTALLED_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version))
+  INSTALLED_VERSION_MAJOR=$(echo $INSTALLED_VERSION | cut -f1 -d '.' | sed 's/v//g')
+  INSTALLED_VERSION_MINOR=$(echo $INSTALLED_VERSION | cut -f2 -d '.' | sed 's/v//g')
 
   if [[ -z $INSTALLED_VERSION_MAJOR || -z $INSTALLED_VERSION_MINOR ]]; then
     echo "Could not determine EOSIO version. Exiting..."
