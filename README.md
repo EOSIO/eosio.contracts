@@ -6,15 +6,16 @@ The design of the EOSIO blockchain calls for a number of smart contracts that ar
 
 This repository contains examples of these privileged contracts that are useful when deploying, managing, and/or using an EOSIO blockchain.  They are provided for reference purposes:
 
-   * [eosio.system](https://github.com/eosio/eosio.contracts/tree/master/eosio.system)
-   * [eosio.msig](https://github.com/eosio/eosio.contracts/tree/master/eosio.msig)
-   * [eosio.wrap](https://github.com/eosio/eosio.contracts/tree/master/eosio.wrap)
+   * [eosio.bios](./contracts/eosio.bios)
+   * [eosio.system](./contracts/eosio.system)
+   * [eosio.msig](./contracts/eosio.msig)
+   * [eosio.wrap](./contracts/eosio.wrap)
 
 The following unprivileged contract(s) are also part of the system.
-   * [eosio.token](https://github.com/eosio/eosio.contracts/tree/master/eosio.token)
+   * [eosio.token](./contracts/eosio.token)
 
 Dependencies:
-* [eosio v1.7.x](https://github.com/EOSIO/eos/releases/tag/v1.7.0)
+* [eosio v1.7.x](https://github.com/EOSIO/eos/releases/tag/v1.7.4)
 * [eosio.cdt v1.5.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.5.0)
 
 To build the contracts and the unit tests:

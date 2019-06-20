@@ -1,7 +1,3 @@
-/**
- *  @file
- *  @copyright defined in eos/LICENSE.txt
- */
 #pragma once
 
 #include <eosio.system/native.hpp>
@@ -481,10 +477,10 @@ namespace eosiosystem {
           */
          [[eosio::action]]
          void mvtosavings( const name& owner, const asset& rex );
-         
+
          /**
           * Moves a specified amount of REX out of savings bucket. The moved amount
-          * will have the regular REX maturity period of 4 days.  
+          * will have the regular REX maturity period of 4 days.
           */
          [[eosio::action]]
          void mvfrsavings( const name& owner, const asset& rex );
