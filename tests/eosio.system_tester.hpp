@@ -52,7 +52,7 @@ public:
    }
 
    void create_core_token( symbol core_symbol = symbol{CORE_SYM} ) {
-      FC_ASSERT( core_symbol.precision() != 4, "create_core_token assumes precision of core token is 4" );
+      FC_ASSERT( core_symbol.decimals() == 4, "create_core_token assumes core token has 4 digits of precision" );
       create_currency( N(eosio.token), config::system_account_name, asset(100000000000000, core_symbol) );
       issue(config::system_account_name, asset(10000000000000, core_symbol) );
       BOOST_REQUIRE_EQUAL( asset(10000000000000, core_symbol), get_balance( "eosio", core_symbol ) );
@@ -413,7 +413,7 @@ public:
                return proceeds;
             }
          }
-      } 
+      }
       return proceeds;
    }
 
@@ -595,7 +595,7 @@ public:
       vector<char> data = get_row_by_account( config::system_account_name, from, N(delband), receiver );
       return data.empty() ? fc::variant() : abi_ser.binary_to_variant("delegated_bandwidth", data, abi_serializer_max_time);
    }
-      
+
    asset get_rex_balance( const account_name& act ) const {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name, N(rexbal), act );
       return data.empty() ? asset(0, symbol(SY(4, REX))) : abi_ser.binary_to_variant("rex_balance", data, abi_serializer_max_time)["rex_balance"].as<asset>();
