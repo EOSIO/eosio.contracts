@@ -1,7 +1,3 @@
-/**
- *  @copyright defined in eos/LICENSE.txt
- */
-
 #include <eosio.system/exchange_state.hpp>
 
 namespace eosiosystem {
@@ -28,7 +24,7 @@ namespace eosiosystem {
       const double Fi = double(1) / reserve.weight;
 
       double dR = R0 * ( std::pow(1. + dS / S0, Fi) - 1. ); // dR < 0 since dS < 0
-      if ( dR > 0 ) dR = 0; // rounding errors 
+      if ( dR > 0 ) dR = 0; // rounding errors
       reserve.balance.amount -= int64_t(-dR);
       supply                 -= tokens;
       return asset( int64_t(-dR), reserve.balance.symbol );
@@ -89,6 +85,20 @@ namespace eosiosystem {
       if ( out < 0 ) out = 0;
 
       return out;
+   }
+
+   int64_t exchange_state::get_bancor_input( int64_t out_reserve,
+                                             int64_t inp_reserve,
+                                             int64_t out )
+   {
+      const double ob = out_reserve;
+      const double ib = inp_reserve;
+
+      int64_t inp = (ib * out) / (ob - out);
+
+      if ( inp < 0 ) inp = 0;
+
+      return inp;
    }
 
 } /// namespace eosiosystem

@@ -1,7 +1,3 @@
-/**
- *  @copyright defined in eos/LICENSE.txt
- */
-
 #include <eosio/crypto.hpp>
 #include <eosio/datastream.hpp>
 #include <eosio/eosio.hpp>
@@ -18,7 +14,7 @@
 #include <cmath>
 
 namespace eosiosystem {
-   
+
    using eosio::const_mem_fun;
    using eosio::indexed_by;
    using eosio::singleton;

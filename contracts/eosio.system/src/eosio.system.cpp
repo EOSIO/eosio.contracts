@@ -1,7 +1,3 @@
-/**
- *  @copyright defined in eos/LICENSE.txt
- */
-
 #include <eosio/crypto.hpp>
 #include <eosio/dispatcher.hpp>
 
@@ -21,7 +17,7 @@ namespace eosiosystem {
    const int64_t  default_votepay_factor        = 4;       // 25% of the producer pay
 
    double get_continuous_rate(int64_t annual_rate) {
-      return std::log(double(1)+double(annual_rate)/double(100*inflation_precision));
+      return std::log1p(double(annual_rate)/double(100*inflation_precision));
    }
 
    system_contract::system_contract( name s, name code, datastream<const char*> ds )

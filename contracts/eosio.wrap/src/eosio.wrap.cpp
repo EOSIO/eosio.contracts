@@ -1,7 +1,3 @@
-/**
- *  @copyright defined in eosio.cdt/LICENSE.txt
- */
-
 #include <eosio.wrap/eosio.wrap.hpp>
 
 namespace eosio {

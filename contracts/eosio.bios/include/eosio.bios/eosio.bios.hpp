@@ -1,7 +1,3 @@
-/**
- *  @copyright defined in eosio.cdt/LICENSE.txt
- */
-
 #pragma once
 
 #include <eosio/action.hpp>

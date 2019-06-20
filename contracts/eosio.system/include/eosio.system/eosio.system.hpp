@@ -1,7 +1,3 @@
-/**
- *  @copyright defined in eos/LICENSE.txt
- */
-
 #pragma once
 
 #include <eosio/asset.hpp>
@@ -1191,9 +1187,9 @@ namespace eosiosystem {
          /**
           * Set inflation action.
           *
-          * @details Change the annual inflation rate of the core token supply and specify how 
+          * @details Change the annual inflation rate of the core token supply and specify how
           *          the new issued tokens will be distributed based on the following structure.
-          * 
+          *
           *    +----+                          +----------------+
           *    +rate|               +--------->|per vote reward |
           *    +--+-+               |          +----------------+
