@@ -4,19 +4,20 @@ function version-check() {
   CHECK_VERSION_MINOR=$2
   VALID_VERSION=1
 
+  # Installed major between min and max major.
   if [[ $CHECK_VERSION_MAJOR -gt $EOSIO_MIN_VERSION_MAJOR && $CHECK_VERSION_MAJOR -lt $EOSIO_MAX_VERSION_MAJOR ]]; then
     VALID_VERSION=0
-  # Installed major same as minimum major.
+  # Installed major same as minimum major. Check if minor is greater.
   elif [[ $CHECK_VERSION_MAJOR -eq $EOSIO_MIN_VERSION_MAJOR && $CHECK_VERSION_MAJOR -lt $EOSIO_MAX_VERSION_MAJOR ]]; then
     if [[ $CHECK_VERSION_MINOR -ge $EOSIO_MIN_VERSION_MINOR ]]; then
       VALID_VERSION=0
     fi
-  # Installed major same as maximum major.
+  # Installed major same as maximum major. Check if minor is less.
   elif [[ $CHECK_VERSION_MAJOR -eq $EOSIO_MAX_VERSION_MAJOR && $CHECK_VERSION_MAJOR -gt $EOSIO_MIN_VERSION_MAJOR ]]; then
     if [[ $CHECK_VERSION_MINOR -le $EOSIO_MAX_VERSION_MINOR ]]; then
       VALID_VERSION=0
     fi
-  # Installed major same as both.
+  # Installed major same as both. Ensure minor is between both.
   else
     if [[ $CHECK_VERSION_MINOR -ge $EOSIO_MIN_VERSION_MINOR && $CHECK_VERSION_MINOR -le $EOSIO_MAX_VERSION_MINOR ]]; then
       VALID_VERSION=0
@@ -128,7 +129,7 @@ function eosio-version-check() {
 
   if $(version-check $INSTALLED_VERSION_MAJOR $INSTALLED_VERSION_MINOR); then
     if [[ $INSTALLED_VERSION_MINOR -gt $EOSIO_SOFT_MAX_MINOR || $INSTALLED_VERSION_MAJOR -gt $EOSIO_SOFT_MAX_MAJOR ]]; then
-      echo "Detected EOSIO version is greater than recommand soft max of $EOSIO_SOFT_MAX_MAJOR.$EOSIO_SOFT_MAX_MINOR. Proceed with caution."
+      echo "Detected EOSIO version is greater than recommended soft max: $EOSIO_SOFT_MAX_MAJOR.$EOSIO_SOFT_MAX_MINOR. Proceed with caution."
     fi
     echo "Using EOSIO installation at: $EOSIO_INSTALL_DIR"
     echo "Using EOSIO.CDT installation at: $CDT_INSTALL_DIR"
