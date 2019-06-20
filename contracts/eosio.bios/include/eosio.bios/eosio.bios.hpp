@@ -112,12 +112,6 @@ namespace eosio {
          }
 
          [[eosio::action]]
-         void setglimits( uint64_t ram, uint64_t net, uint64_t cpu ) {
-            (void)ram; (void)net; (void)cpu;
-            require_auth( _self );
-         }
-
-         [[eosio::action]]
          void setprods( std::vector<eosio::producer_key> schedule ) {
             (void)schedule; // schedule argument just forces the deserialization of the action data into vector<producer_key> (necessary check)
             require_auth( _self );
@@ -165,7 +159,7 @@ namespace eosio {
          };
 
          typedef eosio::multi_index< "abihash"_n, abi_hash > abi_hash_table;
-         
+
          using newaccount_action = action_wrapper<"newaccount"_n, &bios::newaccount>;
          using updateauth_action = action_wrapper<"updateauth"_n, &bios::updateauth>;
          using deleteauth_action = action_wrapper<"deleteauth"_n, &bios::deleteauth>;
@@ -175,7 +169,6 @@ namespace eosio {
          using setcode_action = action_wrapper<"setcode"_n, &bios::setcode>;
          using setpriv_action = action_wrapper<"setpriv"_n, &bios::setpriv>;
          using setalimits_action = action_wrapper<"setalimits"_n, &bios::setalimits>;
-         using setglimits_action = action_wrapper<"setglimits"_n, &bios::setglimits>;
          using setprods_action = action_wrapper<"setprods"_n, &bios::setprods>;
          using setparams_action = action_wrapper<"setparams"_n, &bios::setparams>;
          using reqauth_action = action_wrapper<"reqauth"_n, &bios::reqauth>;
