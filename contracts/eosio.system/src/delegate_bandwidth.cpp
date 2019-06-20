@@ -1,7 +1,3 @@
-/**
- *  @file
- *  @copyright defined in eos/LICENSE.txt
- */
 #include <eosio.system/eosio.system.hpp>
 
 #include <eosiolib/eosio.hpp>
@@ -134,7 +130,7 @@ namespace eosiosystem {
          );
          channel_to_rex( ramfee_account, fee );
       }
-      
+
       int64_t bytes_out;
 
       const auto& market = _rammarket.get(ramcore_symbol.raw(), "ram market does not exist");
