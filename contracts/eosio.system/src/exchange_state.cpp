@@ -87,4 +87,18 @@ namespace eosiosystem {
       return out;
    }
 
+   int64_t exchange_state::get_bancor_input( int64_t out_reserve,
+                                             int64_t inp_reserve,
+                                             int64_t out )
+   {
+      const double ob = out_reserve;
+      const double ib = inp_reserve;
+
+      int64_t inp = (ib * out) / (ob - out);
+
+      if ( inp < 0 ) inp = 0;
+
+      return inp;
+   }
+
 } /// namespace eosiosystem
