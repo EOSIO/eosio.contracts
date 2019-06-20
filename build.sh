@@ -43,12 +43,15 @@ if [ $# -ne 0 ]; then
 fi
 
 # Source helper functions and variables.
-. ./scripts/helper.sh
 . ./scripts/.environment
+. ./scripts/helper.sh
+
 # Prompt user for location of eosio.
 eosio-directory-prompt
+
 # Prompt user for location of eosio.cdt.
 cdt-directory-prompt
+
 # Ensure eosio version is appropriate.
 eosio-version-check
 
