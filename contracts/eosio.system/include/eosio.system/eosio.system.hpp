@@ -1224,6 +1224,7 @@ namespace eosiosystem {
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
          using setacctnet_action = eosio::action_wrapper<"setacctnet"_n, &system_contract::setacctnet>;
          using setacctcpu_action = eosio::action_wrapper<"setacctcpu"_n, &system_contract::setacctcpu>;
+         using activate_action = eosio::action_wrapper<"activate"_n, &system_contract::activate>;
          using delegatebw_action = eosio::action_wrapper<"delegatebw"_n, &system_contract::delegatebw>;
          using deposit_action = eosio::action_wrapper<"deposit"_n, &system_contract::deposit>;
          using withdraw_action = eosio::action_wrapper<"withdraw"_n, &system_contract::withdraw>;
@@ -1240,21 +1241,7 @@ namespace eosiosystem {
          using updaterex_action = eosio::action_wrapper<"updaterex"_n, &system_contract::updaterex>;
          using rexexec_action = eosio::action_wrapper<"rexexec"_n, &system_contract::rexexec>;
          using setrex_action = eosio::action_wrapper<"setrex"_n, &system_contract::setrex>;
-         /**
-          * Move to savings action.
-          *
-          * @details Moves a specified amount of REX to savings bucket.
-          * @param owner - account name of REX owner
-          * @param rex - amount of REX to be moved
-          */
          using mvtosavings_action = eosio::action_wrapper<"mvtosavings"_n, &system_contract::mvtosavings>;
-         /**
-          * Move from savings action.
-          *
-          * @details Moves a specified amount of REX from savings bucket
-          * @param owner - account name of REX owner
-          * @param rex - amount of REX to be moved
-          */
          using mvfrsavings_action = eosio::action_wrapper<"mvfrsavings"_n, &system_contract::mvfrsavings>;
          using consolidate_action = eosio::action_wrapper<"consolidate"_n, &system_contract::consolidate>;
          using closerex_action = eosio::action_wrapper<"closerex"_n, &system_contract::closerex>;
@@ -1270,7 +1257,6 @@ namespace eosiosystem {
          using voteproducer_action = eosio::action_wrapper<"voteproducer"_n, &system_contract::voteproducer>;
          using regproxy_action = eosio::action_wrapper<"regproxy"_n, &system_contract::regproxy>;
          using claimrewards_action = eosio::action_wrapper<"claimrewards"_n, &system_contract::claimrewards>;
-
          using rmvproducer_action = eosio::action_wrapper<"rmvproducer"_n, &system_contract::rmvproducer>;
          using updtrevision_action = eosio::action_wrapper<"updtrevision"_n, &system_contract::updtrevision>;
          using bidname_action = eosio::action_wrapper<"bidname"_n, &system_contract::bidname>;
