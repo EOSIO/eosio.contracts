@@ -264,17 +264,6 @@ namespace eosio {
          void canceldelay( ignore<permission_level> canceling_auth, ignore<capi_checksum256> trx_id ) {}
 
          /**
-          * On error action.
-          *
-          * @details Called every time an error occurs while a transaction was processed.
-          *
-          * @param sender_id - the id of the sender,
-          * @param sent_trx - the transaction that failed.
-          */
-         [[eosio::action]]
-         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {}
-
-         /**
           * Set code action.
           *
           * @details Sets the contract code for an account.
@@ -301,6 +290,19 @@ namespace eosio {
           */
          [[eosio::action]]
          void setabi( name account, const std::vector<char>& abi );
+
+         /**
+          * On error action.
+          *
+          * @details Notification of this action is delivered to the sender of a deferred transaction
+          * when an objective error occurs while executing the deferred transaction.
+          * This action is not meant to be called directly.
+          *
+          * @param sender_id - the id for the deferred transaction chosen by the sender,
+          * @param sent_trx - the deferred transaction that failed.
+          */
+         [[eosio::action]]
+         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
 
          /**
           * Set privilege status for an account.
