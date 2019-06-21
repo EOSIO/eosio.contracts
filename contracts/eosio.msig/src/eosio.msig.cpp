@@ -213,5 +213,3 @@ void multisig::invalidate( name account ) {
 }
 
 } /// namespace eosio
-
-EOSIO_DISPATCH( eosio::multisig, (propose)(approve)(unapprove)(cancel)(exec)(invalidate) )
