@@ -31,13 +31,12 @@ namespace eosiosystem {
    using eosio::const_mem_fun;
    using eosio::datastream;
    using eosio::indexed_by;
-   using eosio::microseconds;
    using eosio::name;
+   using eosio::same_payer;
    using eosio::symbol;
    using eosio::symbol_code;
    using eosio::time_point;
    using eosio::time_point_sec;
-   using eosio::microseconds;
    using eosio::unsigned_int;
 
    template<typename E, typename F>
@@ -58,6 +57,21 @@ namespace eosiosystem {
       else
          return ( flags & ~static_cast<F>(field) );
    }
+
+   static constexpr uint32_t seconds_per_year      = 52 * 7 * 24 * 3600;
+   static constexpr uint32_t seconds_per_day       = 24 * 3600;
+   static constexpr int64_t  useconds_per_year     = int64_t(seconds_per_year) * 1000'000ll;
+   static constexpr int64_t  useconds_per_day      = int64_t(seconds_per_day) * 1000'000ll;
+   static constexpr uint32_t blocks_per_day        = 2 * seconds_per_day; // half seconds per day
+
+   static constexpr int64_t  min_activated_stake   = 150'000'000'0000;
+   static constexpr int64_t  ram_gift_bytes        = 1400;
+   static constexpr int64_t  min_pervote_daily_pay = 100'0000;
+   static constexpr double   continuous_rate       = 0.04879;          // 5% annual rate
+   static constexpr int64_t  inflation_pay_factor  = 5;                // 20% of the inflation
+   static constexpr int64_t  votepay_factor        = 4;                // 25% of the producer pay
+   static constexpr uint32_t refund_delay_sec      = 3 * seconds_per_day;
+
 
    /**
     *
@@ -294,8 +308,56 @@ namespace eosiosystem {
     */
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
 
-   //   static constexpr uint32_t     max_inflation_rate = 5;  // 5% annual inflation
-   static constexpr uint32_t     seconds_per_day = 24 * 3600;
+   struct [[eosio::table, eosio::contract("eosio.system")]] user_resources {
+      name          owner;
+      asset         net_weight;
+      asset         cpu_weight;
+      int64_t       ram_bytes = 0;
+
+      bool is_empty()const { return net_weight.amount == 0 && cpu_weight.amount == 0 && ram_bytes == 0; }
+      uint64_t primary_key()const { return owner.value; }
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( user_resources, (owner)(net_weight)(cpu_weight)(ram_bytes) )
+   };
+
+   /**
+    *  Every user 'from' has a scope/table that uses every receipient 'to' as the primary key.
+    */
+   struct [[eosio::table, eosio::contract("eosio.system")]] delegated_bandwidth {
+      name          from;
+      name          to;
+      asset         net_weight;
+      asset         cpu_weight;
+
+      bool is_empty()const { return net_weight.amount == 0 && cpu_weight.amount == 0; }
+      uint64_t  primary_key()const { return to.value; }
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( delegated_bandwidth, (from)(to)(net_weight)(cpu_weight) )
+
+   };
+
+   struct [[eosio::table, eosio::contract("eosio.system")]] refund_request {
+      name            owner;
+      time_point_sec  request_time;
+      eosio::asset    net_amount;
+      eosio::asset    cpu_amount;
+
+      bool is_empty()const { return net_amount.amount == 0 && cpu_amount.amount == 0; }
+      uint64_t  primary_key()const { return owner.value; }
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE( refund_request, (owner)(request_time)(net_amount)(cpu_amount) )
+   };
+
+   /**
+    *  These tables are designed to be constructed in the scope of the relevant user, this
+    *  facilitates simpler API for per-user queries
+    */
+   typedef eosio::multi_index< "userres"_n, user_resources >      user_resources_table;
+   typedef eosio::multi_index< "delband"_n, delegated_bandwidth > del_bandwidth_table;
+   typedef eosio::multi_index< "refunds"_n, refund_request >      refunds_table;
 
    /**
     * `rex_pool` structure underlying the rex pool table.

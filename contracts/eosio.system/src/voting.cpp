@@ -5,7 +5,6 @@
 #include <eosio/privileged.hpp>
 #include <eosio/serialize.hpp>
 #include <eosio/singleton.hpp>
-#include <eosio/transaction.hpp>
 
 #include <eosio.system/eosio.system.hpp>
 #include <eosio.token/eosio.token.hpp>
@@ -16,9 +15,10 @@
 namespace eosiosystem {
 
    using eosio::const_mem_fun;
+   using eosio::current_time_point;
    using eosio::indexed_by;
+   using eosio::microseconds;
    using eosio::singleton;
-   using eosio::transaction;
 
    void system_contract::regproducer( const name& producer, const eosio::public_key& producer_key, const std::string& url, uint16_t location ) {
       check( url.size() < 512, "url too long" );
@@ -204,7 +204,7 @@ namespace eosiosystem {
          new_vote_weight += voter->proxied_vote_weight;
       }
 
-      std::map<name, pair<double, bool /*new*/> > producer_deltas;
+      std::map<name, std::pair<double, bool /*new*/> > producer_deltas;
       if ( voter->last_vote_weight > 0 ) {
          if( voter->proxy ) {
             auto old_proxy = _voters.find( voter->proxy.value );
