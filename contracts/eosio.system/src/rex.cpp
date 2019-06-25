@@ -1,7 +1,11 @@
 #include <eosio.system/eosio.system.hpp>
+#include <eosio.token/eosio.token.hpp>
 #include <eosio.system/rex.results.hpp>
 
 namespace eosiosystem {
+
+   using eosio::current_time_point;
+   using eosio::token;
 
    void system_contract::deposit( const name& owner, const asset& amount )
    {

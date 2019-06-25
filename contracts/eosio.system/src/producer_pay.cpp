@@ -3,14 +3,9 @@
 
 namespace eosiosystem {
 
-   const int64_t  min_pervote_daily_pay = 100'0000;
-   const int64_t  min_activated_stake   = 150'000'000'0000;
-   const uint32_t blocks_per_year       = 52*7*24*2*3600;   // half seconds per year
-   const uint32_t seconds_per_year      = 52*7*24*3600;
-   const uint32_t blocks_per_day        = 2 * 24 * 3600;
-   const uint32_t blocks_per_hour       = 2 * 3600;
-   const int64_t  useconds_per_day      = 24 * 3600 * int64_t(1000000);
-   const int64_t  useconds_per_year     = seconds_per_year*1000000ll;
+   using eosio::current_time_point;
+   using eosio::microseconds;
+   using eosio::token;
 
    void system_contract::onblock( ignore<block_header> ) {
       using namespace eosio;
@@ -70,7 +65,6 @@ namespace eosiosystem {
       }
    }
 
-   using namespace eosio;
    void system_contract::claimrewards( const name& owner ) {
       require_auth( owner );
 
@@ -84,7 +78,7 @@ namespace eosiosystem {
 
       check( ct - prod.last_claim_time > microseconds(useconds_per_day), "already claimed rewards within past day" );
 
-      const asset token_supply   = eosio::token::get_supply(token_account, core_symbol().code() );
+      const asset token_supply   = token::get_supply(token_account, core_symbol().code() );
       const auto usecs_since_last_fill = (ct - _gstate.last_pervote_bucket_fill).count();
 
       if( usecs_since_last_fill > 0 && _gstate.last_pervote_bucket_fill > time_point() ) {
