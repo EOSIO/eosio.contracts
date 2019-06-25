@@ -15,7 +15,7 @@ namespace eosiosystem {
    void system_contract::onblock( ignore<block_header> ) {
       using namespace eosio;
 
-      require_auth(_self);
+      require_auth(get_self());
 
       block_timestamp timestamp;
       name producer;
@@ -51,7 +51,7 @@ namespace eosiosystem {
          update_elected_producers( timestamp );
 
          if( (timestamp.slot - _gstate.last_name_close.slot) > blocks_per_day ) {
-            name_bid_table bids(_self, _self.value);
+            name_bid_table bids(get_self(), get_self().value);
             auto idx = bids.get_index<"highbid"_n>();
             auto highest = idx.lower_bound( std::numeric_limits<uint64_t>::max()/2 );
             if( highest != idx.end() &&
@@ -97,19 +97,19 @@ namespace eosiosystem {
 
          if( new_tokens > 0 ) {
             {
-               token::issue_action issue_act{ token_account, { {_self, active_permission} } };
-               issue_act.send( _self, asset(new_tokens, core_symbol()), "issue tokens for producer pay and savings" );
+               token::issue_action issue_act{ token_account, { {get_self(), active_permission} } };
+               issue_act.send( get_self(), asset(new_tokens, core_symbol()), "issue tokens for producer pay and savings" );
             }
             {
-               token::transfer_action transfer_act{ token_account, { {_self, active_permission} } };
+               token::transfer_action transfer_act{ token_account, { {get_self(), active_permission} } };
                if( to_savings > 0 ) {
-                  transfer_act.send( _self, saving_account, asset(to_savings, core_symbol()), "unallocated inflation" );
+                  transfer_act.send( get_self(), saving_account, asset(to_savings, core_symbol()), "unallocated inflation" );
                }
                if( to_per_block_pay > 0 ) {
-                  transfer_act.send( _self, bpay_account, asset(to_per_block_pay, core_symbol()), "fund per-block bucket" );
+                  transfer_act.send( get_self(), bpay_account, asset(to_per_block_pay, core_symbol()), "fund per-block bucket" );
                }
                if( to_per_vote_pay > 0 ) {
-                  transfer_act.send( _self, vpay_account, asset(to_per_vote_pay, core_symbol()), "fund per-vote bucket" );
+                  transfer_act.send( get_self(), vpay_account, asset(to_per_vote_pay, core_symbol()), "fund per-vote bucket" );
                }
             }
          }

@@ -139,7 +139,7 @@ namespace eosiosystem {
       _gstate.total_ram_bytes_reserved += uint64_t(bytes_out);
       _gstate.total_ram_stake          += quant_after_fee.amount;
 
-      user_resources_table  userres( _self, receiver.value );
+      user_resources_table  userres( get_self(), receiver.value );
       auto res_itr = userres.find( receiver.value );
       if( res_itr ==  userres.end() ) {
          res_itr = userres.emplace( receiver, [&]( auto& res ) {
@@ -174,7 +174,7 @@ namespace eosiosystem {
 
       check( bytes > 0, "cannot sell negative byte" );
 
-      user_resources_table  userres( _self, account.value );
+      user_resources_table  userres( get_self(), account.value );
       auto res_itr = userres.find( account.value );
       check( res_itr != userres.end(), "no resource row" );
       check( res_itr->ram_bytes >= bytes, "insufficient quota" );
@@ -242,7 +242,7 @@ namespace eosiosystem {
 
       // update stake delegated from "from" to "receiver"
       {
-         del_bandwidth_table     del_tbl( _self, from.value );
+         del_bandwidth_table     del_tbl( get_self(), from.value );
          auto itr = del_tbl.find( receiver.value );
          if( itr == del_tbl.end() ) {
             itr = del_tbl.emplace( from, [&]( auto& dbo ){
@@ -267,7 +267,7 @@ namespace eosiosystem {
 
       // update totals of "receiver"
       {
-         user_resources_table   totals_tbl( _self, receiver.value );
+         user_resources_table   totals_tbl( get_self(), receiver.value );
          auto tot_itr = totals_tbl.find( receiver.value );
          if( tot_itr ==  totals_tbl.end() ) {
             tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
@@ -314,7 +314,7 @@ namespace eosiosystem {
 
       // create refund or update from existing refund
       if ( stake_account != source_stake_from ) { //for eosio both transfer and refund make no sense
-         refunds_table refunds_tbl( _self, from.value );
+         refunds_table refunds_tbl( get_self(), from.value );
          auto req = refunds_tbl.find( from.value );
 
          //create/update/delete refund
@@ -383,7 +383,7 @@ namespace eosiosystem {
          if ( need_deferred_trx ) {
             eosio::transaction out;
             out.actions.emplace_back( permission_level{from, active_permission},
-                                      _self, "refund"_n,
+                                      get_self(), "refund"_n,
                                       from
             );
             out.delay_sec = refund_delay_sec;
@@ -459,7 +459,7 @@ namespace eosiosystem {
    void system_contract::refund( const name& owner ) {
       require_auth( owner );
 
-      refunds_table refunds_tbl( _self, owner.value );
+      refunds_table refunds_tbl( get_self(), owner.value );
       auto req = refunds_tbl.find( owner.value );
       check( req != refunds_tbl.end(), "refund request not found" );
       check( req->request_time + seconds(refund_delay_sec) <= current_time_point(),

@@ -3,7 +3,7 @@
 namespace eosio {
 
 void wrap::exec( ignore<name>, ignore<transaction> ) {
-   require_auth( _self );
+   require_auth( get_self() );
 
    name executer;
    _ds >> executer;
