@@ -8,11 +8,11 @@ void bios::setabi( name account, const std::vector<char>& abi ) {
    if( itr == table.end() ) {
       table.emplace( account, [&]( auto& row ) {
          row.owner = account;
-         sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+         row.hash  = sha256(const_cast<char*>(abi.data()), abi.size());
       });
    } else {
       table.modify( itr, same_payer, [&]( auto& row ) {
-         sha256( const_cast<char*>(abi.data()), abi.size(), &row.hash );
+         row.hash = sha256(const_cast<char*>(abi.data()), abi.size());
       });
    }
 }
@@ -23,23 +23,17 @@ void bios::onerror( ignore<uint128_t>, ignore<std::vector<char>> ) {
 
 void bios::setpriv( name account, uint8_t is_priv ) {
    require_auth( _self );
-   set_privileged( account.value, is_priv );
+   set_privileged( account, is_priv );
 }
 
 void bios::setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight ) {
    require_auth( _self );
-   set_resource_limits( account.value, ram_bytes, net_weight, cpu_weight );
+   set_resource_limits( account, ram_bytes, net_weight, cpu_weight );
 }
 
 void bios::setprods( std::vector<eosio::producer_key> schedule ) {
-   (void)schedule; // schedule argument just forces the deserialization of the action data into vector<producer_key> (necessary check)
    require_auth( _self );
-
-   constexpr size_t max_stack_buffer_size = 512;
-   size_t size = action_data_size();
-   char* buffer = (char*)( max_stack_buffer_size < size ? malloc(size) : alloca(size) );
-   read_action_data( buffer, size );
-   set_proposed_producers(buffer, size);
+   set_proposed_producers( schedule );
 }
 
 void bios::setparams( const eosio::blockchain_parameters& params ) {
