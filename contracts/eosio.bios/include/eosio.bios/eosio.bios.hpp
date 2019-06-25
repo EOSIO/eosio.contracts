@@ -268,17 +268,6 @@ namespace eosio {
          void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
 
          /**
-          * On error action.
-          *
-          * @details Called every time an error occurs while a transaction was processed.
-          *
-          * @param sender_id - the id of the sender,
-          * @param sent_trx - the transaction that failed.
-          */
-         [[eosio::action]]
-         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {}
-
-         /**
           * Set code action.
           *
           * @details Sets the contract code for an account.
@@ -294,6 +283,32 @@ namespace eosio {
          /** @}*/
 
          /**
+          * Set abi for contract.
+          *
+          * @details Set the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
+          * index, with `account` name as key, if it is not already present and sets its value with the abi hash.
+          * Otherwise it is updating the current abi hash value for the existing `account` key.
+          *
+          * @param account - the name of the account to set the abi for
+          * @param abi     - the abi hash represented as a vector of characters
+          */
+         [[eosio::action]]
+         void setabi( name account, const std::vector<char>& abi );
+
+         /**
+          * On error action.
+          *
+          * @details Notification of this action is delivered to the sender of a deferred transaction
+          * when an objective error occurs while executing the deferred transaction.
+          * This action is not meant to be called directly.
+          *
+          * @param sender_id - the id for the deferred transaction chosen by the sender,
+          * @param sent_trx - the deferred transaction that failed.
+          */
+         [[eosio::action]]
+         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
+
+         /**
           * Set privilege status for an account.
           *
           * @details Allows to set privilege status for an account (turn it on/off).
@@ -301,10 +316,7 @@ namespace eosio {
           * @param is_priv - 0 for false, > 0 for true.
           */
          [[eosio::action]]
-         void setpriv( name account, uint8_t is_priv ) {
-            require_auth( _self );
-            set_privileged( account, is_priv );
-         }
+         void setpriv( name account, uint8_t is_priv );
 
          /**
           * Set the resource limits of an account
@@ -317,10 +329,7 @@ namespace eosio {
           * @param cpu_weight - fractionally proportionate cpu limit of available resources based on (weight / total_weight_of_all_accounts)
           */
          [[eosio::action]]
-         void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight ) {
-            require_auth( _self );
-            set_resource_limits( account, ram_bytes, net_weight, cpu_weight );
-         }
+         void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
 
          /**
           * Set a new list of active producers, that is, a new producers' schedule.
@@ -333,10 +342,7 @@ namespace eosio {
           * @param schedule - New list of active producers to set
           */
          [[eosio::action]]
-         void setprods( std::vector<eosio::producer_key> schedule ) {
-            require_auth( _self );
-            set_proposed_producers( schedule );
-         }
+         void setprods( std::vector<eosio::producer_key> schedule );
 
          /**
           * Set the blockchain parameters
@@ -346,10 +352,7 @@ namespace eosio {
           * @param params - New blockchain parameters to set
           */
          [[eosio::action]]
-         void setparams( const eosio::blockchain_parameters& params ) {
-            require_auth( _self );
-            set_blockchain_parameters( params );
-         }
+         void setparams( const eosio::blockchain_parameters& params );
 
          /**
           * Check if an account has authorization to access current action.
@@ -360,9 +363,7 @@ namespace eosio {
           * @param from - the account name to authorize
           */
          [[eosio::action]]
-         void reqauth( name from ) {
-            require_auth( from );
-         }
+         void reqauth( name from );
 
          /**
           * Activates a protocol feature.
@@ -372,10 +373,7 @@ namespace eosio {
           * @param feature_digest - hash of the protocol feature to activate.
           */
          [[eosio::action]]
-         void activate( const eosio::checksum256& feature_digest ) {
-            require_auth( get_self() );
-            preactivate_feature( feature_digest );
-         }
+         void activate( const eosio::checksum256& feature_digest );
 
          /**
           * Asserts that a protocol feature has been activated.
@@ -385,35 +383,7 @@ namespace eosio {
           * @param feature_digest - hash of the protocol feature to check for activation.
           */
          [[eosio::action]]
-         void reqactivated( const eosio::checksum256& feature_digest ) {
-            check( is_feature_activated( feature_digest ), "protocol feature is not activated" );
-         }
-
-         /**
-          * Set abi for contract.
-          *
-          * @details Set the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
-          * index, with `account` name as key, if it is not already present and sets its value with the abi hash.
-          * Otherwise it is updating the current abi hash value for the existing `account` key.
-          *
-          * @param account - the name of the account to set the abi for
-          * @param abi     - the abi hash represented as a vector of characters
-          */
-         [[eosio::action]]
-         void setabi( name account, const std::vector<char>& abi ) {
-            abi_hash_table table(_self, _self.value);
-            auto itr = table.find( account.value );
-            if( itr == table.end() ) {
-               table.emplace( account, [&]( auto& row ) {
-                  row.owner = account;
-                  row.hash  = sha256(const_cast<char*>(abi.data()), abi.size());
-               });
-            } else {
-               table.modify( itr, same_payer, [&]( auto& row ) {
-                  row.hash = sha256(const_cast<char*>(abi.data()), abi.size());
-               });
-            }
-         }
+         void reqactivated( const eosio::checksum256& feature_digest );
 
          /**
           * Abi hash structure
@@ -440,12 +410,14 @@ namespace eosio {
          using unlinkauth_action = action_wrapper<"unlinkauth"_n, &bios::unlinkauth>;
          using canceldelay_action = action_wrapper<"canceldelay"_n, &bios::canceldelay>;
          using setcode_action = action_wrapper<"setcode"_n, &bios::setcode>;
+         using setabi_action = action_wrapper<"setabi"_n, &bios::setabi>;
          using setpriv_action = action_wrapper<"setpriv"_n, &bios::setpriv>;
          using setalimits_action = action_wrapper<"setalimits"_n, &bios::setalimits>;
          using setprods_action = action_wrapper<"setprods"_n, &bios::setprods>;
          using setparams_action = action_wrapper<"setparams"_n, &bios::setparams>;
          using reqauth_action = action_wrapper<"reqauth"_n, &bios::reqauth>;
-         using setabi_action = action_wrapper<"setabi"_n, &bios::setabi>;
+         using activate_action = action_wrapper<"activate"_n, &bios::activate>;
+         using reqactivated_action = action_wrapper<"reqactivated"_n, &bios::reqactivated>;
    };
    /** @}*/ // end of @defgroup eosiobios eosio.bios
 } /// namespace eosio
