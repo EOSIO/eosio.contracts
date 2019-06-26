@@ -130,8 +130,9 @@ void token::open( const name& owner, const symbol& symbol, const name& ram_payer
 {
    require_auth( ram_payer );
 
-   auto sym_code_raw = symbol.code().raw();
+   check( is_account( owner ), "owner account does not exist" );
 
+   auto sym_code_raw = symbol.code().raw();
    stats statstable( _self, sym_code_raw );
    const auto& st = statstable.get( sym_code_raw, "symbol does not exist" );
    check( st.supply.symbol == symbol, "symbol precision mismatch" );
