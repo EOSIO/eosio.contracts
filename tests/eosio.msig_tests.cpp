@@ -414,7 +414,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
    set_producers( {N(alice),N(bob),N(carol)} );
    produce_blocks(50);
 
-   create_accounts( { N(eosio.token) } );
+   create_accounts( { N(eosio.token), N(eosio.rex) } );
    set_code( N(eosio.token), contracts::token_wasm() );
    set_abi( N(eosio.token), contracts::token_abi().data() );
 
@@ -533,7 +533,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
    set_producers( {N(alice),N(bob),N(carol), N(apple)} );
    produce_blocks(50);
 
-   create_accounts( { N(eosio.token) } );
+   create_accounts( { N(eosio.token), N(eosio.rex) } );
    set_code( N(eosio.token), contracts::token_wasm() );
    set_abi( N(eosio.token), contracts::token_abi().data() );
 
