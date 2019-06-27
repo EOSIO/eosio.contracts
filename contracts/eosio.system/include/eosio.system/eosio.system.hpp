@@ -698,7 +698,7 @@ namespace eosiosystem {
                   template <typename... Args>
                   static constexpr void call( system_contract* this_contract, Args&&... args )
                   {
-                     std::invoke( P, this_contract, std::forward<Args>(args)... );
+                     std::invoke( P, this_contract, args... );
                      for_each<Ps...>::call( this_contract, std::forward<Args>(args)... );
                   }
                };
