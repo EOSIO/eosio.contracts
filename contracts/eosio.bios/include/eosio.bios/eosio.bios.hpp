@@ -1,10 +1,14 @@
 #pragma once
-#include <eosiolib/action.hpp>
-#include <eosiolib/crypto.h>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/privileged.hpp>
-#include <eosiolib/producer_schedule.hpp>
-#include <eosiolib/fixed_bytes.hpp>
+
+#include <eosio/action.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/fixed_bytes.hpp>
+#include <eosio/privileged.hpp>
+#include <eosio/producer_schedule.hpp>
+
+// This header is needed until `is_feature_activated` and `preactivate_feature` are added to `eosio.cdt`
+#include <eosio/../../capi/eosio/crypto.h>
 
 namespace eosio {
    namespace internal_use_do_not_use {
@@ -55,9 +59,9 @@ namespace eosio {
 
 namespace eosio {
 
+   using eosio::ignore;
    using eosio::permission_level;
    using eosio::public_key;
-   using eosio::ignore;
 
    /**
     * A weighted permission.
@@ -137,9 +141,9 @@ namespace eosio {
       uint32_t                                  timestamp;
       name                                      producer;
       uint16_t                                  confirmed = 0;
-      capi_checksum256                          previous;
-      capi_checksum256                          transaction_mroot;
-      capi_checksum256                          action_mroot;
+      checksum256                               previous;
+      checksum256                               transaction_mroot;
+      checksum256                               action_mroot;
       uint32_t                                  schedule_version = 0;
       std::optional<eosio::producer_schedule>   new_producers;
 
@@ -261,7 +265,7 @@ namespace eosio {
           * @param trx_id - the deferred transaction id to be cancelled.
           */
          [[eosio::action]]
-         void canceldelay( ignore<permission_level> canceling_auth, ignore<capi_checksum256> trx_id ) {}
+         void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
 
          /**
           * Set code action.
@@ -388,7 +392,7 @@ namespace eosio {
           */
          struct [[eosio::table]] abi_hash {
             name              owner;
-            capi_checksum256  hash;
+            checksum256       hash;
             uint64_t primary_key()const { return owner.value; }
 
             EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
