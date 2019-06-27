@@ -22,22 +22,9 @@ namespace eosio {
          void preactivate_feature( const ::capi_checksum256* feature_digest );
       }
    }
-}
 
-namespace eosio {
-   bool is_feature_activated( const eosio::checksum256& feature_digest ) {
-      auto feature_digest_data = feature_digest.extract_as_byte_array();
-      return internal_use_do_not_use::is_feature_activated(
-         reinterpret_cast<const ::capi_checksum256*>( feature_digest_data.data() )
-      );
-   }
-
-   void preactivate_feature( const eosio::checksum256& feature_digest ) {
-      auto feature_digest_data = feature_digest.extract_as_byte_array();
-      internal_use_do_not_use::preactivate_feature(
-         reinterpret_cast<const ::capi_checksum256*>( feature_digest_data.data() )
-      );
-   }
+   bool is_feature_activated( const eosio::checksum256& feature_digest );
+   void preactivate_feature( const eosio::checksum256& feature_digest );
 }
 
 namespace eosiosystem {
@@ -280,9 +267,7 @@ namespace eosiosystem {
           * @param sent_trx - the deferred transaction that failed.
           */
          [[eosio::action]]
-         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx ) {
-            eosio::check( false, "the onerror action cannot be called directly" );
-         }
+         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
 
          /**
           * Set abi action.

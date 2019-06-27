@@ -8,76 +8,19 @@
 #include <eosio.system/eosio.system.hpp>
 #include <eosio.token/eosio.token.hpp>
 
-#include <cmath>
-#include <map>
+#include "name_bidding.cpp"
+// Unfortunately, this is needed until CDT fixes the duplicate symbol error with eosio::send_deferred
 
 namespace eosiosystem {
 
    using eosio::asset;
    using eosio::const_mem_fun;
+   using eosio::current_time_point;
    using eosio::indexed_by;
    using eosio::permission_level;
+   using eosio::seconds;
    using eosio::time_point_sec;
-
-   using std::map;
-   using std::pair;
-
-   static constexpr uint32_t refund_delay_sec = 3*24*3600;
-   static constexpr int64_t  ram_gift_bytes = 1400;
-
-   struct [[eosio::table, eosio::contract("eosio.system")]] user_resources {
-      name          owner;
-      asset         net_weight;
-      asset         cpu_weight;
-      int64_t       ram_bytes = 0;
-
-      bool is_empty()const { return net_weight.amount == 0 && cpu_weight.amount == 0 && ram_bytes == 0; }
-      uint64_t primary_key()const { return owner.value; }
-
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( user_resources, (owner)(net_weight)(cpu_weight)(ram_bytes) )
-   };
-
-
-   /**
-    *  Every user 'from' has a scope/table that uses every receipient 'to' as the primary key.
-    */
-   struct [[eosio::table, eosio::contract("eosio.system")]] delegated_bandwidth {
-      name          from;
-      name          to;
-      asset         net_weight;
-      asset         cpu_weight;
-
-      bool is_empty()const { return net_weight.amount == 0 && cpu_weight.amount == 0; }
-      uint64_t  primary_key()const { return to.value; }
-
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( delegated_bandwidth, (from)(to)(net_weight)(cpu_weight) )
-
-   };
-
-   struct [[eosio::table, eosio::contract("eosio.system")]] refund_request {
-      name            owner;
-      time_point_sec  request_time;
-      eosio::asset    net_amount;
-      eosio::asset    cpu_amount;
-
-      bool is_empty()const { return net_amount.amount == 0 && cpu_amount.amount == 0; }
-      uint64_t  primary_key()const { return owner.value; }
-
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( refund_request, (owner)(request_time)(net_amount)(cpu_amount) )
-   };
-
-   /**
-    *  These tables are designed to be constructed in the scope of the relevant user, this
-    *  facilitates simpler API for per-user queries
-    */
-   typedef eosio::multi_index< "userres"_n, user_resources >      user_resources_table;
-   typedef eosio::multi_index< "delband"_n, delegated_bandwidth > del_bandwidth_table;
-   typedef eosio::multi_index< "refunds"_n, refund_request >      refunds_table;
-
-
+   using eosio::token;
 
    /**
     *  This action will buy an exact amount of ram and bill the payer the current market price.
@@ -139,7 +82,7 @@ namespace eosiosystem {
       _gstate.total_ram_bytes_reserved += uint64_t(bytes_out);
       _gstate.total_ram_stake          += quant_after_fee.amount;
 
-      user_resources_table  userres( _self, receiver.value );
+      user_resources_table  userres( get_self(), receiver.value );
       auto res_itr = userres.find( receiver.value );
       if( res_itr ==  userres.end() ) {
          res_itr = userres.emplace( receiver, [&]( auto& res ) {
@@ -174,7 +117,7 @@ namespace eosiosystem {
 
       check( bytes > 0, "cannot sell negative byte" );
 
-      user_resources_table  userres( _self, account.value );
+      user_resources_table  userres( get_self(), account.value );
       auto res_itr = userres.find( account.value );
       check( res_itr != userres.end(), "no resource row" );
       check( res_itr->ram_bytes >= bytes, "insufficient quota" );
@@ -242,7 +185,7 @@ namespace eosiosystem {
 
       // update stake delegated from "from" to "receiver"
       {
-         del_bandwidth_table     del_tbl( _self, from.value );
+         del_bandwidth_table     del_tbl( get_self(), from.value );
          auto itr = del_tbl.find( receiver.value );
          if( itr == del_tbl.end() ) {
             itr = del_tbl.emplace( from, [&]( auto& dbo ){
@@ -267,7 +210,7 @@ namespace eosiosystem {
 
       // update totals of "receiver"
       {
-         user_resources_table   totals_tbl( _self, receiver.value );
+         user_resources_table   totals_tbl( get_self(), receiver.value );
          auto tot_itr = totals_tbl.find( receiver.value );
          if( tot_itr ==  totals_tbl.end() ) {
             tot_itr = totals_tbl.emplace( from, [&]( auto& tot ) {
@@ -314,7 +257,7 @@ namespace eosiosystem {
 
       // create refund or update from existing refund
       if ( stake_account != source_stake_from ) { //for eosio both transfer and refund make no sense
-         refunds_table refunds_tbl( _self, from.value );
+         refunds_table refunds_tbl( get_self(), from.value );
          auto req = refunds_tbl.find( from.value );
 
          //create/update/delete refund
@@ -383,14 +326,14 @@ namespace eosiosystem {
          if ( need_deferred_trx ) {
             eosio::transaction out;
             out.actions.emplace_back( permission_level{from, active_permission},
-                                      _self, "refund"_n,
+                                      get_self(), "refund"_n,
                                       from
             );
             out.delay_sec = refund_delay_sec;
-            cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
+            eosio::cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
             out.send( from.value, from, true );
          } else {
-            cancel_deferred( from.value );
+            eosio::cancel_deferred( from.value );
          }
 
          auto transfer_amount = net_balance + cpu_balance;
@@ -459,7 +402,7 @@ namespace eosiosystem {
    void system_contract::refund( const name& owner ) {
       require_auth( owner );
 
-      refunds_table refunds_tbl( _self, owner.value );
+      refunds_table refunds_tbl( get_self(), owner.value );
       auto req = refunds_tbl.find( owner.value );
       check( req != refunds_tbl.end(), "refund request not found" );
       check( req->request_time + seconds(refund_delay_sec) <= current_time_point(),

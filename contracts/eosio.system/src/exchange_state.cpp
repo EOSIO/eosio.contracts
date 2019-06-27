@@ -1,6 +1,12 @@
 #include <eosio.system/exchange_state.hpp>
 
+#include <eosio/check.hpp>
+
+#include <cmath>
+
 namespace eosiosystem {
+
+   using eosio::check;
 
    asset exchange_state::convert_to_exchange( connector& reserve, const asset& payment )
    {
