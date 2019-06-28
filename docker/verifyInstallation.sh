@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e # exit on failure of any "simple" command (excludes &&, ||, or | chains)
 # expected places to find EOSIO CMAKE in the docker container, in ascending order of preference
 [[ -e /usr/lib/eosio/lib/cmake/eosio/eosio-config.cmake ]] && export CMAKE_FRAMEWORK_PATH="/usr/lib/eosio"
 [[ -e /opt/eosio/lib/cmake/eosio/eosio-config.cmake ]] && export CMAKE_FRAMEWORK_PATH="/opt/eosio"
