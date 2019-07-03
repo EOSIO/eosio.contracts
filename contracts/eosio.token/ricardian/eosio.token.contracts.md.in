@@ -22,7 +22,7 @@ icon: @ICON_BASE_URL@/@TOKEN_ICON_URI@
 
 {{$action.account}} agrees to create a new token with symbol {{asset_to_symbol_code maximum_supply}} to be managed by {{issuer}}.
 
-This action will not result any any tokens being issued into circulation.
+This action will not result in any tokens being issued into circulation.
 
 {{issuer}} will be allowed to issue tokens into circulation, up to a maximum supply of {{maximum_supply}}.
 
