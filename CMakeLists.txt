@@ -64,13 +64,6 @@ elseif (UNIX)
 endif()
 set(SECP256K1_ROOT "/usr/local")
 
-if (APPLE)
-   set(OPENSSL_ROOT "/usr/local/opt/openssl")
-elseif (UNIX)
-   set(OPENSSL_ROOT "/usr/include/openssl")
-endif()
-set(SECP256K1_ROOT "/usr/local")
-
 string(REPLACE ";" "|" TEST_FRAMEWORK_PATH "${CMAKE_FRAMEWORK_PATH}")
 string(REPLACE ";" "|" TEST_MODULE_PATH "${CMAKE_MODULE_PATH}")
 
