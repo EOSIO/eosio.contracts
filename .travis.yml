@@ -5,11 +5,6 @@ compiler: clang
 services:
 - docker
 before_install: |
-  echo '##### CHECKPOINT 1'
-# EOSIO
-script: |
-  echo '##### CHECKPOINT 2'
   docker pull eosio/contracts-builder:latest
-  docker run --rm eosio/contracts-builder:latest bash -c "echo 'Yeet!'"
-after_success: |
-  echo '##### CHECKPOINT 3'
+script: |
+  docker run --rm eosio/ci-contracts-builder:latest bash -c "/eosio.contracts/docker/travis-build.sh"
