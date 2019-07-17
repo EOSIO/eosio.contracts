@@ -7,4 +7,4 @@ services:
 before_install: |
   docker pull eosio/ci-contracts-builder:latest
 script: |
-  docker run --rm eosio/ci-contracts-builder:latest bash -c "/eosio.contracts/docker/travis-build.sh"
+  docker run --rm -v $(pwd):/eosio.contracts eosio/ci-contracts-builder:latest bash -c "/eosio.contracts/docker/travis-build.sh"
