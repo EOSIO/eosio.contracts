@@ -1,21 +1,8 @@
-env:
-  BUILD_TIMEOUT: 120
-  TEST_TIMEOUT: 60
-  TIMEOUT: 120
-  VERBOSE: true
-
 steps:
-
   - label: ":webhook: Trigger Travis CI Build"
     command: |
       ./.cicd/trigger-travis.sh
     agents:
       queue: "automation-eos-builder-fleet"
-
-  - trigger: "eosio-contracts-cdt-base-images-beta"
-    label: ":docker: Ensure base images exist"
-    build:
-      commit: "${BUILDKITE_COMMIT}"
-      branch: "${BUILDKITE_BRANCH}"
 
   - wait
