@@ -1,0 +1,8 @@
+steps:
+  - label: ":webhook: Trigger Travis CI Build"
+    command: |
+      ./.cicd/trigger-travis.sh
+    agents:
+      queue: "automation-eos-builder-fleet"
+
+  - wait
