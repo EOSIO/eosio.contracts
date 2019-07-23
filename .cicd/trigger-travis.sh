@@ -8,7 +8,7 @@ echo 'Configuration:'
 echo "$BODY" | jq
 echo 'This configuration is derived from the BUILDKITE_BRANCH and BUILDKITE_MESSAGE variables set for this build.'
 echo '+++ :tractor: Triggering Travis CI Build'
-export RESULT="$(curl -s -X POST -H "Content-Type: application/json" -H "Accept: application/json" -H "Travis-API-Version: 3" -H "Authorization: token $TRIGGER_TRAVIS_API_KEY" -d "$BODY" https://api.travis-ci.org/repo/EOSIO%2f$BUILDKITE_PIPELINE_SLUG/requests)"
+export RESULT="$(curl -s -X POST -H "Content-Type: application/json" -H "Accept: application/json" -H "Travis-API-Version: 3" -H "Authorization: token $TRIGGER_TRAVIS_API_KEY" -d "$BODY" https://api.travis-ci.org/repo/EOSIO%2feosio.contracts/requests)"
 echo 'API Response:'
 echo "$RESULT" | jq 2>/dev/null || echo "$RESULT"
 if [[ "$(echo $RESULT | jq -r '.["@type"]')" != "pending" ]]; then
