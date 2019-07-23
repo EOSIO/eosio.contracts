@@ -5,6 +5,7 @@ steps:
     agents:
       queue: "automation-eos-builder-fleet"
     timeout: ${TIMEOUT:-5}
+    soft_fail: true # until the API key is switched from travis-ci.org to travis-ci.com
 
   - wait
 
