@@ -4,11 +4,10 @@ language: cpp
 compiler: clang
 services:
 - docker
-before_install: 'docker pull eosio/ci-contracts-builder:latest
-
-  '
-script: docker run --rm -v $(pwd):/eosio.contracts eosio/ci-contracts-builder:latest
-  bash -c "/eosio.contracts/.cicd/travis-build.sh"
+before_install: |
+  docker pull eosio/ci-contracts-builder:latest
+script: |
+  docker run --rm -v $(pwd):/eosio.contracts eosio/ci-contracts-builder:latest bash -c "/eosio.contracts/.cicd/travis-build.sh"
 notifications:
   webhooks:
-    secure: SZBqXrVxmc7D1bo0b0c/sBVu2Wa+c4KlFoPeqYX8I3UuO/W+B0I/cdefVNg5XoJ6Un3/ZIOPcLyeHXVdRv/kKnoH7xN3KSQQwArsHl0Geo3RFSQO3lyOzMb9uADFTqBQqf6MmP0hDaih8iXM980w8DiQmrtwBbTSaGKPsf4MB75QQ3K8rQppBf69A/9tB6DEchv3o2s/U0wU2DCFD0qcGgrqNe28brp/hAAF/bIs7Zhw4s9r36Bn7aigk50FBFf0JY6ufQ9ggpqk0CQd055PUZYK5jYfU8YPuA0gMGpYJB8Q4btsjDxBkQpAKbtPGTkkAEESwuF7Dpe7fD8Jgx9aZ7cTHYRyHXqqOEtxy2ABd/1D9++SkgvxG1ysQbU6KTRwcujsUF0/0i2AZTCzXPjYu1BmIvYx2tLgbKwsd0fhKK8goHzpq3TDc/hc9UftJSm/hMvxxSY+Z1URP+Y9ubmy5OoHO53NzdzpT28xCZBbvdLLC6d5q2sHxEHEEYFYpiB7n/oVOlOJQXNvocBSSzHWVX15cjl7HESx/V72L6qPwC4pFhCf3gUtNE4NGvXXMHIA2VlRgptJl+5yf1yILXmMtSRZAQSAgHW2Iui/BHYM+tAzZUspkkZ6ax4Cfh7EkRwi6fRH7/eADEnBrmtMeF4P98x3WFkuTF4eLPv+r8OL8h4=
+    secure: CEIaN/RNCYALwL+QgBhVlyq5DvomyMcmB+gUfdDabxJk55misbIAXkj7l3+1dvq4EeB8Vw3vSKAimfjpj0hGCopOPxPsE5SPYWx3czI7cBPvuu3S4NSmx6WEe+pjI3IexUVQXRLazhvvwB6D/vZnFlr3ECYj59K0fGoYOKW14oG2RLVP7Clx3qoo1O8y7F+Ia6fEp/Q4pvwgFKnUL4hJrCUefJwSKDH8Nxf4FF5U41RLE8Xhdqxo1zbZBpT30gaPERzBnTCO3ko5NIEI/WPruQgcRr/PVDTG1xYZ2XqImDb/fHZKqkOJSoOTH+2U2KBxfXCwLPzkz6CkpJ7v14VL4qoV/F5DA9/fTSB4+B6IWusFF8NhstMmeCw0vkfaO/8WW8VEYHXnlTPFAQZJEiEyIYDcyVnUXur0yFEkvr4ZdGDmUEv/AdClVJ7Ig7T4MF2K66Yqtj930VQhI5PSWMKIWFG+2eboBrmXet+Z+2GRhwCGm5knB4/bcDcg9E80cwUWVol6AxVO07n70Qx57qX9Tvz/Ay9ugtEY+xSDQQ+HkFw62MiPDsNhSFoUD+TNY+SnEe1qnciKhb2/1bNTkKMPjifjJmDWkfC07qrXsDBcj4cIgfj6vh8lBj7U6kg7vCjXeJeljgu0wcTDd+EprDHpfRwkoXi9UsnSw2HXAveZMP4=
