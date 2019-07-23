@@ -1,4 +1,6 @@
 steps:
+  - wait
+
   - label: ":webhook: Trigger Travis CI Build"
     command: |
       ./.cicd/trigger-travis.sh
