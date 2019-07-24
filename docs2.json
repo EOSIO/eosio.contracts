@@ -1,0 +1,21 @@
+{
+  "name": "eosio.contracts",
+  "generators": [
+    {
+      "name": "collate_markdown",
+      "options": {
+        "docs_dir": "docs"
+      }
+    },
+    {
+      "name": "doxygen_to_xml",
+      "options": {
+        "INPUT": "eosio.bios eosio.system eosio.msig eosio.token eosio.wrap"
+      }
+    },
+    {
+      "name": "doxybook",
+      "options": {}
+    }
+  ]
+}
