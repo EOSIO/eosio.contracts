@@ -277,11 +277,11 @@ void ratifyamend::closeprop(uint64_t sub_id) {
     asset non_abstain_votes = (prop.yes_count + prop.no_count); 
 
     //pass thresholds
-    uint64_t voters_pass_thresh = (e->supply * configs_struct.threshold_pass_voters) / 100;
+    uint64_t voters_pass_thresh = (e->supply.amount * configs_struct.threshold_pass_voters) / 100;
     asset votes_pass_thresh = (non_abstain_votes * configs_struct.threshold_pass_votes) / 100;
 
     //fee refund thresholds
-    uint64_t voters_fee_thresh = (e->supply * configs_struct.threshold_fee_voters) / 100; 
+    uint64_t voters_fee_thresh = (e->supply.amount * configs_struct.threshold_fee_voters) / 100; 
     asset votes_fee_thresh = (total_votes * configs_struct.threshold_fee_votes) / 100; 
 
     if( prop.yes_count >= votes_fee_thresh && total_votes >= voters_fee_thresh) {
