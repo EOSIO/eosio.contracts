@@ -6,16 +6,16 @@ The design of the EOSIO blockchain calls for a number of smart contracts that ar
 
 This repository contains examples of these privileged contracts that are useful when deploying, managing, and/or using an EOSIO blockchain.  They are provided for reference purposes:
 
-   * [eosio.bios](https://github.com/EOSIO/eosio.contracts/tree/master/contracts/eosio.bios)
-   * [eosio.system](https://github.com/EOSIO/eosio.contracts/tree/master/contracts/eosio.system)
-   * [eosio.msig](https://github.com/EOSIO/eosio.contracts/tree/master/contracts/eosio.msig)
-   * [eosio.wrap](https://github.com/EOSIO/eosio.contracts/tree/master/contracts/eosio.wrap)
+   * [eosio.bios](./contracts/eosio.bios)
+   * [eosio.system](./contracts/eosio.system)
+   * [eosio.msig](./contracts/eosio.msig)
+   * [eosio.wrap](./contracts/eosio.wrap)
 
 The following unprivileged contract(s) are also part of the system.
-   * [eosio.token](https://github.com/EOSIO/eosio.contracts/tree/master/contracts/eosio.token)
+   * [eosio.token](./contracts/eosio.token)
 
 Dependencies:
-* [eosio v1.8.x](https://github.com/EOSIO/eos/releases/tag/v1.8.0-rc1)
+* [eosio v1.8.x](https://github.com/EOSIO/eos/releases/tag/v1.8.0-rc2)
 * [eosio.cdt v1.6.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.6.1)
 
 To build the contracts and the unit tests:
@@ -37,6 +37,8 @@ After build:
 ## License
 
 [MIT](./LICENSE)
+
+The included icons are provided under the same terms as the software and accompanying documentation, the MIT License.  We welcome contributions from the artistically-inclined members of the community, and if you do send us alternative icons, then you are providing them under those same terms.
 
 ## Important
 

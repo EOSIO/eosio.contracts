@@ -1,7 +1,3 @@
-/**
- *  @file
- *  @copyright defined in eos/LICENSE.txt
- */
 #pragma once
 
 #include <eosio/testing/tester.hpp>
@@ -52,7 +48,7 @@ public:
    }
 
    void create_core_token( symbol core_symbol = symbol{CORE_SYM} ) {
-      FC_ASSERT( core_symbol.precision() != 4, "create_core_token assumes precision of core token is 4" );
+      FC_ASSERT( core_symbol.decimals() == 4, "create_core_token assumes core token has 4 digits of precision" );
       create_currency( N(eosio.token), config::system_account_name, asset(100000000000000, core_symbol) );
       issue( asset(10000000000000, core_symbol) );
       BOOST_REQUIRE_EQUAL( asset(10000000000000, core_symbol), get_balance( "eosio", core_symbol ) );
@@ -960,6 +956,14 @@ public:
          push_transaction( trx );
          produce_block();
       }
+   }
+
+   action_result setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor ) {
+      return push_action( N(eosio), N(setinflation), mvo()
+               ("annual_rate",     annual_rate)
+               ("inflation_pay_factor", inflation_pay_factor)
+               ("votepay_factor", votepay_factor)
+      );
    }
 
    abi_serializer abi_ser;

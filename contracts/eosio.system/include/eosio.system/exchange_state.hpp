@@ -1,13 +1,10 @@
-/**
- *  @copyright defined in eos/LICENSE.txt
- */
-
 #pragma once
 
 #include <eosio/asset.hpp>
+#include <eosio/multi_index.hpp>
 
 namespace eosiosystem {
-   
+
    using eosio::asset;
    using eosio::symbol;
 
@@ -18,8 +15,8 @@ namespace eosiosystem {
 
    /**
     * Uses Bancor math to create a 50/50 relay between two asset types.
-    *  
-    * @details The state of the bancor exchange is entirely contained within this struct. 
+    *
+    * @details The state of the bancor exchange is entirely contained within this struct.
     * There are no external side effects associated with using this API.
     */
    struct [[eosio::table, eosio::contract("eosio.system")]] exchange_state {
@@ -54,6 +51,9 @@ namespace eosiosystem {
       static int64_t get_bancor_output( int64_t inp_reserve,
                                         int64_t out_reserve,
                                         int64_t inp );
+      static int64_t get_bancor_input( int64_t out_reserve,
+                                       int64_t inp_reserve,
+                                       int64_t out );
 
       EOSLIB_SERIALIZE( exchange_state, (supply)(base)(quote) )
    };
