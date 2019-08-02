@@ -26,7 +26,10 @@ function check-version-numbers() {
 # Handles choosing which EOSIO directory to select when the default location is used.
 function default-eosio-directories() {
   REGEX='^[0-9]+([.][0-9]+)?$'
-  ALL_EOSIO_SUBDIRS=($(ls ${HOME}/eosio | sort -V))
+  ALL_EOSIO_SUBDIRS=()
+  if [[ -d ${HOME}/eosio ]]; then
+    ALL_EOSIO_SUBDIRS=($(ls ${HOME}/eosio | sort -V))
+  fi
   for ITEM in "${ALL_EOSIO_SUBDIRS[@]}"; do
     if [[ "$ITEM" =~ $REGEX ]]; then
       DIR_MAJOR=$(echo $ITEM | cut -f1 -d '.')
