@@ -1433,6 +1433,17 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
 BOOST_FIXTURE_TEST_CASE(change_inflation, eosio_system_tester) try {
 
    {
+      BOOST_REQUIRE_EQUAL( success(),
+                           setinflation(0, 10000, 10000) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("annual_rate can't be negative"),
+                           setinflation(-1, 10000, 10000) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("inflation_pay_factor must not be less than 10000"),
+                           setinflation(1, 9999, 10000) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("votepay_factor must not be less than 10000"),
+                           setinflation(1, 10000, 9999) );
+   }
+
+   {
       const asset large_asset = core_sym::from_string("80.0000");
       create_account_with_resources( N(defproducera), config::system_account_name, core_sym::from_string("1.0000"), false, large_asset, large_asset );
       create_account_with_resources( N(defproducerb), config::system_account_name, core_sym::from_string("1.0000"), false, large_asset, large_asset );
@@ -1513,6 +1524,7 @@ BOOST_FIXTURE_TEST_CASE(change_inflation, eosio_system_tester) try {
    }
 
 } FC_LOG_AND_RETHROW()
+
 
 BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
 
