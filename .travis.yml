@@ -1,6 +1,9 @@
 language: cpp
 git:
   depth: false
+cache:
+  ccache: true
+  directories: $HOME/Library/Caches/Homebrew
 if: fork = true OR type = api
 matrix:
   include:
