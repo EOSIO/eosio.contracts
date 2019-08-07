@@ -19,13 +19,15 @@ else # Linux
     
     # Generate Base Images
     # execute ./.cicd/generate-base-images.sh
-
+    [[ -z $CDT_VERSION ]] && echo "Please specify CDT_VERSION." && exit 1
+    CDT_INSTALL="curl -LO https://github.com/EOSIO/eosio.cdt/releases/download/v$CDT_VERSION/eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && dpkg -i eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb"
     BUILD_COMMANDS="mkdir -p /workdir/build && cd /workdir/build && cmake .. && make -j$JOBS"
     TEST_COMMANDS="cd /workdir/build && ctest -j$JOBS -V --output-on-failure -T Test"
 
     # Docker Run Arguments
     ARGS=${ARGS:-"--rm -v $(pwd):/workdir"}
     # Docker Commands
+    append-to-commands $CDT_INSTALL
     if [[ $BUILDKITE ]]; then
         [[ $ENABLE_BUILD ]] && append-to-commands $BUILD_COMMANDS
         [[ $ENABLE_TEST ]] && append-to-commands $TEST_COMMANDS
