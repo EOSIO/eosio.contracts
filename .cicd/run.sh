@@ -39,7 +39,6 @@ else # Linux
         TRAV_COMMANDS="ccache -s && $BUILD_COMMANDS && $TEST_COMMANDS"
         append-to-commands $TRAV_COMMANDS
     fi
-    echo "Got here."
     # Docker Run
     docker-run $COMMANDS
 
