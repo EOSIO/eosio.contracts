@@ -1,9 +1,4 @@
-env:
-  FULL_TAG: "eosio/producer:eos-binaries-trav-poc-contract-support-1.8.0"
-  CDT_VERSION: "1.6.2"
-  
 steps:
-  - wait
 
   - label: ":ubuntu: Ubuntu 18.04 - Build"
     command:
