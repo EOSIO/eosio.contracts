@@ -1,29 +1,30 @@
 steps:
   - wait
 
-  - label: ":webhook: Trigger Travis CI Build"
-    command: |
-      ./.cicd/trigger-travis.sh
-    agents:
+  - label: ":ubuntu: Ubuntu 18.04 - Build"
+    command:
+      - "bash ./.cicd/run.sh"
+      - "tar -pczf build.tar.gz build && buildkite-agent artifact upload build.tar.gz"
+    env:
+      IMAGE_TAG: "ubuntu-18.04"
+      ENABLE_BUILD: true
+      FULL_TAG: "eosio/producer:eos-binaries-trav-poc-contract-support-1.8.0"
+    agents: 
       queue: "automation-eos-builder-fleet"
-    timeout: ${TIMEOUT:-5}
-    soft_fail: true # until the API key is switched from travis-ci.org to travis-ci.com
+    timeout: ${TIMEOUT:-10}
+    skip: $SKIP_UBUNTU_18
 
   - wait
 
-  - label: ":ubuntu: Ubuntu 18.04 — Build and Test"
-    command: |
-      . /eosio.contracts/.cicd/travis-build.sh
-    agents:
-      queue: "automation-docker-builder-fleet"
-    plugins:
-      - docker#v3.2.0:
-          always-pull: true
-          debug: $DEBUG
-          image: "eosio/ci-contracts-builder:latest"
-          mount-buildkite-agent: true
-          mount-checkout: true
-          propagate-environment: true
-          shell: ["/bin/bash", "-i", "-e", "-c"]
-          workdir: "/eosio.contracts"
-    timeout: ${TIMEOUT:-300}
+  - label: ":ubuntu: Ubuntu 18.04 - Test"
+    command:
+      - "buildkite-agent artifact download build.tar.gz . --step ':ubuntu: Ubuntu 18.04 - Build' && tar -xzf build.tar.gz"
+      - "bash ./.cicd/run.sh"
+    env:
+      IMAGE_TAG: "ubuntu-18.04"
+      ENABLE_TEST: true
+      FULL_TAG: "eosio/producer:eos-binaries-trav-poc-contract-support-1.8.0"
+    agents: 
+      queue: "automation-eos-builder-fleet"
+    timeout: ${TIMEOUT:-10}
+    skip: $SKIP_UBUNTU_18

@@ -1,0 +1,9 @@
+steps:
+  - wait
+
+  - label: ":ubuntu: Ubuntu 18.04 - Build"
+    command: ". .cicd/generate-base-images.sh ubuntu-18.04"
+    agents:
+      queue: "automation-eos-dockerhub-image-builder-fleet"
+    timeout: ${TIMEOUT:-90}
+    skip: $SKIP_UBUNTU_18
