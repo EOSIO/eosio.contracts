@@ -20,7 +20,7 @@ steps:
       - docker#v3.2.0:
           always-pull: true
           debug: $DEBUG
-          image: "eosio/ci-contracts-builder:latest"
+          image: "eosio/ci-contracts-builder:d1be23a980c874b30a7d696daab7c8d2e31c2175"
           mount-buildkite-agent: true
           mount-checkout: true
           propagate-environment: true
