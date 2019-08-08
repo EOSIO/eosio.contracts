@@ -3,7 +3,8 @@ set -eo pipefail
 . ./.cicd/helpers/general.sh
 . ./$HELPERS_DIR/execute.sh
 
-export FULL_TAG="eosio/producer:eos-binaries-trav-poc-contract-tests-1.8.0-e13ec7f756e78d9baf994c5d3a7bd643653d834b"
+# export FULL_TAG="eosio/producer:eos-binaries-trav-poc-contract-tests-1.8.0-e13ec7f756e78d9baf994c5d3a7bd643653d834b"
+export FULL_TAG="eosio/producer:eos-binaries-trav-poc-contract-support-1.8.0"
 export CDT_VERSION="1.6.2"
 
 if [[ $(uname) == Darwin ]]; then
@@ -37,7 +38,7 @@ else # Linux
         docker-run $COMMANDS
     elif [[ $TRAVIS ]]; then
         ARGS="$ARGS -v /usr/lib/ccache -v $HOME/.ccache:/opt/.ccache -e JOBS -e CCACHE_DIR=/opt/.ccache"
-        TRAV_COMMANDS="ccache -s && $CDT_COMMANDS && $BUILD_COMMANDS"
+        TRAV_COMMANDS="ccache -s && $CDT_COMMANDS && $BUILD_COMMANDS && $TEST_COMMANDS"
         docker run $ARGS $FULL_TAG bash -c "$TRAV_COMMANDS"
     fi
     # Docker Run
