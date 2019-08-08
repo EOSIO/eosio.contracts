@@ -3,7 +3,7 @@ set -eo pipefail
 . ./.cicd/helpers/general.sh
 . ./$HELPERS_DIR/execute.sh
 
-export FULL_TAG="eosio/producer:eos-binaries-trav-poc-contract-support-1.8.0"
+export FULL_TAG="eosio/producer:eos-binaries-trav-poc-contract-support-1.8.0-c00bf047d29a188806fba877e5fed08b6d8fe984"
 export CDT_VERSION="1.6.2"
 
 if [[ $(uname) == Darwin ]]; then
