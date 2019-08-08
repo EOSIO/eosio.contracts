@@ -2,8 +2,8 @@
 set -e
 CPU_CORES=$(getconf _NPROCESSORS_ONLN)
 [[ -d "build" ]] && rm -rf build
-mkdir build
-cd build
+mkdir /workdir/build
+cd /workdir/build
 echo '$ cmake ..'
 cmake ..
 echo "$ make -j $CPU_CORES"
