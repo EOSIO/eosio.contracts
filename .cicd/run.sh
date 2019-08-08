@@ -23,22 +23,21 @@ else # Linux
     # Generate Base Images
     # execute ./.cicd/generate-base-images.sh
     [[ -z $CDT_VERSION ]] && echo "Please specify CDT_VERSION." && exit 1
-    CDT_INSTALL="curl -LO https://github.com/EOSIO/eosio.cdt/releases/download/v$CDT_VERSION/eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && dpkg -i eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:$PATH"
+    CDT_COMMANDS="curl -LO https://github.com/EOSIO/eosio.cdt/releases/download/v$CDT_VERSION/eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && dpkg -i eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:$PATH"
     BUILD_COMMANDS="mkdir -p /workdir/build && cd /workdir/build && cmake -DCMAKE_CXX_COMPILER='clang++' -DCMAKE_C_COMPILER='clang' -DCMAKE_FRAMEWORK_PATH='/usr/local' .. && make -j$JOBS"
     TEST_COMMANDS="cd /workdir/build/tests && ctest -j$JOBS -V --output-on-failure -T Test"
 
     # Docker Run Arguments
     ARGS=${ARGS:-"--rm -v $(pwd):/workdir"}
     # Docker Commands
-    append-to-commands $CDT_INSTALL
     if [[ $BUILDKITE ]]; then
+        append-to-commands $CDT_COMMANDS
         [[ $ENABLE_BUILD ]] && append-to-commands $BUILD_COMMANDS
         [[ $ENABLE_TEST ]] && append-to-commands $TEST_COMMANDS
         docker-run $COMMANDS
     elif [[ $TRAVIS ]]; then
         ARGS="$ARGS -v /usr/lib/ccache -v $HOME/.ccache:/opt/.ccache -e JOBS -e CCACHE_DIR=/opt/.ccache"
-        TRAV_COMMANDS="ccache -s && $BUILD_COMMANDS && $TEST_COMMANDS"
-        append-to-commands $TRAV_COMMANDS
+        TRAV_COMMANDS="ccache -s && $CDT_COMMANDS && $BUILD_COMMANDS && $TEST_COMMANDS"
         travis_wait 50 docker-run $COMMANDS
     fi
     # Docker Run
