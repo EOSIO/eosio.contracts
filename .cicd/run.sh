@@ -38,7 +38,7 @@ else # Linux
     elif [[ $TRAVIS ]]; then
         ARGS="$ARGS -v /usr/lib/ccache -v $HOME/.ccache:/opt/.ccache -e JOBS -e CCACHE_DIR=/opt/.ccache"
         TRAV_COMMANDS="ccache -s && $CDT_COMMANDS && $BUILD_COMMANDS && $TEST_COMMANDS"
-        docker run $ARGS $FULL_TAG $TRAV_COMMANDS
+        docker run $ARGS $FULL_TAG bash -c $TRAV_COMMANDS
     fi
     # Docker Run
 
