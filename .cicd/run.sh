@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -eo pipefail
-. ./.cicd/helpers/general.sh
-. ./.cicd/helpers/execute.sh
+# . ./.cicd/helpers/general.sh
+# . ./.cicd/helpers/execute.sh
 
 export FULL_TAG="eosio/producer:eos-binaries-trav-poc-contract-tests-1.8.0-e13ec7f756e78d9baf994c5d3a7bd643653d834b"
 export CDT_VERSION="1.6.2"
