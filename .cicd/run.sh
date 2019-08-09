@@ -34,12 +34,11 @@ else # Linux
         append-to-commands $CDT_COMMANDS
         [[ $ENABLE_BUILD ]] && append-to-commands $BUILD_COMMANDS
         [[ $ENABLE_TEST ]] && append-to-commands $TEST_COMMANDS
-        docker-run $COMMANDS
     elif [[ $TRAVIS ]]; then
         ARGS="$ARGS -e JOBS"
-        TRAV_COMMANDS="ccache -s && $CDT_COMMANDS && $BUILD_COMMANDS && $TEST_COMMANDS"
-        docker run $ARGS $FULL_TAG bash -c "curl -LO https://github.com/EOSIO/eosio.cdt/releases/download/v$CDT_VERSION/eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && dpkg -i eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:$PATH && mkdir -p /workdir/build && cd /workdir/build && cmake -DCMAKE_CXX_COMPILER='clang++' -DCMAKE_C_COMPILER='clang' -DCMAKE_FRAMEWORK_PATH='/usr/local' .. && make -j 2 && cd /workdir/build/tests && ctest -j 2 -V --output-on-failure -T Test"
+        COMMANDS="ccache -s && $CDT_COMMANDS && $BUILD_COMMANDS && $TEST_COMMANDS"
     fi
     # Docker Run
+    docker-run $COMMANDS
 
 fi
