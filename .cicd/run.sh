@@ -33,7 +33,7 @@ else # Linux
     # Docker Commands
     if [[ $BUILDKITE ]]; then
         # SANITIZED_BRANCH="$(echo $BUILDKITE_BRANCH | sed 's/\//\_/g')"
-        append-to-commands $CDT_COMMANDS
+        # append-to-commands $CDT_COMMANDS
         [[ $ENABLE_BUILD ]] && append-to-commands $BUILD_COMMANDS
         [[ $ENABLE_TEST ]] && append-to-commands $TEST_COMMANDS
     elif [[ $TRAVIS ]]; then
