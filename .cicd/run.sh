@@ -25,7 +25,7 @@ else # Linux
     [[ -z $CDT_VERSION ]] && echo "Please specify CDT_VERSION." && exit 1
     CDT_COMMANDS="curl -LO https://github.com/EOSIO/eosio.cdt/releases/download/v$CDT_VERSION/eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && dpkg -i eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:$PATH"
     BUILD_COMMANDS="mkdir -p /workdir/build && cd /workdir/build && cmake -DCMAKE_CXX_COMPILER='clang++' -DCMAKE_C_COMPILER='clang' -DCMAKE_FRAMEWORK_PATH='/usr/local' .. && make -j 1"
-    TEST_COMMANDS="cd /workdir/build/tests && ctest -j$JOBS -V --output-on-failure -T Test"
+    TEST_COMMANDS="cd /workdir/build/tests && ctest -j 1 -V --output-on-failure -T Test"
 
     # Docker Run Arguments
     ARGS=${ARGS:-"--rm -v $(pwd):/workdir"}
