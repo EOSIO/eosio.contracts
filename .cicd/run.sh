@@ -39,7 +39,7 @@ else # Linux
     elif [[ $TRAVIS ]]; then
         # SANITIZED_BRANCH="$(echo $TRAVIS_BRANCH | sed 's/\//\_/g')"
         ARGS="$ARGS -e JOBS"
-        COMMANDS="ccache -s && $CDT_COMMANDS && $BUILD_COMMANDS && $TEST_COMMANDS"
+        COMMANDS="ccache -s && $BUILD_COMMANDS && $TEST_COMMANDS"
 
     fi
     # FULL_TAG="$DOCKER_REPO:base-ubuntu-18.04-$SANITIZED_BRANCH"
