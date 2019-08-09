@@ -1,6 +1,14 @@
 steps:
   - wait
 
+  - trigger: "eosio_contracts_base_images_beta"
+    label: ":docker: Ensure Base Images"
+    build:
+      commit: "${BUILDKITE_COMMIT}"
+      branch: "${BUILDKITE_BRANCH}"
+
+  - wait
+
   - label: ":webhook: Trigger Travis CI Build"
     command: |
       ./.cicd/trigger-travis.sh
