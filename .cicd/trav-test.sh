@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 CPU_CORES=$(getconf _NPROCESSORS_ONLN)
+curl -LO https://github.com/EOSIO/eosio.cdt/releases/download/v1.6.2/eosio.cdt_1.6.2-1-ubuntu-18.04_amd64.deb && dpkg -i eosio.cdt_1.6.2-1-ubuntu-18.04_amd64.deb && export PATH=/usr/opt/eosio.cdt/1.6.2/bin:$PATH
 [[ -d "build" ]] && rm -rf build
 mkdir /workdir/build
 cd /workdir/build
