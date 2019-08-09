@@ -42,7 +42,7 @@ else # Linux
         COMMANDS="ccache -s && $CDT_COMMANDS && $BUILD_COMMANDS && $TEST_COMMANDS"
 
     fi
-    FULL_TAG="$DOCKER_REPO:$SANITIZED_BRANCH"
+    FULL_TAG="$DOCKER_REPO:base-ubuntu-18.04-$SANITIZED_BRANCH"
     # Docker Run
     docker-run $COMMANDS
 
