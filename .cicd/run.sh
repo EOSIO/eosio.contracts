@@ -32,15 +32,14 @@ else # Linux
     ARGS=${ARGS:-"--rm -v $(pwd):/workdir"}
     # Docker Commands
     if [[ $BUILDKITE ]]; then
-        append-to-commands $CDT_COMMANDS
+        # append-to-commands $CDT_COMMANDS
         [[ $ENABLE_BUILD ]] && append-to-commands $BUILD_COMMANDS
         [[ $ENABLE_TEST ]] && append-to-commands $TEST_COMMANDS
     elif [[ $TRAVIS ]]; then
         ARGS="$ARGS -e JOBS"
-        COMMANDS="ccache -s && $CDT_COMMANDS && $BUILD_COMMANDS && $TEST_COMMANDS"
-
+        COMMANDS="ccache -s && $BUILD_COMMANDS && $TEST_COMMANDS"
     fi
-    
+
     # Docker Run
     docker-run $COMMANDS
 
