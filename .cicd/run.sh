@@ -32,17 +32,18 @@ else # Linux
     ARGS=${ARGS:-"--rm -v $(pwd):/workdir"}
     # Docker Commands
     if [[ $BUILDKITE ]]; then
-        SANITIZED_BRANCH="$(echo $BUILDKITE_BRANCH | sed 's/\//\_/g')"
+        # SANITIZED_BRANCH="$(echo $BUILDKITE_BRANCH | sed 's/\//\_/g')"
         append-to-commands $CDT_COMMANDS
         [[ $ENABLE_BUILD ]] && append-to-commands $BUILD_COMMANDS
         [[ $ENABLE_TEST ]] && append-to-commands $TEST_COMMANDS
     elif [[ $TRAVIS ]]; then
-        SANITIZED_BRANCH="$(echo $TRAVIS_BRANCH | sed 's/\//\_/g')"
+        # SANITIZED_BRANCH="$(echo $TRAVIS_BRANCH | sed 's/\//\_/g')"
         ARGS="$ARGS -e JOBS"
         COMMANDS="ccache -s && $CDT_COMMANDS && $BUILD_COMMANDS && $TEST_COMMANDS"
 
     fi
-    FULL_TAG="$DOCKER_REPO:base-ubuntu-18.04-$SANITIZED_BRANCH"
+    # FULL_TAG="$DOCKER_REPO:base-ubuntu-18.04-$SANITIZED_BRANCH"
+    FULL_TAG="$DOCKER_REPO:base-ubuntu-18.04-17ee21428e21cbc7b244e1b1a39549373b5c2325"
     # Docker Run
     docker-run $COMMANDS
 
