@@ -18,7 +18,7 @@ if [[ $(uname) == Darwin ]]; then
     
 else # Linux
 
-    # . ./.cicd/helpers/docker.sh
+    . ./.cicd/helpers/docker.sh
     
     # Generate Base Images
     # execute ./.cicd/generate-base-images.sh
