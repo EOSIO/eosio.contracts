@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 CPU_CORES=$(getconf _NPROCESSORS_ONLN)
+# build
 cd /eosio.contracts
 [[ -d "build" ]] && rm -rf build
 mkdir build
