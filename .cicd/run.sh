@@ -3,7 +3,7 @@ set -eo pipefail
 . ./.cicd/helpers/general.sh
 . ./$HELPERS_DIR/execute.sh
 
-export FULL_TAG=${FULL_TAG:-eosio/producer:eos-binaries-trav-poc}
+export FULL_TAG=${FULL_TAG:-eosio/producer:eos-binaries-trav-poc-install-fix}
 export CDT_VERSION=${CDT_VERSION:-1.6.2}
 
 . ./$HELPERS_DIR/docker.sh
