@@ -1,7 +1,7 @@
 steps:
   - wait
 
-  - trigger: "eosio_contracts_base_images_beta"
+  - trigger: "eosio-dot-contracts-base-images-beta"
     label: ":docker: Ensure Base Images"
     build:
       commit: "${BUILDKITE_COMMIT}"
