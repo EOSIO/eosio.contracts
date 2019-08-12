@@ -1,10 +1,12 @@
-# About System Contracts
+## About System Contracts
 
 The EOSIO blockchain platform is unique in that the features and characteristics of the blockchain built on it are flexible, that is, they can be changed, or modified completely to suit each business case requirement. Core blockchain features such as consensus, fee schedules, account creation and modification, token economics, block producer registration, voting, multi-sig, etc., are implemented inside smart contracts which are deployed on the blockchain built on the EOSIO platform.
 
-Block.one implements and maintains EOSIO open source platform which contains as an example, the system contracts which encapsulates the base functionality for an EOSIO based blockchain and this tutorial will explain each of them: eosio.bios, eosio.system, eosio.msig, eosio.wrap (formerly known as sudo) and eosio.token.
+Block.one implements and maintains EOSIO open source platform which contains, as an example, the system contracts encapsulating the base functionality for an EOSIO based blockchain. This document will detail each one of them, [eosio.bios](#eosiobios-system-contract), [eosio.system](#eosiosystem-system-contract), [eosio.msig](#eosiomsig-system-contract), [eosio.token](#eosiotoken-system-contract), [eosio.wrap](#eosiowrap-system-contract) along with a few other main concepts.
 
-## System contracts, system accounts, priviledged accounts
+## Concepts
+
+### System contracts, system accounts, priviledged accounts
 
 At the genesis of an EOSIO based blockchain, there is only one account present: eosio, which is the main system account. There are other system accounts, which are created by eosio, and control specific actions of the system contracts mentioned earlier. Note that we are introducing the notion of system contract/s and system account/s. Also note that privileged accounts are accounts which can execute a transaction while skipping the standard authorization check. To ensure that this is not a security hole, the permission authority over these accounts is granted to eosio.prods.
 
@@ -26,15 +28,38 @@ As you just learned the relation between an account and a contract, we are addin
 |eosio.vpay|No|No|The account that pays the block producers accordingly with the votes won. It assigns 0.75% of inflation based on the amount of votes a block producer won in the last 24 hours.|
 |eosio.rex|No|No|The account that keeps track of fees and balances resulted from REX related actions execution.|
 
-# System contracts defined in eosio.contracts
+### RAM
 
-1. [eosio.bios](#eosio.bios-system-contract)
-2. [eosio.system](#eosio.system-system-contract)
-3. [eosio.msig](#eosio.msig-system-contract)
-4. [eosio.token](#eosio.token-system-contract)
-5. [eosio.wrap](#eosio.wrap-system-contract)
+RAM is the memory (space, storage) where the blockchain stores data. If your contract needs to store data on the blockchain, like in a database, then it can store it in the blockchain's RAM using either a multi-index table, which can be found explained [here](https://developers.eos.io/eosio-cpp/v1.3.1/docs/db-api) and [here](https://developers.eos.io/eosio-cpp/docs/using-multi-index-tables) or a singleton, its definition can be found [here](https://github.com/EOSIO/eosio.cdt/blob/develop/libraries/eosiolib/singleton.hpp) and a sample of its usage [here](https://github.com/EOSIO/eos/blob/3fddb727b8f3615917707281dfd3dd3cc5d3d66d/contracts/eosio.system/eosio.system.hpp).
+The EOSIO-based blockchains are known for their high performance, which is achieved also because the data stored on the blockchain is using RAM as the storage medium, and thus access to blockchain data is very fast, helping the performance benchmarks to reach levels no other blockchain has been able to.
+RAM is a very important resource because of the following reasons: it is a limited resource, each EOSIO-based blockchain can have a different policy and rules around RAM, for example the public EOS blockchain started with 64GB of RAM and after that the block producers decided to increase the memory with 1KiB (1024 bytes) per day, thus increasing constantly the supply of RAM for the price of RAM to not grow too high because of the increased demand from blockchain applications; also RAM it is used in executing many actions that are available on the blockchain, creating a new account for example (it needs to store in the blockchain memory the new account's information), also when an account accepts a new type of token a new record has to be created somewhere in the blockchain memory that holds the balance of the new token accepted, and that memory, the storage space on the blockchain, has to be purchased either by the account that transfers the token or by the account that accepts the new token type.
+RAM is a scarce resource priced according to the unique Bancor liquidity algorithm which is implemented in the system contract [here](https://github.com/EOSIO/eos/blob/905e7c85714aee4286fa180ce946f15ceb4ce73c/contracts/eosio.system/exchange_state.hpp).
 
-## eosio.bios system contract
+### CPU
+
+CPU is processing power, the amount of CPU an account has is measured in microseconds, it is referred to as "cpu bandwidth" on the cleos get account command output and represents the amount of processing time an account has at its disposal when pushing actions to a contract.
+
+### NET
+
+As CPU and RAM, NET is also a very important resource in EOSIO-based blockchains. NET is data storage measured in bytes and you need to allocate NET according to how much is needed for your transactions to be stored in the blockchain, or more if you wish so, but not less if you want your contract's actions to function. Be careful to not confuse NET with RAM, RAM stores any random data that the contract wants to store in the blockchain, whereas NET although it is also storage space, it measures the size of the transactions.
+
+### Stake
+
+On EOSIO based blockchains, to be able to deploy and then interact with a smart contract via its implemented actions it needs to be backed up by resources allocated on the account where the smart contract is deployed to. The three resource types an EOSIO smart contract developer needs to know about are RAM, CPU and NET. You can __stake__ CPU and NET and you can __buy__ RAM. You will also find that staking/unstaking is at times referred to as delegating/undelegating. The economics of staking is also to provably commit to a promise that you'll hold the staked tokens, either for NET or CPU, for a pre-established period of time, in spite of inflation caused by minting new tokens in order to reward BPs for their services every 24 hours.
+
+### Vote 
+
+In a EOSIO-based network the blockchain is kept alive by nodes which are interconnected into a mesh, communicating with each other via peer to peer protocols. Some of these nodes are elected, via a __voting__ process, by the token holders to be producer nodes. They produce blocks, validate them and reach consensus on what transactions are allowed in each block, their order, and what blocks are finalized and stored forever in the blockchain memory. This way the governance, the mechanism by which collective decisions are made, of the blockchain is achieved through the 21 active block producers which are appointed by token holders' __votes__. It's the 21 active block producers which continuously create the blockchain by creating blocks, and securing them by validating them, and reaching consensus. Consensus is reached when 2/3+1 active block producers agree on validity of a block, that is all transactions contained in it and their order.
+
+## System contracts defined in eosio.contracts
+
+1. [eosio.bios](#eosiobios-system-contract)
+2. [eosio.system](#eosiosystem-system-contract)
+3. [eosio.msig](#eosiomsig-system-contract)
+4. [eosio.token](#eosiotoken-system-contract)
+5. [eosio.wrap](#eosiowrap-system-contract)
+
+### eosio.bios system contract
 
 The `eosio.bios` is the first sample of system smart contract provided by `block.one` through the EOSIO platform. It is a minimalist system contract because it only supplies the actions that are absolutely critical to bootstrap a chain and nothing more. This allows for a chain agnostic approach to bootstrapping a chain.
 
@@ -65,7 +90,7 @@ Below are listed the actions which are declared in the `eosio.bios` contract, ma
 |onerror|Called every time an error occurs while a transaction was processed.|
 |setcode|Allows for update of the contract code of an account.|
 
-## eosio.system system contract
+### eosio.system system contract
 
 The `eosio.system` contract is another smart contract that Block.one provides an implementation for as a sample system contract.  It is a version of `eosio.bios` only this time it is not minimalist, it contains more elaborated structures, classes, methods, and actions needed for an EOSIO based blockchain core functionality:
 - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or delegate their vote to a proxy.
@@ -131,7 +156,7 @@ The actions implemented and publicly exposed by the `eosio.system` system contra
 |onblock|This special action is triggered when a block is applied by the given producer and cannot be generated from any other source.|
 |claimrewards|Claim block producing and vote rewards for block producer identified by an account.|
 
-## eosio.msig system contract
+### eosio.msig system contract
 
 The `eosio.msig` allows for the creation of proposed transactions which require authorization from a list of accounts, approval of the proposed transactions by those accounts required to approve it, and finally, it also allows the execution of the approved transactions on the blockchain.
 
@@ -146,12 +171,12 @@ These are the actions implemented and publicly exposed by the `eosio.msig` contr
 |---|---|
 |propose|Creates a proposal containing one transaction.|
 |approve|Approves an existing proposal.|
-|unapprove|Revokes an existing proposal.|
+|unapprove|Revokes approval of an existing proposal.|
 |cancel|Cancels an existing proposal.|
 |exec|Allows an account to execute a proposal.|
 |invalidate|Invalidate proposal.|
 
-## eosio.token system contract
+### eosio.token system contract
 
 The `eosio.token` contract defines the structures and actions that allow users to create, issue, and manage tokens for EOSIO based blockchains.
 
@@ -173,7 +198,7 @@ The `eosio.token` contract manages the set of tokens, accounts and their corresp
 
 Similarly, the `stats` multi-index table, holds instances of `currency_stats` objects for each row, which contains information about current supply, maximum supply, and the creator account for a symbol token. The `stats` table is scoped to the token symbol.  Therefore, when one queries the `stats` table for a token symbol the result is one single entry/row corresponding to the queried symbol token if it was previously created, or nothing, otherwise.
 
-## eosio.wrap system contract
+### eosio.wrap system contract
 The `eosio.wrap` system contract allows block producers to bypass authorization checks or run privileged actions with 15/21 producer approval and thus simplifies block producers superuser actions. It also makes these actions easier to audit.
 
 It does not give block producers any additional powers or privileges that do not already exist within the EOSIO based blockchains. As it is implemented, in an EOSIO based blockchain, 15/21 block producers can change an account's permissions or modify an account's contract code if they decided it is beneficial for the blockchain and community. 
