@@ -41,7 +41,7 @@ CPU is processing power, the amount of CPU an account has is measured in microse
 
 ### NET
 
-As CPU and RAM, NET is also a very important resource in EOSIO-based blockchains. NET is data storage measured in bytes and you need to allocate NET according to how much is needed for your transactions to be stored in the blockchain, or more if you wish so, but not less if you want your contract's actions to function. Be careful to not confuse NET with RAM, RAM stores any random data that the contract wants to store in the blockchain, whereas NET although it is also storage space, it measures the size of the transactions.
+As CPU and RAM, NET is also a very important resource in EOSIO-based blockchains. NET is the network bandwidth measured in bytes of transactions and it is reffered to as "net bandwidth" on the cleos get account command. This resource like CPU must be staked so that a contract's transactions can be executed.
 
 ### Stake
 
