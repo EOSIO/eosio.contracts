@@ -120,10 +120,11 @@ namespace eosiosystem {
       checksum256                               action_mroot;
       uint32_t                                  schedule_version = 0;
       std::optional<eosio::producer_schedule>   new_producers;
+      std::vector<std::pair<uint16_t,std::vector<char>>> header_extensions;
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE(block_header, (timestamp)(producer)(confirmed)(previous)(transaction_mroot)(action_mroot)
-                                     (schedule_version)(new_producers))
+                                     (schedule_version)(new_producers)(header_extensions))
    };
 
    /**
