@@ -8,7 +8,7 @@ steps:
 
   - wait
 
-  - label: ":ubuntu: Ubuntu 18.04 — Build"
+  - label: ":ubuntu: Ubuntu 18.04 - Build"
     command:
       - ./.cicd/build.sh
       - "tar -pczf build.tar.gz build && buildkite-agent artifact upload build.tar.gz"
@@ -19,7 +19,7 @@ steps:
 
   - wait
 
-  - label: ":ubuntu: Ubuntu 18.04 — Test"
+  - label: ":ubuntu: Ubuntu 18.04 - Test"
     command:
       - "buildkite-agent artifact download build.tar.gz . --step ':ubuntu: Ubuntu 18.04 - Build' && tar -xzf build.tar.gz"
       - bash ./.cicd/test.sh
