@@ -7,7 +7,7 @@ mkdir -p $BUILD_DIR
 FULL_TAG=${FULL_TAG:-eosio/ci-contracts-builder:17ee214-889efb1}
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
 
-PRE_COMMANDS="cd $MOUNTED_DIR/build"
+PRE_COMMANDS="cd $MOUNTED_DIR/build/tests"
 TEST_COMMANDS="ctest -j $JOBS"
 
 COMMANDS="$PRE_COMMANDS && $TEST_COMMANDS"
