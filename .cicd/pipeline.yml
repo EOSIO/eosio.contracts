@@ -1,5 +1,7 @@
 steps:
 
+  - wait
+
   - trigger: "eosio-dot-contracts-base-images-beta"
     label: ":docker: Ensure Base Images"
     build:
