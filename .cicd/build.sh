@@ -12,6 +12,8 @@ BUILD_COMMANDS="cmake .. && make -j $JOBS"
 
 COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
 
+[[ $BUILDKITE == true ]] && "" $CICD_DIR/contracts-docker.sh
+
 # Load BUILDKITE Environment Variables for use in docker run
 if [[ -f $BUILDKITE_ENV_FILE ]]; then
     evars=""
