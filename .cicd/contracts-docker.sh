@@ -4,15 +4,13 @@ set -e # exit on failure of any "simple" command (excludes &&, ||, or | chains)
 echo '+++ :evergreen_tree: Configuring Environment'
 CONTRACTS_ROOT="$(pwd)"
 DIGEST=''
-[[ "$DOCKER_PASSWORD" == '' ]] && (echo '+++ :no_entry: ERROR: Docker Hub password not found!' && exit 1)
+[[ "$DOCKERHUB_PASSWORD" == '' ]] && (echo '+++ :no_entry: ERROR: Docker Hub password not found!' && exit 1)
 DOCKER_ROOT="$CONTRACTS_ROOT/docker"
-DOCKER_USERNAME='b1automation'
+DOCKERHUB_USERNAME='b1automation'
 DOCKER_FILE="$DOCKER_ROOT/dockerfile"
 [[ "$RAW_PIPELINE_CONFIG" == '' ]] && export RAW_PIPELINE_CONFIG="$1"
 [[ "$RAW_PIPELINE_CONFIG" == '' ]] && export RAW_PIPELINE_CONFIG='pipeline.jsonc'
 [[ "$PIPELINE_CONFIG" == '' ]] && export PIPELINE_CONFIG='pipeline.json'
-SANITIZED_BRANCH="$(echo $BUILDKITE_BRANCH | tr '/' '_')" # '/' ruins docker hub URLs
-SANITIZED_TAG="$(echo $BUILDKITE_TAG | tr '/' '_')"
 # read dependency file
 echo '+++ :gear: Reading Pipeline Configuration File'
 if [[ -f "$RAW_PIPELINE_CONFIG" ]]; then
@@ -36,6 +34,13 @@ echo "Using eosio ${EOSIO_COMMIT:0:7} from \"$EOSIO_VERSION\"..."
 CDT_COMMIT=$((curl -s https://api.github.com/repos/EOSIO/eosio.cdt/git/refs/tags/$CDT_VERSION && curl -s https://api.github.com/repos/EOSIO/eosio.cdt/git/refs/heads/$CDT_VERSION) | jq '.object.sha' | grep -v 'null' | tr -d '"' | sed -n '1p') # search GitHub for commit hash by tag and branch, preferring tag if both match
 test -z "$CDT_COMMIT" && CDT_COMMIT=$(echo $CDT_VERSION | tr -d '"' | tr -d "''" | cut -d ' ' -f 1) # if both searches returned nothing, the version is probably specified by commit hash already
 echo "Using cdt ${CDT_COMMIT:0:7} from \"$CDT_VERSION\"..."
+# exit if image already exists
+DOCKER_IMAGE="eosio/ci-contracts-builder:${EOSIO_COMMIT:0:7}-${CDT_COMMIT:0:7}"
+if $(docker pull $DOCKER_IMAGE); then
+    echo "Base image $DOCKER_IMAGE already exists"'!'
+else
+    echo "$DOCKER_IMAGE not found, building from scratch..."
+fi
 # get eosio
 echo '+++ :arrow_down: Pulling EOSIO Docker Image'
 DOCKER_IMAGE="eosio/ci-contracts-builder:base-ubuntu-18.04-$EOSIO_COMMIT"
@@ -76,28 +81,22 @@ if [[ "$DEBUG" == 'true' ]]; then
 fi
 # build Docker image
 echo '+++ :docker: Building Docker Image'
-docker build -t eosio/ci-contracts-builder:latest -t eosio/ci-contracts-builder:$BUILDKITE_COMMIT -t eosio/ci-contracts-builder:$SANITIZED_BRANCH $([[ "$SANITIZED_TAG" != '' ]] && echo "-t eosio/ci-contracts-builder:$SANITIZED_TAG ")-f "$DOCKER_FILE" .
+docker build -t eosio/ci-contracts-builder:latest -t eosio/ci-contracts-builder:${EOSIO_COMMIT:0:7}-${CDT_COMMIT:0:7} -f "$DOCKER_FILE" .
 # tag
 echo '+++ :label: Tagging Image'
-docker tag eosio/ci-contracts-builder:latest eosio/ci-contracts-builder:$BUILDKITE_COMMIT
-docker tag eosio/ci-contracts-builder:latest eosio/ci-contracts-builder:$SANITIZED_BRANCH
-[[ "$SANITIZED_TAG" != '' ]] && docker tag eosio/ci-contracts-builder:latest eosio/ci-contracts-builder:$SANITIZED_TAG
+docker tag eosio/ci-contracts-builder:latest eosio/ci-contracts-builder:${EOSIO_COMMIT:0:7}-${CDT_COMMIT:0:7}
 # push
 echo '+++ :arrow_up: Pushing Image'
-echo "Authenticating with Docker Hub as $DOCKER_USERNAME..."
-echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+echo "Authenticating with Docker Hub as $DOCKERHUB_USERNAME..."
+echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 echo 'Pushing...'
-docker push eosio/ci-contracts-builder:$BUILDKITE_COMMIT
-docker push eosio/ci-contracts-builder:$SANITIZED_BRANCH
-[[ "$SANITIZED_TAG" != '' ]] && docker push eosio/ci-contracts-builder:$SANITIZED_TAG
+docker push eosio/ci-contracts-builder:${EOSIO_COMMIT:0:7}-${CDT_COMMIT:0:7}
 docker push eosio/ci-contracts-builder:latest
 # clean up
 echo '+++ :put_litter_in_its_place: Cleaning Up'
 docker rmi eosio/ci-contracts-builder:latest
-docker rmi eosio/ci-contracts-builder:$BUILDKITE_COMMIT
-docker rmi eosio/ci-contracts-builder:$SANITIZED_BRANCH
-[[ "$SANITIZED_TAG" != '' ]] && docker rmi eosio/ci-contracts-builder:$SANITIZED_TAG
+docker rmi eosio/ci-contracts-builder:${EOSIO_COMMIT:0:7}-${CDT_COMMIT:0:7}
 echo '+++ :white_check_mark: Done!'
 echo 'See this container for yourself:'
-echo "$ docker pull eosio/ci-contracts-builder:$BUILDKITE_COMMIT"
-echo "$ docker run -it eosio/ci-contracts-builder:$BUILDKITE_COMMIT /bin/bash"
+echo "$ docker pull eosio/ci-contracts-builder:${EOSIO_COMMIT:0:7}-${CDT_COMMIT:0:7}"
+echo "$ docker run -it eosio/ci-contracts-builder:${EOSIO_COMMIT:0:7}-${CDT_COMMIT:0:7} /bin/bash"
