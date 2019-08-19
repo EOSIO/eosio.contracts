@@ -4,7 +4,7 @@ set -e # exit on failure of any "simple" command (excludes &&, ||, or | chains)
 echo '+++ :evergreen_tree: Configuring Environment'
 CONTRACTS_ROOT="$(pwd)"
 DIGEST=''
-[[ "$DOCKERHUB_PASSWORD" == '' ]] && (echo '+++ :no_entry: ERROR: Docker Hub password not found!' && exit 1)
+[[ "$DOCKER_PASSWORD" == '' ]] && (echo '+++ :no_entry: ERROR: Docker Hub password not found!' && exit 1)
 DOCKER_ROOT="$CONTRACTS_ROOT/docker"
 DOCKER_USERNAME='b1automation'
 DOCKER_FILE="$DOCKER_ROOT/dockerfile"
@@ -85,7 +85,7 @@ docker tag eosio/ci-contracts-builder:latest eosio/ci-contracts-builder:$SANITIZ
 # push
 echo '+++ :arrow_up: Pushing Image'
 echo "Authenticating with Docker Hub as $DOCKER_USERNAME..."
-echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 echo 'Pushing...'
 docker push eosio/ci-contracts-builder:$BUILDKITE_COMMIT
 docker push eosio/ci-contracts-builder:$SANITIZED_BRANCH
