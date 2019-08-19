@@ -5,7 +5,7 @@ steps:
   - label: "Create Docker Image 'eosio/contracts-builder'"
     command: "./.cicd/contracts-docker.sh"
     agents:
-      queue: "automation-docker-builder-fleet"
+      queue: "automation-standard-builder-fleet"
     timeout: ${TIMEOUT:-10}
     skip: $SKIP_UBUNTU_18
 
