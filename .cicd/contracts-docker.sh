@@ -4,7 +4,7 @@ set -e # exit on failure of any "simple" command (excludes &&, ||, or | chains)
 echo '+++ :evergreen_tree: Configuring Environment'
 CONTRACTS_ROOT="$(pwd)"
 DIGEST=''
-[[ "$DOCKER_PASSWORD" == '' ]] && (echo '+++ :no_entry: ERROR: Docker Hub password not found!' && exit 1)
+[[ "$DOCKERHUB_PASSWORD" == '' ]] && (echo '+++ :no_entry: ERROR: Docker Hub password not found!' && exit 1)
 DOCKER_ROOT="$CONTRACTS_ROOT/docker"
 DOCKER_USERNAME='b1automation'
 DOCKER_FILE="$DOCKER_ROOT/dockerfile"
