@@ -85,7 +85,7 @@ docker tag eosio/ci-contracts-builder:latest eosio/ci-contracts-builder:$SANITIZ
 # push
 echo '+++ :arrow_up: Pushing Image'
 echo "Authenticating with Docker Hub as $DOCKER_USERNAME..."
-echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 echo 'Pushing...'
 docker push eosio/ci-contracts-builder:$BUILDKITE_COMMIT
 docker push eosio/ci-contracts-builder:$SANITIZED_BRANCH
