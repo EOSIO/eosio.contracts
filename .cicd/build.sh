@@ -4,10 +4,14 @@ set -eo pipefail
 
 mkdir -p $BUILD_DIR
 
-FULL_TAG=${FULL_TAG:-eosio/ci-contracts-builder:17ee214-889efb1}
+CDT_VERSION=${CDT_VERSION:-1.6.2}
+FULL_TAG=${FULL_TAG:-eosio/ci-contracts-builder:base-ubuntu-18.04-trav-poc-standardization}
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
+CDT_COMMANDS="curl -LO https://github.com/EOSIO/eosio.cdt/releases/download/v$CDT_VERSION/eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && dpkg -i eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:$PATH"
 
-PRE_COMMANDS="cd $MOUNTED_DIR/build"
+[[ -z $CDT_VERSION ]] && echo "Please specify CDT_VERSION." && exit 1
+
+PRE_COMMANDS="cd $MOUNTED_DIR/build && $CDT_COMMANDS"
 BUILD_COMMANDS="cmake .. && make -j $JOBS"
 
 COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
