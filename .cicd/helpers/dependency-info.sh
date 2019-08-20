@@ -24,4 +24,4 @@ test -z "$CDT_COMMIT" && CDT_COMMIT=$(echo $CDT_BRANCH | tr -d '"' | tr -d "''" 
 echo "Using cdt ${CDT_COMMIT:0:7} from \"$CDT_BRANCH\"..."
 
 export BRANCH=$(echo $EOSIO_BRANCH | sed 's/\//\_/')
-export CDT_URL="https://eos-public-oss-binaries.s3-us-west-2.amazonaws.com/${CDT_COMMIT:0:7}-eosio.cdt_${CDT_VERSION}_amd64.deb"
+export CDT_URL="https://eos-public-oss-binaries.s3-us-west-2.amazonaws.com/${CDT_COMMIT:0:7}-eosio.cdt_${CDT_VERSION}-ubuntu-18.04_amd64.deb"
