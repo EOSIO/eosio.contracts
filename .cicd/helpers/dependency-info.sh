@@ -11,7 +11,7 @@ if [[ -f "$RAW_PIPELINE_CONFIG" ]]; then
     cat "$RAW_PIPELINE_CONFIG" | grep -Po '^[^"/]*("((?<=\\).|[^"])*"[^"/]*)*' | jq -c .\"eosio-dot-contracts\" > "$PIPELINE_CONFIG"
     EOSIO_BRANCH=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies.eosio')
     CDT_BRANCH=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies."eosio.cdt"')
-    CDT_VERSION=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies.cdt-version"')
+    CDT_VERSION=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies."cdt-version"')
 else
     echo 'ERROR: No pipeline configuration file or dependencies file found!'
     exit 1
