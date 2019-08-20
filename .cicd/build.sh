@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 set -eo pipefail
 . ./.cicd/helpers/general.sh
+. ./.cicd/helpers/dependency-info.sh
 
 mkdir -p $BUILD_DIR
 
-CDT_VERSION=${CDT_VERSION:-1.6.2}
-FULL_TAG=${FULL_TAG:-eosio/ci-contracts-builder:base-ubuntu-18.04-trav-poc-standardization}
+FULL_TAG=${FULL_TAG:-eosio/ci-contracts-builder:base-ubuntu-18.04-$BRANCH}
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
-CDT_COMMANDS="curl -LO https://github.com/EOSIO/eosio.cdt/releases/download/v$CDT_VERSION/eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && dpkg -i eosio.cdt_$CDT_VERSION-1-ubuntu-18.04_amd64.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:$PATH"
+CDT_COMMANDS="wget $CDT_URL -O eosio.cdt.deb && dpkg -i eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:$PATH"
 
-[[ -z $CDT_VERSION ]] && echo "Please specify CDT_VERSION." && exit 1
-
-PRE_COMMANDS="cd $MOUNTED_DIR/build && $CDT_COMMANDS"
+PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build"
 BUILD_COMMANDS="cmake .. && make -j $JOBS"
 
 COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
