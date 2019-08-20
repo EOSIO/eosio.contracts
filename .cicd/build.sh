@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 set -eo pipefail
 . ./.cicd/helpers/general.sh
+. ./.cicd/helpers/dependency-info.sh
 
 mkdir -p $BUILD_DIR
 
-FULL_TAG=${FULL_TAG:-eosio/ci-contracts-builder:17ee214-889efb1}
+FULL_TAG=${FULL_TAG:-eosio/ci-contracts-builder:base-ubuntu-18.04-$BRANCH}
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
+CDT_COMMANDS="wget $CDT_URL -O eosio.cdt.deb && dpkg -i eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:$PATH"
 
-PRE_COMMANDS="cd $MOUNTED_DIR/build"
+PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build"
 BUILD_COMMANDS="cmake .. && make -j $JOBS"
 
 COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
