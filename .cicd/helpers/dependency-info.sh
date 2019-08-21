@@ -14,8 +14,8 @@ else
     echo 'ERROR: No pipeline configuration file or dependencies file found!'
     exit 1
 fi
-CDT_COMMIT=$((curl -s https://api.github.com/repos/EOSIO/eosio.cdt/git/refs/tags/$CDT_VERSION && curl -s https://api.github.com/repos/EOSIO/eosio.cdt/git/refs/heads/$CDT_VERSION) | jq '.object.sha' | grep -v 'null' | tr -d '"' | sed -n '1p') # search GitHub for commit hash by tag and branch, preferring tag if both match
-[[ -z "$CDT_COMMIT" ]] && CDT_COMMIT=$(echo $CDT_BRANCH | tr -d '"' | tr -d "''" | cut -d ' ' -f 1) # if both searches returned nothing, the version is probably specified by commit hash already
+CDT_COMMIT=$((curl -s https://api.github.com/repos/EOSIO/eosio.cdt/git/refs/tags/$CDT_BRANCH && curl -s https://api.github.com/repos/EOSIO/eosio.cdt/git/refs/heads/$CDT_BRANCH) | jq '.object.sha' | grep -v 'null' | tr -d '"' | sed -n '1p') # search GitHub for commit hash by tag and branch, preferring tag if both match
+test -z "$CDT_COMMIT" && CDT_COMMIT=$(echo $CDT_BRANCH | tr -d '"' | tr -d "''" | cut -d ' ' -f 1) # if both searches returned nothing, the version is probably specified by commit hash already
 echo "Using cdt ${CDT_COMMIT:0:7} from \"$CDT_BRANCH\"..."
 
 export BRANCH=$(echo $EOSIO_BRANCH | sed 's/\//\_/')
