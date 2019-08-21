@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -eo pipefail
+echo ""
 . ./.cicd/helpers/general.sh
 . ./.cicd/helpers/dependency-info.sh
 
