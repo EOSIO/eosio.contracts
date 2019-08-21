@@ -8,7 +8,7 @@ echo '+++ :gear: Reading Pipeline Configuration File'
 if [[ -f "$RAW_PIPELINE_CONFIG" ]]; then
     echo 'Reading pipeline configuration file...'
     cat "$RAW_PIPELINE_CONFIG" | grep -Po '^[^"/]*("((?<=\\).|[^"])*"[^"/]*)*' | jq -c .\"eosio-dot-contracts\" > "$PIPELINE_CONFIG"
-    echo 'derp'
+    echo 'derp 1'
     EOSIO_BRANCH=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies.eosio')
     CDT_BRANCH=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies."eosio.cdt"')
     CDT_VERSION=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies."cdt-version"')
@@ -22,3 +22,4 @@ echo "Using cdt ${CDT_COMMIT:0:7} from \"$CDT_BRANCH\"..."
 
 export BRANCH=$(echo $EOSIO_BRANCH | sed 's/\//\_/')
 export CDT_URL="https://eos-public-oss-binaries.s3-us-west-2.amazonaws.com/${CDT_COMMIT:0:7}-eosio.cdt_${CDT_VERSION}-ubuntu-18.04_amd64.deb"
+echo 'derp 2'
