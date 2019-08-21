@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -eo pipefail
-echo "Before sourcing."
 . ./.cicd/helpers/general.sh
 . ./.cicd/helpers/dependency-info.sh
 
