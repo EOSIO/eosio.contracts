@@ -4,7 +4,6 @@ set -eo pipefail
 [[ "$RAW_PIPELINE_CONFIG" == '' ]] && export RAW_PIPELINE_CONFIG='pipeline.jsonc'
 [[ "$PIPELINE_CONFIG" == '' ]] && export PIPELINE_CONFIG='pipeline.json'
 # read dependency file
-echo '+++ :gear: Reading Pipeline Configuration File'
 if [[ -f "$RAW_PIPELINE_CONFIG" ]]; then
     echo 'Reading pipeline configuration file...'
     cat "$RAW_PIPELINE_CONFIG" | grep -Po '^[^"/]*("((?<=\\).|[^"])*"[^"/]*)*' | jq -c .\"eosio-dot-contracts\" > "$PIPELINE_CONFIG"
