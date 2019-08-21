@@ -5,7 +5,7 @@ echo "Before sourcing."
 . ./.cicd/helpers/dependency-info.sh
 
 mkdir -p $BUILD_DIR
-echo "Setting commands."
+
 FULL_TAG=${FULL_TAG:-eosio/ci-contracts-builder:base-ubuntu-18.04-$BRANCH}
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
 CDT_COMMANDS="apt-get install -y wget && wget $CDT_URL -O eosio.cdt.deb && dpkg -i eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:$PATH"
@@ -22,5 +22,5 @@ if [[ -f $BUILDKITE_ENV_FILE ]]; then
         evars="$evars --env ${var%%=*}"
     done < "$BUILDKITE_ENV_FILE"
 fi
-echo "docker run $ARGS $evars $FULL_TAG bash -c \\\"$COMMANDS\\\""
+
 eval docker run $ARGS $evars $FULL_TAG bash -c \"$COMMANDS\"
