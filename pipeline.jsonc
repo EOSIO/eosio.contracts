@@ -5,7 +5,7 @@
         "dependencies": // dependencies to pull for a build of contracts, by branch, tag, or commit hash
         {
             "eosio": "trav-poc",
-            "eosio.cdt": "trav-poc",
+            "eosio.cdt": "release/1.6.x",
             "cdt-version": "1.6.2-1"
         }
     }
