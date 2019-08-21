@@ -22,5 +22,5 @@ if [[ -f $BUILDKITE_ENV_FILE ]]; then
         evars="$evars --env ${var%%=*}"
     done < "$BUILDKITE_ENV_FILE"
 fi
-echo 'derp3'
+
 eval docker run $ARGS $evars $FULL_TAG bash -c \"$COMMANDS\"
