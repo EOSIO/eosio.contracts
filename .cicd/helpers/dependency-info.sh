@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
+apt-get install -y jq
+
 [[ "$RAW_PIPELINE_CONFIG" == '' ]] && export RAW_PIPELINE_CONFIG="$1"
 [[ "$RAW_PIPELINE_CONFIG" == '' ]] && export RAW_PIPELINE_CONFIG='pipeline.jsonc'
 [[ "$PIPELINE_CONFIG" == '' ]] && export PIPELINE_CONFIG='pipeline.json'
@@ -9,6 +11,7 @@ echo '+++ :gear: Reading Pipeline Configuration File'
 if [[ -f "$RAW_PIPELINE_CONFIG" ]]; then
     echo 'Reading pipeline configuration file...'
     cat "$RAW_PIPELINE_CONFIG" | grep -Po '^[^"/]*("((?<=\\).|[^"])*"[^"/]*)*' | jq -c .\"eosio-dot-contracts\" > "$PIPELINE_CONFIG"
+    echo 'derp'
     EOSIO_BRANCH=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies.eosio')
     CDT_BRANCH=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies."eosio.cdt"')
     CDT_VERSION=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies."cdt-version"')
