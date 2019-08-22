@@ -4,9 +4,9 @@
         "pipeline-branch": "master",
         "dependencies": // dependencies to pull for a build of contracts, by branch, tag, or commit hash
         {
-            "eosio": "trav-poc",
-            "eosio.cdt": "release/1.6.x",
-            "cdt-version": "1.6.2-1"
+            "eosio": "release/1.7.x",
+            "eosio.cdt": "release/1.5.x",
+            "cdt-version": "1.5.0-1"
         }
     }
 }
