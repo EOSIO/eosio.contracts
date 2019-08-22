@@ -1382,12 +1382,12 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
       BOOST_REQUIRE_EQUAL(claim_time, microseconds_since_epoch_of_iso_string( prod["last_claim_time"] ));
       auto usecs_between_fills = claim_time - initial_claim_time;
 
-      BOOST_REQUIRE_EQUAL(int64_t( ( double(initial_supply.get_amount()) * double(usecs_between_fills) * continuous_rate / usecs_per_year ) ),
-                          supply.get_amount() - initial_supply.get_amount());
+      BOOST_REQUIRE_EQUAL( int64_t( initial_supply.get_amount() * double(usecs_between_fills) * continuous_rate / usecs_per_year ),
+                           supply.get_amount() - initial_supply.get_amount() );
       BOOST_REQUIRE_EQUAL( (supply.get_amount() - initial_supply.get_amount()) - (supply.get_amount() - initial_supply.get_amount()) / 5,
-                          savings - initial_savings);
+                           savings - initial_savings );
 
-      int64_t to_producer        = int64_t( (double(initial_supply.get_amount()) * double(usecs_between_fills) * continuous_rate) / usecs_per_year ) / 5;
+      int64_t to_producer        = int64_t( initial_supply.get_amount() * double(usecs_between_fills) * continuous_rate / usecs_per_year ) / 5;
       int64_t to_perblock_bucket = to_producer / 4;
       int64_t to_pervote_bucket  = to_producer - to_perblock_bucket;
 
@@ -1431,6 +1431,17 @@ BOOST_FIXTURE_TEST_CASE(producer_pay, eosio_system_tester, * boost::unit_test::t
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(change_inflation, eosio_system_tester) try {
+
+   {
+      BOOST_REQUIRE_EQUAL( success(),
+                           setinflation(0, 10000, 10000) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("annual_rate can't be negative"),
+                           setinflation(-1, 10000, 10000) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("inflation_pay_factor must not be less than 10000"),
+                           setinflation(1, 9999, 10000) );
+      BOOST_REQUIRE_EQUAL( wasm_assert_msg("votepay_factor must not be less than 10000"),
+                           setinflation(1, 10000, 9999) );
+   }
 
    {
       const asset large_asset = core_sym::from_string("80.0000");
@@ -1487,7 +1498,7 @@ BOOST_FIXTURE_TEST_CASE(change_inflation, eosio_system_tester) try {
             BOOST_REQUIRE_EQUAL( theoretical_new_tokens, 0 );
          }
 
-         double savings_inflation = inflation*double(inflation_pay_factor-1)/double(inflation_pay_factor);
+         double savings_inflation = inflation - inflation * 10000 / inflation_pay_factor;
 
          double computed_savings_tokens = double(final_savings-initial_savings);
          double theoretical_savings_tokens = double(initial_supply.get_amount())*savings_inflation;
@@ -1502,17 +1513,18 @@ BOOST_FIXTURE_TEST_CASE(change_inflation, eosio_system_tester) try {
          }
       };
 
-      //1% inflation for 1 year => 50% saving / 50% bp reward
-      run_for_1year(100, 2, 5);
+      // 1% inflation for 1 year. 50% savings / 50% bp reward. 10000 / 50000 = 0.2 => 20% blockpay, 80% votepay
+      run_for_1year(100, 20000, 50000);
 
-      //3% inflation for 1 year => 66.6% savings / 33.33 bp reward
-      run_for_1year(300, 3, 5);
+      // 3% inflation for 1 year. 66.6% savings / 33.33% bp reward. 10000/13333 = 0.75 => 75% blockpay, 25% votepay 
+      run_for_1year(300, 30000, 13333); 
 
-      //0% inflation for 1 year
-      run_for_1year(0, 3, 5);
+      // 0% inflation for 1 year
+      run_for_1year(0, 30000, 50000);
    }
 
 } FC_LOG_AND_RETHROW()
+
 
 BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
 

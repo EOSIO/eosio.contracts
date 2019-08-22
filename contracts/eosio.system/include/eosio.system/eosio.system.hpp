@@ -70,8 +70,9 @@ namespace eosiosystem {
 
    static constexpr int64_t  inflation_precision           = 100;     // 2 decimals
    static constexpr int64_t  default_annual_rate           = 500;     // 5% annual rate
-   static constexpr int64_t  default_inflation_pay_factor  = 5;       // 20% of the inflation
-   static constexpr int64_t  default_votepay_factor        = 4;       // 25% of the producer pay
+   static constexpr int64_t  pay_factor_precision          = 10000;
+   static constexpr int64_t  default_inflation_pay_factor  = 50000;   // producers pay share = 10000 / 50000 = 20% of the inflation
+   static constexpr int64_t  default_votepay_factor        = 40000;   // per-block pay share = 10000 / 40000 = 25% of the producer pay
 
    /**
     *
@@ -1273,13 +1274,13 @@ namespace eosiosystem {
           *
           * @param inflation_pay_factor - Inverse of the fraction of the inflation used to reward block producers.
           *     The remaining inflation will be sent to the `eosio.saving` account.
-          *     (eg. For 20% of inflation going to block producer rewards  => inflation_pay_factor=5
-          *          For 100% of inflation going to block producer rewards  => inflation_pay_factor=1).
+          *     (eg. For 20% of inflation going to block producer rewards   => inflation_pay_factor = 50000
+          *          For 100% of inflation going to block producer rewards  => inflation_pay_factor = 10000).
           *
           * @param votepay_factor - Inverse of the fraction of the block producer rewards to be distributed proportional to blocks produced.
           *     The remaining rewards will be distributed proportional to votes received.
-          *     (eg. For 25% of block producer rewards going towards block pay => votepay_factor=4
-          *          For 50% of block producer rewards going towards block pay => votepay_factor=2).
+          *     (eg. For 25% of block producer rewards going towards block pay => votepay_factor = 40000
+          *          For 75% of block producer rewards going towards block pay => votepay_factor = 13333).
           */
          [[eosio::action]]
          void setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
@@ -1328,6 +1329,7 @@ namespace eosiosystem {
          using setpriv_action = eosio::action_wrapper<"setpriv"_n, &system_contract::setpriv>;
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
+         using setinflation_action = eosio::action_wrapper<"setinflation"_n, &system_contract::setinflation>;
 
       private:
          // Implementation details:
