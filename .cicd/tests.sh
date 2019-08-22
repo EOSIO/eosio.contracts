@@ -23,4 +23,8 @@ if [[ -f $BUILDKITE_ENV_FILE ]]; then
     done < "$BUILDKITE_ENV_FILE"
 fi
 
-eval docker run $ARGS $evars $FULL_TAG bash -c \"$COMMANDS\"
+if [[ $TRAVIS ]]; then
+    travis_wait 60 eval docker run $ARGS $evars $FULL_TAG bash -c \"$COMMANDS\"
+else
+    eval docker run $ARGS $evars $FULL_TAG bash -c \"$COMMANDS\"
+fi
