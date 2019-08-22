@@ -21,3 +21,17 @@ steps:
       queue: "automation-eos-builder-fleet"
     timeout: ${TIMEOUT:-10}
     skip: $SKIP_UBUNTU_18
+
+  - wait:
+    continue_on_failure: true
+
+  - label: ":bar_chart: Test Metrics"
+    command: |
+      echo '+++ :compression: Extracting Test Metrics Code'
+      tar -zxf .cicd/metrics/test-metrics.tar.gz
+      echo '+++ :javascript: Running test-metrics.js'
+      node --max-old-space-size=32768 test-metrics.js
+    agents:
+      queue: "automation-eos-builder-fleet"
+    timeout: 10
+    soft_fail: true
