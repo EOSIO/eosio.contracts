@@ -6,7 +6,7 @@ set -eo pipefail
 
 mkdir -p $BUILD_DIR
 
-FULL_TAG=${FULL_TAG:-eosio/ci-contracts-builder:base-ubuntu-18.04-$BRANCH}
+FULL_TAG=${FULL_TAG:-eosio/ci-contracts-builder:base-ubuntu-18.04-$EOSIO_COMMIT}
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
 CDT_COMMANDS="apt-get install -y wget && wget -q $CDT_URL -O eosio.cdt.deb && dpkg -i eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:\\\$PATH"
 
