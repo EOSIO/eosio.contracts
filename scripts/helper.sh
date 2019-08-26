@@ -9,12 +9,12 @@ function check-version-numbers() {
   if [[ $CHECK_VERSION_MAJOR -gt $EOSIO_MAX_VERSION_MAJOR ]]; then
     exit 1
   fi
-  if [[ $CHECK_VERSION_MAJOR -eq $EOSIO_MIN_VERSION_MAJOR ]]; then 
+  if [[ $CHECK_VERSION_MAJOR -eq $EOSIO_MIN_VERSION_MAJOR ]]; then
     if [[ $CHECK_VERSION_MINOR -lt $EOSIO_MIN_VERSION_MINOR ]]; then
       exit 1
     fi
   fi
-  if [[ $CHECK_VERSION_MAJOR -eq $EOSIO_MAX_VERSION_MAJOR ]]; then 
+  if [[ $CHECK_VERSION_MAJOR -eq $EOSIO_MAX_VERSION_MAJOR ]]; then
     if [[ $CHECK_VERSION_MINOR -gt $EOSIO_MAX_VERSION_MINOR ]]; then
       exit 1
     fi
@@ -73,6 +73,7 @@ function eosio-directory-prompt() {
             printf "$HOME/eosio/%s\n" "${PROMPT_EOSIO_DIRS[@]}"
           fi
           printf "Enter the installation location of EOSIO:" && read -e -p " " EOSIO_DIR_PROMPT;
+          EOSIO_DIR_PROMPT="${EOSIO_DIR_PROMPT/#\~/$HOME}"
           break;;
         * )
           echo "Please type 'y' for yes or 'n' for no.";;
@@ -99,6 +100,7 @@ function cdt-directory-prompt() {
           break;;
         1 | false | [Nn]* )
           printf "Enter the installation location of EOSIO.CDT:" && read -e -p " " CDT_DIR_PROMPT;
+          CDT_DIR_PROMPT="${CDT_DIR_PROMPT/#\~/$HOME}"
           break;;
         * )
           echo "Please type 'y' for yes or 'n' for no.";;
@@ -111,6 +113,7 @@ function cdt-directory-prompt() {
 
 # Ensures EOSIO is installed and compatible via version listed in tests/CMakeLists.txt.
 function nodeos-version-check() {
+  echo "EOSIO_INSTALL_DIR = ${EOSIO_INSTALL_DIR}"
   INSTALLED_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version))
   INSTALLED_VERSION_MAJOR=$(echo $INSTALLED_VERSION | cut -f1 -d '.' | sed 's/v//g')
   INSTALLED_VERSION_MINOR=$(echo $INSTALLED_VERSION | cut -f2 -d '.' | sed 's/v//g')
@@ -127,12 +130,9 @@ function nodeos-version-check() {
     if [[ $INSTALLED_VERSION_MAJOR -eq $EOSIO_SOFT_MAX_MAJOR && $INSTALLED_VERSION_MINOR -gt $EOSIO_SOFT_MAX_MINOR ]]; then
       echo "Detected EOSIO version is greater than recommended soft max: $EOSIO_SOFT_MAX_MAJOR.$EOSIO_SOFT_MAX_MINOR. Proceed with caution."
     fi
-    echo "Using EOSIO installation at: $EOSIO_INSTALL_DIR"
-    echo "Using EOSIO.CDT installation at: $CDT_INSTALL_DIR"
   else
     echo "Supported versions are: $EOSIO_MIN_VERSION_MAJOR.$EOSIO_MIN_VERSION_MINOR - $EOSIO_MAX_VERSION_MAJOR.$EOSIO_MAX_VERSION_MINOR"
     echo "Invalid EOSIO installation. Exiting..."
     exit 1;
   fi
-  export CMAKE_FRAMEWORK_PATH="${EOSIO_INSTALL_DIR}:${CDT_INSTALL_DIR}:${CMAKE_PREFIX_PATH}"
 }
