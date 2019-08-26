@@ -113,7 +113,6 @@ function cdt-directory-prompt() {
 
 # Ensures EOSIO is installed and compatible via version listed in tests/CMakeLists.txt.
 function nodeos-version-check() {
-  echo "EOSIO_INSTALL_DIR = ${EOSIO_INSTALL_DIR}"
   INSTALLED_VERSION=$(echo $($EOSIO_INSTALL_DIR/bin/nodeos --version))
   INSTALLED_VERSION_MAJOR=$(echo $INSTALLED_VERSION | cut -f1 -d '.' | sed 's/v//g')
   INSTALLED_VERSION_MINOR=$(echo $INSTALLED_VERSION | cut -f2 -d '.' | sed 's/v//g')
