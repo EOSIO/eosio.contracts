@@ -11,7 +11,7 @@ ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
 CDT_COMMANDS="apt-get install -y wget && wget -q $CDT_URL -O eosio.cdt.deb && dpkg -i eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:\\\$PATH"
 
 PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build"
-BUILD_COMMANDS="cmake .. && make -j $JOBS"
+BUILD_COMMANDS="cmake -DBUILD_TESTS=true .. && make -j $JOBS"
 
 COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
 
