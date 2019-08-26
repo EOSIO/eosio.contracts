@@ -290,18 +290,19 @@ namespace eosiosystem {
       check( _gstate2.revision < 255, "can not increment revision" ); // prevent wrap around
       check( revision == _gstate2.revision + 1, "can only increment revision by one" );
       check( revision <= 1, // set upper bound to greatest revision supported in the code
-                    "specified revision is not yet supported by the code" );
+             "specified revision is not yet supported by the code" );
       _gstate2.revision = revision;
    }
-
-
 
    void system_contract::setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor ) {
       require_auth(get_self());
       check(annual_rate >= 0, "annual_rate can't be negative");
-      check(inflation_pay_factor > 0, "inflation_pay_factor must be positive");
-      check(votepay_factor > 0, "votepay_factor must be positive");
-
+      if ( inflation_pay_factor < pay_factor_precision ) {
+         check( false, "inflation_pay_factor must not be less than " + std::to_string(pay_factor_precision) );
+      }
+      if ( votepay_factor < pay_factor_precision ) {
+         check( false, "votepay_factor must not be less than " + std::to_string(pay_factor_precision) );
+      }
       _gstate4.continuous_rate      = get_continuous_rate(annual_rate);
       _gstate4.inflation_pay_factor = inflation_pay_factor;
       _gstate4.votepay_factor       = votepay_factor;
