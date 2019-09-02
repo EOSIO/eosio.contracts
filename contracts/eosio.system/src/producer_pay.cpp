@@ -83,6 +83,7 @@ namespace eosiosystem {
 
       if( usecs_since_last_fill > 0 && _gstate.last_pervote_bucket_fill > time_point() ) {
          int64_t new_tokens = (_gstate4.continuous_rate * double(token_supply.amount) * double(usecs_since_last_fill)) / double(useconds_per_year);
+         check( new_tokens >= 0, "overflow in calculating new tokens to be issued; inflation rate is too high" );
 
          int64_t to_producers     = (new_tokens * uint128_t(pay_factor_precision)) / _gstate4.inflation_pay_factor;
          int64_t to_savings       = new_tokens - to_producers;

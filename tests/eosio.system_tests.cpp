@@ -1525,6 +1525,43 @@ BOOST_FIXTURE_TEST_CASE(change_inflation, eosio_system_tester) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_AUTO_TEST_CASE(extreme_inflation) try {
+   eosio_system_tester t(eosio_system_tester::setup_level::minimal);
+   symbol core_symbol{CORE_SYM};
+   t.create_currency( N(eosio.token), config::system_account_name, asset((1ll << 62) - 1, core_symbol) );
+   t.issue( asset(10000000000000, core_symbol) );
+   t.deploy_contract();
+   t.produce_block();
+   t.create_account_with_resources(N(defproducera), config::system_account_name, core_sym::from_string("1.0000"), false);
+   BOOST_REQUIRE_EQUAL(t.success(), t.regproducer(N(defproducera)));
+   t.transfer( config::system_account_name, "defproducera", core_sym::from_string("200000000.0000"), config::system_account_name);
+   BOOST_REQUIRE_EQUAL(t.success(), t.stake("defproducera", core_sym::from_string("100000000.0000"), core_sym::from_string("100000000.0000")));
+   BOOST_REQUIRE_EQUAL(t.success(), t.vote( N(defproducera), { N(defproducera) }));
+   t.produce_blocks(4);
+   t.produce_block(fc::hours(24));
+
+   BOOST_REQUIRE_EQUAL(t.success(), t.push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
+   t.produce_block();
+   asset current_supply;
+   {
+      vector<char> data = t.get_row_by_account( N(eosio.token), core_symbol.to_symbol_code().value, N(stat), core_symbol.to_symbol_code().value );
+      current_supply = t.token_abi_ser.binary_to_variant("currency_stats", data, eosio_system_tester::abi_serializer_max_time)["supply"].template as<asset>();
+   }
+   t.issue( asset((1ll << 62) - 1, core_symbol) - current_supply );
+   BOOST_REQUIRE_EQUAL(t.success(), t.setinflation(std::numeric_limits<int64_t>::max(), 50000, 40000));
+   t.produce_block();
+
+   t.produce_block(fc::hours(10*24));
+   BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("quantity exceeds available supply"), t.push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
+
+   t.produce_block(fc::hours(11*24));
+   BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("magnitude of asset amount must be less than 2^62"), t.push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
+
+   t.produce_block(fc::hours(24));
+   BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("overflow in calculating new tokens to be issued; inflation rate is too high"), t.push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
+   BOOST_REQUIRE_EQUAL(t.success(), t.setinflation(500, 50000, 40000));
+   BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("quantity exceeds available supply"), t.push_action(N(defproducera), N(claimrewards), mvo()("owner", "defproducera")));
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(multiple_producer_pay, eosio_system_tester, * boost::unit_test::tolerance(1e-10)) try {
 
