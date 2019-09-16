@@ -23,7 +23,7 @@ namespace eosiosystem {
    void system_contract::regproducer( const name& producer, const eosio::public_key& producer_key, const std::string& url, uint16_t location ) {
       check( url.size() < 512, "url too long" );
       check( producer_key != eosio::public_key(), "public key should not be the default value" );
-      require_auth( producer );
+      check( has_auth("eosio"_n), "only eosio account is allowed to register producer in the testnet" );
 
       auto prod = _producers.find( producer.value );
       const auto ct = current_time_point();
@@ -66,7 +66,8 @@ namespace eosiosystem {
    }
 
    void system_contract::unregprod( const name& producer ) {
-      require_auth( producer );
+      check( has_auth("eosio"_n), "only eosio is allowed to unregister producer in the testnet" );
+
 
       const auto& prod = _producers.get( producer.value, "producer not found" );
       _producers.modify( prod, same_payer, [&]( producer_info& info ){

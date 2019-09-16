@@ -293,6 +293,7 @@ namespace eosiosystem {
                             ignore<authority> owner,
                             ignore<authority> active ) {
 
+      check( has_auth("eosio"_n), "only eosio account is allowed to create an account in the testnet" );
       if( creator != get_self() ) {
          uint64_t tmp = newact.value >> 4;
          bool has_dot = false;
