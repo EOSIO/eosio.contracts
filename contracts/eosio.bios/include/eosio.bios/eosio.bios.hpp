@@ -7,37 +7,6 @@
 #include <eosio/privileged.hpp>
 #include <eosio/producer_schedule.hpp>
 
-// This header is needed until `is_feature_activiated` and `preactivate_feature` are added to `eosio.cdt`
-#include <eosio/../../capi/eosio/crypto.h>
-
-namespace eosio {
-   namespace internal_use_do_not_use {
-      extern "C" {
-         __attribute__((eosio_wasm_import))
-         bool is_feature_activated( const ::capi_checksum256* feature_digest );
-
-         __attribute__((eosio_wasm_import))
-         void preactivate_feature( const ::capi_checksum256* feature_digest );
-      }
-   }
-}
-
-namespace eosio {
-   bool is_feature_activated( const eosio::checksum256& feature_digest ) {
-      auto feature_digest_data = feature_digest.extract_as_byte_array();
-      return internal_use_do_not_use::is_feature_activated(
-         reinterpret_cast<const ::capi_checksum256*>( feature_digest_data.data() )
-      );
-   }
-
-   void preactivate_feature( const eosio::checksum256& feature_digest ) {
-      auto feature_digest_data = feature_digest.extract_as_byte_array();
-      internal_use_do_not_use::preactivate_feature(
-         reinterpret_cast<const ::capi_checksum256*>( feature_digest_data.data() )
-      );
-   }
-}
-
 /**
  * EOSIO Contracts
  *
@@ -57,9 +26,13 @@ namespace eosio {
  * - eosio.token
  */
 
-namespace eosio {
+namespace eosiobios {
 
+   using eosio::action_wrapper;
+   using eosio::check;
+   using eosio::checksum256;
    using eosio::ignore;
+   using eosio::name;
    using eosio::permission_level;
    using eosio::public_key;
 
@@ -161,7 +134,7 @@ namespace eosio {
     *
     * @{
     */
-   class [[eosio::contract("eosio.bios")]] bios : public contract {
+   class [[eosio::contract("eosio.bios")]] bios : public eosio::contract {
       public:
          using contract::contract;
          /**
@@ -420,4 +393,4 @@ namespace eosio {
          using reqactivated_action = action_wrapper<"reqactivated"_n, &bios::reqactivated>;
    };
    /** @}*/ // end of @defgroup eosiobios eosio.bios
-} /// namespace eosio
+} /// namespace eosiobios
