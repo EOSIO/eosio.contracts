@@ -8,7 +8,7 @@ steps:
       buildkite-agent artifact upload build.tar.gz
     agents:
       queue: "automation-eos-builder-fleet"
-    timeout: "${TIMEOUT:-10}"
+    timeout: "${TIMEOUT:-40}"
     skip: "$SKIP_UBUNTU_18"
 
   - wait
