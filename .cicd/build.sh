@@ -16,4 +16,16 @@ if [[ -f $BUILDKITE_ENV_FILE ]]; then
         evars="$evars --env ${var%%=*}"
     done < "$BUILDKITE_ENV_FILE"
 fi
+# retry docker pull to protect against failures due to race conditions with eosio pipeline
+INDEX='1'
+echo "$ docker pull $FULL_TAG"
+while [[ "$(docker pull $FULL_TAG 2>&1 | grep -ice "manifest for $FULL_TAG not found")" != '0' ]]; do
+    echo "ERROR: Docker image \"$FULL_TAG\" not found for eosio commit ${EOSIO_COMMIT:0:7} from \"$EOSIO_VERSION\""'!'
+    printf "There must be a successful build against ${EOSIO_COMMIT:0:7} \033]1339;url=https://eos-coverage.s3-us-west-2.amazonaws.com/build-$BUILDKITE_BUILD_NUMBER/code-coverage-report/index.html;content=here\a for this container to exist.\n"
+    echo "Attempt $INDEX, retry in 60 seconds..."
+    echo ''
+    INDEX=$(( $INDEX + 1 ))
+    sleep 60
+done
+# run
 eval docker run $ARGS $evars $FULL_TAG bash -c \"$COMMANDS\"
