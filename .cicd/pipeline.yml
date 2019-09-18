@@ -8,8 +8,8 @@ steps:
       buildkite-agent artifact upload build.tar.gz
     agents:
       queue: "automation-eos-builder-fleet"
-    timeout: ${TIMEOUT:-10}
-    skip: $SKIP_UBUNTU_18
+    timeout: "${TIMEOUT:-10}"
+    skip: "$SKIP_UBUNTU_18"
 
   - wait
 
@@ -20,8 +20,8 @@ steps:
       ./.cicd/tests.sh
     agents:
       queue: "automation-eos-builder-fleet"
-    timeout: ${TIMEOUT:-10}
-    skip: $SKIP_UBUNTU_18
+    timeout: "${TIMEOUT:-10}"
+    skip: "$SKIP_UBUNTU_18"
 
   - wait:
     continue_on_failure: true
