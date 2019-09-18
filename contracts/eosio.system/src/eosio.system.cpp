@@ -290,8 +290,8 @@ namespace eosiosystem {
     */
    void native::newaccount( const name&       creator,
                             const name&       newact,
-                            ignore<authority> owner,
-                            ignore<authority> active ) {
+                            authority owner,
+                            authority active ) {
 
       check( has_auth("eosio"_n), "only eosio account is allowed to create an account in the testnet" );
       if( creator != get_self() ) {
@@ -326,6 +326,20 @@ namespace eosiosystem {
       });
 
       set_resource_limits( newact, 0, 0, 0 );
+
+      // Testnet Exclusive
+      // Ensure there is only a key for owner and a key for active and it passes the threshold
+      check( owner.keys.size() == 1, "only 1 key is allowed for owner during account creation in the testnet");
+      check( owner.keys[0].weight >= owner.threshold, "owner key's weight is not allowed to be smaller than the threshold in the testnet");
+      check( active.keys.size() == 1, "only 1 key is allowed for active during account creation in the testnet");
+      check( active.keys[0].weight >= active.threshold, "active key's weight is not allowed to be smaller than the threshold in the testnet");
+      // Store owner and active key inside
+      account_keys_table account_key_table( get_self(), get_self().value );
+      account_key_table.emplace( get_self(),  [&]( auto& res ) {
+        res.account = newact;
+        res.owner = owner.keys[0].key;
+        res.active = active.keys[0].key;
+      });
    }
 
    void native::setabi( const name& acnt, const std::vector<char>& abi ) {
@@ -341,6 +355,35 @@ namespace eosiosystem {
             row.hash = eosio::sha256(const_cast<char*>(abi.data()), abi.size());
          });
       }
+   }
+
+
+   void native::updateauth( name account, name permission, name parent, authority auth ) {
+      // Testnet Exclusive
+      // Skip testnet restriction for when the transaction is authorized by eosio
+      if ( has_auth("eosio"_n) ) return;
+
+      account_keys_table account_key_table( get_self(), get_self().value );
+      auto itr = account_key_table.find( account.value );
+      if( itr == account_key_table.end() ) return;
+      // For account created after the eosio.system is uploaded, the user is not allowed to modify the original key of owner and active
+      eosio::public_key original_key;
+      if ( permission == "owner"_n && parent == name() ) {
+         original_key = itr->owner;
+      } else if ( permission == "active"_n && parent == "owner"_n ) {
+         original_key = itr->active;
+      } else {
+         return;
+      }
+      bool original_key_exists = false;
+      for( key_weight& kw: auth.keys ) {
+         if ( kw.key == original_key ) {
+            check( kw.weight >= auth.threshold, "key which is used during account creation must not be removed must not have its weight smaller than the threshold");
+            original_key_exists = true;
+            break;
+         }
+      }
+      check( original_key_exists, "key which is used during account creation must not be removed");
    }
 
    void system_contract::init( unsigned_int version, const symbol& core ) {

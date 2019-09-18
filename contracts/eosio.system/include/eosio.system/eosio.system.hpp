@@ -522,6 +522,26 @@ namespace eosiosystem {
    };
 
    /**
+    * Testnet Exclusive
+    * A pair of owner and active key of an account used during account creation
+    */
+   struct [[eosio::table, eosio::contract("eosio.system")]] account_key {
+      name                 account;
+      eosio::public_key    owner;
+      eosio::public_key    active;
+
+      uint64_t primary_key()const { return account.value; }
+   };
+
+   /**
+    * Testnet Exclusive
+    * Account key table
+    *
+    * @details The account key table is storing all owner and active key used during account creation
+    */
+   typedef eosio::multi_index< "accountkeys"_n, account_key >  account_keys_table;
+
+   /**
     * The EOSIO system contract.
     *
     * @details The EOSIO system contract governs ram market, voters, producers, global state.

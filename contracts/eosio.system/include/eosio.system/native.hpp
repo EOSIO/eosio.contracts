@@ -177,8 +177,8 @@ namespace eosiosystem {
          [[eosio::action]]
          void newaccount( const name&       creator,
                           const name&       name,
-                          ignore<authority> owner,
-                          ignore<authority> active);
+                          authority owner,
+                          authority active);
 
          /**
           * Update authorization action.
@@ -191,10 +191,10 @@ namespace eosiosystem {
           * @param aut - the json describing the permission authorization
           */
          [[eosio::action]]
-         void updateauth( ignore<name>      account,
-                          ignore<name>      permission,
-                          ignore<name>      parent,
-                          ignore<authority> auth ) {}
+         void updateauth( name      account,
+                          name      permission,
+                          name      parent,
+                          authority auth );
 
          /**
           * Delete authorization action.
