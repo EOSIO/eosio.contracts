@@ -9,7 +9,7 @@ matrix:
     services: docker
 script: 
   - "export -f travis_wait && export -f travis_jigger"
-  - "./.cicd/build.sh && ./.cicd/tests.sh"
+  - ". ./.cicd/build.sh && ./.cicd/tests.sh"
 notifications:
   webhooks:
     secure: CEIaN/RNCYALwL+QgBhVlyq5DvomyMcmB+gUfdDabxJk55misbIAXkj7l3+1dvq4EeB8Vw3vSKAimfjpj0hGCopOPxPsE5SPYWx3czI7cBPvuu3S4NSmx6WEe+pjI3IexUVQXRLazhvvwB6D/vZnFlr3ECYj59K0fGoYOKW14oG2RLVP7Clx3qoo1O8y7F+Ia6fEp/Q4pvwgFKnUL4hJrCUefJwSKDH8Nxf4FF5U41RLE8Xhdqxo1zbZBpT30gaPERzBnTCO3ko5NIEI/WPruQgcRr/PVDTG1xYZ2XqImDb/fHZKqkOJSoOTH+2U2KBxfXCwLPzkz6CkpJ7v14VL4qoV/F5DA9/fTSB4+B6IWusFF8NhstMmeCw0vkfaO/8WW8VEYHXnlTPFAQZJEiEyIYDcyVnUXur0yFEkvr4ZdGDmUEv/AdClVJ7Ig7T4MF2K66Yqtj930VQhI5PSWMKIWFG+2eboBrmXet+Z+2GRhwCGm5knB4/bcDcg9E80cwUWVol6AxVO07n70Qx57qX9Tvz/Ay9ugtEY+xSDQQ+HkFw62MiPDsNhSFoUD+TNY+SnEe1qnciKhb2/1bNTkKMPjifjJmDWkfC07qrXsDBcj4cIgfj6vh8lBj7U6kg7vCjXeJeljgu0wcTDd+EprDHpfRwkoXi9UsnSw2HXAveZMP4=
