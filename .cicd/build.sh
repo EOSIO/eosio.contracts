@@ -1,5 +1,6 @@
 #!/bin/bash
 set -eo pipefail
+. ./.cicd/helpers/buildkite.sh
 . ./.cicd/helpers/general.sh
 . ./.cicd/helpers/dependency-info.sh
 mkdir -p $BUILD_DIR
@@ -10,13 +11,6 @@ CDT_COMMANDS="apt-get install -y wget && wget -q $CDT_URL -O eosio.cdt.deb && dp
 PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build"
 BUILD_COMMANDS="cmake .. && make -j $JOBS"
 COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
-# Load BUILDKITE Environment Variables for use in docker run
-if [[ -f $BUILDKITE_ENV_FILE ]]; then
-    evars=""
-    while read -r var; do
-        evars="$evars --env ${var%%=*}"
-    done < "$BUILDKITE_ENV_FILE"
-fi
 # retry docker pull to protect against failures due to race conditions with eosio pipeline
 INDEX='1'
 echo "$ docker pull $DOCKER_IMAGE"
@@ -29,4 +23,4 @@ while [[ "$(docker pull $DOCKER_IMAGE 2>&1 | grep -ice "manifest for $DOCKER_IMA
     sleep 60
 done
 # run
-eval docker run $ARGS $evars $DOCKER_IMAGE bash -c \"$COMMANDS\"
+eval docker run $ARGS $(buildkite-intrinsics) $DOCKER_IMAGE bash -c \"$COMMANDS\"
