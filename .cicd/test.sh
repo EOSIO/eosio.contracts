@@ -3,7 +3,7 @@ set -eo pipefail
 . ./.cicd/helpers/general.sh
 . ./.cicd/helpers/dependency-info.sh
 mkdir -p $BUILD_DIR
-FULL_TAG="$(buildkite-agent meta-data get docker-image)"
+DOCKER_IMAGE="$(buildkite-agent meta-data get docker-image)"
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
 CDT_COMMANDS="apt-get install -y wget && wget -q $CDT_URL -O eosio.cdt.deb && dpkg -i eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:\\\$PATH"
 PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build/tests"
@@ -16,4 +16,4 @@ if [[ -f $BUILDKITE_ENV_FILE ]]; then
         evars="$evars --env ${var%%=*}"
     done < "$BUILDKITE_ENV_FILE"
 fi
-eval docker run $ARGS $evars $FULL_TAG bash -c \"$COMMANDS\"
+eval docker run $ARGS $evars $DOCKER_IMAGE bash -c \"$COMMANDS\"
