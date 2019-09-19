@@ -2,6 +2,7 @@
 set -eo pipefail
 . ./.cicd/helpers/buildkite.sh
 . ./.cicd/helpers/general.sh
+. ./.cicd/helpers/dependency-info.sh
 mkdir -p $BUILD_DIR
 DOCKER_IMAGE="$(buildkite-agent meta-data get docker-image)"
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
