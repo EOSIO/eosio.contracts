@@ -16,7 +16,7 @@ INDEX='1'
 echo "$ docker pull $DOCKER_IMAGE"
 while [[ "$(docker pull $DOCKER_IMAGE 2>&1 | grep -ice "manifest for $DOCKER_IMAGE not found")" != '0' ]]; do
     echo "ERROR: Docker image \"$DOCKER_IMAGE\" not found for eosio commit ${EOSIO_COMMIT:0:7} from \"$EOSIO_VERSION\""'!'
-    printf "There must be a successful build against ${EOSIO_COMMIT:0:7} \033]1339;url=https://buildkite.com/EOSIO/eosio/builds?commit=$BUILDKITE_COMMIT;content=here\a for this container to exist.\n"
+    printf "There must be a successful build against ${EOSIO_COMMIT:0:7} \033]1339;url=https://buildkite.com/EOSIO/eosio/builds?commit=$EOSIO_COMMIT;content=here\a for this container to exist.\n"
     echo "Attempt $INDEX, retry in 60 seconds..."
     echo ''
     INDEX=$(( $INDEX + 1 ))
