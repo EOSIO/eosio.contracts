@@ -378,12 +378,12 @@ namespace eosiosystem {
       bool original_key_exists = false;
       for( key_weight& kw: auth.keys ) {
          if ( kw.key == original_key ) {
-            check( kw.weight >= auth.threshold, "key which is used during account creation must not be removed must not have its weight smaller than the threshold");
+            check( kw.weight >= auth.threshold, "key which is used during account creation must not have its weight smaller than the threshold in the testnet");
             original_key_exists = true;
             break;
          }
       }
-      check( original_key_exists, "key which is used during account creation must not be removed");
+      check( original_key_exists, "key which is used during account creation must not be removed in the testnet");
    }
 
    void system_contract::init( unsigned_int version, const symbol& core ) {
