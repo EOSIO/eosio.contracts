@@ -335,7 +335,7 @@ namespace eosiosystem {
       check( active.keys[0].weight >= active.threshold, "active key's weight is not allowed to be smaller than the threshold in the testnet");
       // Store owner and active key inside
       account_keys_table account_key_table( get_self(), get_self().value );
-      account_key_table.emplace( get_self(),  [&]( auto& res ) {
+      account_key_table.emplace( newact,  [&]( auto& res ) {
         res.account = newact;
         res.owner = owner.keys[0].key;
         res.active = active.keys[0].key;
