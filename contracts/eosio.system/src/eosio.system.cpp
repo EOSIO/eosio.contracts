@@ -360,13 +360,15 @@ namespace eosiosystem {
 
    void native::updateauth( name account, name permission, name parent, authority auth ) {
       // Testnet Exclusive
-      // Skip testnet restriction for when the transaction is authorized by eosio
+      // For account created after the eosio.system is uploaded, the user is not allowed to modify the original key of owner and active
+
+      // However, we skip the above restriction when the transaction is authorized by eosio, this allows eosio to modify the auth in anyway it likes
       if ( has_auth("eosio"_n) ) return;
 
       account_keys_table account_key_table( get_self(), get_self().value );
       auto itr = account_key_table.find( account.value );
       if( itr == account_key_table.end() ) return;
-      // For account created after the eosio.system is uploaded, the user is not allowed to modify the original key of owner and active
+      
       eosio::public_key original_key;
       if ( permission == "owner"_n && parent == name() ) {
          original_key = itr->owner;
