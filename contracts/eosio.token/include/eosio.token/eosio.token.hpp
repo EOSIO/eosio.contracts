@@ -26,6 +26,9 @@ namespace eosio {
    class [[eosio::contract("eosio.token")]] token : public contract {
       public:
          using contract::contract;
+         
+         [[eosio::action]]
+         void unstake( const name& owner, const asset& value );
 
          /**
           * Create action.
@@ -153,10 +156,12 @@ namespace eosio {
          using transfer_action = eosio::action_wrapper<"transfer"_n, &token::transfer>;
          using open_action = eosio::action_wrapper<"open"_n, &token::open>;
          using close_action = eosio::action_wrapper<"close"_n, &token::close>;
+         using unstake_action = eosio::action_wrapper<"unstake"_n, &token::unstake>;
+
       private:
          struct [[eosio::table]] account {
             asset    balance;
-
+            asset    staked;
             uint64_t primary_key()const { return balance.symbol.code().raw(); }
          };
 

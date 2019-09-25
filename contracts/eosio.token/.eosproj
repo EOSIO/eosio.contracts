@@ -1,0 +1,21 @@
+{
+  "main": "src/eosio.token.cpp",
+  "contract": "eosio.token",
+  "include": "",
+  "resource": "",
+  "cdt": "v1.6.2",
+  "output": "",
+  "scripts": {
+    "build": ""
+  },
+  "deploy": {
+    "target": "both",
+    "mainnet": "",
+    "kylin": "",
+    "jungle": "",
+    "local": ""
+  },
+  "test": {
+    "npmClient": ""
+  }
+}

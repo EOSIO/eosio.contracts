@@ -2,6 +2,25 @@
 
 namespace eosio {
 
+void token::unstake( const name& owner, const asset& value ) 
+{
+    require_auth( owner );
+    check( is_account( owner ), "to account does not exist");
+    auto sym = value.symbol.code();
+    
+    check( value.is_valid(), "invalid quantity" );
+    check( value.amount > 0, "must transfer positive quantity" );
+    
+   accounts from_acnts( get_self(), owner.value );
+
+   const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
+   check( (from.balance.amount)  >= value.amount, "overdrawn balance" );
+
+   from_acnts.modify( from, owner, [&]( auto& a ) {
+         a.staked -= value;
+      });    
+}
+
 void token::create( const name&   issuer,
                     const asset&  maximum_supply )
 {
@@ -104,7 +123,7 @@ void token::sub_balance( const name& owner, const asset& value ) {
    accounts from_acnts( get_self(), owner.value );
 
    const auto& from = from_acnts.get( value.symbol.code().raw(), "no balance object found" );
-   check( from.balance.amount >= value.amount, "overdrawn balance" );
+   check( (from.balance.amount - from.staked.amount)  >= value.amount, "overdrawn balance" );
 
    from_acnts.modify( from, owner, [&]( auto& a ) {
          a.balance -= value;
@@ -118,10 +137,12 @@ void token::add_balance( const name& owner, const asset& value, const name& ram_
    if( to == to_acnts.end() ) {
       to_acnts.emplace( ram_payer, [&]( auto& a ){
         a.balance = value;
+        a.staked  = value;
       });
    } else {
       to_acnts.modify( to, same_payer, [&]( auto& a ) {
         a.balance += value;
+        a.staked  += value;
       });
    }
 }
