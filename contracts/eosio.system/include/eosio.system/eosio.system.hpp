@@ -74,9 +74,6 @@ namespace eosiosystem {
    static constexpr int64_t  default_votepay_factor        = 4;       // 25% of the producer pay
 
    /**
-    *
-    * @defgroup eosiosystem eosio.system
-    * @ingroup eosiocontracts
     * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
     * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
     *    delegate their vote to a proxy.
@@ -88,13 +85,11 @@ namespace eosiosystem {
     * @{
     */
 
-   /**
-    * A name bid, which consists of:
-    * - a `newname` name that the bid is for
-    * - a `high_bidder` account name that is the one with the highest bid so far
-    * - the `high_bid` which is amount of highest bid
-    * - and `last_bid_time` which is the time of the highest bid
-    */
+   // A name bid, which consists of:
+   // - a `newname` name that the bid is for
+   // - a `high_bidder` account name that is the one with the highest bid so far
+   // - the `high_bid` which is amount of highest bid
+   // - and `last_bid_time` which is the time of the highest bid
    struct [[eosio::table, eosio::contract("eosio.system")]] name_bid {
      name            newname;
      name            high_bidder;
@@ -105,11 +100,9 @@ namespace eosiosystem {
      uint64_t by_high_bid()const { return static_cast<uint64_t>(-high_bid); }
    };
 
-   /**
-    * A bid refund, which is defined by:
-    * - the `bidder` account name owning the refund
-    * - the `amount` to be refunded
-    */
+   // A bid refund, which is defined by:
+   // - the `bidder` account name owning the refund
+   // - the `amount` to be refunded
    struct [[eosio::table, eosio::contract("eosio.system")]] bid_refund {
       name         bidder;
       asset        amount;
@@ -122,9 +115,7 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "bidrefunds"_n, bid_refund > bid_refund_table;
 
-   /**
-    * Defines new global state parameters.
-    */
+   // Defines new global state parameters.
    struct [[eosio::table("global"), eosio::contract("eosio.system")]] eosio_global_state : eosio::blockchain_parameters {
       uint64_t free_ram()const { return max_ram_size - total_ram_bytes_reserved; }
 
@@ -151,9 +142,7 @@ namespace eosiosystem {
                                 (last_producer_schedule_size)(total_producer_vote_weight)(last_name_close) )
    };
 
-   /**
-    * Defines new global state parameters added after version 1.0
-    */
+   // Defines new global state parameters added after version 1.0
    struct [[eosio::table("global2"), eosio::contract("eosio.system")]] eosio_global_state2 {
       eosio_global_state2(){}
 
@@ -167,9 +156,7 @@ namespace eosiosystem {
                         (total_producer_votepay_share)(revision) )
    };
 
-   /**
-    * Defines new global state parameters added after version 1.3.0
-    */
+   // Defines new global state parameters added after version 1.3.0
    struct [[eosio::table("global3"), eosio::contract("eosio.system")]] eosio_global_state3 {
       eosio_global_state3() { }
       time_point        last_vpay_state_update;
@@ -178,9 +165,7 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
    };
 
-   /**
-    * Defines new global state parameters to store inflation rate and distribution
-    */
+   // Defines new global state parameters to store inflation rate and distribution
    struct [[eosio::table("global4"), eosio::contract("eosio.system")]] eosio_global_state4 {
       eosio_global_state4() { }
       double   continuous_rate;
@@ -190,9 +175,7 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( eosio_global_state4, (continuous_rate)(inflation_pay_factor)(votepay_factor) )
    };
 
-   /**
-    * Defines `producer_info` structure to be stored in `producer_info` table, added after version 1.0
-    */
+   // Defines `producer_info` structure to be stored in `producer_info` table, added after version 1.0
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
       name                  owner;
       double                total_votes = 0;
@@ -213,9 +196,7 @@ namespace eosiosystem {
                         (unpaid_blocks)(last_claim_time)(location) )
    };
 
-   /**
-    * Defines new producer info structure to be stored in new producer info table, added after version 1.3.0
-    */
+   // Defines new producer info structure to be stored in new producer info table, added after version 1.3.0
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info2 {
       name            owner;
       double          votepay_share = 0;
@@ -227,30 +208,23 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( producer_info2, (owner)(votepay_share)(last_votepay_share_update) )
    };
 
-   /**
-    * Voter info. Voter info stores information about the voter:
-    * - `owner` the voter
-    * - `proxy` the proxy set by the voter, if any
-    * - `producers` the producers approved by this voter if no proxy set
-    * - `staked` the amount staked
-    */
+   // Voter info. Voter info stores information about the voter:
+   // - `owner` the voter
+   // - `proxy` the proxy set by the voter, if any
+   // - `producers` the producers approved by this voter if no proxy set
+   // - `staked` the amount staked
    struct [[eosio::table, eosio::contract("eosio.system")]] voter_info {
       name                owner;     /// the voter
       name                proxy;     /// the proxy set by the voter, if any
       std::vector<name>   producers; /// the producers approved by this voter if no proxy set
       int64_t             staked = 0;
 
-      /**
-       *  Every time a vote is cast we must first "undo" the last vote weight, before casting the
-       *  new vote weight.  Vote weight is calculated as:
-       *
-       *  stated.amount * 2 ^ ( weeks_since_launch/weeks_per_year)
-       */
+      //  Every time a vote is cast we must first "undo" the last vote weight, before casting the
+      //  new vote weight.  Vote weight is calculated as:
+      //  stated.amount * 2 ^ ( weeks_since_launch/weeks_per_year)
       double              last_vote_weight = 0; /// the vote weight cast the last time the vote was updated
 
-      /**
-       * Total vote weight delegated to this voter.
-       */
+      // Total vote weight delegated to this voter.
       double              proxied_vote_weight= 0; /// the total vote weight delegated to this voter as a proxy
       bool                is_proxy = 0; /// whether the voter is a proxy for others
 
@@ -303,9 +277,7 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( user_resources, (owner)(net_weight)(cpu_weight)(ram_bytes) )
    };
 
-   /**
-    *  Every user 'from' has a scope/table that uses every receipient 'to' as the primary key.
-    */
+   // Every user 'from' has a scope/table that uses every receipient 'to' as the primary key.
    struct [[eosio::table, eosio::contract("eosio.system")]] delegated_bandwidth {
       name          from;
       name          to;
@@ -338,17 +310,15 @@ namespace eosiosystem {
    typedef eosio::multi_index< "delband"_n, delegated_bandwidth > del_bandwidth_table;
    typedef eosio::multi_index< "refunds"_n, refund_request >      refunds_table;
 
-   /**
-    * `rex_pool` structure underlying the rex pool table. A rex pool table entry is defined by:
-    * - `version` defaulted to zero,
-    * - `total_lent` total amount of CORE_SYMBOL in open rex_loans
-    * - `total_unlent` total amount of CORE_SYMBOL available to be lent (connector),
-    * - `total_rent` fees received in exchange for lent  (connector),
-    * - `total_lendable` total amount of CORE_SYMBOL that have been lent (total_unlent + total_lent),
-    * - `total_rex` total number of REX shares allocated to contributors to total_lendable,
-    * - `namebid_proceeds` the amount of CORE_SYMBOL to be transferred from namebids to REX pool,
-    * - `loan_num` increments with each new loan.
-    */
+   // `rex_pool` structure underlying the rex pool table. A rex pool table entry is defined by:
+   // - `version` defaulted to zero,
+   // - `total_lent` total amount of CORE_SYMBOL in open rex_loans
+   // - `total_unlent` total amount of CORE_SYMBOL available to be lent (connector),
+   // - `total_rent` fees received in exchange for lent  (connector),
+   // - `total_lendable` total amount of CORE_SYMBOL that have been lent (total_unlent + total_lent),
+   // - `total_rex` total number of REX shares allocated to contributors to total_lendable,
+   // - `namebid_proceeds` the amount of CORE_SYMBOL to be transferred from namebids to REX pool,
+   // - `loan_num` increments with each new loan
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_pool {
       uint8_t    version = 0;
       asset      total_lent;
@@ -364,12 +334,10 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "rexpool"_n, rex_pool > rex_pool_table;
 
-   /**
-    * `rex_fund` structure underlying the rex fund table. A rex fund table entry is defined by:
-    * - `version` defaulted to zero,
-    * - `owner` the owner of the rex fund,
-    * - `balance` the balance of the fund.
-    */
+   // `rex_fund` structure underlying the rex fund table. A rex fund table entry is defined by:
+   // - `version` defaulted to zero,
+   // - `owner` the owner of the rex fund,
+   // - `balance` the balance of the fund.
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_fund {
       uint8_t version = 0;
       name    owner;
@@ -380,14 +348,12 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "rexfund"_n, rex_fund > rex_fund_table;
 
-   /**
-    * `rex_balance` structure underlying the rex balance table. A rex balance table entry is defined by:
-    * - `version` defaulted to zero,
-    * - `owner` the owner of the rex fund,
-    * - `vote_stake` the amount of CORE_SYMBOL currently included in owner's vote,
-    * - `rex_balance` the amount of REX owned by owner,
-    * - `matured_rex` matured REX available for selling.
-    */
+   // `rex_balance` structure underlying the rex balance table. A rex balance table entry is defined by:
+   // - `version` defaulted to zero,
+   // - `owner` the owner of the rex fund,
+   // - `vote_stake` the amount of CORE_SYMBOL currently included in owner's vote,
+   // - `rex_balance` the amount of REX owned by owner,
+   // - `matured_rex` matured REX available for selling
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_balance {
       uint8_t version = 0;
       name    owner;
@@ -401,18 +367,16 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "rexbal"_n, rex_balance > rex_balance_table;
 
-   /**
-    * `rex_loan` structure underlying the `rex_cpu_loan_table` and `rex_net_loan_table`. A rex net/cpu loan table entry is defined by:
-    * - `version` defaulted to zero,
-    * - `from` account creating and paying for loan,
-    * - `receiver` account receiving rented resources,
-    * - `payment` SYS tokens paid for the loan,
-    * - `balance` is the amount of SYS tokens available to be used for loan auto-renewal,
-    * - `total_staked` total amount staked,
-    * - `loan_num` loan number/id,
-    * - `expiration` the expiration time when loan will be either closed or renewed
-    *       If payment <= balance, the loan is renewed, and closed otherwise.
-    */
+   // `rex_loan` structure underlying the `rex_cpu_loan_table` and `rex_net_loan_table`. A rex net/cpu loan table entry is defined by:
+   // - `version` defaulted to zero,
+   // - `from` account creating and paying for loan,
+   // - `receiver` account receiving rented resources,
+   // - `payment` SYS tokens paid for the loan,
+   // - `balance` is the amount of SYS tokens available to be used for loan auto-renewal,
+   // - `total_staked` total amount staked,
+   // - `loan_num` loan number/id,
+   // - `expiration` the expiration time when loan will be either closed or renewed
+   //       If payment <= balance, the loan is renewed, and closed otherwise.
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_loan {
       uint8_t             version = 0;
       name                from;
