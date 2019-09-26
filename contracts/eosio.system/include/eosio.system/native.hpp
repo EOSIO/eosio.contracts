@@ -35,16 +35,9 @@ namespace eosiosystem {
    using eosio::permission_level;
    using eosio::public_key;
 
-   /**
-    * @addtogroup eosiosystem
-    * @{
-    */
-   /**
-    * A weighted permission.
-    *
-    * @details Defines a weighted permission, that is a permission which has a weight associated.
-    * A permission is defined by an account name plus a permission name.
-    */
+   // A weighted permission.
+   // @details Defines a weighted permission, that is a permission which has a weight associated.
+   // A permission is defined by an account name plus a permission name.
    struct permission_level_weight {
       permission_level  permission;
       uint16_t          weight;
@@ -53,11 +46,8 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( permission_level_weight, (permission)(weight) )
    };
 
-   /**
-    * Weighted key.
-    *
-    * @details A weighted key is defined by a public key and an associated weight.
-    */
+   // Weighted key.
+   // @details A weighted key is defined by a public key and an associated weight.
    struct key_weight {
       eosio::public_key  key;
       uint16_t           weight;
@@ -66,11 +56,8 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( key_weight, (key)(weight) )
    };
 
-   /**
-    * Wait weight.
-    *
-    * @details A wait weight is defined by a number of seconds to wait for and a weight.
-    */
+   // Wait weight.
+   // @details A wait weight is defined by a number of seconds to wait for and a weight.
    struct wait_weight {
       uint32_t           wait_sec;
       uint16_t           weight;
@@ -79,15 +66,12 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( wait_weight, (wait_sec)(weight) )
    };
 
-   /**
-    * Blockchain authority.
-    *
-    * @details An authority is defined by:
-    * - a vector of key_weights (a key_weight is a public key plus a wieght),
-    * - a vector of permission_level_weights, (a permission_level is an account name plus a permission name)
-    * - a vector of wait_weights (a wait_weight is defined by a number of seconds to wait and a weight)
-    * - a threshold value
-    */
+   // Blockchain authority.
+   // @details An authority is defined by:
+   // - a vector of key_weights (a key_weight is a public key plus a wieght),
+   // - a vector of permission_level_weights, (a permission_level is an account name plus a permission name)
+   // - a vector of wait_weights (a wait_weight is defined by a number of seconds to wait and a weight)
+   // - a threshold value
    struct authority {
       uint32_t                              threshold = 0;
       std::vector<key_weight>               keys;
@@ -98,19 +82,16 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts)(waits) )
    };
 
-   /**
-    * Blockchain block header.
-    *
-    * @details A block header is defined by:
-    * - a timestamp,
-    * - the producer that created it,
-    * - a confirmed flag default as zero,
-    * - a link to previous block,
-    * - a link to the transaction merkel root,
-    * - a link to action root,
-    * - a schedule version,
-    * - and a producers' schedule.
-    */
+   // Blockchain block header.
+   // @details A block header is defined by:
+   // - a timestamp,
+   // - the producer that created it,
+   // - a confirmed flag default as zero,
+   // - a link to previous block,
+   // - a link to the transaction merkel root,
+   // - a link to action root,
+   // - a schedule version,
+   // - and a producers' schedule.
    struct block_header {
       uint32_t                                  timestamp;
       name                                      producer;
@@ -126,13 +107,10 @@ namespace eosiosystem {
                                      (schedule_version)(new_producers))
    };
 
-   /**
-    * abi_hash
-    *
-    * @details abi_hash is the structure underlying the abihash table and consists of:
-    * - `owner`: the account owner of the contract's abi
-    * - `hash`: is the sha256 hash of the abi/binary
-    */
+   // abi_hash
+   // @details abi_hash is the structure underlying the abihash table and consists of:
+   // - `owner`: the account owner of the contract's abi
+   // - `hash`: is the sha256 hash of the abi/binary
    struct [[eosio::table("abihash"), eosio::contract("eosio.system")]] abi_hash {
       name              owner;
       checksum256       hash;
@@ -140,30 +118,21 @@ namespace eosiosystem {
 
       EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
    };
-
-   // Method parameters commented out to prevent generation of code that parses input data.
-   /**
-    * The EOSIO core native contract that governs authorization and contracts' abi.
-    *
-    * @details
-    */
    class [[eosio::contract("eosio.system")]] native : public eosio::contract {
       public:
 
          using eosio::contract::contract;
 
-         /**
-          * @{
-          * These actions map one-on-one with the ones defined in
-          * [Native Action Handlers](@ref native_action_handlers) section.
-          * They are present here so they can show up in the abi file and thus user can send them
-          * to this contract, but they have no specific implementation at this contract level,
-          * they will execute the implementation at the core level and nothing else.
-          */
+         // These actions map one-on-one with the ones defined in
+         // [Native Action Handlers](@ref native_action_handlers) section.
+         // They are present here so they can show up in the abi file and thus user can send them
+         // to this contract, but they have no specific implementation at this contract level,
+         // they will execute the implementation at the core level and nothing else.
+
          /**
           * New account action
           *
-          * @details Called after a new account is created. This code enforces resource-limits rules
+          * Called after a new account is created. This code enforces resource-limits rules
           * for new accounts as well as new account naming conventions.
           *
           * 1. accounts cannot contain '.' symbols which forces all acccounts to be 12
@@ -182,8 +151,6 @@ namespace eosiosystem {
 
          /**
           * Update authorization action.
-          *
-          * @details Updates pemission for an account
           *
           * @param account - the account for which the permission is updated
           * @param pemission - the permission name which is updated
@@ -304,5 +271,4 @@ namespace eosiosystem {
          using setcode_action = eosio::action_wrapper<"setcode"_n, &native::setcode>;
          using setabi_action = eosio::action_wrapper<"setabi"_n, &native::setabi>;
    };
-   /** @}*/ // @addtogroup eosiosystem
 }
