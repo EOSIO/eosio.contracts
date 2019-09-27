@@ -75,7 +75,9 @@ string(REPLACE ";" "|" TEST_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
 string(REPLACE ";" "|" TEST_FRAMEWORK_PATH "${CMAKE_FRAMEWORK_PATH}")
 string(REPLACE ";" "|" TEST_MODULE_PATH "${CMAKE_MODULE_PATH}")
 
-set(BUILD_TESTS FALSE CACHE BOOL "Build unit tests")
+set(BUILD_TESTS FALSE CACHE BOOL "Build unit tests, which should have been integration tests, 
+   but are left here named unit tests, so that the newer correctly-named integration tests,
+   don't have a name conflict")
 
 if(BUILD_TESTS)
    message(STATUS "Building unit tests.")
@@ -91,4 +93,22 @@ if(BUILD_TESTS)
    )
 else()
    message(STATUS "Unit tests will not be built. To build unit tests, set BUILD_TESTS to true.")
+endif()
+
+set(BUILD_INTEGRATION_TESTS FALSE CACHE BOOL "Build integration tests")
+
+if(BUILD_INTEGRATION_TESTS)
+   ExternalProject_Add(
+      integration-tests
+      SOURCE_DIR ${CMAKE_SOURCE_DIR}/integration-tests
+      BINARY_DIR ${CMAKE_BINARY_DIR}/integration-tests
+      CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${EOSIO_CDT_ROOT}/lib/cmake/eosio.cdt/EosioWasmToolchain.cmake
+      UPDATE_COMMAND ""
+      PATCH_COMMAND ""
+      TEST_COMMAND ""
+      INSTALL_COMMAND ""
+      BUILD_ALWAYS 1
+   )
+else()
+   message(STATUS "Integration tests will not be built. To build integration tests, set BUILD_INTEGRATION_TESTS to true.")
 endif()
