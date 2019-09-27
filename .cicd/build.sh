@@ -1,4 +1,5 @@
 #!/bin/bash
+# This change will test PR builds on Buildkite.
 set -eo pipefail
 . ./.cicd/helpers/buildkite.sh
 . ./.cicd/helpers/general.sh
