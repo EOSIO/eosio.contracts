@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(eosio_contracts)
 
 set(VERSION_MAJOR 1)
-set(VERSION_MINOR 8)
+set(VERSION_MINOR 9)
 set(VERSION_PATCH 0)
 set(VERSION_SUFFIX rc1)
 
@@ -19,8 +19,8 @@ find_package(eosio.cdt)
 
 message(STATUS "Building eosio.contracts v${VERSION_FULL}")
 
-set(EOSIO_CDT_VERSION_MIN "1.6")
-set(EOSIO_CDT_VERSION_SOFT_MAX "1.6")
+set(EOSIO_CDT_VERSION_MIN "1.7")
+set(EOSIO_CDT_VERSION_SOFT_MAX "1.7")
 #set(EOSIO_CDT_VERSION_HARD_MAX "")
 
 ### Check the version of eosio.cdt

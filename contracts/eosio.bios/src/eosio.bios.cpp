@@ -1,6 +1,6 @@
 #include <eosio.bios/eosio.bios.hpp>
 
-namespace eosio {
+namespace eosiobios {
 
 void bios::setabi( name account, const std::vector<char>& abi ) {
    abi_hash_table table(get_self(), get_self().value);
@@ -8,11 +8,11 @@ void bios::setabi( name account, const std::vector<char>& abi ) {
    if( itr == table.end() ) {
       table.emplace( account, [&]( auto& row ) {
          row.owner = account;
-         row.hash  = sha256(const_cast<char*>(abi.data()), abi.size());
+         row.hash  = eosio::sha256(const_cast<char*>(abi.data()), abi.size());
       });
    } else {
-      table.modify( itr, same_payer, [&]( auto& row ) {
-         row.hash = sha256(const_cast<char*>(abi.data()), abi.size());
+      table.modify( itr, eosio::same_payer, [&]( auto& row ) {
+         row.hash = eosio::sha256(const_cast<char*>(abi.data()), abi.size());
       });
    }
 }
