@@ -1,7 +1,9 @@
 #pragma once
 
 #include <eosio/asset.hpp>
+#include <eosio/binary_extension.hpp>
 #include <eosio/privileged.hpp>
+#include <eosio/producer_schedule.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
@@ -210,19 +212,20 @@ namespace eosiosystem {
     * Defines `producer_info` structure to be stored in `producer_info` table, added after version 1.0
     */
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
-      name                  owner;
-      double                total_votes = 0;
-      eosio::public_key     producer_key; /// a packed public key object
-      bool                  is_active = true;
-      std::string           url;
-      uint32_t              unpaid_blocks = 0;
-      time_point            last_claim_time;
-      uint16_t              location = 0;
+      name                                                     owner;
+      double                                                   total_votes = 0;
+      eosio::public_key                                        producer_key; /// a packed public key object
+      bool                                                     is_active = true;
+      std::string                                              url;
+      uint32_t                                                 unpaid_blocks = 0;
+      time_point                                               last_claim_time;
+      uint16_t                                                 location = 0;
+      eosio::binary_extension<eosio::block_signing_authority>  producer_authority; // added in version 1.9.0
 
       uint64_t primary_key()const { return owner.value;                             }
       double   by_votes()const    { return is_active ? -total_votes : total_votes;  }
       bool     active()const      { return is_active;                               }
-      void     deactivate()       { producer_key = public_key(); is_active = false; }
+      void     deactivate()       { producer_key = public_key(); producer_authority.reset(); is_active = false; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
@@ -1083,12 +1086,29 @@ namespace eosiosystem {
           * @param url - the url of the block producer, normally the url of the block producer presentation website,
           * @param location - is the country code as defined in the ISO 3166, https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
           *
-          * @pre Producer is not already registered
           * @pre Producer to register is an account
           * @pre Authority of producer to register
           */
          [[eosio::action]]
          void regproducer( const name& producer, const public_key& producer_key, const std::string& url, uint16_t location );
+
+         /**
+          * Register producer action.
+          *
+          * @details Register producer action, indicates that a particular account wishes to become a producer,
+          * this action will create a `producer_config` and a `producer_info` object for `producer` scope
+          * in producers tables.
+          *
+          * @param producer - account registering to be a producer candidate,
+          * @param producer_authority - the weighted threshold multisig block signing authority of the block producer used to sign blocks,
+          * @param url - the url of the block producer, normally the url of the block producer presentation website,
+          * @param location - is the country code as defined in the ISO 3166, https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
+          *
+          * @pre Producer to register is an account
+          * @pre Authority of producer to register
+          */
+         [[eosio::action]]
+         void regproducer2( const name& producer, const eosio::block_signing_authority& producer_authority, const std::string& url, uint16_t location );
 
          /**
           * Unregister producer action.
@@ -1316,6 +1336,7 @@ namespace eosiosystem {
          using sellram_action = eosio::action_wrapper<"sellram"_n, &system_contract::sellram>;
          using refund_action = eosio::action_wrapper<"refund"_n, &system_contract::refund>;
          using regproducer_action = eosio::action_wrapper<"regproducer"_n, &system_contract::regproducer>;
+         using regproducer2_action = eosio::action_wrapper<"regproducer2"_n, &system_contract::regproducer2>;
          using unregprod_action = eosio::action_wrapper<"unregprod"_n, &system_contract::unregprod>;
          using setram_action = eosio::action_wrapper<"setram"_n, &system_contract::setram>;
          using setramrate_action = eosio::action_wrapper<"setramrate"_n, &system_contract::setramrate>;
@@ -1386,7 +1407,8 @@ namespace eosiosystem {
                         const asset& stake_net_quantity, const asset& stake_cpu_quantity, bool transfer );
          void update_voting_power( const name& voter, const asset& total_update );
 
-         // defined in voting.hpp
+         // defined in voting.cpp
+         void register_producer( const name& producer, const eosio::block_signing_authority& producer_authority, const std::string& url, uint16_t location );
          void update_elected_producers( const block_timestamp& timestamp );
          void update_votes( const name& voter, const name& proxy, const std::vector<name>& producers, bool voting );
          void propagate_weight_change( const voter_info& voter );

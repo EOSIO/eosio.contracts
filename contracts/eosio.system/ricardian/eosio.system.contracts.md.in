@@ -309,6 +309,30 @@ icon: @ICON_BASE_URL@/@VOTING_ICON_URI@
 
 Register {{producer}} account as a block producer candidate.
 
+URL: {{url}}
+Location code: {{location}}
+Block signing key: {{producer_key}}
+
+## Block Producer Agreement
+{{$clauses.BlockProducerAgreement}}
+
+<h1 class="contract">regproducer2</h1>
+
+---
+spec_version: "0.2.0"
+title: Register as a Block Producer Candidate
+summary: 'Register {{nowrap producer}} account as a block producer candidate'
+icon: @ICON_BASE_URL@/@VOTING_ICON_URI@
+---
+
+Register {{producer}} account as a block producer candidate.
+
+URL: {{url}}
+Location code: {{location}}
+Block signing authority:
+{{to_json producer_authority}}
+
+## Block Producer Agreement
 {{$clauses.BlockProducerAgreement}}
 
 <h1 class="contract">regproxy</h1>
