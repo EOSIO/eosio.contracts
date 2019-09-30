@@ -96,7 +96,7 @@ namespace eosiosystem {
 
       check( producer_key.index() < 2, "currently only K1 and R1 producer keys are supported" );
       check( !is_null_key( producer_key ), "public key should not be the default value" );
-      check_permission_authorization( null_account, active_permission, {} ); // aborts transaction if native side cannot unpack producer_key
+      check_permission_authorization( null_account, active_permission, {producer_key} ); // aborts transaction if native side cannot unpack producer_key
 
       register_producer( producer, convert_to_block_signing_authority( producer_key ), url, location );
    }
@@ -105,9 +105,9 @@ namespace eosiosystem {
       require_auth( producer );
       check( url.size() < 512, "url too long" );
 
+      std::set<eosio::public_key> unique_keys;
       std::visit( [&](auto&& auth ) {
          uint32_t sum_weights = 0;
-         std::set<eosio::public_key> unique_keys;
 
          for (const auto& kw: auth.keys ) {
             check( kw.key.index() < 2, "currently only K1 and R1 producer keys are supported" );
@@ -127,6 +127,7 @@ namespace eosiosystem {
          check( sum_weights >= auth.threshold, "producer authority is unsatisfiable" );
       }, producer_authority );
 
+      check_permission_authorization( null_account, active_permission, unique_keys ); // aborts transaction if native side cannot unpack all of the keys
 
       register_producer( producer, producer_authority, url, location );
    }
