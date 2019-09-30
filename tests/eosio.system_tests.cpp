@@ -803,6 +803,89 @@ BOOST_FIXTURE_TEST_CASE( producer_register_unregister, eosio_system_tester ) try
 } FC_LOG_AND_RETHROW()
 
 
+BOOST_FIXTURE_TEST_CASE( producer_wtmsig, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   BOOST_REQUIRE_EQUAL( control->active_producers().version, 0u );
+
+   issue_and_transfer( N(alice1111111), core_sym::from_string("200000000.0000"),  config::system_account_name );
+   block_signing_authority_v0 alice_signing_authority;
+   alice_signing_authority.threshold = 1;
+   alice_signing_authority.keys.push_back( {.key = get_public_key( N(alice1111111), "bs1"), .weight = 1} );
+   alice_signing_authority.keys.push_back( {.key = get_public_key( N(alice1111111), "bs2"), .weight = 1} );
+   producer_authority alice_producer_authority = {.producer_name = N(alice1111111), .authority = alice_signing_authority};
+   BOOST_REQUIRE_EQUAL( success(), push_action( N(alice1111111), N(regproducer2), mvo()
+                                               ("producer",  "alice1111111")
+                                               ("producer_authority", alice_producer_authority.get_abi_variant()["authority"])
+                                               ("url", "http://block.one")
+                                               ("location", 0 )
+                        )
+   );
+   BOOST_REQUIRE_EQUAL( success(), stake( N(alice1111111), core_sym::from_string("100000000.0000"), core_sym::from_string("100000000.0000") ) );
+   BOOST_REQUIRE_EQUAL( success(), vote( N(alice1111111), { N(alice1111111) } ) );
+
+   block_signing_private_keys.emplace(get_public_key(N(alice1111111), "bs1"), get_private_key(N(alice1111111), "bs1"));
+
+   auto alice_prod_info = get_producer_info( N(alice1111111) );
+   wdump((alice_prod_info));
+   BOOST_REQUIRE_EQUAL( alice_prod_info["is_active"], true );
+
+   produce_block();
+   produce_block( fc::minutes(2) );
+   produce_blocks(2);
+   BOOST_REQUIRE_EQUAL( control->active_producers().version, 1u );
+   produce_block();
+   BOOST_REQUIRE_EQUAL( control->pending_block_producer(), N(alice1111111) );
+   produce_block();
+
+   alice_signing_authority.threshold = 0;
+   alice_producer_authority.authority = alice_signing_authority;
+
+   BOOST_REQUIRE_EQUAL( error("assertion failure with message: producer authority has a threshold of 0"),
+                        push_action( N(alice1111111), N(regproducer2), mvo()
+                                       ("producer",  "alice1111111")
+                                       ("producer_authority", alice_producer_authority.get_abi_variant()["authority"])
+                                       ("url", "http://block.one")
+                                       ("location", 0 )
+                        )
+   );
+
+   alice_signing_authority.threshold = 3;
+   alice_producer_authority.authority = alice_signing_authority;
+   BOOST_REQUIRE_EQUAL( error("assertion failure with message: producer authority is unsatisfiable"),
+                        push_action( N(alice1111111), N(regproducer2), mvo()
+                                       ("producer",  "alice1111111")
+                                       ("producer_authority", alice_producer_authority.get_abi_variant()["authority"])
+                                       ("url", "http://block.one")
+                                       ("location", 0 )
+                        )
+   );
+
+   alice_signing_authority.threshold = 1;
+   alice_signing_authority.keys[1] = alice_signing_authority.keys[0];
+   alice_producer_authority.authority = alice_signing_authority;
+   BOOST_REQUIRE_EQUAL( error("assertion failure with message: producer authority includes a duplicated key"),
+                        push_action( N(alice1111111), N(regproducer2), mvo()
+                                       ("producer",  "alice1111111")
+                                       ("producer_authority", alice_producer_authority.get_abi_variant()["authority"])
+                                       ("url", "http://block.one")
+                                       ("location", 0 )
+                        )
+   );
+
+   alice_signing_authority.keys[1] = {};
+   alice_producer_authority.authority = alice_signing_authority;
+   BOOST_REQUIRE_EQUAL( error("assertion failure with message: producer authority includes an invalid key"),
+                        push_action( N(alice1111111), N(regproducer2), mvo()
+                                       ("producer",  "alice1111111")
+                                       ("producer_authority", alice_producer_authority.get_abi_variant()["authority"])
+                                       ("url", "http://block.one")
+                                       ("location", 0 )
+                        )
+   );
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE( vote_for_producer, eosio_system_tester, * boost::unit_test::tolerance(1e+5) ) try {
    cross_15_percent_threshold();
 
