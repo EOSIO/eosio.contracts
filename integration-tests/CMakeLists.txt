@@ -22,4 +22,5 @@ function(add_test TARGET SRC)
      RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endfunction()
 
+add_test(eosio.msig-tests eosio.msig-tests.cpp)
 add_test(eosio.token-tests eosio.token-tests.cpp)

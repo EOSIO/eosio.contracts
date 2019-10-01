@@ -73,4 +73,6 @@ NamespaceIndentation: Inner
 ReflowComments: true
 SortIncludes: true
 SortUsingDeclarations: true
+
+ReflowComments: false
 ---
