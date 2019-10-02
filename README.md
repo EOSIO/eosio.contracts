@@ -16,7 +16,7 @@ The following unprivileged contract(s) are also part of the system.
 
 Dependencies:
 * [eosio.cdt v1.7.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.7.0-rc1)
-* [eosio v1.8.x](https://github.com/EOSIO/eos/releases/tag/v1.8.1) (optional dependency only needed to build unit tests)
+* [eosio v2.0.x](https://github.com/EOSIO/eos/releases/tag/v2.0.0-rc1) (optional dependency only needed to build unit tests)
 
 To build contracts alone:
 1. Ensure an appropriate version of eosio.cdt is installed. Installing eosio.cdt from binaries is sufficient.
