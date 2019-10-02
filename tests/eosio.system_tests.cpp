@@ -841,7 +841,8 @@ BOOST_FIXTURE_TEST_CASE( producer_wtmsig, eosio_system_tester ) try {
    alice_signing_authority.threshold = 0;
    alice_producer_authority.authority = alice_signing_authority;
 
-   BOOST_REQUIRE_EQUAL( error("assertion failure with message: producer authority has a threshold of 0"),
+   // Ensure an authority with a threshold of 0 is rejected.
+   BOOST_REQUIRE_EQUAL( error("assertion failure with message: invalid producer authority"),
                         push_action( N(alice1111111), N(regproducer2), mvo()
                                        ("producer",  "alice1111111")
                                        ("producer_authority", alice_producer_authority.get_abi_variant()["authority"])
@@ -850,9 +851,10 @@ BOOST_FIXTURE_TEST_CASE( producer_wtmsig, eosio_system_tester ) try {
                         )
    );
 
+   // Ensure an authority that is not satisfiable is rejected.
    alice_signing_authority.threshold = 3;
    alice_producer_authority.authority = alice_signing_authority;
-   BOOST_REQUIRE_EQUAL( error("assertion failure with message: producer authority is unsatisfiable"),
+   BOOST_REQUIRE_EQUAL( error("assertion failure with message: invalid producer authority"),
                         push_action( N(alice1111111), N(regproducer2), mvo()
                                        ("producer",  "alice1111111")
                                        ("producer_authority", alice_producer_authority.get_abi_variant()["authority"])
@@ -861,10 +863,11 @@ BOOST_FIXTURE_TEST_CASE( producer_wtmsig, eosio_system_tester ) try {
                         )
    );
 
+   // Ensure an authority with duplicate keys is rejected.
    alice_signing_authority.threshold = 1;
    alice_signing_authority.keys[1] = alice_signing_authority.keys[0];
    alice_producer_authority.authority = alice_signing_authority;
-   BOOST_REQUIRE_EQUAL( error("assertion failure with message: producer authority includes a duplicated key"),
+   BOOST_REQUIRE_EQUAL( error("assertion failure with message: invalid producer authority"),
                         push_action( N(alice1111111), N(regproducer2), mvo()
                                        ("producer",  "alice1111111")
                                        ("producer_authority", alice_producer_authority.get_abi_variant()["authority"])
@@ -873,9 +876,10 @@ BOOST_FIXTURE_TEST_CASE( producer_wtmsig, eosio_system_tester ) try {
                         )
    );
 
+   // However, an authority with an invalid key is okay.
    alice_signing_authority.keys[1] = {};
    alice_producer_authority.authority = alice_signing_authority;
-   BOOST_REQUIRE_EQUAL( error("assertion failure with message: producer authority includes an invalid key"),
+   BOOST_REQUIRE_EQUAL( success(),
                         push_action( N(alice1111111), N(regproducer2), mvo()
                                        ("producer",  "alice1111111")
                                        ("producer_authority", alice_producer_authority.get_abi_variant()["authority"])
@@ -883,6 +887,14 @@ BOOST_FIXTURE_TEST_CASE( producer_wtmsig, eosio_system_tester ) try {
                                        ("location", 0 )
                         )
    );
+
+   produce_block();
+   produce_block( fc::minutes(2) );
+   produce_blocks(2);
+   BOOST_REQUIRE_EQUAL( control->active_producers().version, 2u );
+   produce_block();
+   BOOST_REQUIRE_EQUAL( control->pending_block_producer(), N(alice1111111) );
+   produce_block();
 
 } FC_LOG_AND_RETHROW()
 

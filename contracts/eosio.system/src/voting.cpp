@@ -28,16 +28,6 @@ namespace eosiosystem {
       return eosio::block_signing_authority_v0{ .threshold = 1, .keys = {{producer_key, 1}} };
    }
 
-   template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-   template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
-   bool is_null_key( const eosio::public_key& pub_key ) {
-      return std::visit( overloaded{
-         []( const eosio::ecc_public_key& k ) { return (k == eosio::ecc_public_key{}); },
-         []( const eosio::webauthn_public_key& k ) { return (k.key == eosio::ecc_public_key{}); }
-      }, pub_key );
-   }
-
    void system_contract::register_producer( const name& producer, const eosio::block_signing_authority& producer_authority, const std::string& url, uint16_t location ) {
       auto prod = _producers.find( producer.value );
       const auto ct = current_time_point();
@@ -94,9 +84,6 @@ namespace eosiosystem {
       require_auth( producer );
       check( url.size() < 512, "url too long" );
 
-      check( producer_key.index() < 2, "currently only K1 and R1 producer keys are supported" );
-      check( !is_null_key( producer_key ), "public key should not be the default value" );
-
       register_producer( producer, convert_to_block_signing_authority( producer_key ), url, location );
    }
 
@@ -104,26 +91,8 @@ namespace eosiosystem {
       require_auth( producer );
       check( url.size() < 512, "url too long" );
 
-      std::set<eosio::public_key> unique_keys;
       std::visit( [&](auto&& auth ) {
-         uint32_t sum_weights = 0;
-
-         for (const auto& kw: auth.keys ) {
-            check( kw.key.index() < 2, "currently only K1 and R1 producer keys are supported" );
-            check( !is_null_key( kw.key ), "producer authority includes an invalid key" );
-
-            if( std::numeric_limits<uint32_t>::max() - sum_weights <= kw.weight ) {
-               sum_weights = std::numeric_limits<uint32_t>::max();
-            } else {
-               sum_weights += kw.weight;
-            }
-
-            unique_keys.insert(kw.key);
-         }
-
-         check( auth.keys.size() == unique_keys.size(), "producer authority includes a duplicated key" );
-         check( auth.threshold > 0, "producer authority has a threshold of 0" );
-         check( sum_weights >= auth.threshold, "producer authority is unsatisfiable" );
+         check( auth.is_valid(), "invalid producer authority" );
       }, producer_authority );
 
       register_producer( producer, producer_authority, url, location );
