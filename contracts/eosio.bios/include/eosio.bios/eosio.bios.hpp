@@ -315,7 +315,7 @@ namespace eosiobios {
           * @param schedule - New list of active producers to set
           */
          [[eosio::action]]
-         void setprods( std::vector<eosio::producer_key> schedule );
+         void setprods( const std::vector<eosio::producer_authority>& schedule );
 
          /**
           * Set the blockchain parameters
