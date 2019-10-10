@@ -1,5 +1,3 @@
-# eosio.wrap
-
 ## 1. Installing the eosio.wrap contract
 
 The eosio.wrap contract needs to be installed on a privileged account to function. It is recommended to use the account `eosio.wrap`.

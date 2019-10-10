@@ -125,15 +125,12 @@ namespace eosio {
       public:
          using contract::contract;
          // These actions map one-on-one with the ones defined in
-         // [Native Action Handlers](@ref native_action_handlers) section.
          // They are present here so they can show up in the abi file and thus user can send them
          // to this contract, but they have no specific implementation at this contract level,
          // they will execute the implementation at the core level and nothing else.
 
          /**
-          * New account action
-          *
-          * @details Used to create new accounts. This code enforces resource-limits rules
+          * Used to create new accounts. This code enforces resource-limits rules
           * for new accounts as well as new account naming conventions.
           *
           * @param creator - The accountname of the creator. An account must be created from an existing account.
@@ -147,14 +144,12 @@ namespace eosio {
                           ignore<authority> owner,
                           ignore<authority> active){}
          /**
-          * Update authorization action.
-          *
-          * @details Updates pemission for an account.
+          * Updates pemission for an account.
           *
           * @param account - the account for which the permission is updated,
-          * @param pemission - the permission name which is updated,
-          * @param parem - the parent of the permission which is updated,
-          * @param aut - the json describing the permission authorization.
+          * @param permission - the permission name which is updated,
+          * @param parent- the parent of the permission which is updated,
+          * @param auth - the json describing the permission authorization.
           */
          [[eosio::action]]
          void updateauth(  ignore<name>  account,
@@ -163,9 +158,7 @@ namespace eosio {
                            ignore<authority> auth ) {}
 
          /**
-          * Delete authorization action.
-          *
-          * @details Deletes the authorization for an account's permision.
+          * Deletes the authorization for an account's permision.
           *
           * @param account - the account for which the permission authorization is deleted,
           * @param permission - the permission name been deleted.
@@ -175,9 +168,7 @@ namespace eosio {
                           ignore<name>  permission ) {}
 
          /**
-          * Link authorization action.
-          *
-          * @details Assigns a specific action from a contract to a permission you have created. Five system
+          * Assigns a specific action from a contract to a permission you have created. Five system
           * actions can not be linked `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, and `canceldelay`.
           * This is useful because when doing authorization checks, the EOSIO based blockchain starts with the
           * action needed to be authorized (and the contract belonging to), and looks up which permission
@@ -187,7 +178,7 @@ namespace eosio {
           * and that will make it so linked actions are accessible to any permissions defined for the account.
           *
           * @param account - the permission's owner to be linked and the payer of the RAM needed to store this link,
-          * @param code - the owner of the action to be linked,
+          * @param code - the account_name of the action to be linked,
           * @param type - the action to be linked,
           * @param requirement - the permission to be linked.
           */
@@ -198,12 +189,10 @@ namespace eosio {
                          ignore<name>    requirement  ) {}
 
          /**
-          * Unlink authorization action.
-          *
-          * @details It's doing the reverse of linkauth action, by unlinking the given action.
+          * Unlink authorization action for an account from a .
           *
           * @param account - the owner of the permission to be unlinked and the receiver of the freed RAM,
-          * @param code - the owner of the action to be unlinked,
+          * @param code - the account_name of the action to be unlinked,
           * @param type - the action to be unlinked.
           */
          [[eosio::action]]
@@ -212,9 +201,7 @@ namespace eosio {
                           ignore<name>  type ) {}
 
          /**
-          * Cancel delay action.
-          *
-          * @details Cancels a deferred transaction.
+          * Cancels a deferred transaction.
           *
           * @param canceling_auth - the permission that authorizes this action,
           * @param trx_id - the deferred transaction id to be cancelled.
@@ -223,9 +210,7 @@ namespace eosio {
          void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
 
          /**
-          * Set code action.
-          *
-          * @details Sets the contract code for an account.
+          * Sets the contract code for an account.
           *
           * @param account - the account for which to set the contract code.
           * @param vmtype - reserved, set it to zero.
@@ -235,12 +220,8 @@ namespace eosio {
          [[eosio::action]]
          void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
 
-         /** @}*/
-
          /**
-          * Set abi for contract.
-          *
-          * @details Set the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
+          * Set abi for contract. Set the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
           * index, with `account` name as key, if it is not already present and sets its value with the abi hash.
           * Otherwise it is updating the current abi hash value for the existing `account` key.
           *
@@ -251,9 +232,7 @@ namespace eosio {
          void setabi( name account, const std::vector<char>& abi );
 
          /**
-          * On error action.
-          *
-          * @details Notification of this action is delivered to the sender of a deferred transaction
+          * On error action. Notification of this action is delivered to the sender of a deferred transaction
           * when an objective error occurs while executing the deferred transaction.
           * This action is not meant to be called directly.
           *
@@ -264,9 +243,8 @@ namespace eosio {
          void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
 
          /**
-          * Set privilege status for an account.
+          * Set privilege status for an account (turn it on/off).
           *
-          * @details Allows to set privilege status for an account (turn it on/off).
           * @param account - the account to set the privileged status for.
           * @param is_priv - 0 for false, > 0 for true.
           */
@@ -275,8 +253,6 @@ namespace eosio {
 
          /**
           * Set the resource limits of an account
-          *
-          * @details Set the resource limits of an account
           *
           * @param account - name of the account whose resource limit to be set
           * @param ram_bytes - ram limit in absolute bytes
@@ -287,9 +263,7 @@ namespace eosio {
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
 
          /**
-          * Set a new list of active producers, that is, a new producers' schedule.
-          *
-          * @details Set a new list of active producers, by proposing a schedule change, once the block that
+          * Set a new list of active producers, by proposing a schedule change, once the block that
           * contains the proposal becomes irreversible, the schedule is promoted to "pending"
           * automatically. Once the block that promotes the schedule is irreversible, the schedule will
           * become "active".
@@ -321,9 +295,7 @@ namespace eosio {
          void reqauth( name from );
 
          /**
-          * Activates a protocol feature.
-          *
-          * @details Activates a protocol feature
+          * Activates a protocol feature
           *
           * @param feature_digest - hash of the protocol feature to activate.
           */
@@ -331,17 +303,14 @@ namespace eosio {
          void activate( const eosio::checksum256& feature_digest );
 
          /**
-          * Asserts that a protocol feature has been activated.
-          *
-          * @details Asserts that a protocol feature has been activated
+          * Asserts that a protocol feature has been activated
           *
           * @param feature_digest - hash of the protocol feature to check for activation.
           */
          [[eosio::action]]
          void reqactivated( const eosio::checksum256& feature_digest );
 
-         // Abi hash structure
-         // @details Abi hash structure is defined by contract owner and the contract hash.
+         //  Abi hash structure is defined by contract owner and the contract hash.
          struct [[eosio::table]] abi_hash {
             name              owner;
             checksum256       hash;

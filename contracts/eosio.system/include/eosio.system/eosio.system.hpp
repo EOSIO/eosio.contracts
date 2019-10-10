@@ -557,6 +557,9 @@ namespace eosiosystem {
          /**
           * Delegate bandwidth and/or cpu action. Stakes SYS from the balance of `from` for the benefit of `receiver`.
           *
+          * **Postconditions:**
+          * - All producers `from` account has voted for will have their votes updated immediately.
+          *
           * @param from - the account to delegate bandwidth from, that is, the account holding
           *    tokens to be staked,
           * @param receiver - the account to delegate bandwith to, that is, the account to
@@ -564,17 +567,13 @@ namespace eosiosystem {
           * @param stake_net_quantity - tokens staked for NET bandwidth,
           * @param stake_cpu_quantity - tokens staked for CPU bandwidth,
           * @param transfer - if true, ownership of staked tokens is transfered to `receiver`.
-          *
-          * @post All producers `from` account has voted for will have their votes updated immediately.
           */
          [[eosio::action]]
          void delegatebw( const name& from, const name& receiver,
                           const asset& stake_net_quantity, const asset& stake_cpu_quantity, bool transfer );
 
          /**
-          * Setrex action.
-          *
-          * @details Sets total_rent balance of REX pool to the passed value.
+          * Sets total_rent balance of REX pool to the passed value.
           * @param balance - amount to set the REX pool balance.
           */
          [[eosio::action]]
@@ -595,10 +594,7 @@ namespace eosiosystem {
          void deposit( const name& owner, const asset& amount );
 
          /**
-          * Withdraw from REX fund action.
-          *
-          * @details Withdraws core tokens from user REX fund.
-          * An inline token transfer to user balance is executed.
+          * Withdraws core tokens from user REX fund. An inline token transfer to user balance is executed.
           *
           * @param owner - REX fund owner account,
           * @param amount - amount of tokens to be withdrawn.
@@ -612,34 +608,37 @@ namespace eosiosystem {
           * lending tokens in order to be rented as CPU or NET resourses.
           * Storage change is billed to 'from' account.
           *
+          * **Preconditions:**
+          * - A voting requirement must be satisfied before action can be executed.
+          * - User must vote for at least 21 producers or delegate vote to proxy before buying REX.
+          *
+          * **Postconditions:**
+          * - User votes are updated following this action.
+          * - Tokens used in purchase are added to user's voting power.
+          * - Bought REX cannot be sold before 4 days counting from end of day of purchase.
+          *
           * @param from - owner account name,
           * @param amount - amount of tokens taken out of 'from' REX fund.
-          *
-          * @pre A voting requirement must be satisfied before action can be executed.
-          * @pre User must vote for at least 21 producers or delegate vote to proxy before buying REX.
-          *
-          * @post User votes are updated following this action.
-          * @post Tokens used in purchase are added to user's voting power.
-          * @post Bought REX cannot be sold before 4 days counting from end of day of purchase.
           */
          [[eosio::action]]
          void buyrex( const name& from, const asset& amount );
 
          /**
-          * Unstaketorex action. Use staked core tokens to buy REX.
-          * Storage change is billed to 'owner' account.
+          * Unstaketorex action. Use staked core tokens to buy REX. Storage change is billed to 'owner' account.
+          *
+          * **Preconditions:**
+          * - A voting requirement must be satisfied before action can be executed.
+          * - User must vote for at least 21 producers or delegate vote to proxy before buying REX.
+          *
+          * **Postconditions:**
+          * - User votes are updated following this action.
+          * - Tokens used in purchase are added to user's voting power.
+          * - Bought REX cannot be sold before 4 days counting from end of day of purchase.
           *
           * @param owner - owner of staked tokens,
           * @param receiver - account name that tokens have previously been staked to,
           * @param from_net - amount of tokens to be unstaked from NET bandwidth and used for REX purchase,
           * @param from_cpu - amount of tokens to be unstaked from CPU bandwidth and used for REX purchase.
-          *
-          * @pre A voting requirement must be satisfied before action can be executed.
-          * @pre User must vote for at least 21 producers or delegate vote to proxy before buying REX.
-          *
-          * @post User votes are updated following this action.
-          * @post Tokens used in purchase are added to user's voting power.
-          * @post Bought REX cannot be sold before 4 days counting from end of day of purchase.
           */
          [[eosio::action]]
          void unstaketorex( const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu );
@@ -658,11 +657,9 @@ namespace eosiosystem {
          void sellrex( const name& from, const asset& rex );
 
          /**
-          * Cnclrexorder action. Cancels unfilled REX sell order by owner if one exists.
+          * Cnclrexorder action. Cancels unfilled REX sell order by owner if one exists. An Order cannot be cancelled once it's been filled.
           *
-          * @param owner - owner account name.
-          *
-          * @pre Order cannot be cancelled once it's been filled.
+          * @param owner - owner account name
           */
          [[eosio::action]]
          void cnclrexorder( const name& owner );
@@ -672,8 +669,7 @@ namespace eosiosystem {
           * stake them for CPU for the benefit of receiver, after 30 days the rented core delegation of CPU
           * will expire. At expiration, if balance is greater than or equal to `loan_payment`, `loan_payment`
           * is taken out of loan balance and used to renew the loan. Otherwise, the loan is closed and user
-          * is refunded any remaining balance.
-          * Owner can fund or refund a loan at any time before its expiration.
+          * is refunded any remaining balance. Owner can fund or refund a loan at any time before its expiration.
           * All loan expenses and refunds come out of or are added to owner's REX fund.
           *
           * @param from - account creating and paying for CPU loan, 'from' account can add tokens to loan
@@ -804,9 +800,9 @@ namespace eosiosystem {
           *
           * @param owner - user account name.
           *
-          * @pre If owner has a non-zero REX balance, the action fails; otherwise,
+          * - If owner has a non-zero REX balance, the action fails; otherwise,
           *    owner REX balance entry is deleted.
-          * @pre If owner has no outstanding loans and a zero REX fund balance,
+          * - If owner has no outstanding loans and a zero REX fund balance,
           *    REX fund entry is deleted.
           */
          [[eosio::action]]
@@ -825,6 +821,14 @@ namespace eosiosystem {
           * The `from` account loses voting power as a result of this call and
           * all producer tallies are updated.
           *
+          * **Postconditions:**
+          * - Unstaked tokens are transferred to `from` liquid balance via a
+          *    deferred transaction with a delay of 3 days.
+          * - If called during the delay period of a previous `undelegatebw`
+          *    action, pending action is canceled and timer is reset.
+          * - All producers `from` account has voted for will have their votes updated immediately.
+          * - Bandwidth and storage for the deferred transaction are billed to `from`.
+          *
           * @param from - the account to undelegate bandwidth from, that is,
           *    the account whose tokens will be unstaked,
           * @param receiver - the account to undelegate bandwith to, that is,
@@ -832,12 +836,7 @@ namespace eosiosystem {
           * @param unstake_net_quantity - tokens to be unstaked from NET bandwidth,
           * @param unstake_cpu_quantity - tokens to be unstaked from CPU bandwidth,
           *
-          * @post Unstaked tokens are transferred to `from` liquid balance via a
-          *    deferred transaction with a delay of 3 days.
-          * @post If called during the delay period of a previous `undelegatebw`
-          *    action, pending action is canceled and timer is reset.
-          * @post All producers `from` account has voted for will have their votes updated immediately.
-          * @post Bandwidth and storage for the deferred transaction are billed to `from`.
+
           */
          [[eosio::action]]
          void undelegatebw( const name& from, const name& receiver,
@@ -892,14 +891,15 @@ namespace eosiosystem {
           * this action will create a `producer_config` and a `producer_info` object for `producer` scope
           * in producers tables.
           *
+          * **Preconditions:**
+          * - Producer is not already registered
+          * - Producer to register is an account
+          * - Authority of producer to register
+          *
           * @param producer - account registering to be a producer candidate,
           * @param producer_key - the public key of the block producer, this is the key used by block producer to sign blocks,
           * @param url - the url of the block producer, normally the url of the block producer presentation website,
           * @param location - is the country code as defined in the ISO 3166, https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
-          *
-          * @pre Producer is not already registered
-          * @pre Producer to register is an account
-          * @pre Authority of producer to register
           */
          [[eosio::action]]
          void regproducer( const name& producer, const public_key& producer_key, const std::string& url, uint16_t location );
@@ -934,22 +934,25 @@ namespace eosiosystem {
           * proxy updates their own vote. Voter can vote for a proxy __or__ a list of at most 30 producers.
           * Storage change is billed to `voter`.
           *
+          * **Preconditions:**
+          * - Producers must be sorted from lowest to highest and must be registered and active
+          * - If proxy is set then no producers can be voted for
+          * - If proxy is set then proxy account must exist and be registered as a proxy
+          * - Every listed producer or proxy must have been previously registered
+          * - Voter must authorize this action
+          *-  Voter must have previously staked some EOS for voting
+          * - Voter->staked must be up to date
+          *
+          * **Postconditions:**
+          * - Every producer previously voted for will have vote reduced by previous vote weight
+          * - Every producer newly voted for will have vote increased by new vote amount
+          * - Prior proxy will proxied_vote_weight decremented by previous vote weight
+          * - New proxy will proxied_vote_weight incremented by new vote weight
+          *
           * @param voter - the account to change the voted producers for,
           * @param proxy - the proxy to change the voted producers for,
           * @param producers - the list of producers to vote for, a maximum of 30 producers is allowed.
           *
-          * @pre Producers must be sorted from lowest to highest and must be registered and active
-          * @pre If proxy is set then no producers can be voted for
-          * @pre If proxy is set then proxy account must exist and be registered as a proxy
-          * @pre Every listed producer or proxy must have been previously registered
-          * @pre Voter must authorize this action
-          * @pre Voter must have previously staked some EOS for voting
-          * @pre Voter->staked must be up to date
-          *
-          * @post Every producer previously voted for will have vote reduced by previous vote weight
-          * @post Every producer newly voted for will have vote increased by new vote amount
-          * @post Prior proxy will proxied_vote_weight decremented by previous vote weight
-          * @post New proxy will proxied_vote_weight incremented by new vote weight
           */
          [[eosio::action]]
          void voteproducer( const name& voter, const name& proxy, const std::vector<name>& producers );
@@ -961,11 +964,12 @@ namespace eosiosystem {
           * update the proxy's weight.
           * Storage change is billed to `proxy`.
           *
+          * **Preconditions:**
+          * - Proxy must have something staked (existing row in voters table)
+          * - New state must be different than current state
+          *
           * @param rpoxy - the account registering as voter proxy (or unregistering),
           * @param isproxy - if true, proxy is registered; if false, proxy is unregistered.
-          *
-          * @pre Proxy must have something staked (existing row in voters table)
-          * @pre New state must be different than current state
           */
          [[eosio::action]]
          void regproxy( const name& proxy, bool isproxy );
@@ -1002,29 +1006,32 @@ namespace eosiosystem {
 
          /**
           * Update revision action.  Updates the current revision.
-          * @param revision - it has to be incremented by 1 compared with current revision.
           *
-          * @pre Current revision can not be higher than 254, and has to be smaller
-          * than or equal 1 (“set upper bound to greatest revision supported in the code”).
+          * **Preconditions:**
+          * - Current revision can not be higher than 254, and has to be lesser-than or equal 1 (“set upper bound to greatest revision supported in the code”).
+          *
+          * @param revision - it has to be incremented by 1 compared with current revision.
           */
          [[eosio::action]]
          void updtrevision( uint8_t revision );
 
          /**
           * Bid name action. Allows an account `bidder` to place a bid for a name `newname`.
+          *
+          * **Preconditions:**
+          * - Bids can be placed only on top-level suffix,
+          * - Non empty name,
+          * - Names longer than 12 chars are not allowed,
+          * - Names equal with 12 chars can be created without placing a bid,
+          * - Bid has to be bigger than zero,
+          * - Bid's symbol must be system token,
+          * - Bidder account has to be different than current highest bidder,
+          * - Bid must increase current bid by 10%,
+          * - Auction must still be opened.
+          *
           * @param bidder - the account placing the bid,
           * @param newname - the name the bid is placed for,
           * @param bid - the amount of system tokens payed for the bid.
-          *
-          * @pre Bids can be placed only on top-level suffix,
-          * @pre Non empty name,
-          * @pre Names longer than 12 chars are not allowed,
-          * @pre Names equal with 12 chars can be created without placing a bid,
-          * @pre Bid has to be bigger than zero,
-          * @pre Bid's symbol must be system token,
-          * @pre Bidder account has to be different than current highest bidder,
-          * @pre Bid must increase current bid by 10%,
-          * @pre Auction must still be opened.
           */
          [[eosio::action]]
          void bidname( const name& bidder, const name& newname, const asset& bid );

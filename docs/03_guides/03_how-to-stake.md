@@ -1,5 +1,3 @@
-## How to stake tokens for CPU and/or NET bandwidth
-
 You can stake tokens for CPU and/or NET bandwidth using `cleos` command line tool or using a wallet that implements this functionality.
 
 TO DO: verify and correct the next url

@@ -1,5 +1,3 @@
-## eosio.msig examples
-
 ### Cleos usage example for issuing tokens.
 
 #### Prerequisites:
@@ -144,7 +142,7 @@ executed transaction: 475970a4b0016368d0503d1ce01577376f91f5a5ba63dd4353683bd951
 ````
 $ cleos get account tester
 ...
-SYS balances: 
+SYS balances:
      liquid:            1.0487 SYS
      staked:            2.0000 SYS
      unstaking:         0.0000 SYS
@@ -163,7 +161,7 @@ executed transaction: 64e5eaceb77362694055f572ae35876111e87b637a55250de315b1b55e
 ````
 $ cleos get account tester
 ...
-SYS balances: 
+SYS balances:
      liquid:            2.0487 SYS
      staked:            2.0000 SYS
      unstaking:         0.0000 SYS

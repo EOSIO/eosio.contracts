@@ -1,6 +1,4 @@
-## Upgrading the system contract
-
-### Indirect method using eosio.msig contract
+## Indirect method using eosio.msig contract
 
 Cleos currently provides tools to propose an action with the eosio.msig contract, but it does not provide an easy interface to propose a custom transaction.
 
@@ -12,7 +10,7 @@ The disadvantage of the eosio.msig method is that it requires the proposer to ha
 
 For now, it is recommended to use the direct method to upgrade the system contract.
 
-### Direct method (avoids using eosio.msig contract)
+## Direct method (avoids using eosio.msig contract)
 
 Each of the top 21 block producers should do the following:
 
@@ -72,8 +70,6 @@ One of the top block producers should be chosen to lead the upgrade process. Thi
 Then each of the top 21 block producers should do the following:
 
 5. Compare their generated `upgrade_system_contract_official_trx.json` file with the `upgrade_system_contract_official_trx.json` provided by the lead producer. The only difference should be in `expiration`, `ref_block_num`, `ref_block_prefix`, for example:
-
-TO DO: Shouldn't one of the files be upgrade_system_contract_trx.json?
 
 ```
 $ diff upgrade_system_contract_official_trx.json upgrade_system_contract_trx.json

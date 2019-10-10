@@ -24,13 +24,14 @@ namespace eosio {
          /**
           * Allows `issuer` account to create a token in supply of `maximum_supply`. If validation is successful a new entry in statstable for token symbol scope gets created.
           *
+          * Preconditions:
+          * - Token symbol has to be valid,
+          * - Token symbol must not be already created,
+          * - maximum_supply has to be smaller than the maximum supply allowed by the system: $1^62 - 1$
+          * - maximum_supply must be positive
+          *
           * @param issuer - the account that creates the token,
           * @param maximum_supply - the maximum supply set for the token created.
-          *
-          * @pre Token symbol has to be valid,
-          * @pre Token symbol must not be already created,
-          * @pre maximum_supply has to be smaller than the maximum supply allowed by the system: 1^62 - 1.
-          * @pre Maximum supply must be positive;
           */
          [[eosio::action]]
          void create( const name&   issuer,
@@ -96,12 +97,9 @@ namespace eosio {
          [[eosio::action]]
          void close( const name& owner, const symbol& symbol );
 
-         /**
-          * Gets the supply for token `sym_code`, created by `token_contract_account` account.
-          *
-          * @param token_contract_account - the account to get the supply for,
-          * @param sym_code - the symbol to get the supply for.
-          */
+          //Gets the supply for token `sym_code`, created by `token_contract_account` account.
+          //@param token_contract_account - the account to get the supply for,
+          //@param sym_code - the symbol to get the supply for.
          static asset get_supply( const name& token_contract_account, const symbol_code& sym_code )
          {
             stats statstable( token_contract_account, sym_code.raw() );
@@ -109,14 +107,11 @@ namespace eosio {
             return st.supply;
          }
 
-         /**
-          * Get the balance for a token `sym_code` created by `token_contract_account` account,
-          * for account `owner`.
-          *
-          * @param token_contract_account - the token creator account,
-          * @param owner - the account for which the token balance is returned,
-          * @param sym_code - the token for which the balance is returned.
-          */
+          //Get the balance for a token `sym_code` created by `token_contract_account` account,
+          //for account `owner`.
+          //@param token_contract_account - the token creator account,
+          //@param owner - the account for which the token balance is returned,
+          //@param sym_code - the token for which the balance is returned.
          static asset get_balance( const name& token_contract_account, const name& owner, const symbol_code& sym_code )
          {
             accounts accountstable( token_contract_account, owner.value );

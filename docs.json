@@ -17,7 +17,8 @@
           "contracts/eosio.system/include/eosio.system/",
           "contracts/eosio.msig/include/eosio.msig/"
         ],
-        "output_dir": "action-reference"
+        "output_dir": "action-reference",
+        "filter": "/^(?!exchange_state).*/"
       }
     }
   ],

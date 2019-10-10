@@ -1,5 +1,3 @@
-## How buy RAM
-
 You can buy RAM using `cleos` command line tool or using a wallet that implements the buy RAM functionality.
 
 TO DO: verify and correct the next url
