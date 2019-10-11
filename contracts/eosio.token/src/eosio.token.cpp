@@ -28,7 +28,6 @@ void token::issue( const name& to, const asset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
     check( sym.is_valid(), "invalid symbol name" );
-    check( memo.size() <= 256, "memo has more than 256 bytes" );
 
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
@@ -54,7 +53,6 @@ void token::retire( const asset& quantity, const string& memo )
 {
     auto sym = quantity.symbol;
     check( sym.is_valid(), "invalid symbol name" );
-    check( memo.size() <= 256, "memo has more than 256 bytes" );
 
     stats statstable( get_self(), sym.code().raw() );
     auto existing = statstable.find( sym.code().raw() );
@@ -92,7 +90,6 @@ void token::transfer( const name&    from,
     check( quantity.is_valid(), "invalid quantity" );
     check( quantity.amount > 0, "must transfer positive quantity" );
     check( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
-    check( memo.size() <= 256, "memo has more than 256 bytes" );
 
     auto payer = has_auth( to ) ? to : from;
 
