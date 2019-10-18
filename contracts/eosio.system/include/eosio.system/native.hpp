@@ -9,24 +9,6 @@
 #include <eosio/privileged.hpp>
 #include <eosio/producer_schedule.hpp>
 
-// This header is needed until `is_feature_activiated` and `preactivate_feature` are added to `eosio.cdt`
-#include <eosio/../../capi/eosio/crypto.h>
-
-namespace eosio {
-   namespace internal_use_do_not_use {
-      extern "C" {
-         __attribute__((eosio_wasm_import))
-         bool is_feature_activated( const ::capi_checksum256* feature_digest );
-
-         __attribute__((eosio_wasm_import))
-         void preactivate_feature( const ::capi_checksum256* feature_digest );
-      }
-   }
-
-   bool is_feature_activated( const eosio::checksum256& feature_digest );
-   void preactivate_feature( const eosio::checksum256& feature_digest );
-}
-
 namespace eosiosystem {
 
    using eosio::checksum256;

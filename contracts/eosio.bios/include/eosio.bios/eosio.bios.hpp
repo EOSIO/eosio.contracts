@@ -38,9 +38,32 @@ namespace eosio {
    }
 }
 
-namespace eosio {
+/**
+ * EOSIO Contracts
+ *
+ * @details The design of the EOSIO blockchain calls for a number of smart contracts that are run at a
+ * privileged permission level in order to support functions such as block producer registration and
+ * voting, token staking for CPU and network bandwidth, RAM purchasing, multi-sig, etc. These smart
+ * contracts are referred to as the system, token, msig and wrap (formerly known as sudo) contracts.
+ *
+ * This repository contains examples of these privileged contracts that are useful when deploying,
+ * managing, and/or using an EOSIO blockchain. They are provided for reference purposes:
+ * - eosio.bios
+ * - eosio.system
+ * - eosio.msig
+ * - eosio.wrap
+ *
+ * The following unprivileged contract(s) are also part of the system.
+ * - eosio.token
+ */
 
+namespace eosiobios {
+
+   using eosio::action_wrapper;
+   using eosio::check;
+   using eosio::checksum256;
    using eosio::ignore;
+   using eosio::name;
    using eosio::permission_level;
    using eosio::public_key;
 
@@ -142,7 +165,7 @@ namespace eosio {
     *
     * @{
     */
-   class [[eosio::contract("eosio.bios")]] bios : public contract {
+   class [[eosio::contract("eosio.bios")]] bios : public eosio::contract {
       public:
          using contract::contract;
          /**
@@ -323,7 +346,7 @@ namespace eosio {
           * @param schedule - New list of active producers to set
           */
          [[eosio::action]]
-         void setprods( std::vector<eosio::producer_key> schedule );
+         void setprods( const std::vector<eosio::producer_authority>& schedule );
 
          /**
           * Set the blockchain parameters
@@ -401,4 +424,4 @@ namespace eosio {
          using reqactivated_action = action_wrapper<"reqactivated"_n, &bios::reqactivated>;
    };
    /** @}*/ // end of @defgroup eosiobios eosio.bios
-} /// namespace eosio
+} /// namespace eosiobios

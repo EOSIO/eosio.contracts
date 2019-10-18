@@ -1,7 +1,9 @@
 #pragma once
 
 #include <eosio/asset.hpp>
+#include <eosio/binary_extension.hpp>
 #include <eosio/privileged.hpp>
+#include <eosio/producer_schedule.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
@@ -70,8 +72,9 @@ namespace eosiosystem {
 
    static constexpr int64_t  inflation_precision           = 100;     // 2 decimals
    static constexpr int64_t  default_annual_rate           = 500;     // 5% annual rate
-   static constexpr int64_t  default_inflation_pay_factor  = 5;       // 20% of the inflation
-   static constexpr int64_t  default_votepay_factor        = 4;       // 25% of the producer pay
+   static constexpr int64_t  pay_factor_precision          = 10000;
+   static constexpr int64_t  default_inflation_pay_factor  = 50000;   // producers pay share = 10000 / 50000 = 20% of the inflation
+   static constexpr int64_t  default_votepay_factor        = 40000;   // per-block pay share = 10000 / 40000 = 25% of the producer pay
 
    /**
     * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
@@ -177,23 +180,24 @@ namespace eosiosystem {
 
    // Defines `producer_info` structure to be stored in `producer_info` table, added after version 1.0
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
-      name                  owner;
-      double                total_votes = 0;
-      eosio::public_key     producer_key; /// a packed public key object
-      bool                  is_active = true;
-      std::string           url;
-      uint32_t              unpaid_blocks = 0;
-      time_point            last_claim_time;
-      uint16_t              location = 0;
+      name                                                     owner;
+      double                                                   total_votes = 0;
+      eosio::public_key                                        producer_key; /// a packed public key object
+      bool                                                     is_active = true;
+      std::string                                              url;
+      uint32_t                                                 unpaid_blocks = 0;
+      time_point                                               last_claim_time;
+      uint16_t                                                 location = 0;
+      eosio::binary_extension<eosio::block_signing_authority>  producer_authority; // added in version 1.9.0
 
       uint64_t primary_key()const { return owner.value;                             }
       double   by_votes()const    { return is_active ? -total_votes : total_votes;  }
       bool     active()const      { return is_active;                               }
-      void     deactivate()       { producer_key = public_key(); is_active = false; }
+      void     deactivate()       { producer_key = public_key(); producer_authority.reset(); is_active = false; }
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
-                        (unpaid_blocks)(last_claim_time)(location) )
+                        (unpaid_blocks)(last_claim_time)(location)(producer_authority) )
    };
 
    // Defines new producer info structure to be stored in new producer info table, added after version 1.3.0
@@ -897,7 +901,6 @@ namespace eosiosystem {
           * @param url - the url of the block producer, normally the url of the block producer presentation website,
           * @param location - is the country code as defined in the ISO 3166, https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
           *
-          * @pre Producer is not already registered
           * @pre Producer to register is an account
           * @pre Authority of producer to register
           */
@@ -905,7 +908,27 @@ namespace eosiosystem {
          void regproducer( const name& producer, const public_key& producer_key, const std::string& url, uint16_t location );
 
          /**
+          * Register producer action.
+          *
+          * @details Register producer action, indicates that a particular account wishes to become a producer,
+          * this action will create a `producer_config` and a `producer_info` object for `producer` scope
+          * in producers tables.
+          *
+          * @param producer - account registering to be a producer candidate,
+          * @param producer_authority - the weighted threshold multisig block signing authority of the block producer used to sign blocks,
+          * @param url - the url of the block producer, normally the url of the block producer presentation website,
+          * @param location - is the country code as defined in the ISO 3166, https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
+          *
+          * @pre Producer to register is an account
+          * @pre Authority of producer to register
+          */
+         [[eosio::action]]
+         void regproducer2( const name& producer, const eosio::block_signing_authority& producer_authority, const std::string& url, uint16_t location );
+
+         /**
           * Unregister producer action. Deactivate the block producer with account name `producer`.
+          *
+          * @details Deactivate the block producer with account name `producer`.
           * @param producer - the block producer account to unregister.
           */
          [[eosio::action]]
@@ -1049,13 +1072,13 @@ namespace eosiosystem {
           *
           * @param inflation_pay_factor - Inverse of the fraction of the inflation used to reward block producers.
           *     The remaining inflation will be sent to the `eosio.saving` account.
-          *     (eg. For 20% of inflation going to block producer rewards  => inflation_pay_factor=5
-          *          For 100% of inflation going to block producer rewards  => inflation_pay_factor=1).
+          *     (eg. For 20% of inflation going to block producer rewards   => inflation_pay_factor = 50000
+          *          For 100% of inflation going to block producer rewards  => inflation_pay_factor = 10000).
           *
           * @param votepay_factor - Inverse of the fraction of the block producer rewards to be distributed proportional to blocks produced.
           *     The remaining rewards will be distributed proportional to votes received.
-          *     (eg. For 25% of block producer rewards going towards block pay => votepay_factor=4
-          *          For 50% of block producer rewards going towards block pay => votepay_factor=2).
+          *     (eg. For 25% of block producer rewards going towards block pay => votepay_factor = 40000
+          *          For 75% of block producer rewards going towards block pay => votepay_factor = 13333).
           */
          [[eosio::action]]
          void setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
@@ -1091,6 +1114,7 @@ namespace eosiosystem {
          using sellram_action = eosio::action_wrapper<"sellram"_n, &system_contract::sellram>;
          using refund_action = eosio::action_wrapper<"refund"_n, &system_contract::refund>;
          using regproducer_action = eosio::action_wrapper<"regproducer"_n, &system_contract::regproducer>;
+         using regproducer2_action = eosio::action_wrapper<"regproducer2"_n, &system_contract::regproducer2>;
          using unregprod_action = eosio::action_wrapper<"unregprod"_n, &system_contract::unregprod>;
          using setram_action = eosio::action_wrapper<"setram"_n, &system_contract::setram>;
          using setramrate_action = eosio::action_wrapper<"setramrate"_n, &system_contract::setramrate>;
@@ -1104,6 +1128,7 @@ namespace eosiosystem {
          using setpriv_action = eosio::action_wrapper<"setpriv"_n, &system_contract::setpriv>;
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
+         using setinflation_action = eosio::action_wrapper<"setinflation"_n, &system_contract::setinflation>;
 
       private:
          // Implementation details:
@@ -1160,7 +1185,8 @@ namespace eosiosystem {
                         const asset& stake_net_quantity, const asset& stake_cpu_quantity, bool transfer );
          void update_voting_power( const name& voter, const asset& total_update );
 
-         // defined in voting.hpp
+         // defined in voting.cpp
+         void register_producer( const name& producer, const eosio::block_signing_authority& producer_authority, const std::string& url, uint16_t location );
          void update_elected_producers( const block_timestamp& timestamp );
          void update_votes( const name& voter, const name& proxy, const std::vector<name>& producers, bool voting );
          void propagate_weight_change( const voter_info& voter );
