@@ -20,11 +20,6 @@ Dependencies:
 
 To build the contracts follow the instructions in [`Compile and deploy` section](./docs/02_compile-and-deploy.md).
 
-After build:
-* If the build was configured to also build unit tests, the unit tests executable is placed in the _build/tests_ folder and is named __unit_test__.
-* The contracts (both `.wasm` and `.abi` files) are built into their corresponding _build/contracts/\<contract name\>_ folder.
-* Finally, simply use __cleos__ to _set contract_ by pointing to the previously mentioned directory for the specific contract.
-
 ## Contributing
 
 [Contributing Guide](./CONTRIBUTING.md)
