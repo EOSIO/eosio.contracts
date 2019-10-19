@@ -75,7 +75,7 @@ icon: @ICON_BASE_URL@/@RESOURCE_ICON_URI@
 ---
 spec_version: "0.2.0"
 title: Buy REX Tokens
-summary: '{{nowrap from}} buys REX tokens in exchange for {{nowrap amount}} and his vote stake increases by {{nowrap amount}}'
+summary: '{{nowrap from}} buys REX tokens in exchange for {{nowrap amount}} and their vote stake increases by {{nowrap amount}}'
 icon: @ICON_BASE_URL@/@REX_ICON_URI@
 ---
 
