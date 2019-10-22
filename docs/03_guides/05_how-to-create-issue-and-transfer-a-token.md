@@ -14,7 +14,7 @@ git clone https://github.com/EOSIO/eosio.contracts --branch master --single-bran
 ```
 
 ```text
-cd eosio.contracts/eosio.token
+cd eosio.contracts/contracts/eosio.token
 ```
 
 ## Step 2: Create Account for Contract
@@ -34,7 +34,7 @@ eosio-cpp -I include -o eosio.token.wasm src/eosio.token.cpp --abigen
 ## Step 4: Deploy the Token Contract
 
 ```shell
-cleos set contract eosio.token CONTRACTS_DIR/eosio.contracts/eosio.token --abi eosio.token.abi -p eosio.token@active
+cleos set contract eosio.token CONTRACTS_DIR/eosio.contracts/contracts/eosio.token --abi eosio.token.abi -p eosio.token@active
 ```
 
 Result should look similar to the one below:
@@ -74,38 +74,34 @@ This command created a new token `SYS` with a precision of 4 decimals and a maxi
 
 ## Step 6: Issue Tokens
 
-The issuer can issue new tokens to the "alice" account created earlier. 
+The issuer can issue new tokens to the issuer account in our case `eosio`. 
 
 ```text
-cleos push action eosio.token issue '[ "alice", "100.0000 SYS", "memo" ]' -p eosio@active
+cleos push action eosio.token issue '[ "eosio", "100.0000 SYS", "memo" ]' -p eosio@active
 ```
 
 Result should look similar to the one below:
 ```shell
-executed transaction: 822a607a9196112831ecc2dc14ffb1722634f1749f3ac18b73ffacd41160b019  268 bytes  1000 cycles
-#   eosio.token <= eosio.token::issue           {"to":"user","quantity":"100.0000 SYS","memo":"memo"}
->> issue
-#   eosio.token <= eosio.token::transfer        {"from":"eosio","to":"user","quantity":"100.0000 SYS","memo":"memo"}
->> transfer
-#         eosio <= eosio.token::transfer        {"from":"eosio","to":"user","quantity":"100.0000 SYS","memo":"memo"}
-#          user <= eosio.token::transfer        {"from":"eosio","to":"user","quantity":"100.0000 SYS","memo":"memo"}
+executed transaction: a26b29d66044ad95edf0fc04bad3073e99718bc26d27f3c006589adedb717936  128 bytes  337 us
+#   eosio.token <= eosio.token::issue           {"to":"eosio","quantity":"100.0000 SYS","memo":"memo"}
+warning: transaction executed locally, but may not be confirmed by the network yet         ]
 ```
 
 ## Step 7: Transfer Tokens
 
-Now that account `alice` has been issued tokens, transfer some of them to account `bob`.  It was previously indicated that `alice` authorized this action using the argument `-p alice@active`.
+Now that account `eosio` has been issued tokens, transfer some of them to account `bob`.
 
 ```shell
-cleos push action eosio.token transfer '[ "alice", "bob", "25.0000 SYS", "m" ]' -p alice@active
+cleos push action eosio.token transfer '[ "eosio", "bob", "25.0000 SYS", "m" ]' -p eosio@active
 ```
 
 Result should look similar to the one below:
 ```text
-executed transaction: 06d0a99652c11637230d08a207520bf38066b8817ef7cafaab2f0344aafd7018  268 bytes  1000 cycles
-#   eosio.token <= eosio.token::transfer        {"from":"alice","to":"bob","quantity":"25.0000 SYS","memo":"Here you go bob!"}
->> transfer
-#          user <= eosio.token::transfer        {"from":"alice","to":"bob","quantity":"25.0000 SYS","memo":"Here you go bob!"}
-#        tester <= eosio.token::transfer        {"from":"alice","to":"bob","quantity":"25.0000 SYS","memo":"Here you go bob!"}
+executed transaction: 60d334850151cb95c35fe31ce2e8b536b51441c5fd4c3f2fea98edcc6d69f39d  128 bytes  497 us
+#   eosio.token <= eosio.token::transfer        {"from":"eosio","to":"bob","quantity":"25.0000 SYS","memo":"m"}
+#         eosio <= eosio.token::transfer        {"from":"eosio","to":"bob","quantity":"25.0000 SYS","memo":"m"}
+#           bob <= eosio.token::transfer        {"from":"eosio","to":"bob","quantity":"25.0000 SYS","memo":"m"}
+warning: transaction executed locally, but may not be confirmed by the network yet         ]
 ```
 Now check if "bob" got the tokens using [cleos get currency balance](https://developers.eos.io/eosio-cleos/reference#currency-balance)
 
@@ -118,10 +114,10 @@ Result:
 25.00 SYS
 ```
 
-Check "alice's" balance, notice that tokens were deducted from the account 
+Check "eosio's" balance, notice that tokens were deducted from the account 
 
 ```shell
-cleos get currency balance eosio.token alice SYS
+cleos get currency balance eosio.token eosio SYS
 ```
 
 Result:
