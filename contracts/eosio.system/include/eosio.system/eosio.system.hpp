@@ -265,7 +265,7 @@ namespace eosiosystem {
        *  Every time a vote is cast we must first "undo" the last vote weight, before casting the
        *  new vote weight.  Vote weight is calculated as:
        *
-       *  stated.amount * 2 ^ ( weeks_since_launch/weeks_per_year)
+       *  staked.amount * 2 ^ ( weeks_since_launch/weeks_per_year)
        */
       double              last_vote_weight = 0; /// the vote weight cast the last time the vote was updated
 
