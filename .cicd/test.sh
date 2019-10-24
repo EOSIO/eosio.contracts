@@ -15,7 +15,7 @@ TEST_COMMANDS="ctest -j $JOBS --output-on-failure"
 COMMANDS="$PRE_COMMANDS && $TEST_COMMANDS"
 set +e
 eval docker run $ARGS $(buildkite-intrinsics) $DOCKER_IMAGE bash -c \"$COMMANDS\"
-$EXIT_STATUS=$?
+EXIT_STATUS=$?
 # buildkite
 if [[ "$BUILDKITE" == 'true' ]]; then
     cd build
@@ -24,7 +24,7 @@ if [[ "$BUILDKITE" == 'true' ]]; then
     echo 'Compressing core dumps...'
     [[ $((`ls -1 core.* 2>/dev/null | wc -l`)) != 0 ]] && tar czf core.tar.gz core.* || : # collect core dumps
     echo 'Exporting xUnit XML'
-    mv -f ./tests/Testing/$(ls ./Testing/ | grep '2' | tail -n 1)/Test.xml test-results.xml
+    mv -f ./tests/Testing/$(ls ./tests/Testing/ | grep '2' | tail -n 1)/Test.xml test-results.xml
     echo 'Uploading artifacts'
     [[ -f config.ini ]] && buildkite-agent artifact upload config.ini
     [[ -f core.tar.gz ]] && buildkite-agent artifact upload core.tar.gz
