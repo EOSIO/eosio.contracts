@@ -15,6 +15,7 @@ TEST_COMMANDS="ctest -j $JOBS --output-on-failure"
 COMMANDS="$PRE_COMMANDS && $TEST_COMMANDS"
 set +e
 eval docker run $ARGS $(buildkite-intrinsics) $DOCKER_IMAGE bash -c \"$COMMANDS\"
+$EXIT_STATUS=$?
 # buildkite
 if [[ "$BUILDKITE" == 'true' ]]; then
     cd build
