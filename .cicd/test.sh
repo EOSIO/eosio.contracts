@@ -13,11 +13,11 @@ CDT_COMMANDS="apt-get install -y wget && wget -q $CDT_URL -O eosio.cdt.deb && dp
 PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build/tests"
 TEST_COMMANDS="ctest -j $JOBS --output-on-failure -T Test"
 COMMANDS="$PRE_COMMANDS && $TEST_COMMANDS"
+set +e
 if [[ $TRAVIS ]]; then
     travis_wait 60 eval docker run $ARGS $(buildkite-intrinsics) $DOCKER_IMAGE bash -c \"$COMMANDS\"
     EXIT_STATUS=$?
 else
-    set +e
     eval docker run $ARGS $(buildkite-intrinsics) $DOCKER_IMAGE bash -c \"$COMMANDS\"
     EXIT_STATUS=$?
 fi
