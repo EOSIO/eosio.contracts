@@ -143,26 +143,6 @@ namespace eosiosystem {
           * they will execute the implementation at the core level and nothing else.
           */
          /**
-          * New account action
-          *
-          * @details Called after a new account is created. This code enforces resource-limits rules
-          * for new accounts as well as new account naming conventions.
-          *
-          * 1. accounts cannot contain '.' symbols which forces all acccounts to be 12
-          * characters long without '.' until a future account auction process is implemented
-          * which prevents name squatting.
-          *
-          * 2. new accounts must stake a minimal number of tokens (as set in system parameters)
-          * therefore, this method will execute an inline buyram from receiver for newacnt in
-          * an amount equal to the current new account creation fee.
-          */
-         [[eosio::action]]
-         void newaccount( const name&       creator,
-                          const name&       name,
-                          ignore<authority> owner,
-                          ignore<authority> active);
-
-         /**
           * Update authorization action.
           *
           * @details Updates pemission for an account
@@ -239,30 +219,6 @@ namespace eosiosystem {
          void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
 
          /**
-          * On error action.
-          *
-          * @details Notification of this action is delivered to the sender of a deferred transaction
-          * when an objective error occurs while executing the deferred transaction.
-          * This action is not meant to be called directly.
-          *
-          * @param sender_id - the id for the deferred transaction chosen by the sender,
-          * @param sent_trx - the deferred transaction that failed.
-          */
-         [[eosio::action]]
-         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
-
-         /**
-          * Set abi action.
-          *
-          * @details Sets the contract abi for an account.
-          *
-          * @param account - the account for which to set the contract abi.
-          * @param abi - the abi content to be set, in the form of a blob binary.
-          */
-         [[eosio::action]]
-         void setabi( const name& account, const std::vector<char>& abi );
-
-         /**
           * Set code action.
           *
           * @details Sets the contract code for an account.
@@ -276,6 +232,57 @@ namespace eosiosystem {
          void setcode( const name& account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
 
          /** @}*/
+
+         /**
+          * New account action
+          *
+          * @details Creates a new account. The behavior of this action is further modified in this contract to
+          * enforce resource-limits rules for new accounts as well as new account naming conventions.
+          *
+          * 1. accounts cannot contain '.' symbols which forces all acccounts to be 12
+          * characters long without '.' until a future account auction process is implemented
+          * which prevents name squatting.
+          *
+          * 2. new accounts must stake a minimal number of tokens (as set in system parameters)
+          * therefore, this method will execute an inline buyram from receiver for newacnt in
+          * an amount equal to the current new account creation fee.
+          *
+          * @param creator - the creator of the account
+          * @param name - the name of the new account
+          * @param owner - the authority for the owner permission of the new account
+          * @param active - the authority for the active permission of the new account
+          */
+         [[eosio::action]]
+         void newaccount( const name&       creator,
+                          const name&       name,
+                          ignore<authority> owner,
+                          ignore<authority> active);
+
+         /**
+          * Set abi for contract.
+          *
+          * @details Set the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
+          * index, with `account` name as key, if it is not already present and sets its value with the abi hash.
+          * Otherwise it is updating the current abi hash value for the existing `account` key.
+          *
+          * @param account - the name of the account to set the abi for
+          * @param abi     - the abi hash represented as a vector of characters
+          */
+         [[eosio::action]]
+         void setabi( const name& account, const std::vector<char>& abi );
+
+         /**
+          * On error action.
+          *
+          * @details Notification of this action is delivered to the sender of a deferred transaction
+          * when an objective error occurs while executing the deferred transaction.
+          * This action is not meant to be called directly.
+          *
+          * @param sender_id - the id for the deferred transaction chosen by the sender,
+          * @param sent_trx - the deferred transaction that failed.
+          */
+         [[eosio::action]]
+         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
 
          using newaccount_action = eosio::action_wrapper<"newaccount"_n, &native::newaccount>;
          using updateauth_action = eosio::action_wrapper<"updateauth"_n, &native::updateauth>;

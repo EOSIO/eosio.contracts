@@ -1,31 +1,9 @@
 #pragma once
 
-#include <eosio/action.hpp>
 #include <eosio/crypto.hpp>
 #include <eosio/eosio.hpp>
-#include <eosio/fixed_bytes.hpp>
-#include <eosio/privileged.hpp>
 
-/**
- * EOSIO Contracts
- *
- * @details The design of the EOSIO blockchain calls for a number of smart contracts that are run at a
- * privileged permission level in order to support functions such as block producer registration and
- * voting, token staking for CPU and network bandwidth, RAM purchasing, multi-sig, etc. These smart
- * contracts are referred to as the system, token, msig and wrap (formerly known as sudo) contracts.
- *
- * This repository contains examples of these privileged contracts that are useful when deploying,
- * managing, and/or using an EOSIO blockchain. They are provided for reference purposes:
- * - eosio.bios
- * - eosio.system
- * - eosio.msig
- * - eosio.wrap
- *
- * The following unprivileged contract(s) are also part of the system.
- * - eosio.token
- */
-
-namespace eosiobios {
+namespace eosioboot {
 
    using eosio::action_wrapper;
    using eosio::check;
@@ -97,15 +75,16 @@ namespace eosiobios {
    };
 
    /**
-    * @defgroup eosiobios eosio.bios
+    * @defgroup eosioboot eosio.boot
     * @ingroup eosiocontracts
     *
-    * eosio.bios is a minimalistic system contract meant to allow quick setup for testing on local chains or
-    * to use to bootstrap a chain with a more sophisticated system contract such as eosio.system.
+    * eosio.boot is a extremely minimalistic system contract that only supports the native actions and an
+    * activate action that allows activating desired protocol features prior to deploying a system contract
+    * with more features such as eosio.bios or eosio.system.
     *
     * @{
     */
-   class [[eosio::contract("eosio.bios")]] bios : public eosio::contract {
+   class [[eosio::contract("eosio.boot")]] boot : public eosio::contract {
       public:
          using contract::contract;
          /**
@@ -131,7 +110,6 @@ namespace eosiobios {
                           name             name,
                           ignore<authority> owner,
                           ignore<authority> active) {}
-
          /**
           * Update authorization action.
           *
@@ -221,20 +199,18 @@ namespace eosiobios {
          [[eosio::action]]
          void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
 
-         /** @}*/
-
          /**
           * Set abi for contract.
           *
-          * @details Set the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
-          * index, with `account` name as key, if it is not already present and sets its value with the abi hash.
-          * Otherwise it is updating the current abi hash value for the existing `account` key.
+          * @details Set the abi for contract identified by `account` name.
           *
           * @param account - the name of the account to set the abi for
           * @param abi     - the abi hash represented as a vector of characters
           */
          [[eosio::action]]
-         void setabi( name account, const std::vector<char>& abi );
+         void setabi( name account, const std::vector<char>& abi ) {}
+
+         /** @}*/
 
          /**
           * On error action.
@@ -248,63 +224,6 @@ namespace eosiobios {
           */
          [[eosio::action]]
          void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
-
-         /**
-          * Set privilege status for an account.
-          *
-          * @details Allows to set privilege status for an account (turn it on/off).
-          * @param account - the account to set the privileged status for.
-          * @param is_priv - 0 for false, > 0 for true.
-          */
-         [[eosio::action]]
-         void setpriv( name account, uint8_t is_priv );
-
-         /**
-          * Set the resource limits of an account
-          *
-          * @details Set the resource limits of an account
-          *
-          * @param account - name of the account whose resource limit to be set
-          * @param ram_bytes - ram limit in absolute bytes
-          * @param net_weight - fractionally proportionate net limit of available resources based on (weight / total_weight_of_all_accounts)
-          * @param cpu_weight - fractionally proportionate cpu limit of available resources based on (weight / total_weight_of_all_accounts)
-          */
-         [[eosio::action]]
-         void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
-
-         /**
-          * Set a new list of active producers, that is, a new producers' schedule.
-          *
-          * @details Set a new list of active producers, by proposing a schedule change, once the block that
-          * contains the proposal becomes irreversible, the schedule is promoted to "pending"
-          * automatically. Once the block that promotes the schedule is irreversible, the schedule will
-          * become "active".
-          *
-          * @param schedule - New list of active producers to set
-          */
-         [[eosio::action]]
-         void setprods( const std::vector<eosio::producer_authority>& schedule );
-
-         /**
-          * Set the blockchain parameters
-          *
-          * @details Set the blockchain parameters. By tuning these parameters, various degrees of customization can be achieved.
-          *
-          * @param params - New blockchain parameters to set
-          */
-         [[eosio::action]]
-         void setparams( const eosio::blockchain_parameters& params );
-
-         /**
-          * Check if an account has authorization to access current action.
-          *
-          * @details Checks if the account name `from` passed in as param has authorization to access
-          * current action, that is, if it is listed in the action’s allowed permissions vector.
-          *
-          * @param from - the account name to authorize
-          */
-         [[eosio::action]]
-         void reqauth( name from );
 
          /**
           * Activates a protocol feature.
@@ -326,39 +245,16 @@ namespace eosiobios {
          [[eosio::action]]
          void reqactivated( const eosio::checksum256& feature_digest );
 
-         /**
-          * Abi hash structure
-          *
-          * @details Abi hash structure is defined by contract owner and the contract hash.
-          */
-         struct [[eosio::table]] abi_hash {
-            name              owner;
-            checksum256       hash;
-            uint64_t primary_key()const { return owner.value; }
-
-            EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
-         };
-
-         /**
-          * Multi index table that stores the contracts' abi index by their owners/accounts.
-          */
-         typedef eosio::multi_index< "abihash"_n, abi_hash > abi_hash_table;
-
-         using newaccount_action = action_wrapper<"newaccount"_n, &bios::newaccount>;
-         using updateauth_action = action_wrapper<"updateauth"_n, &bios::updateauth>;
-         using deleteauth_action = action_wrapper<"deleteauth"_n, &bios::deleteauth>;
-         using linkauth_action = action_wrapper<"linkauth"_n, &bios::linkauth>;
-         using unlinkauth_action = action_wrapper<"unlinkauth"_n, &bios::unlinkauth>;
-         using canceldelay_action = action_wrapper<"canceldelay"_n, &bios::canceldelay>;
-         using setcode_action = action_wrapper<"setcode"_n, &bios::setcode>;
-         using setabi_action = action_wrapper<"setabi"_n, &bios::setabi>;
-         using setpriv_action = action_wrapper<"setpriv"_n, &bios::setpriv>;
-         using setalimits_action = action_wrapper<"setalimits"_n, &bios::setalimits>;
-         using setprods_action = action_wrapper<"setprods"_n, &bios::setprods>;
-         using setparams_action = action_wrapper<"setparams"_n, &bios::setparams>;
-         using reqauth_action = action_wrapper<"reqauth"_n, &bios::reqauth>;
-         using activate_action = action_wrapper<"activate"_n, &bios::activate>;
-         using reqactivated_action = action_wrapper<"reqactivated"_n, &bios::reqactivated>;
+         using newaccount_action = action_wrapper<"newaccount"_n, &boot::newaccount>;
+         using updateauth_action = action_wrapper<"updateauth"_n, &boot::updateauth>;
+         using deleteauth_action = action_wrapper<"deleteauth"_n, &boot::deleteauth>;
+         using linkauth_action = action_wrapper<"linkauth"_n, &boot::linkauth>;
+         using unlinkauth_action = action_wrapper<"unlinkauth"_n, &boot::unlinkauth>;
+         using canceldelay_action = action_wrapper<"canceldelay"_n, &boot::canceldelay>;
+         using setcode_action = action_wrapper<"setcode"_n, &boot::setcode>;
+         using setabi_action = action_wrapper<"setabi"_n, &boot::setabi>;
+         using activate_action = action_wrapper<"activate"_n, &boot::activate>;
+         using reqactivated_action = action_wrapper<"reqactivated"_n, &boot::reqactivated>;
    };
-   /** @}*/ // end of @defgroup eosiobios eosio.bios
-} /// namespace eosiobios
+   /** @}*/ // end of @defgroup eosioboot eosio.boot
+} /// namespace eosioboot
