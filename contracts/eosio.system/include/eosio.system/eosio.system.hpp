@@ -897,6 +897,7 @@ namespace eosiosystem {
           * @param url - the url of the block producer, normally the url of the block producer presentation website,
           * @param location - is the country code as defined in the ISO 3166, https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
           *
+          * @pre Producer is not already registered
           * @pre Producer to register is an account
           * @pre Authority of producer to register
           */
@@ -1162,7 +1163,7 @@ namespace eosiosystem {
                         const asset& stake_net_quantity, const asset& stake_cpu_quantity, bool transfer );
          void update_voting_power( const name& voter, const asset& total_update );
 
-         // defined in voting.cpp
+         // defined in voting.hpp
          void update_elected_producers( const block_timestamp& timestamp );
          void update_votes( const name& voter, const name& proxy, const std::vector<name>& producers, bool voting );
          void propagate_weight_change( const voter_info& voter );
