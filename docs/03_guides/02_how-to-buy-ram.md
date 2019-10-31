@@ -1,8 +1,23 @@
-## How buy RAM
+## Goal
 
-You can buy RAM using `cleos` command line tool or using a wallet that implements the buy RAM functionality.
+Setup an account that require multiple signatures for signing a transaction
 
-TO DO: verify and correct the next url
-To buy ram using `cleos` check [how to buy ram](https://eosio.github.io/eos/cleos/how-to-buy-ram)
+## Before you begin
 
-To buy ram using a wallet check the wallet user's manual for each wallet has its own implementation.
+* You have an account
+
+* Ensure the reference system contracts from `eosio.contracts` repository is deployed and used to manage system resources
+
+* You have sufficient token allocated to your account
+
+* Install the currently supported version of cleos
+
+* Unlock your wallet
+
+## Steps
+
+Buys RAM in value of 0.1 SYS tokens for account `alice`:
+
+```shell
+cleos system buyram alice alice "0.1 SYS" -p alice@active
+```
