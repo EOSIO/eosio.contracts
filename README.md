@@ -18,7 +18,7 @@ Dependencies:
 * [eosio.cdt v1.7.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.7.0-rc1)
 * [eosio v2.0.x](https://github.com/EOSIO/eos/releases/tag/v2.0.0-rc1) (optional dependency only needed to build unit tests)
 
-To build the contracts follow the instructions in [`Compile and deploy` section](./docs/02_compile-and-deploy.md).
+To build the contracts follow the instructions in [`Build and deploy` section](./docs/02_build-and-deploy.md).
 
 ## Contributing
 
