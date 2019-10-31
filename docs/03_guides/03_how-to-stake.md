@@ -1,8 +1,28 @@
-## How to stake tokens for CPU and/or NET bandwidth
+## Goal
 
-You can stake tokens for CPU and/or NET bandwidth using `cleos` command line tool or using a wallet that implements this functionality.
+Stake resource for your account
 
-TO DO: verify and correct the next url
-To stake tokens for CPU and/or NET bandwidth using `cleos` check [how to stake resource](https://eosio.github.io/eos/cleos/how-to-stake-resource)
+## Before you begin
 
-To stake tokens for CPU and/or NET bandwidth using a wallet check the wallet user's manual for each wallet has its own implementation.
+* Install the currently supported version of cleos
+
+* Ensure the reference system contracts from `eosio.contracts` repository is deployed and used to manage system resources
+
+* Understand the following:
+  * What is an account
+  * What is network bandwidth
+  * What is CPU bandwidth
+
+## Steps
+
+Stake 0.01 SYS network bandwidth for `alice`
+
+```shell
+cleos system delegatebw alice alice "0 SYS" "0.01 SYS"
+```
+
+Stake 0.01 SYS CPU bandwidth for `alice`:
+
+```shell
+cleos system delegatebw alice alice "0.01 SYS" "0 SYS"
+```

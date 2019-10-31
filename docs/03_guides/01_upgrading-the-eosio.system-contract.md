@@ -73,8 +73,6 @@ Then each of the top 21 block producers should do the following:
 
 5. Compare their generated `upgrade_system_contract_official_trx.json` file with the `upgrade_system_contract_official_trx.json` provided by the lead producer. The only difference should be in `expiration`, `ref_block_num`, `ref_block_prefix`, for example:
 
-TO DO: Shouldn't one of the files be upgrade_system_contract_trx.json?
-
 ```
 $ diff upgrade_system_contract_official_trx.json upgrade_system_contract_trx.json
 2,4c2,4
