@@ -96,12 +96,6 @@ namespace eosio {
          [[eosio::action]]
          void close( const name& owner, const symbol& symbol );
 
-         /**
-          * Gets the supply for token `sym_code`, created by `token_contract_account` account.
-          *
-          * @param token_contract_account - the account to get the supply for,
-          * @param sym_code - the symbol to get the supply for.
-          */
          static asset get_supply( const name& token_contract_account, const symbol_code& sym_code )
          {
             stats statstable( token_contract_account, sym_code.raw() );
@@ -109,14 +103,6 @@ namespace eosio {
             return st.supply;
          }
 
-         /**
-          * Get the balance for a token `sym_code` created by `token_contract_account` account,
-          * for account `owner`.
-          *
-          * @param token_contract_account - the token creator account,
-          * @param owner - the account for which the token balance is returned,
-          * @param sym_code - the token for which the balance is returned.
-          */
          static asset get_balance( const name& token_contract_account, const name& owner, const symbol_code& sym_code )
          {
             accounts accountstable( token_contract_account, owner.value );
