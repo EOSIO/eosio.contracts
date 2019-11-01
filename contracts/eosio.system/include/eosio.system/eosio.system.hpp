@@ -83,7 +83,6 @@ namespace eosiosystem {
     * - Users can bid on premium names.
     * - A resource exchange system (REX) allows token holders to lend their tokens,
     *    and users to rent CPU and Network resources in return for a market-determined fee.
-    * @{
     */
 
    // A name bid, which consists of:
@@ -467,11 +466,8 @@ namespace eosiosystem {
          system_contract( name s, name code, datastream<const char*> ds );
          ~system_contract();
 
-         /**
-          * Returns the core symbol by system account name
-          *
-          * @param system_account - the system account to get the core symbol for.
-          */
+          // Returns the core symbol by system account name
+          // @param system_account - the system account to get the core symbol for.
          static symbol get_core_symbol( name system_account = "eosio"_n ) {
             rammarket rm(system_account, system_account.value);
             const static auto sym = get_core_symbol( rm );
