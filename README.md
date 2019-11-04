@@ -18,19 +18,7 @@ Dependencies:
 * [eosio.cdt v1.6.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.6.2)
 * [eosio v1.8.x](https://github.com/EOSIO/eos/releases/tag/v1.8.1) (optional dependency only needed to build unit tests)
 
-To build contracts alone:
-1. Ensure an appropriate version of eosio.cdt is installed. Installing eosio.cdt from binaries is sufficient.
-2. Run the `build.sh` script in the top directory to build all the contracts.
-
-To build the contracts and unit tests:
-1. Ensure an appropriate version of eosio.cdt is installed. Installing eosio.cdt from binaries is sufficient.
-2. Ensure an appropriate version of eosio has been built from source and installed. Installing eosio from binaries is not sufficient.
-3. Run the `build.sh` script in the top directory with the `-t` flag to build all the contracts and the unit tests for these contracts.
-
-After build:
-* If the build was configured to also build unit tests, the unit tests executable is placed in the _build/tests_ folder and is named __unit_test__.
-* The contracts (both `.wasm` and `.abi` files) are built into their corresponding _build/contracts/\<contract name\>_ folder.
-* Finally, simply use __cleos__ to _set contract_ by pointing to the previously mentioned directory for the specific contract.
+To build the contracts follow the instructions in [`Build and deploy` section](./docs/02_build-and-deploy.md).
 
 ## Contributing
 
