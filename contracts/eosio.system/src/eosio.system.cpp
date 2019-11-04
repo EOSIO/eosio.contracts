@@ -4,10 +4,16 @@
 #include <eosio/crypto.hpp>
 #include <eosio/dispatcher.hpp>
 
+#include <cmath>
+
 namespace eosiosystem {
 
    using eosio::current_time_point;
    using eosio::token;
+
+   double get_continuous_rate(int64_t annual_rate) {
+      return std::log1p(double(annual_rate)/double(100*inflation_precision));
+   }
 
    system_contract::system_contract( name s, name code, datastream<const char*> ds )
    :native(s,code,ds),
@@ -17,6 +23,7 @@ namespace eosiosystem {
     _global(get_self(), get_self().value),
     _global2(get_self(), get_self().value),
     _global3(get_self(), get_self().value),
+    _global4(get_self(), get_self().value),
     _rammarket(get_self(), get_self().value),
     _rexpool(get_self(), get_self().value),
     _rexfunds(get_self(), get_self().value),
@@ -27,12 +34,21 @@ namespace eosiosystem {
       _gstate  = _global.exists() ? _global.get() : get_default_parameters();
       _gstate2 = _global2.exists() ? _global2.get() : eosio_global_state2{};
       _gstate3 = _global3.exists() ? _global3.get() : eosio_global_state3{};
+      _gstate4 = _global4.exists() ? _global4.get() : get_default_inflation_parameters();
    }
 
    eosio_global_state system_contract::get_default_parameters() {
       eosio_global_state dp;
       get_blockchain_parameters(dp);
       return dp;
+   }
+
+   eosio_global_state4 system_contract::get_default_inflation_parameters() {
+      eosio_global_state4 gs4;
+      gs4.continuous_rate      = get_continuous_rate(default_annual_rate);
+      gs4.inflation_pay_factor = default_inflation_pay_factor;
+      gs4.votepay_factor       = default_votepay_factor;
+      return gs4;
    }
 
    symbol system_contract::core_symbol()const {
@@ -44,6 +60,7 @@ namespace eosiosystem {
       _global.set( _gstate, get_self() );
       _global2.set( _gstate2, get_self() );
       _global3.set( _gstate3, get_self() );
+      _global4.set( _gstate4, get_self() );
    }
 
    void system_contract::setram( uint64_t max_ram_size ) {
@@ -273,11 +290,24 @@ namespace eosiosystem {
       check( _gstate2.revision < 255, "can not increment revision" ); // prevent wrap around
       check( revision == _gstate2.revision + 1, "can only increment revision by one" );
       check( revision <= 1, // set upper bound to greatest revision supported in the code
-                    "specified revision is not yet supported by the code" );
+             "specified revision is not yet supported by the code" );
       _gstate2.revision = revision;
    }
 
-
+   void system_contract::setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor ) {
+      require_auth(get_self());
+      check(annual_rate >= 0, "annual_rate can't be negative");
+      if ( inflation_pay_factor < pay_factor_precision ) {
+         check( false, "inflation_pay_factor must not be less than " + std::to_string(pay_factor_precision) );
+      }
+      if ( votepay_factor < pay_factor_precision ) {
+         check( false, "votepay_factor must not be less than " + std::to_string(pay_factor_precision) );
+      }
+      _gstate4.continuous_rate      = get_continuous_rate(annual_rate);
+      _gstate4.inflation_pay_factor = inflation_pay_factor;
+      _gstate4.votepay_factor       = votepay_factor;
+      _global4.set( _gstate4, get_self() );
+   }
 
    /**
     *  Called after a new account is created. This code enforces resource-limits rules
