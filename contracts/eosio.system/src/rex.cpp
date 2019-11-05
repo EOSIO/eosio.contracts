@@ -678,7 +678,7 @@ namespace eosiosystem {
       asset stake_change( 0, core_symbol() );
       bool  success = false;
 
-      const int64_t unlent_lower_bound = rexitr->total_lent.amount;;
+      const int64_t unlent_lower_bound = rexitr->total_lent.amount;
       const int64_t available_unlent   = rexitr->total_unlent.amount - unlent_lower_bound;
       if ( proceeds.amount <= available_unlent ) {
          const int64_t init_vote_stake_amount = bitr->vote_stake.amount;
