@@ -679,7 +679,7 @@ namespace eosiosystem {
       bool  success = false;
 
       const int64_t unlent_lower_bound = 0;
-      const int64_t available_unlent   = rexitr->total_unlent.amount - unlent_lower_bound; // available_unlent <= 0 is possible
+      const int64_t available_unlent   = rexitr->total_unlent.amount - unlent_lower_bound;
       if ( proceeds.amount <= available_unlent ) {
          const int64_t init_vote_stake_amount = bitr->vote_stake.amount;
          const int64_t current_stake_value    = ( uint128_t(bitr->rex_balance.amount) * S0 ) / R0;
