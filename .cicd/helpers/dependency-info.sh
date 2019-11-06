@@ -23,7 +23,10 @@ else
     git clone https://github.com/EOSIO/eosio.cdt && cd eosio.cdt
     git pull && git checkout $CDT_VERSION
     CDT_COMMIT=$(git rev-parse --verify HEAD)
-    EOSIO_COMMIT=$(echo $EOSIO_VERSION | sed 's/\//\_/')
+    cd ..
+    git clone https://github.com/EOSIO/eos && cd eos
+    git pull && git checkout $EOSIO_VERSION
+    EOSIO_COMMIT=$(git rev-parse --verify HEAD)
     cd ..
 fi
 echo "Using eosio ${EOSIO_COMMIT:0:7} from \"$EOSIO_VERSION\"..."
