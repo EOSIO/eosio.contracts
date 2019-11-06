@@ -1,0 +1,40 @@
+{
+  "name": "eosio.contracts",
+  "generators": [
+    {
+      "name": "collate_markdown",
+      "options": {
+        "docs_dir": "docs"
+      }
+    },
+    {
+      "name": "mdjavadoc",
+      "options": {
+        "source_dirs": [
+          "contracts/eosio.token/include/eosio.token/",
+          "contracts/eosio.wrap/include/eosio.wrap/",
+          "contracts/eosio.bios/include/eosio.bios/",
+          "contracts/eosio.system/include/eosio.system/",
+          "contracts/eosio.msig/include/eosio.msig/"
+        ],
+        "output_dir": "action-reference"
+      }
+    }
+  ],
+  "skip_default_filters": true,
+  "filters": [
+    {
+      "name": "sanitize",
+      "options": {
+        "exclude": ["action-reference"]
+      }
+    },
+    {
+      "name": "capitalize",
+      "options": {
+        "mode": "all",
+        "exclude": ["action-reference"]
+      }
+    }
+  ]
+}
