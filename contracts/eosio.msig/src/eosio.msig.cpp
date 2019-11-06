@@ -1,8 +1,8 @@
-#include <eosio.msig/eosio.msig.hpp>
-
 #include <eosio/action.hpp>
-#include <eosio/permission.hpp>
 #include <eosio/crypto.hpp>
+#include <eosio/permission.hpp>
+
+#include <eosio.msig/eosio.msig.hpp>
 
 namespace eosio {
 
@@ -36,6 +36,7 @@ void multisig::propose( ignore<name> proposer,
                   (const char*)0, 0,
                   packed_requested.data(), packed_requested.size()
                );
+
    check( res > 0, "transaction authorization failed" );
 
    std::vector<char> pkd_trans;
@@ -180,6 +181,7 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
                   (const char*)0, 0,
                   packed_provided_approvals.data(), packed_provided_approvals.size()
                );
+
    check( res > 0, "transaction authorization failed" );
 
    send_deferred( (uint128_t(proposer.value) << 64) | proposal_name.value, executer,

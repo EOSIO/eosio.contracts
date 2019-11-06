@@ -6,6 +6,7 @@
 #include <eosio/transaction.hpp>
 
 namespace eosio {
+    
    /**
     * @defgroup eosiomsig eosio.msig
     * @ingroup eosiocontracts
@@ -27,8 +28,7 @@ namespace eosio {
           * authorized by the provided keys and permissions, and if the proposal name doesn’t
           * already exist; if all validations pass the `proposal_name` and `trx` trasanction are
           * saved in the proposals table and the `requested` permission levels to the
-          * approvals table (for the `proposer` context).
-          * Storage changes are billed to `proposer`.
+          * approvals table (for the `proposer` context). Storage changes are billed to `proposer`.
           *
           * @param proposer - The account proposing a transaction
           * @param proposal_name - The name of the proposal (should be unique for proposer)
@@ -46,8 +46,7 @@ namespace eosio {
           * proposed by `proposer`. If the proposal's requested approval list contains the `level`
           * permission then the `level` permission is moved from internal `requested_approvals` list to
           * internal `provided_approvals` list of the proposal, thus persisting the approval for
-          * the `proposal_name` proposal.
-          * Storage changes are billed to `proposer`.
+          * the `proposal_name` proposal. Storage changes are billed to `proposer`.
           *
           * @param proposer - The account proposing a transaction
           * @param proposal_name - The name of the proposal (should be unique for proposer)
