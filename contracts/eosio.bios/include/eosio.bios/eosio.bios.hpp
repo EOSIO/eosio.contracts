@@ -36,14 +36,6 @@ namespace eosiobios {
    using eosio::permission_level;
    using eosio::public_key;
 
-   /**
-    * A weighted permission.
-    *
-    * @details Defines a weighted permission, that is a permission which has a weight associated.
-    * A permission is defined by an account name plus a permission name. The weight is going to be
-    * used against a threshold, if the weight is equal or greater than the threshold set then authorization
-    * will pass.
-    */
    struct permission_level_weight {
       permission_level  permission;
       uint16_t          weight;
@@ -52,11 +44,6 @@ namespace eosiobios {
       EOSLIB_SERIALIZE( permission_level_weight, (permission)(weight) )
    };
 
-   /**
-    * Weighted key.
-    *
-    * @details A weighted key is defined by a public key and an associated weight.
-    */
    struct key_weight {
       eosio::public_key  key;
       uint16_t           weight;
@@ -65,11 +52,6 @@ namespace eosiobios {
       EOSLIB_SERIALIZE( key_weight, (key)(weight) )
    };
 
-   /**
-    * Wait weight.
-    *
-    * @details A wait weight is defined by a number of seconds to wait for and a weight.
-    */
    struct wait_weight {
       uint32_t           wait_sec;
       uint16_t           weight;
@@ -78,15 +60,6 @@ namespace eosiobios {
       EOSLIB_SERIALIZE( wait_weight, (wait_sec)(weight) )
    };
 
-   /**
-    * Blockchain authority.
-    *
-    * @details An authority is defined by:
-    * - a vector of key_weights (a key_weight is a public key plus a weight),
-    * - a vector of permission_level_weights, (a permission_level is an account name plus a permission name)
-    * - a vector of wait_weights (a wait_weight is defined by a number of seconds to wait and a weight)
-    * - a threshold value
-    */
    struct authority {
       uint32_t                              threshold = 0;
       std::vector<key_weight>               keys;
@@ -97,19 +70,6 @@ namespace eosiobios {
       EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts)(waits) )
    };
 
-   /**
-    * Blockchain block header.
-    *
-    * @details A block header is defined by:
-    * - a timestamp,
-    * - the producer that created it,
-    * - a confirmed flag default as zero,
-    * - a link to previous block,
-    * - a link to the transaction merkel root,
-    * - a link to action root,
-    * - a schedule version,
-    * - and a producers' schedule.
-    */
    struct block_header {
       uint32_t                                  timestamp;
       name                                      producer;
@@ -125,26 +85,9 @@ namespace eosiobios {
                                      (schedule_version)(new_producers))
    };
 
-   /**
-    * @defgroup eosiobios eosio.bios
-    * @ingroup eosiocontracts
-    *
-    * eosio.bios is a minimalistic system contract that only supplies the actions that are absolutely
-    * critical to bootstrap a chain and nothing more.
-    *
-    * @{
-    */
    class [[eosio::contract("eosio.bios")]] bios : public eosio::contract {
       public:
          using contract::contract;
-         /**
-          * @{
-          * These actions map one-on-one with the ones defined in
-          * [Native Action Handlers](@ref native_action_handlers) section.
-          * They are present here so they can show up in the abi file and thus user can send them
-          * to this contract, but they have no specific implementation at this contract level,
-          * they will execute the implementation at the core level and nothing else.
-          */
          /**
           * New account action
           *
@@ -358,11 +301,6 @@ namespace eosiobios {
          [[eosio::action]]
          void reqactivated( const eosio::checksum256& feature_digest );
 
-         /**
-          * Abi hash structure
-          *
-          * @details Abi hash structure is defined by contract owner and the contract hash.
-          */
          struct [[eosio::table]] abi_hash {
             name              owner;
             checksum256       hash;
@@ -371,9 +309,6 @@ namespace eosiobios {
             EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
          };
 
-         /**
-          * Multi index table that stores the contracts' abi index by their owners/accounts.
-          */
          typedef eosio::multi_index< "abihash"_n, abi_hash > abi_hash_table;
 
          using newaccount_action = action_wrapper<"newaccount"_n, &bios::newaccount>;
@@ -392,5 +327,4 @@ namespace eosiobios {
          using activate_action = action_wrapper<"activate"_n, &bios::activate>;
          using reqactivated_action = action_wrapper<"reqactivated"_n, &bios::reqactivated>;
    };
-   /** @}*/ // end of @defgroup eosiobios eosio.bios
-} /// namespace eosiobios
+}

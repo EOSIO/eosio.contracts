@@ -38,16 +38,7 @@ namespace eosiosystem {
       asset convert_from_exchange( connector& reserve, const asset& tokens );
       asset convert( const asset& from, const symbol& to );
       asset direct_convert( const asset& from, const symbol& to );
-      /**
-       * Given two connector balances (inp_reserve and out_reserve), and an incoming amount
-       * of inp, this function calculates the delta out using Banacor equation.
-       *
-       * @param inp - input amount, same units as inp_reserve
-       * @param inp_reserve - the input connector balance
-       * @param out_reserve - the output connector balance
-       *
-       * @return int64_t - conversion output amount
-       */
+
       static int64_t get_bancor_output( int64_t inp_reserve,
                                         int64_t out_reserve,
                                         int64_t inp );
