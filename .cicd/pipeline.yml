@@ -7,7 +7,7 @@ steps:
       tar -pczf build.tar.gz build
       buildkite-agent artifact upload build.tar.gz
     agents:
-      queue: "automation-eos-builder-fleet"
+      queue: "automation-eks-eos-builder-fleet"
     timeout: "${TIMEOUT:-40}"
     skip: "$SKIP_UBUNTU_18"
 
@@ -19,7 +19,7 @@ steps:
       tar -xzf build.tar.gz
       ./.cicd/test.sh
     agents:
-      queue: "automation-eos-builder-fleet"
+      queue: "automation-eks-eos-builder-fleet"
     timeout: "${TIMEOUT:-10}"
     skip: "$SKIP_UBUNTU_18"
 
@@ -33,6 +33,6 @@ steps:
       echo '+++ :javascript: Running test-metrics.js'
       node --max-old-space-size=32768 test-metrics.js
     agents:
-      queue: "automation-eos-builder-fleet"
+      queue: "automation-eks-eos-builder-fleet"
     timeout: 10
     soft_fail: true
