@@ -17,7 +17,7 @@ namespace eosiosystem {
       check( (newname.value & 0x1F0ull) == 0, "accounts with 12 character names and no dots can be created without bidding required" );
       check( !is_account( newname ), "account already exists" );
       check( bid.symbol == core_symbol(), "asset must be system token" );
-      check( bid.amount > 0, "insufficient bid" );
+      check( bid.amount > 10000, "insufficient bid" );
       token::transfer_action transfer_act{ token_account, { {bidder, active_permission} } };
       transfer_act.send( bidder, names_account, bid, std::string("bid name ")+ newname.to_string() );
       name_bid_table bids(get_self(), get_self().value);
