@@ -50,7 +50,7 @@ namespace eosiosystem {
          }
 
          eosio::transaction t;
-         t.actions.emplace_back( permission_level{get_self(), active_permission},
+         t.actions.emplace_back( permission_level{current->high_bidder, active_permission},
                                  get_self(), "bidrefund"_n,
                                  std::make_tuple( current->high_bidder, newname )
          );
