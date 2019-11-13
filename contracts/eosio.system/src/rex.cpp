@@ -513,6 +513,8 @@ namespace eosiosystem {
    {
       check( rex_system_initialized(), "rex system not initialized yet" );
 
+      update_rex_pool();
+
       const auto& pool = _rexpool.begin();
 
       auto process_expired_loan = [&]( auto& idx, const auto& itr ) -> std::pair<bool, int64_t> {
@@ -614,6 +616,43 @@ namespace eosiosystem {
          }
       }
 
+   }
+
+   void system_contract::update_rex_pool()
+   {
+      const int32_t num_of_days     = 30;
+      const time_point_sec ct       = current_time_point();
+      const int32_t time_interval   = ct.sec_since_epoch() - _rexretpool.begin()->last_update_time.sec_since_epoch();
+      const int64_t current_rate    = _rexretpool.begin()->current_rate_of_increase;
+      const int64_t change_estimate = ( uint128_t(time_interval) * current_rate ) / ( num_of_days * seconds_per_day );
+      const auto time_threshold     = ct - eosio::days(num_of_days);
+
+      int64_t change = change_estimate;
+      _rexretpool.modify( _rexretpool.begin(), same_payer, [&](auto& return_pool) {
+         auto& return_buckets = return_pool.return_buckets;
+         auto iter= return_buckets.begin();
+         while ( iter!= return_buckets.begin() && iter->first <= time_threshold ) {
+            auto next = iter;
+            ++next;
+            const uint32_t overtime = time_threshold.sec_since_epoch() - iter->first.sec_since_epoch();
+            const int64_t  rate     = iter->second;
+            int64_t surplus = ( uint128_t(overtime) * rate ) / ( num_of_days * seconds_per_day );
+            change                               -= surplus;
+            return_pool.current_rate_of_increase -= rate;
+            return_buckets.erase(iter);
+            iter = next;
+         }
+         return_pool.last_update_time = ct;
+      });
+
+      if ( change <= 0 ) {
+         return;
+      }
+
+      _rexpool.modify(_rexpool.begin(), same_payer, [&](auto& pool) {
+         pool.total_unlent.amount += change;
+         pool.total_lendable       = pool.total_unlent + pool.total_lent;
+      });
    }
 
    template <typename T>
@@ -959,6 +998,17 @@ namespace eosiosystem {
       }
 
       return rex_received;
+   }
+
+   void system_contract::add_to_rex_return_pool( const asset& fee )
+   {
+      update_rex_pool();
+      const uint32_t cts = current_time_point().sec_since_epoch();
+      time_point_sec effective_time{ cts - cts % seconds_per_day };
+      _rexretpool.modify( _rexretpool.begin(), same_payer, [&](auto& return_pool) {
+         return_pool.return_buckets[effective_time] += fee.amount;
+         return_pool.current_rate_of_increase       += fee.amount;
+      });
    }
 
    /**

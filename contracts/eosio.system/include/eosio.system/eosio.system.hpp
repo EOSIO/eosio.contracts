@@ -333,6 +333,17 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "rexpool"_n, rex_pool > rex_pool_table;
 
+   struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
+      uint8_t                           version = 0;
+      int64_t                           current_rate_of_increase = 0;
+      time_point_sec                    last_update_time;
+      std::map<time_point_sec, int64_t> return_buckets;
+
+      uint64_t primary_key()const { return 0; }
+   };
+
+   typedef eosio::multi_index< "rexretpool"_n, rex_return_pool > rex_return_pool_table;
+
    // `rex_fund` structure underlying the rex fund table. A rex fund table entry is defined by:
    // - `version` defaulted to zero,
    // - `owner` the owner of the rex fund,
@@ -443,6 +454,7 @@ namespace eosiosystem {
          eosio_global_state4     _gstate4;
          rammarket               _rammarket;
          rex_pool_table          _rexpool;
+         rex_return_pool_table   _rexretpool;
          rex_fund_table          _rexfunds;
          rex_balance_table       _rexbalance;
          rex_order_table         _rexorders;
@@ -1121,6 +1133,7 @@ namespace eosiosystem {
 
          // defined in rex.cpp
          void runrex( uint16_t max );
+         void update_rex_pool();
          void update_resource_limits( const name& from, const name& receiver, int64_t delta_net, int64_t delta_cpu );
          void check_voting_requirement( const name& owner,
                                         const char* error_msg = "must vote for at least 21 producers or for a proxy before buying REX" )const;
@@ -1142,6 +1155,7 @@ namespace eosiosystem {
          static time_point_sec get_rex_maturity();
          asset add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received );
          asset add_to_rex_pool( const asset& payment );
+         void add_to_rex_return_pool( const asset& fee );
          void process_rex_maturities( const rex_balance_table::const_iterator& bitr );
          void consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
                                        const asset& rex_in_sell_order );
