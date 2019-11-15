@@ -452,15 +452,13 @@ namespace eosiosystem {
     */
    void system_contract::add_loan_to_rex_pool( const asset& payment, int64_t rented_tokens, bool new_loan )
    {
+      add_to_rex_return_pool( payment );
       _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rt ) {
          // add payment to total_rent
          rt.total_rent.amount    += payment.amount;
          // move rented_tokens from total_unlent to total_lent
          rt.total_unlent.amount  -= rented_tokens;
          rt.total_lent.amount    += rented_tokens;
-         // add payment to total_unlent
-         rt.total_unlent.amount  += payment.amount;
-         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
          // increment loan_num if a new loan is being created
          if ( new_loan ) {
             rt.loan_num++;
@@ -620,18 +618,39 @@ namespace eosiosystem {
 
    void system_contract::update_rex_pool()
    {
-      const int32_t num_of_days     = 30;
-      const time_point_sec ct       = current_time_point();
+      const int32_t num_of_days = 30;
+      const time_point_sec ct   = current_time_point();
+
+      if ( _rexretpool.begin() == _rexretpool.end() || ct <= _rexretpool.begin()->last_update_time ) {
+         return;
+      }
+
+      if ( _rexretpool.begin()->residue > 0 ) {
+         _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& pool ) {
+            pool.total_unlent.amount += _rexretpool.begin()->residue;
+            pool.total_lendable       = pool.total_unlent + pool.total_lent;
+         });
+         _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
+            return_pool.residue = 0;
+         });
+      }
+
+      if ( _rexretpool.begin()->return_buckets.empty() || ct <= _rexretpool.begin()->return_buckets.begin()->first ) {
+         _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
+            return_pool.last_update_time = ct;
+         });
+         return;
+      }
       const int32_t time_interval   = ct.sec_since_epoch() - _rexretpool.begin()->last_update_time.sec_since_epoch();
       const int64_t current_rate    = _rexretpool.begin()->current_rate_of_increase;
       const int64_t change_estimate = ( uint128_t(time_interval) * current_rate ) / ( num_of_days * seconds_per_day );
       const auto time_threshold     = ct - eosio::days(num_of_days);
 
       int64_t change = change_estimate;
-      _rexretpool.modify( _rexretpool.begin(), same_payer, [&](auto& return_pool) {
+      _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
          auto& return_buckets = return_pool.return_buckets;
-         auto iter= return_buckets.begin();
-         while ( iter!= return_buckets.begin() && iter->first <= time_threshold ) {
+         auto iter = return_buckets.begin();
+         while ( iter != return_buckets.end() && iter->first <= time_threshold ) {
             auto next = iter;
             ++next;
             const uint32_t overtime = time_threshold.sec_since_epoch() - iter->first.sec_since_epoch();
@@ -649,7 +668,7 @@ namespace eosiosystem {
          return;
       }
 
-      _rexpool.modify(_rexpool.begin(), same_payer, [&](auto& pool) {
+      _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& pool ) {
          pool.total_unlent.amount += change;
          pool.total_lendable       = pool.total_unlent + pool.total_lent;
       });
@@ -1003,11 +1022,33 @@ namespace eosiosystem {
    void system_contract::add_to_rex_return_pool( const asset& fee )
    {
       update_rex_pool();
-      const uint32_t cts = current_time_point().sec_since_epoch();
-      time_point_sec effective_time{ cts - cts % seconds_per_day };
-      _rexretpool.modify( _rexretpool.begin(), same_payer, [&](auto& return_pool) {
-         return_pool.return_buckets[effective_time] += fee.amount;
-         return_pool.current_rate_of_increase       += fee.amount;
+      const uint32_t num_of_days = 30;
+      const time_point_sec ct    = current_time_point();
+      const uint32_t cts         = ct.sec_since_epoch();
+
+      if ( _rexretpool.begin() == _rexretpool.end() ) {
+         _rexretpool.emplace( get_self(), [&]( auto& return_pool ) {
+            return_pool.last_update_time = ct;
+         });
+      }
+
+      _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
+         time_point_sec effective_time{ cts - cts % seconds_per_day };
+         auto& return_buckets           = return_pool.return_buckets;
+         auto& current_rate_of_increase = return_pool.current_rate_of_increase;
+         auto iter = return_buckets.find( effective_time );
+         if ( iter != return_buckets.end() ) {
+            iter->second += fee.amount;
+         } else {
+            int64_t residue = 0;
+            if ( !return_buckets.empty() ) {
+               uint32_t interval = cts - return_buckets.rbegin()->first.sec_since_epoch();
+               residue = ( uint128_t(return_buckets.rbegin()->second) * interval ) / ( num_of_days * seconds_per_day );
+            }
+            return_pool.residue           += residue;
+            current_rate_of_increase      += return_buckets.rbegin()->second;
+            return_buckets[effective_time] = fee.amount;
+         }
       });
    }
 
