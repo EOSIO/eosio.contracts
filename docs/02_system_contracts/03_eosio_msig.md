@@ -1,4 +1,4 @@
-## eosio.msig system contract
+## [eosio.msig system contract](action-reference/eosio.msig)
 
 The `eosio.msig` allows for the creation of proposed transactions which require authorization from a list of accounts, approval of the proposed transactions by those accounts required to approve it, and finally, it also allows the execution of the approved transactions on the blockchain.
 
@@ -8,12 +8,5 @@ The workflow to propose, review, approve and then executed a transaction is desc
 - the proposal then gets stored on the blockchain by the `eosio.msig` contract, and is accessible for review and approval to those accounts required to approve it,
 - after each of the appointed accounts required to approve the proposed transactions reviews and approves it, you can execute the proposed transaction.  The `eosio.msig` contract will execute it automatically, but not before validating that the transaction has not expired, it is not cancelled, and it has been signed by all the permissions in the initial proposal's required permission list.
 
-These are the actions implemented and publicly exposed by the `eosio.msig` contract:
-|Action name|Action description|
-|---|---|
-|propose|Creates a proposal containing one transaction.|
-|approve|Approves an existing proposal.|
-|unapprove|Revokes approval of an existing proposal.|
-|cancel|Cancels an existing proposal.|
-|exec|Allows an account to execute a proposal.|
-|invalidate|Invalidate proposal.|
+The actions implemented and publicly exposed by the `eosio.msig` contract are detailed in the [eosio.msig reference documentation](action-reference/eosio.msig).
+
