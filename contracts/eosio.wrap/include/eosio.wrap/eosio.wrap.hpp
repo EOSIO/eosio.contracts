@@ -8,7 +8,6 @@ namespace eosio {
    /**
     * @defgroup eosiowrap eosio.wrap
     * @ingroup eosiocontracts
-    * eosio.wrap contract simplifies Block Producer superuser actions by making them more readable and easier to audit.
     * 
     * The `eosio.wrap` system contract allows block producers to bypass authorization checks or run privileged actions with 15/21 producer approval and thus simplifies block producers superuser actions. It also makes these actions easier to audit.
     * 
