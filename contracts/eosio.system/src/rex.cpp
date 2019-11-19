@@ -1032,8 +1032,7 @@ namespace eosiosystem {
          });
       }
 
-      const uint8_t  hours_per_bucket = _rexretpool.begin()->hours_per_bucket;
-      const uint32_t bucket_interval  = hours_per_bucket * seconds_per_hour;
+      const uint32_t bucket_interval = _rexretpool.begin()->hours_per_bucket * seconds_per_hour;
 
       _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
          time_point_sec effective_time{ cts - cts % bucket_interval + bucket_interval };
@@ -1047,9 +1046,10 @@ namespace eosiosystem {
             if ( !return_buckets.empty() ) {
                uint32_t interval = cts - return_buckets.rbegin()->first.sec_since_epoch();
                residue = ( uint128_t(return_buckets.rbegin()->second) * interval ) / total_duration;
+               current_rate_of_increase += return_buckets.rbegin()->second;
             }
-            return_pool.residue           += residue;
-            current_rate_of_increase      += return_buckets.rbegin()->second;
+            return_pool.residue += residue;
+            //            current_rate_of_increase      += return_buckets.rbegin()->second;
             return_buckets[effective_time] = fee.amount;
          }
       });
