@@ -59,6 +59,7 @@ namespace eosiosystem {
 
    static constexpr uint32_t seconds_per_year      = 52 * 7 * 24 * 3600;
    static constexpr uint32_t seconds_per_day       = 24 * 3600;
+   static constexpr uint32_t seconds_per_hour      = 3600;
    static constexpr int64_t  useconds_per_year     = int64_t(seconds_per_year) * 1000'000ll;
    static constexpr int64_t  useconds_per_day      = int64_t(seconds_per_day) * 1000'000ll;
    static constexpr uint32_t blocks_per_day        = 2 * seconds_per_day; // half seconds per day
@@ -335,6 +336,7 @@ namespace eosiosystem {
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
       uint8_t                           version = 0;
+      uint8_t                           hours_per_bucket = 12;
       int64_t                           current_rate_of_increase = 0;
       int64_t                           residue = 0; 
       time_point_sec                    last_update_time;
