@@ -418,7 +418,10 @@ namespace eosiosystem {
    };
 
   /**
-   * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
+   * The `eosio.system` contract is a smart contract that `block.one` provides an implementation for as a sample system contract, and it defines the structures and actions needed for blockchain's core functionality.
+   * 
+   * Just like in the `eosio.bios` sample contract implementation, there are a few actions which are not implemented at the contract level (`newaccount`, `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, `canceldelay`, `onerror`, `setabi`, `setcode`), they are just declared in the contract so they will show in the contract's ABI and users will be able to push those actions to the chain via the account holding the `eosio.system` contract, but the implementation is at the EOSIO core level. They are referred to as EOSIO native actions.
+   * 
    * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
    *    delegate their vote to a proxy.
    * - Producers register in order to be voted for, and can claim per-block and per-vote rewards.
