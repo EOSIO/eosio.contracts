@@ -336,11 +336,13 @@ namespace eosiosystem {
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
       uint8_t                           version = 0;
-      uint8_t                           hours_per_bucket = 12;
       int64_t                           current_rate_of_increase = 0;
       int64_t                           residue = 0; 
       time_point_sec                    last_update_time;
       std::map<time_point_sec, int64_t> return_buckets;
+
+      static constexpr uint32_t         total_duration = 30 * seconds_per_day;
+      static constexpr uint8_t          hours_per_bucket = 12;
 
       uint64_t primary_key()const { return 0; }
    };
