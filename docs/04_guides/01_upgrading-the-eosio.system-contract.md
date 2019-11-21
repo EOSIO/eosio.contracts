@@ -1,6 +1,4 @@
-## Upgrading the system contract
-
-### Indirect method using eosio.msig contract
+# Indirect method using eosio.msig contract
 
 Cleos currently provides tools to propose an action with the eosio.msig contract, but it does not provide an easy interface to propose a custom transaction.
 
@@ -12,7 +10,7 @@ The disadvantage of the eosio.msig method is that it requires the proposer to ha
 
 For now, it is recommended to use the direct method to upgrade the system contract.
 
-### Direct method (avoids using eosio.msig contract)
+# Direct method (avoids using eosio.msig contract)
 
 Each of the top 21 block producers should do the following:
 
