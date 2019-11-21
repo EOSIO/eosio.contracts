@@ -3985,14 +3985,17 @@ BOOST_FIXTURE_TEST_CASE( buy_rent_rex, eosio_system_tester ) try {
 
       rex_return_pool = get_rex_return_pool();
       BOOST_REQUIRE( !rex_return_pool.is_null() );
-      BOOST_REQUIRE_EQUAL( 0, rex_return_pool["residue"].as<int64_t>() );
-      BOOST_REQUIRE_EQUAL( 0, rex_return_pool["current_rate_of_increase"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["residue"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( fee.get_amount(), rex_return_pool["current_rate_of_increase"].as<int64_t>() );
 
       produce_block( fc::days(10) );
       // alice is finally able to sellrex, she gains the fee paid by bob
       BOOST_REQUIRE_EQUAL( success(),          sellrex( alice, get_rex_balance(alice) ) );
       BOOST_REQUIRE_EQUAL( 0,                  get_rex_balance(alice).get_amount() );
-      BOOST_REQUIRE_EQUAL( init_balance + fee, get_rex_fund(alice) );
+      auto expected_rex_fund = (init_balance + fee).get_amount();
+      auto actual_rex_fund   = get_rex_fund(alice).get_amount();
+      BOOST_REQUIRE_EQUAL( true,               within_one( expected_rex_fund, actual_rex_fund ) );
+      BOOST_REQUIRE( actual_rex_fund <= expected_rex_fund );
       // test that carol's resource limits have been updated properly when loan expires
       BOOST_REQUIRE_EQUAL( init_cpu_limit,     get_cpu_limit( carol ) );
       BOOST_REQUIRE_EQUAL( init_net_limit,     get_net_limit( carol ) );
@@ -4050,7 +4053,7 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_sell_rex, eosio_system_tester ) try {
    const asset fee = core_sym::from_string("7.0000");
    BOOST_REQUIRE_EQUAL( success(),               rentcpu( bob, carol, fee ) );
    rex_pool = get_rex_pool();
-   BOOST_REQUIRE_EQUAL( init_tot_lendable + fee, rex_pool["total_lendable"].as<asset>() );
+   BOOST_REQUIRE_EQUAL( init_tot_lendable,       rex_pool["total_lendable"].as<asset>() );
    BOOST_REQUIRE_EQUAL( init_tot_rent + fee,     rex_pool["total_rent"].as<asset>() );
 
    produce_block( fc::days(5) );
