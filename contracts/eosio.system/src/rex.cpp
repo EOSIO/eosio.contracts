@@ -618,8 +618,7 @@ namespace eosiosystem {
 
    void system_contract::update_rex_pool()
    {
-      constexpr int32_t    total_duration = 30 * seconds_per_day;
-      const time_point_sec ct             = current_time_point();
+      const time_point_sec ct = current_time_point();
 
       if ( _rexretpool.begin() == _rexretpool.end() || ct <= _rexretpool.begin()->last_update_time ) {
          return;
@@ -634,17 +633,24 @@ namespace eosiosystem {
             return_pool.residue = 0;
          });
       }
-
+      /*
       if ( _rexretpool.begin()->return_buckets.empty() || ct <= _rexretpool.begin()->return_buckets.begin()->first ) {
          _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
             return_pool.last_update_time = ct;
          });
          return;
       }
-      const int32_t        time_interval   = ct.sec_since_epoch() - _rexretpool.begin()->last_update_time.sec_since_epoch();
+      */
+      if ( _rexretpool.begin()->last_update_time <= _rexretpool.begin()->return_buckets.rbegin()->first ) {
+         _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
+            return_pool.current_rate_of_increase += return_pool.return_buckets.rbegin()->second;
+         });
+      }
+
       const int64_t        current_rate    = _rexretpool.begin()->current_rate_of_increase;
-      const int64_t        change_estimate = ( uint128_t(time_interval) * current_rate ) / total_duration;
-      const time_point_sec time_threshold{ ct.sec_since_epoch() - total_duration };
+      const int32_t        time_interval   = ct.sec_since_epoch() - _rexretpool.begin()->last_update_time.sec_since_epoch();
+      const int64_t        change_estimate = ( uint128_t(time_interval) * current_rate ) / rex_return_pool::total_duration;
+      const time_point_sec time_threshold{ ct.sec_since_epoch() - rex_return_pool::total_duration };
 
       int64_t change = change_estimate;
       _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
@@ -655,7 +661,7 @@ namespace eosiosystem {
             ++next;
             const uint32_t overtime = time_threshold.sec_since_epoch() - iter->first.sec_since_epoch();
             const int64_t  rate     = iter->second;
-            const int64_t  surplus  = ( uint128_t(overtime) * rate ) / total_duration;
+            const int64_t  surplus  = ( uint128_t(overtime) * rate ) / rex_return_pool::total_duration;
             change                               -= surplus;
             return_pool.current_rate_of_increase -= rate;
             return_buckets.erase(iter);
@@ -1022,35 +1028,39 @@ namespace eosiosystem {
    void system_contract::add_to_rex_return_pool( const asset& fee )
    {
       update_rex_pool();
-      constexpr uint32_t   total_duration = 30 * seconds_per_day;
-      const time_point_sec ct             = current_time_point();
-      const uint32_t       cts            = ct.sec_since_epoch();
 
+      const time_point_sec ct              = current_time_point();
+      const uint32_t       cts             = ct.sec_since_epoch();
+      const uint32_t       bucket_interval = rex_return_pool::hours_per_bucket * seconds_per_hour;
+      const time_point_sec effective_time{ cts - cts % bucket_interval + bucket_interval };
       if ( _rexretpool.begin() == _rexretpool.end() ) {
          _rexretpool.emplace( get_self(), [&]( auto& return_pool ) {
-            return_pool.last_update_time = ct;
+            return_pool.last_update_time = effective_time;
          });
       }
 
-      const uint32_t bucket_interval = _rexretpool.begin()->hours_per_bucket * seconds_per_hour;
-
       _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
-         time_point_sec effective_time{ cts - cts % bucket_interval + bucket_interval };
          auto& return_buckets           = return_pool.return_buckets;
          auto& current_rate_of_increase = return_pool.current_rate_of_increase;
          auto iter = return_buckets.find( effective_time );
          if ( iter != return_buckets.end() ) {
             iter->second += fee.amount;
          } else {
+            // create a new bucket
+            // but first process the previous bucket if it exists
             int64_t residue = 0;
             if ( !return_buckets.empty() ) {
                uint32_t interval = cts - return_buckets.rbegin()->first.sec_since_epoch();
-               residue = ( uint128_t(return_buckets.rbegin()->second) * interval ) / total_duration;
-               current_rate_of_increase += return_buckets.rbegin()->second;
+               if ( interval < rex_return_pool::total_duration ) {
+                  residue = ( uint128_t(return_buckets.rbegin()->second) * interval ) / rex_return_pool::total_duration;
+                  current_rate_of_increase += return_buckets.rbegin()->second;
+               } else {
+                  residue = return_buckets.rbegin()->second;
+                  // erase rbegin
+               }
             }
             return_pool.residue += residue;
-            //            current_rate_of_increase      += return_buckets.rbegin()->second;
-            return_buckets[effective_time] = fee.amount;
+            return_buckets.emplace( effective_time, fee.amount );
          }
       });
    }
