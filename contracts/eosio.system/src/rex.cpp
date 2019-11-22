@@ -620,7 +620,9 @@ namespace eosiosystem {
    {
       const time_point_sec ct = current_time_point();
 
-      if ( _rexretpool.begin() == _rexretpool.end() || ct <= _rexretpool.begin()->last_update_time ) {
+      if ( _rexretpool.begin() == _rexretpool.end() || 
+           _rexretpool.begin()->return_buckets.empty() ||
+           ct <= _rexretpool.begin()->last_update_time ) {
          return;
       }
 
@@ -633,14 +635,18 @@ namespace eosiosystem {
             return_pool.residue = 0;
          });
       }
-      /*
-      if ( _rexretpool.begin()->return_buckets.empty() || ct <= _rexretpool.begin()->return_buckets.begin()->first ) {
+
+      if ( _rexretpool.begin()->return_buckets.empty() ) {
+         return;
+      }
+
+      if ( ct <= _rexretpool.begin()->return_buckets.begin()->first ) {
          _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
-            return_pool.last_update_time = ct;
+               return_pool.last_update_time = ct;
          });
          return;
       }
-      */
+
       if ( _rexretpool.begin()->last_update_time <= _rexretpool.begin()->return_buckets.rbegin()->first ) {
          _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
             return_pool.current_rate_of_increase += return_pool.return_buckets.rbegin()->second;

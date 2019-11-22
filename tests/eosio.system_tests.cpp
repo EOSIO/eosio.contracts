@@ -4007,16 +4007,42 @@ BOOST_FIXTURE_TEST_CASE( buy_rent_rex, eosio_system_tester ) try {
    }
 
    {
+      typedef std::map<time_point_sec, int64_t> return_buckets_t;
+      auto rex_return_pool = get_rex_return_pool();
+      BOOST_REQUIRE( !rex_return_pool.is_null() );
+      BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["residue"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["current_rate_of_increase"].as<int64_t>() );
+
       const int64_t init_net_limit = get_net_limit( emily );
       BOOST_REQUIRE_EQUAL( 0,         get_rex_balance(alice).get_amount() );
-      BOOST_REQUIRE_EQUAL( success(), buyrex( alice, core_sym::from_string("20050.0000") ) );
+      const asset payment = core_sym::from_string("20050.0000");
+      BOOST_REQUIRE_EQUAL( success(), buyrex( alice, payment ) );
       rex_pool = get_rex_pool();
-      const asset fee = core_sym::from_string("0.4560");
-      int64_t expected_net = bancor_convert( rex_pool["total_rent"].as<asset>().get_amount(),
-                                             rex_pool["total_unlent"].as<asset>().get_amount(),
-                                             fee.get_amount() );
+      BOOST_REQUIRE_EQUAL( payment,                             rex_pool["total_unlent"].as<asset>() );
+      BOOST_REQUIRE_EQUAL( payment,                             rex_pool["total_lendable"].as<asset>() );
+      BOOST_REQUIRE_EQUAL( core_sym::from_string("20000.0000"), rex_pool["total_rent"].as<asset>() );
+
+      rex_return_pool = get_rex_return_pool();
+      BOOST_REQUIRE( !rex_return_pool.is_null() );
+      BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["residue"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["current_rate_of_increase"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["return_buckets"].as<return_buckets_t>().size() );
+
+      const asset   fee          = core_sym::from_string("0.4560");
+      const int64_t expected_net = bancor_convert( rex_pool["total_rent"].as<asset>().get_amount(),
+                                                   rex_pool["total_unlent"].as<asset>().get_amount(),
+                                                   fee.get_amount() );
       BOOST_REQUIRE_EQUAL( success(),    rentnet( emily, emily, fee ) );
-      BOOST_REQUIRE_EQUAL( expected_net, get_net_limit( emily ) - init_net_limit );
+
+      rex_return_pool = get_rex_return_pool();
+      BOOST_REQUIRE( !rex_return_pool.is_null() );
+      BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["residue"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["current_rate_of_increase"].as<int64_t>() );
+
+      rex_pool = get_rex_pool();
+      BOOST_REQUIRE_EQUAL( expected_net,                              get_net_limit( emily ) - init_net_limit );
+      BOOST_REQUIRE_EQUAL( payment,                                   rex_pool["total_lendable"].as<asset>() );
+      BOOST_REQUIRE_EQUAL( core_sym::from_string("20000.0000") + fee, rex_pool["total_rent"].as<asset>() );
    }
 
 } FC_LOG_AND_RETHROW()
@@ -4113,7 +4139,7 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
       BOOST_REQUIRE_EQUAL( success(), rentcpu( emily, emily, core_sym::from_string("20000.0000") ) );
    }
 
-   const asset rent_payment = core_sym::from_string("40000.0000");
+   const asset rent_payment = core_sym::from_string("500.0000");
 
    BOOST_REQUIRE_EQUAL( success(), rentcpu( frank, frank, rent_payment, rent_payment ) );
 
@@ -4161,7 +4187,7 @@ BOOST_FIXTURE_TEST_CASE( buy_sell_claim_rex, eosio_system_tester ) try {
 
    // wait for 2 more hours, by now frank's loan has expired and there is enough balance in
    // total_unlent to close some sellrex orders. only two are processed, bob's and carol's.
-   // alices's order is still open.
+   // alice's order is still open.
    // an action is needed to trigger queue processing
    produce_block( fc::hours(2) );
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("rex loans are currently not available"),
@@ -4319,13 +4345,14 @@ BOOST_FIXTURE_TEST_CASE( rex_loans, eosio_system_tester ) try {
 
    // wait for 30 days, frank's loan will be renewed at the current price
    produce_block( fc::hours(30*24 + 1) );
+   BOOST_REQUIRE_EQUAL( success(), updaterex( alice ) );
    rex_pool = get_rex_pool();
    {
-      int64_t unlent_tokens = bancor_convert( rex_pool["total_unlent"].as<asset>().get_amount(),
-                                              rex_pool["total_rent"].as<asset>().get_amount(),
-                                              expected_stake );
+      int64_t total_rent_change = bancor_convert( rex_pool["total_unlent"].as<asset>().get_amount(),
+                                                  rex_pool["total_rent"].as<asset>().get_amount(),
+                                                  expected_stake );
 
-      expected_stake = bancor_convert( rex_pool["total_rent"].as<asset>().get_amount() - unlent_tokens,
+      expected_stake = bancor_convert( rex_pool["total_rent"].as<asset>().get_amount() - total_rent_change,
                                        rex_pool["total_unlent"].as<asset>().get_amount() + expected_stake,
                                        payment.get_amount() );
    }
