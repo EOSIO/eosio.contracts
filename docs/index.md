@@ -181,6 +181,7 @@ These are the actions implemented and publicly exposed by the `eosio.msig` contr
 The `eosio.token` contract defines the structures and actions that allow users to create, issue, and manage tokens for EOSIO based blockchains.
 
 These are the public actions the `eosio.token` contract is implementing:
+
 |Action name|Action description|
 |---|---|
 |create|Allows an account to create a token in a given supply amount.|
