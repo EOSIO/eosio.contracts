@@ -1283,6 +1283,9 @@ namespace eosiosystem {
          };
 
          registration<&system_contract::update_rex_stake> vote_stake_updater{ this };
+
+         // defined in buybandwidth.cpp
+         void adjust_resources(name payer, name account, int64_t net_delta, int64_t cpu_delta, bool must_not_be_managed = false);
    };
 
 }
