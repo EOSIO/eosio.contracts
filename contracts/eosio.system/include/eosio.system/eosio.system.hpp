@@ -87,7 +87,7 @@ namespace eosiosystem {
     * - Users can bid on premium names.
     * - A resource exchange system (REX) allows token holders to lend their tokens,
     *    and users to rent CPU and Network resources in return for a market-determined fee.
-    * - A resource market separate from REX: `buycpu31`, `buynet31`
+    * - A resource market separate from REX: `buybandwidth`
     */
 
    // A name bid, which consists of:
@@ -470,45 +470,62 @@ namespace eosiosystem {
       asset stake_change;
    };
 
-   enum resource31_type: uint8_t {
-      cpu = 0,
-      net = 1,
+   struct buybw_config_resource {
+      int64_t        current_weight;         // Immediately set the resource market weight to this amount. 1 represents the same amount of resources as 1 satoshi of SYS staked.
+      int64_t        target_weight;          // Linearly grow the resource market weight to this amount. 1 represents the same amount of resources as 1 satoshi of SYS staked.
+      time_point_sec target_timestamp;       // Stop automatic resource market weight growth at this time. Once this time hits, the market weight will be target_weight.
+                                             //     Ignored if current_weight == target_weight.
+      double         exponent;               // Exponent of resource price curve. Must be >= 1.
+      uint32_t       decay_days;             // Number of days for adjusted resource utilization to decay to instantaneous utilization within exp(-1).
+      asset          total_price;            // Total price needed to buy the entire resource market weight.
+      asset          min_purchase_price;     // Minimum purchase. This needs to be large enough to cover RAM costs.
    };
 
-   struct [[eosio::table,eosio::contract("eosio.system")]] resource31_state {
+   struct buybw_config {
+      buybw_config_resource   net;           // NET market configuration
+      buybw_config_resource   cpu;           // CPU market configuration
+      uint32_t                purchase_days; // `buybandwidth` `days` argument must match this.
+   };
+
+   struct buybw_state_resource {
+      uint8_t        version = 0;
+      int64_t        weight;                 // resource market weight
+      int64_t        initial_weight;         // Initial resource market weight used for linear growth
+      int64_t        target_weight;          // Linearly grow the resource market weight to this amount
+      time_point_sec initial_timestamp;      // When resource market weight growth started
+      time_point_sec target_timestamp;       // Stop automatic resource market weight growth at this time. Once this time hits, the market weight will be target_weight.
+      double         exponent;               // Exponent of resource price curve.
+      uint32_t       decay_days;             // Number of days for adjusted resource utilization to decay to instantaneous utilization within exp(-1).
+      asset          total_price;            // Total price needed to buy the entire resource market weight.
+      asset          min_purchase_price;     // Minimum purchase
+      int64_t        utilization;            // Instantaneous resource utilization. This is the current amount sold.
+      int64_t        adjusted_utilization;   // Adjusted resource utilization. This >= utilization. It grows instantly but decays exponentially.
+   };
+
+   struct [[eosio::table("buybw.state"),eosio::contract("eosio.system")]] buybw_state {
       uint8_t              version = 0;
-      uint8_t              type;                // resource31_type
-      int64_t              weight;
-      int64_t              initial_weight;
-      int64_t              target_weight;
-      time_point_sec       initial_timestamp;
-      time_point_sec       target_timestamp;
-      time_point_sec       last_update;
-      double               exponent;
-      uint32_t             window;
-      asset                peak_price;
-      asset                min_purchase_price;
-      int64_t              sold;
+      buybw_state_resource net;              // NET market state
+      buybw_state_resource cpu;              // CPU market state
 
-      uint64_t primary_key()const { return type; }
+      uint64_t primary_key()const { return 0; }
    };
 
-   typedef eosio::multi_index<"res31.state"_n, resource31_state> resource31_state_table;
+   typedef eosio::singleton<"buybw.state"_n, buybw_state> buybw_state_singleton;
 
-   struct [[eosio::table,eosio::contract("eosio.system")]] resource31_order {
+   struct [[eosio::table("buybw.order"),eosio::contract("eosio.system")]] buybw_order {
       uint8_t              version = 0;
       uint64_t             id;
       name                 owner;
-      uint8_t              type;                // resource31_type
-      int64_t              weight;
+      int64_t              net_weight;
+      int64_t              cpu_weight;
       time_point_sec       expires;
 
       uint64_t primary_key()const { return id; }
       uint64_t by_owner()const    { return owner.value; }
    };
 
-   typedef eosio::multi_index< "res31.order"_n, resource31_order,
-                               indexed_by<"byowner"_n, const_mem_fun<resource31_order, uint64_t, &resource31_order::by_owner>>> resource31_order_table;
+   typedef eosio::multi_index< "buybw.order"_n, buybw_order,
+                               indexed_by<"byowner"_n, const_mem_fun<buybw_order, uint64_t, &buybw_order::by_owner>>> buybw_order_table;
 
    /**
     * The EOSIO system contract. The EOSIO system contract governs ram market, voters, producers, global state.
@@ -546,6 +563,7 @@ namespace eosiosystem {
          static constexpr eosio::name names_account{"eosio.names"_n};
          static constexpr eosio::name saving_account{"eosio.saving"_n};
          static constexpr eosio::name rex_account{"eosio.rex"_n};
+         static constexpr eosio::name reserv_account{"eosio.reserv"_n};
          static constexpr eosio::name null_account{"eosio.null"_n};
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
          static constexpr symbol ram_symbol     = symbol(symbol_code("RAM"), 0);
@@ -1164,58 +1182,25 @@ namespace eosiosystem {
          void setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
 
          /**
-          * Configure or modify the `buycpu31` market. The market becomes available the first time this
+          * Configure the `buybandwidth` market. The market becomes available the first time this
           * action is invoked.
-          * 
-          * @param delta_weight - immediately adjust the market cap by this amount. 1 represents the same amount of
-          *    resources as 1 satoshi of SYS staked.
-          * @param target_weight - linearly grow the market cap to this amount.
-          * @param target_timestamp - stop automatic market growth at this time. Once this time hits, the market
-          *    cap will be `target_weight`.
           */
          [[eosio::action]]
-         void configcpu31( int64_t delta_weight, int64_t target_weight, const time_point_sec& target_timestamp,
-                           double exponent, uint32_t window, const asset& peak_price, const asset& min_purchase_price );
+         void configbuybw(const buybw_config& args);
 
          /**
-          * Configure or modify the `buynet31` market. The market becomes available the first time this
-          * action is invoked.
-          * 
-          * @param delta_weight - immediately adjust the market cap by this amount. 1 represents the same amount of
-          *    resources as 1 satoshi of SYS staked.
-          * @param target_weight - linearly grow the market cap to this amount.
-          * @param target_timestamp - stop automatic market growth at this time. Once this time hits, the market
-          *    cap will be `target_weight`.
-          */
-         [[eosio::action]]
-         void confignet31( int64_t delta_weight, int64_t target_weight, const time_point_sec& target_timestamp,
-                           double exponent, uint32_t window, const asset& peak_price, const asset& min_purchase_price );
-
-         /**
-          * Buy CPU for 31 days.
+          * Buy NET and CPU
           * 
           * @param payer - the resource buyer
           * @param receiver - the resource receiver
-          * @param amount - the amount of resource to buy. 1 has the same amount of resources as
-          *    1 satoshi of SYS staked.
+          * @param days - number of days of resource availability. Must match market configuration.
+          * @param net - fraction of net (100% = 10^18) managed by this market
+          * @param cpu - fraction of cpu (100% = 10^18) managed by this market
           * @param max_payment - the maximum amount `payer` is willing to pay. Tokens are withdrawn from
           *    `payer`'s token balance.
           */
          [[eosio::action]]
-         void buycpu31( const name& payer, const name& receiver, int64_t amount, const asset& max_payment );
-
-         /**
-          * Buy NET for 31 days.
-          * 
-          * @param payer - the resource buyer
-          * @param receiver - the resource receiver
-          * @param amount - the amount of resource to buy. 1 has the same amount of resources as
-          *    1 satoshi of SYS staked.
-          * @param max_payment - the maximum amount `payer` is willing to pay. Tokens are withdrawn from
-          *    `payer`'s token balance.
-          */
-         [[eosio::action]]
-         void buynet31( const name& payer, const name& receiver, int64_t amount, const asset& max_payment );
+         void buybandwidth( const name& payer, const name& receiver, uint32_t days, int64_t net, int64_t cpu, const asset& max_payment );
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
@@ -1263,10 +1248,8 @@ namespace eosiosystem {
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
          using setinflation_action = eosio::action_wrapper<"setinflation"_n, &system_contract::setinflation>;
-         using configcpu31_action = eosio::action_wrapper<"configcpu31"_n, &system_contract::configcpu31>;
-         using confignet31_action = eosio::action_wrapper<"confignet31"_n, &system_contract::confignet31>;
-         using buycpu31_action = eosio::action_wrapper<"buycpu31"_n, &system_contract::buycpu31>;
-         using buynet31_action = eosio::action_wrapper<"buynet31"_n, &system_contract::buynet31>;
+         using configcpu_action = eosio::action_wrapper<"configbuybw"_n, &system_contract::configbuybw>;
+         using buybandwidth_action = eosio::action_wrapper<"buybandwidth"_n, &system_contract::buybandwidth>;
 
       private:
          // Implementation details:
