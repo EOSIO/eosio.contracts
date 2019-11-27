@@ -478,10 +478,13 @@ namespace eosiosystem {
 
       uint64_t primary_key()const { return id; }
       uint64_t by_owner()const    { return owner.value; }
+      uint64_t by_expires()const  { return expires.utc_seconds; }
    };
 
    typedef eosio::multi_index< "buybw.order"_n, buybw_order,
-                               indexed_by<"byowner"_n, const_mem_fun<buybw_order, uint64_t, &buybw_order::by_owner>>> buybw_order_table;
+                               indexed_by<"byowner"_n, const_mem_fun<buybw_order, uint64_t, &buybw_order::by_owner>>,
+                               indexed_by<"byexpires"_n, const_mem_fun<buybw_order, uint64_t, &buybw_order::by_expires>>
+                               > buybw_order_table;
 
    /**
     * The EOSIO system contract. The EOSIO system contract governs ram market, voters, producers, global state.
@@ -1285,7 +1288,9 @@ namespace eosiosystem {
          registration<&system_contract::update_rex_stake> vote_stake_updater{ this };
 
          // defined in buybandwidth.cpp
-         void adjust_resources(name payer, name account, int64_t net_delta, int64_t cpu_delta, bool must_not_be_managed = false);
+         void adjust_resources(name payer, name account, symbol core_symbol, int64_t net_delta, int64_t cpu_delta, bool must_not_be_managed = false);
+         void process_buybw_queue(symbol core_symbol, buybw_state& state, buybw_order_table& orders, uint32_t max_items);
+         void update_buybw_state(buybw_state& state);
    };
 
 }
