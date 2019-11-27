@@ -2,8 +2,8 @@
 
 namespace eosiosystem {
 
-void system_contract::adjust_resources(name payer, name account, int64_t net_delta, int64_t cpu_delta,
-                                       bool must_not_be_managed) {
+void system_contract::adjust_resources(name payer, name account, symbol core_symbol, int64_t net_delta,
+                                       int64_t cpu_delta, bool must_not_be_managed) {
    if (!net_delta && !cpu_delta)
       return;
 
@@ -12,13 +12,13 @@ void system_contract::adjust_resources(name payer, name account, int64_t net_del
    if (tot_itr == totals_tbl.end()) {
       tot_itr = totals_tbl.emplace(payer, [&](auto& tot) {
          tot.owner      = account;
-         tot.net_weight = net_delta;
-         tot.cpu_weight = cpu_delta;
+         tot.net_weight = asset{ net_delta, core_symbol };
+         tot.cpu_weight = asset{ cpu_delta, core_symbol };
       });
    } else {
       totals_tbl.modify(tot_itr, same_payer, [&](auto& tot) {
-         tot.net_weight += net_delta;
-         tot.cpu_weight += cpu_delta;
+         tot.net_weight.amount += net_delta;
+         tot.cpu_weight.amount += cpu_delta;
       });
    }
    check(0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth");
@@ -53,7 +53,32 @@ void system_contract::adjust_resources(name payer, name account, int64_t net_del
    }
 } // system_contract::adjust_resources
 
+void system_contract::process_buybw_queue(symbol core_symbol, buybw_state& state, buybw_order_table& orders,
+                                          uint32_t max_items) {
+   time_point_sec now       = eosio::current_time_point();
+   auto           idx       = orders.get_index<"byexpires"_n>();
+   int64_t        total_net = 0;
+   int64_t        total_cpu = 0;
+   while (max_items--) {
+      auto it = idx.begin();
+      if (it == idx.end() || it->expires > now)
+         break;
+      total_net = it->net_weight;
+      total_cpu = it->cpu_weight;
+      adjust_resources(get_self(), it->owner, core_symbol, -it->net_weight, -it->cpu_weight);
+      idx.erase(it);
+   }
+   state.net.utilization -= total_net;
+   state.cpu.utilization -= total_cpu;
+   adjust_resources(get_self(), reserv_account, core_symbol, total_net, total_cpu, true);
+}
+
+void system_contract::update_buybw_state(buybw_state& state) {
+   //
+}
+
 void system_contract::configbuybw(buybw_config& args) {
+   require_auth(get_self());
    time_point_sec        now         = eosio::current_time_point();
    auto                  core_symbol = get_core_symbol();
    buybw_state_singleton state_sing{ get_self(), 0 };
@@ -93,13 +118,21 @@ void system_contract::configbuybw(buybw_config& args) {
    update(state.net, args.net, net_delta);
    update(state.cpu, args.cpu, cpu_delta);
 
-   adjust_resources(get_self(), reserv_account, net_delta, cpu_delta, true);
+   adjust_resources(get_self(), reserv_account, core_symbol, net_delta, cpu_delta, true);
    state_sing.set(state, get_self());
-}
+} // system_contract::configbuybw
 
 void system_contract::buybandwidth(const name& payer, const name& receiver, uint32_t days, int64_t net, int64_t cpu,
                                    const asset& max_payment) {
-   //
+   require_auth(payer);
+   buybw_state_singleton state_sing{ get_self(), 0 };
+   buybw_order_table     orders{ get_self(), 0 };
+   eosio::check(state_sing.exists(), "buybandwidth hasn't been initialized");
+   auto state       = state_sing.get();
+   auto core_symbol = get_core_symbol();
+   process_buybw_queue(core_symbol, state, orders, 2);
+   update_buybw_state(state);
+   state_sing.set(state, get_self());
 }
 
 } // namespace eosiosystem
