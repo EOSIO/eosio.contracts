@@ -624,50 +624,40 @@ namespace eosiosystem {
          return;
       }
 
-      if ( _rexretpool.begin()->residue > 0 ) {
-         _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& pool ) {
-            pool.total_unlent.amount += _rexretpool.begin()->residue;
-            pool.total_lendable       = pool.total_unlent + pool.total_lent;
-         });
-         _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
-            return_pool.residue = 0;
-         });
-      }
-      /*
-      if ( _rexretpool.begin()->return_buckets.empty() || ct <= _rexretpool.begin()->return_buckets.begin()->first ) {
-         _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
-            return_pool.last_update_time = ct;
-         });
-         return;
-      }
-      */
-      if ( _rexretpool.begin()->last_update_time <= _rexretpool.begin()->return_buckets.rbegin()->first ) {
-         _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
-            return_pool.current_rate_of_increase += return_pool.return_buckets.rbegin()->second;
+      const bool new_return_bucket = !_rexretpool.begin()->return_buckets.empty()
+         && _rexretpool.begin()->last_update_time <= _rexretpool.begin()->return_buckets.rbegin()->first
+         && _rexretpool.begin()->return_buckets.rbegin()->first <= ct;
+      int64_t new_bucket_overestimate = 0;
+      if ( new_return_bucket ) {
+         _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& rp ) {
+            rp.current_rate_of_increase += rp.return_buckets.rbegin()->second;
+            const uint32_t dt = rp.return_buckets.rbegin()->first.sec_since_epoch() - rp.last_update_time.sec_since_epoch();
+            new_bucket_overestimate = ( uint128_t(dt) * rp.return_buckets.rbegin()->second ) / rex_return_pool::total_duration;
          });
       }
 
       const int64_t        current_rate    = _rexretpool.begin()->current_rate_of_increase;
-      const int32_t        time_interval   = ct.sec_since_epoch() - _rexretpool.begin()->last_update_time.sec_since_epoch();
-      const int64_t        change_estimate = ( uint128_t(time_interval) * current_rate ) / rex_return_pool::total_duration;
+      const uint32_t       time_interval   = ct.sec_since_epoch() - _rexretpool.begin()->last_update_time.sec_since_epoch();
+      const int64_t        change_estimate = ( uint128_t(time_interval) * current_rate ) / rex_return_pool::total_duration
+                                             - new_bucket_overestimate;
       const time_point_sec time_threshold{ ct.sec_since_epoch() - rex_return_pool::total_duration };
 
       int64_t change = change_estimate;
-      _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
-         auto& return_buckets = return_pool.return_buckets;
+      _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& rp ) {
+         auto& return_buckets = rp.return_buckets;
          auto iter = return_buckets.begin();
          while ( iter != return_buckets.end() && iter->first <= time_threshold ) {
             auto next = iter;
             ++next;
-            const uint32_t overtime = time_threshold.sec_since_epoch() - iter->first.sec_since_epoch();
+            const uint32_t overtime = ct.sec_since_epoch() - ( iter->first.sec_since_epoch() + rex_return_pool::total_duration );
             const int64_t  rate     = iter->second;
             const int64_t  surplus  = ( uint128_t(overtime) * rate ) / rex_return_pool::total_duration;
-            change                               -= surplus;
-            return_pool.current_rate_of_increase -= rate;
+            change                      -= surplus;
+            rp.current_rate_of_increase -= rate;
             return_buckets.erase(iter);
             iter = next;
          }
-         return_pool.last_update_time = ct;
+         rp.last_update_time = ct;
       });
 
       if ( change <= 0 ) {
@@ -1029,39 +1019,18 @@ namespace eosiosystem {
    {
       update_rex_pool();
 
-      const time_point_sec ct              = current_time_point();
-      const uint32_t       cts             = ct.sec_since_epoch();
+      const uint32_t       cts             = current_time_point().sec_since_epoch();
       const uint32_t       bucket_interval = rex_return_pool::hours_per_bucket * seconds_per_hour;
       const time_point_sec effective_time{ cts - cts % bucket_interval + bucket_interval };
+
       if ( _rexretpool.begin() == _rexretpool.end() ) {
-         _rexretpool.emplace( get_self(), [&]( auto& return_pool ) {
-            return_pool.last_update_time = effective_time;
+         _rexretpool.emplace( get_self(), [&]( auto& rp ) {
+            rp.last_update_time = effective_time;
          });
       }
 
-      _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& return_pool ) {
-         auto& return_buckets           = return_pool.return_buckets;
-         auto& current_rate_of_increase = return_pool.current_rate_of_increase;
-         auto iter = return_buckets.find( effective_time );
-         if ( iter != return_buckets.end() ) {
-            iter->second += fee.amount;
-         } else {
-            // create a new bucket
-            // but first process the previous bucket if it exists
-            int64_t residue = 0;
-            if ( !return_buckets.empty() ) {
-               uint32_t interval = cts - return_buckets.rbegin()->first.sec_since_epoch();
-               if ( interval < rex_return_pool::total_duration ) {
-                  residue = ( uint128_t(return_buckets.rbegin()->second) * interval ) / rex_return_pool::total_duration;
-                  current_rate_of_increase += return_buckets.rbegin()->second;
-               } else {
-                  residue = return_buckets.rbegin()->second;
-                  // erase rbegin
-               }
-            }
-            return_pool.residue += residue;
-            return_buckets.emplace( effective_time, fee.amount );
-         }
+      _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& rp ) {
+         rp.return_buckets[effective_time] += fee.amount;
       });
    }
 
