@@ -624,25 +624,25 @@ namespace eosiosystem {
          return;
       }
 
+      const int64_t        current_rate    = _rexretpool.begin()->current_rate_of_increase;
+      const uint32_t       time_interval   = ct.sec_since_epoch() - _rexretpool.begin()->last_update_time.sec_since_epoch();
+      const int64_t        change_estimate = ( uint128_t(time_interval) * current_rate ) / rex_return_pool::total_duration;
+      const time_point_sec time_threshold{ ct.sec_since_epoch() - rex_return_pool::total_duration };
+
       const bool new_return_bucket = !_rexretpool.begin()->return_buckets.empty()
          && _rexretpool.begin()->last_update_time <= _rexretpool.begin()->return_buckets.rbegin()->first
          && _rexretpool.begin()->return_buckets.rbegin()->first <= ct;
-      int64_t new_bucket_overestimate = 0;
+      int64_t new_bucket_estimate = 0;
       if ( new_return_bucket ) {
          _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& rp ) {
             rp.current_rate_of_increase += rp.return_buckets.rbegin()->second;
-            const uint32_t dt = rp.return_buckets.rbegin()->first.sec_since_epoch() - rp.last_update_time.sec_since_epoch();
-            new_bucket_overestimate = ( uint128_t(dt) * rp.return_buckets.rbegin()->second ) / rex_return_pool::total_duration;
+            const uint32_t dt = ct.sec_since_epoch() - rp.return_buckets.rbegin()->first.sec_since_epoch();
+            new_bucket_estimate = ( uint128_t(dt) * rp.return_buckets.rbegin()->second ) / rex_return_pool::total_duration;
          });
       }
 
-      const int64_t        current_rate    = _rexretpool.begin()->current_rate_of_increase;
-      const uint32_t       time_interval   = ct.sec_since_epoch() - _rexretpool.begin()->last_update_time.sec_since_epoch();
-      const int64_t        change_estimate = ( uint128_t(time_interval) * current_rate ) / rex_return_pool::total_duration
-                                             - new_bucket_overestimate;
-      const time_point_sec time_threshold{ ct.sec_since_epoch() - rex_return_pool::total_duration };
+      int64_t change = change_estimate + new_bucket_estimate;
 
-      int64_t change = change_estimate;
       _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& rp ) {
          auto& return_buckets = rp.return_buckets;
          auto iter = return_buckets.begin();
@@ -651,7 +651,8 @@ namespace eosiosystem {
             ++next;
             const uint32_t overtime = ct.sec_since_epoch() - ( iter->first.sec_since_epoch() + rex_return_pool::total_duration );
             const int64_t  rate     = iter->second;
-            const int64_t  surplus  = ( uint128_t(overtime) * rate ) / rex_return_pool::total_duration;
+            const int64_t  surplus  = ( uint128_t(overtime) * rate +  rex_return_pool::total_duration - 1 )
+                                      / rex_return_pool::total_duration;
             change                      -= surplus;
             rp.current_rate_of_increase -= rate;
             return_buckets.erase(iter);
@@ -872,10 +873,7 @@ namespace eosiosystem {
    {
 #if CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
       if ( rex_available() ) {
-         _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
-            rp.total_unlent.amount   += amount.amount;
-            rp.total_lendable.amount += amount.amount;
-         });
+         add_to_rex_return_pool( amount );
          // inline transfer to rex_account
          token::transfer_action transfer_act{ token_account, { from, active_permission } };
          transfer_act.send( from, rex_account, amount,
