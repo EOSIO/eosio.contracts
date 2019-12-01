@@ -6,7 +6,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/v1.9</loc>
+    <loc>https://eosio.github.io//eosio.contracts/v1.9/index</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
@@ -21,12 +21,12 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/v1.9/guides/how-to-vote</loc>
+    <loc>https://eosio.github.io//eosio.contracts/v1.9/guides/index</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/v1.9/guides</loc>
+    <loc>https://eosio.github.io//eosio.contracts/v1.9/guides/how-to-vote</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
@@ -41,12 +41,12 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/v1.9/action-reference/eosio.system/index</loc>
+    <loc>https://eosio.github.io//eosio.contracts/v1.9/action-reference/eosio.system/exchange_state</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/v1.9/action-reference/eosio.system/native</loc>
+    <loc>https://eosio.github.io//eosio.contracts/v1.9/action-reference/eosio.system</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
@@ -56,17 +56,12 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/v1.9/action-reference/eosio.wrap</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://eosio.github.io//eosio.contracts/v1.9/action-reference/eosio.token</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/v1.9/guides/how-to-use-eosio.wrap</loc>
+    <loc>https://eosio.github.io//eosio.contracts/v1.9/action-reference/eosio.wrap</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
