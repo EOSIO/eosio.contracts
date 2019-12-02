@@ -62,6 +62,7 @@ namespace eosiosystem {
    static constexpr uint32_t seconds_per_hour      = 3600;
    static constexpr int64_t  useconds_per_year     = int64_t(seconds_per_year) * 1000'000ll;
    static constexpr int64_t  useconds_per_day      = int64_t(seconds_per_day) * 1000'000ll;
+   static constexpr int64_t  useconds_per_hour     = int64_t(seconds_per_hour) * 1000'000ll;
    static constexpr uint32_t blocks_per_day        = 2 * seconds_per_day; // half seconds per day
 
    static constexpr int64_t  min_activated_stake   = 150'000'000'0000;
@@ -335,13 +336,13 @@ namespace eosiosystem {
    typedef eosio::multi_index< "rexpool"_n, rex_pool > rex_pool_table;
 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
-      uint8_t                           version = 0;
-      time_point_sec                    last_update_time;
-      int64_t                           current_rate_of_increase = 0;
-      std::map<time_point_sec, int64_t> return_buckets;
+      uint8_t                       version = 0;
+      time_point                    last_update_time;
+      int64_t                       current_rate_of_increase = 0;
+      std::map<time_point, int64_t> return_buckets;
 
-      static constexpr uint32_t         total_duration = 30 * seconds_per_day;
-      static constexpr uint8_t          hours_per_bucket = 12;
+      static constexpr int64_t      total_duration = 30 * useconds_per_day;
+      static constexpr uint8_t      hours_per_bucket = 12;
 
       uint64_t primary_key()const { return 0; }
    };
