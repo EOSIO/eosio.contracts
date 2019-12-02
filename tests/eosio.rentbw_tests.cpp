@@ -14,7 +14,7 @@
 
 using namespace eosio_system;
 
-BOOST_AUTO_TEST_SUITE(eosio_system_buybandwidth_tests)
+BOOST_AUTO_TEST_SUITE(eosio_system_rentbw_tests)
 
 BOOST_FIXTURE_TEST_CASE(foo, eosio_system_tester) try {
    //

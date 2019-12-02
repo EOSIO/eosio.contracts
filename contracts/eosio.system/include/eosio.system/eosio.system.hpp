@@ -83,7 +83,7 @@ namespace eosiosystem {
     * - Users can bid on premium names.
     * - A resource exchange system (REX) allows token holders to lend their tokens,
     *    and users to rent CPU and Network resources in return for a market-determined fee.
-    * - A resource market separate from REX: `buybandwidth`
+    * - A resource market separate from REX: `rentbw`
     */
 
    // A name bid, which consists of:
@@ -425,7 +425,7 @@ namespace eosiosystem {
       asset stake_change;
    };
 
-   struct buybw_config_resource {
+   struct rentbw_config_resource {
       int64_t        current_weight;         // Immediately set the resource market weight to this amount. 1 represents the same amount of resources as 1 satoshi of SYS staked.
       int64_t        target_weight;          // Linearly grow the resource market weight to this amount. 1 represents the same amount of resources as 1 satoshi of SYS staked.
       time_point_sec target_timestamp;       // Stop automatic resource market weight growth at this time. Once this time hits, the market weight will be target_weight.
@@ -433,16 +433,16 @@ namespace eosiosystem {
       double         exponent;               // Exponent of resource price curve. Must be >= 1.
       uint32_t       decay_secs;             // Number of seconds for adjusted resource utilization to decay to instantaneous utilization within exp(-1).
       asset          total_price;            // Total price needed to buy the entire resource market weight.
-      asset          min_purchase_price;     // Minimum purchase. This needs to be large enough to cover RAM costs.
+      asset          min_rent_price;         // Rents below this amount are rejected. This needs to be large enough to cover RAM costs.
    };
 
-   struct buybw_config {
-      buybw_config_resource   net;           // NET market configuration
-      buybw_config_resource   cpu;           // CPU market configuration
-      uint32_t                purchase_days; // `buybandwidth` `days` argument must match this.
+   struct rentbw_config {
+      rentbw_config_resource   net;          // NET market configuration
+      rentbw_config_resource   cpu;          // CPU market configuration
+      uint32_t                 rent_days;    // `rentbw` `days` argument must match this.
    };
 
-   struct buybw_state_resource {
+   struct rentbw_state_resource {
       uint8_t        version                 = 0;
       int64_t        weight                  = 0;  // resource market weight
       int64_t        initial_weight          = 0;  // Initial resource market weight used for linear growth
@@ -452,24 +452,24 @@ namespace eosiosystem {
       double         exponent                = 0;  // Exponent of resource price curve.
       uint32_t       decay_secs              = 0;  // Number of seconds for adjusted resource utilization to decay to instantaneous utilization within exp(-1).
       asset          total_price             = {}; // Total price needed to buy the entire resource market weight.
-      asset          min_purchase_price      = {}; // Minimum purchase
+      asset          min_rent_price          = {}; // Rents below this amount are rejected
       int64_t        utilization             = 0;  // Instantaneous resource utilization. This is the current amount sold.
       int64_t        adjusted_utilization    = 0;  // Adjusted resource utilization. This >= utilization. It grows instantly but decays exponentially.
       time_point_sec utilization_timestamp   = {}; // When adjusted_utilization was last updated
    };
 
-   struct [[eosio::table("buybw.state"),eosio::contract("eosio.system")]] buybw_state {
-      uint8_t              version           = 0;
-      buybw_state_resource net               = {}; // NET market state
-      buybw_state_resource cpu               = {}; // CPU market state
-      uint32_t             purchase_days     = 0;  // `buybandwidth` `days` argument must match this.
+   struct [[eosio::table("rent.state"),eosio::contract("eosio.system")]] rentbw_state {
+      uint8_t                 version        = 0;
+      rentbw_state_resource   net            = {}; // NET market state
+      rentbw_state_resource   cpu            = {}; // CPU market state
+      uint32_t                rent_days      = 0;  // `rentbw` `days` argument must match this.
 
       uint64_t primary_key()const { return 0; }
    };
 
-   typedef eosio::singleton<"buybw.state"_n, buybw_state> buybw_state_singleton;
+   typedef eosio::singleton<"rent.state"_n, rentbw_state> rentbw_state_singleton;
 
-   struct [[eosio::table("buybw.order"),eosio::contract("eosio.system")]] buybw_order {
+   struct [[eosio::table("rentbw.order"),eosio::contract("eosio.system")]] rentbw_order {
       uint8_t              version = 0;
       uint64_t             id;
       name                 owner;
@@ -482,10 +482,10 @@ namespace eosiosystem {
       uint64_t by_expires()const  { return expires.utc_seconds; }
    };
 
-   typedef eosio::multi_index< "buybw.order"_n, buybw_order,
-                               indexed_by<"byowner"_n, const_mem_fun<buybw_order, uint64_t, &buybw_order::by_owner>>,
-                               indexed_by<"byexpires"_n, const_mem_fun<buybw_order, uint64_t, &buybw_order::by_expires>>
-                               > buybw_order_table;
+   typedef eosio::multi_index< "rentbw.order"_n, rentbw_order,
+                               indexed_by<"byowner"_n, const_mem_fun<rentbw_order, uint64_t, &rentbw_order::by_owner>>,
+                               indexed_by<"byexpires"_n, const_mem_fun<rentbw_order, uint64_t, &rentbw_order::by_expires>>
+                               > rentbw_order_table;
 
    /**
     * The EOSIO system contract. The EOSIO system contract governs ram market, voters, producers, global state.
@@ -1123,14 +1123,14 @@ namespace eosiosystem {
          void setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
 
          /**
-          * Configure the `buybandwidth` market. The market becomes available the first time this
+          * Configure the `rentbw` market. The market becomes available the first time this
           * action is invoked.
           */
          [[eosio::action]]
-         void configbuybw(buybw_config& args);
+         void configrentbw(rentbw_config& args);
 
          /**
-          * Buy NET and CPU
+          * Rent NET and CPU
           * 
           * @param payer - the resource buyer
           * @param receiver - the resource receiver
@@ -1141,7 +1141,7 @@ namespace eosiosystem {
           *    `payer`'s token balance.
           */
          [[eosio::action]]
-         void buybandwidth( const name& payer, const name& receiver, uint32_t days, int64_t net, int64_t cpu, const asset& max_payment );
+         void rentbw( const name& payer, const name& receiver, uint32_t days, int64_t net, int64_t cpu, const asset& max_payment );
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
@@ -1188,8 +1188,8 @@ namespace eosiosystem {
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
          using setinflation_action = eosio::action_wrapper<"setinflation"_n, &system_contract::setinflation>;
-         using configcpu_action = eosio::action_wrapper<"configbuybw"_n, &system_contract::configbuybw>;
-         using buybandwidth_action = eosio::action_wrapper<"buybandwidth"_n, &system_contract::buybandwidth>;
+         using configcpu_action = eosio::action_wrapper<"configrentbw"_n, &system_contract::configrentbw>;
+         using rentbw_action = eosio::action_wrapper<"rentbw"_n, &system_contract::rentbw>;
 
       private:
          // Implementation details:
@@ -1288,10 +1288,10 @@ namespace eosiosystem {
 
          registration<&system_contract::update_rex_stake> vote_stake_updater{ this };
 
-         // defined in buybandwidth.cpp
+         // defined in rentbw.cpp
          void adjust_resources(name payer, name account, symbol core_symbol, int64_t net_delta, int64_t cpu_delta, bool must_not_be_managed = false);
-         void process_buybw_queue(symbol core_symbol, buybw_state& state, buybw_order_table& orders, uint32_t max_items);
-         void update_buybw_state(buybw_state& state);
+         void process_rentbw_queue(symbol core_symbol, rentbw_state& state, rentbw_order_table& orders, uint32_t max_items);
+         void update_rentbw_state(rentbw_state& state);
    };
 
 }
