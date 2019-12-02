@@ -38,6 +38,8 @@ namespace eosiosystem {
    using eosio::time_point_sec;
    using eosio::unsigned_int;
 
+   inline constexpr int64_t rentbw_ratio_frac = 1000000000000000ll; // 1.0 = 10^15
+
    template<typename E, typename F>
    static inline auto has_field( F flags, E field )
    -> std::enable_if_t< std::is_integral_v<F> && std::is_unsigned_v<F> &&
@@ -426,14 +428,28 @@ namespace eosiosystem {
    };
 
    struct rentbw_config_resource {
-      int64_t        current_weight;         // Immediately set the resource market weight to this amount. 1 represents the same amount of resources as 1 satoshi of SYS staked.
-      int64_t        target_weight;          // Linearly grow the resource market weight to this amount. 1 represents the same amount of resources as 1 satoshi of SYS staked.
-      time_point_sec target_timestamp;       // Stop automatic resource market weight growth at this time. Once this time hits, the market weight will be target_weight.
-                                             //     Ignored if current_weight == target_weight.
+      int64_t        current_weight_ratio;   // Immediately set weight_ratio to this amount. 1x = 10^15. 0.01x = 10^13. Set this
+                                             //    to 0 to preserve the existing setting or use the default; this avoids sudden
+                                             //    price jumps. For new chains which don't need to gradually phase out staking
+                                             //    and REX, 0.01x (10^13) is a good value for both current_weight_ratio and
+                                             //    target_weight_ratio.
+      int64_t        target_weight_ratio;    // Linearly shrink weight_ratio to this amount. 1x = 10^15. 0.01x = 10^13. Set this
+                                             //    to 0 to preserve the existing setting or use the default.
+      int64_t        assumed_stake_weight;   // Assumed stake weight for ratio calculations. Use the sum of total staked and
+                                             //    total rented by REX at the time the rentbw market is first activated. Set
+                                             //    this to 0 to preserve the existing setting; this avoids sudden price jumps.
+                                             //    For new chains which don't need to phase out staking and REX, 10^12 is
+                                             //    probably a good value. 
+      time_point_sec target_timestamp;       // Stop automatic weight_ratio shrinkage at this time. Once this
+                                             //    time hits, weight_ratio will be target_weight_ratio. Ignored if
+                                             //    current_weight_ratio == target_weight_ratio. Set this to 0 to preserve the
+                                             //    existing setting.
       double         exponent;               // Exponent of resource price curve. Must be >= 1.
-      uint32_t       decay_secs;             // Number of seconds for adjusted resource utilization to decay to instantaneous utilization within exp(-1).
+      uint32_t       decay_secs;             // Number of seconds for adjusted resource utilization to decay to instantaneous
+                                             //    utilization within exp(-1).
       asset          total_price;            // Total price needed to buy the entire resource market weight.
-      asset          min_rent_price;         // Rents below this amount are rejected. This needs to be large enough to cover RAM costs.
+      asset          min_rent_price;         // Rents below this amount are rejected. This needs to be large enough to cover
+                                             //    RAM costs.
    };
 
    struct rentbw_config {
@@ -444,18 +460,28 @@ namespace eosiosystem {
 
    struct rentbw_state_resource {
       uint8_t        version                 = 0;
-      int64_t        weight                  = 0;  // resource market weight
-      int64_t        initial_weight          = 0;  // Initial resource market weight used for linear growth
-      int64_t        target_weight           = 0;  // Linearly grow the resource market weight to this amount
-      time_point_sec initial_timestamp       = {}; // When resource market weight growth started
-      time_point_sec target_timestamp        = {}; // Stop automatic resource market weight growth at this time. Once this time hits, the market weight will be target_weight.
-      double         exponent                = 0;  // Exponent of resource price curve.
-      uint32_t       decay_secs              = 0;  // Number of seconds for adjusted resource utilization to decay to instantaneous utilization within exp(-1).
-      asset          total_price             = {}; // Total price needed to buy the entire resource market weight.
-      asset          min_rent_price          = {}; // Rents below this amount are rejected
-      int64_t        utilization             = 0;  // Instantaneous resource utilization. This is the current amount sold.
-      int64_t        adjusted_utilization    = 0;  // Adjusted resource utilization. This >= utilization. It grows instantly but decays exponentially.
-      time_point_sec utilization_timestamp   = {}; // When adjusted_utilization was last updated
+      int64_t        weight                  = 0;                       // resource market weight. calculated; varies over time.
+                                                                        //    1 represents the same amount of resources as 1
+                                                                        //    satoshi of SYS staked.
+      int64_t        weight_ratio            = 0;                       // resource market weight ratio:
+                                                                        //    assumed_stake_weight / (assumed_stake_weight + weight).
+                                                                        //    calculated; varies over time. 1x = 10^15. 0.01x = 10^13.
+      int64_t        assumed_stake_weight    = 0;                       // Assumed stake weight for ratio calculations.
+      int64_t        initial_weight_ratio    = rentbw_ratio_frac;       // Initial weight_ratio used for linear shrinkage.
+      int64_t        target_weight_ratio     = rentbw_ratio_frac / 100; // Linearly shrink the weight_ratio to this amount.
+      time_point_sec initial_timestamp       = {};                      // When weight_ratio shrinkage started
+      time_point_sec target_timestamp        = {};                      // Stop automatic weight_ratio shrinkage at this time. Once this
+                                                                        //    time hits, weight_ratio will be target_weight_ratio.
+      double         exponent                = 0;                       // Exponent of resource price curve.
+      uint32_t       decay_secs              = 0;                       // Number of seconds for adjusted resource utilization to
+                                                                        //    decay to instantaneous utilization within exp(-1).
+      asset          total_price             = {};                      // Total price needed to buy the entire resource market weight.
+      asset          min_rent_price          = {};                      // Rents below this amount are rejected
+      int64_t        utilization             = 0;                       // Instantaneous resource utilization. This is the current
+                                                                        //    amount sold.
+      int64_t        adjusted_utilization    = 0;                       // Adjusted resource utilization. This >= utilization. It
+                                                                        //    grows instantly but decays exponentially.
+      time_point_sec utilization_timestamp   = {};                      // When adjusted_utilization was last updated
    };
 
    struct [[eosio::table("rent.state"),eosio::contract("eosio.system")]] rentbw_state {
@@ -1290,8 +1316,7 @@ namespace eosiosystem {
 
          // defined in rentbw.cpp
          void adjust_resources(name payer, name account, symbol core_symbol, int64_t net_delta, int64_t cpu_delta, bool must_not_be_managed = false);
-         void process_rentbw_queue(symbol core_symbol, rentbw_state& state, rentbw_order_table& orders, uint32_t max_items);
-         void update_rentbw_state(rentbw_state& state);
+         void process_rentbw_queue(symbol core_symbol, rentbw_state& state, rentbw_order_table& orders, uint32_t max_items, int64_t& net_delta_available, int64_t& cpu_delta_available);
    };
 
 }
