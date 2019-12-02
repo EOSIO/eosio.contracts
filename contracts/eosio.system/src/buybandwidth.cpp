@@ -1,4 +1,5 @@
 #include <eosio.system/eosio.system.hpp>
+#include <math.h>
 
 namespace eosiosystem {
 
@@ -73,8 +74,33 @@ void system_contract::process_buybw_queue(symbol core_symbol, buybw_state& state
    adjust_resources(get_self(), reserv_account, core_symbol, total_net, total_cpu, true);
 }
 
+void update_weight(time_point_sec now, buybw_state_resource& res) {
+   if (now >= res.target_timestamp)
+      res.weight = res.target_weight;
+   else
+      res.weight = res.initial_weight + //
+                   int128_t(res.target_weight - res.initial_weight) *
+                         (now.utc_seconds - res.initial_timestamp.utc_seconds) /
+                         (res.target_timestamp.utc_seconds - res.initial_timestamp.utc_seconds);
+}
+
+void update_utilization(time_point_sec now, buybw_state_resource& res) {
+   if (res.utilization >= res.adjusted_utilization)
+      res.adjusted_utilization = res.utilization;
+   else
+      res.adjusted_utilization = //
+            res.utilization +
+            (res.adjusted_utilization - res.utilization) *
+                  exp((now.utc_seconds - res.utilization_timestamp.utc_seconds) / double(-res.decay_secs));
+   res.utilization_timestamp = now;
+}
+
 void system_contract::update_buybw_state(buybw_state& state) {
-   //
+   time_point_sec now = eosio::current_time_point();
+   update_weight(now, state.net);
+   update_weight(now, state.cpu);
+   update_utilization(now, state.net);
+   update_utilization(now, state.cpu);
 }
 
 void system_contract::configbuybw(buybw_config& args) {

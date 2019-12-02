@@ -488,25 +488,26 @@ namespace eosiosystem {
    };
 
    struct buybw_state_resource {
-      uint8_t        version              = 0;
-      int64_t        weight               = 0;  // resource market weight
-      int64_t        initial_weight       = 0;  // Initial resource market weight used for linear growth
-      int64_t        target_weight        = 0;  // Linearly grow the resource market weight to this amount
-      time_point_sec initial_timestamp    = {}; // When resource market weight growth started
-      time_point_sec target_timestamp     = {}; // Stop automatic resource market weight growth at this time. Once this time hits, the market weight will be target_weight.
-      double         exponent             = 0;  // Exponent of resource price curve.
-      uint32_t       decay_secs           = 0;  // Number of seconds for adjusted resource utilization to decay to instantaneous utilization within exp(-1).
-      asset          total_price          = {}; // Total price needed to buy the entire resource market weight.
-      asset          min_purchase_price   = {}; // Minimum purchase
-      int64_t        utilization          = 0;  // Instantaneous resource utilization. This is the current amount sold.
-      int64_t        adjusted_utilization = 0;  // Adjusted resource utilization. This >= utilization. It grows instantly but decays exponentially.
+      uint8_t        version                 = 0;
+      int64_t        weight                  = 0;  // resource market weight
+      int64_t        initial_weight          = 0;  // Initial resource market weight used for linear growth
+      int64_t        target_weight           = 0;  // Linearly grow the resource market weight to this amount
+      time_point_sec initial_timestamp       = {}; // When resource market weight growth started
+      time_point_sec target_timestamp        = {}; // Stop automatic resource market weight growth at this time. Once this time hits, the market weight will be target_weight.
+      double         exponent                = 0;  // Exponent of resource price curve.
+      uint32_t       decay_secs              = 0;  // Number of seconds for adjusted resource utilization to decay to instantaneous utilization within exp(-1).
+      asset          total_price             = {}; // Total price needed to buy the entire resource market weight.
+      asset          min_purchase_price      = {}; // Minimum purchase
+      int64_t        utilization             = 0;  // Instantaneous resource utilization. This is the current amount sold.
+      int64_t        adjusted_utilization    = 0;  // Adjusted resource utilization. This >= utilization. It grows instantly but decays exponentially.
+      time_point_sec utilization_timestamp   = {}; // When adjusted_utilization was last updated
    };
 
    struct [[eosio::table("buybw.state"),eosio::contract("eosio.system")]] buybw_state {
-      uint8_t              version        = 0;
-      buybw_state_resource net            = {}; // NET market state
-      buybw_state_resource cpu            = {}; // CPU market state
-      uint32_t             purchase_days  = 0;  // `buybandwidth` `days` argument must match this.
+      uint8_t              version           = 0;
+      buybw_state_resource net               = {}; // NET market state
+      buybw_state_resource cpu               = {}; // CPU market state
+      uint32_t             purchase_days     = 0;  // `buybandwidth` `days` argument must match this.
 
       uint64_t primary_key()const { return 0; }
    };
