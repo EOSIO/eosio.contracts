@@ -616,6 +616,9 @@ namespace eosiosystem {
 
    }
 
+   /**
+    * @brief Adds returns from the REX return pool to the REX pool
+    */
    void system_contract::update_rex_pool()
    {
       const time_point ct = current_time_point();
@@ -1013,6 +1016,11 @@ namespace eosiosystem {
       return rex_received;
    }
 
+   /**
+    * @brief Adds an amount of core tokens to the REX return pool
+    *
+    * @param fee - amount to be added
+    */
    void system_contract::add_to_rex_return_pool( const asset& fee )
    {
       update_rex_pool();
