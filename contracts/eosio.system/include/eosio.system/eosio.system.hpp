@@ -489,18 +489,21 @@ namespace eosiosystem {
                                              //    time hits, weight_ratio will be target_weight_ratio. Ignored if
                                              //    current_weight_ratio == target_weight_ratio. Set this to 0 to preserve the
                                              //    existing setting.
-      double         exponent;               // Exponent of resource price curve. Must be >= 1.
+      double         exponent;               // Exponent of resource price curve. Must be >= 1. Set this to 0 to preserve the
+                                             //    existing setting.
       uint32_t       decay_secs;             // Number of seconds for adjusted resource utilization to decay to instantaneous
-                                             //    utilization within exp(-1).
-      asset          total_price;            // Total price needed to buy the entire resource market weight.
+                                             //    utilization within exp(-1). Set this to 0 to preserve the existing setting.
+      asset          total_price;            // Total price needed to buy the entire resource market weight. Set this to 0 to
+                                             //    preserve the existing setting.
       asset          min_rent_price;         // Rents below this amount are rejected. This needs to be large enough to cover
-                                             //    RAM costs.
+                                             //    RAM costs. Set this to 0 to preserve the existing setting.
    };
 
    struct rentbw_config {
       rentbw_config_resource   net;          // NET market configuration
       rentbw_config_resource   cpu;          // CPU market configuration
-      uint32_t                 rent_days;    // `rentbw` `days` argument must match this.
+      uint32_t                 rent_days;    // `rentbw` `days` argument must match this. Set this to 0 to preserve the
+                                             //     existing setting.
    };
 
    struct rentbw_state_resource {
@@ -1384,7 +1387,10 @@ namespace eosiosystem {
 
          // defined in rentbw.cpp
          void adjust_resources(name payer, name account, symbol core_symbol, int64_t net_delta, int64_t cpu_delta, bool must_not_be_managed = false);
-         void process_rentbw_queue(symbol core_symbol, rentbw_state& state, rentbw_order_table& orders, uint32_t max_items, int64_t& net_delta_available, int64_t& cpu_delta_available);
+         void process_rentbw_queue(
+            time_point_sec now, symbol core_symbol, rentbw_state& state,
+            rentbw_order_table& orders, uint32_t max_items, int64_t& net_delta_available,
+            int64_t& cpu_delta_available);
    };
 
 }

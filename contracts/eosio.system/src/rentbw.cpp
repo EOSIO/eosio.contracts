@@ -54,11 +54,10 @@ void system_contract::adjust_resources(name payer, name account, symbol core_sym
    }
 } // system_contract::adjust_resources
 
-void system_contract::process_rentbw_queue(symbol core_symbol, rentbw_state& state, rentbw_order_table& orders,
-                                           uint32_t max_items, int64_t& net_delta_available,
+void system_contract::process_rentbw_queue(time_point_sec now, symbol core_symbol, rentbw_state& state,
+                                           rentbw_order_table& orders, uint32_t max_items, int64_t& net_delta_available,
                                            int64_t& cpu_delta_available) {
-   time_point_sec now = eosio::current_time_point();
-   auto           idx = orders.get_index<"byexpires"_n>();
+   auto idx = orders.get_index<"byexpires"_n>();
    while (max_items--) {
       auto it = idx.begin();
       if (it == idx.end() || it->expires > now)
@@ -80,7 +79,7 @@ void update_weight(time_point_sec now, rentbw_state_resource& res, int64_t& delt
                          int128_t(res.target_weight_ratio - res.initial_weight_ratio) *
                                (now.utc_seconds - res.initial_timestamp.utc_seconds) /
                                (res.target_timestamp.utc_seconds - res.initial_timestamp.utc_seconds);
-
+   // !!! check bounds of weight_ratio
    int64_t new_weight =
          res.assumed_stake_weight * int128_t(rentbw_ratio_frac) / res.weight_ratio - res.assumed_stake_weight;
    delta_available += new_weight - res.weight;
@@ -107,25 +106,41 @@ void system_contract::configrentbw(rentbw_config& args) {
 
    int64_t net_delta_available = 0;
    int64_t cpu_delta_available = 0;
-   update_weight(now, state.net, net_delta_available);
-   update_weight(now, state.cpu, cpu_delta_available);
+   if (state_sing.exists()) {
+      update_weight(now, state.net, net_delta_available);
+      update_weight(now, state.cpu, cpu_delta_available);
+   }
 
    auto update = [&](auto& state, auto& args) {
-      if (!args.current_weight_ratio)
-         args.current_weight_ratio = state.weight_ratio;
+      if (!args.current_weight_ratio) {
+         if (state.weight_ratio)
+            args.current_weight_ratio = state.weight_ratio;
+         else
+            args.current_weight_ratio = state.initial_weight_ratio;
+      }
       if (!args.target_weight_ratio)
          args.target_weight_ratio = state.target_weight_ratio;
       if (!args.assumed_stake_weight)
          args.assumed_stake_weight = state.assumed_stake_weight;
       if (!args.target_timestamp.utc_seconds)
          args.target_timestamp = state.target_timestamp;
+      if (!args.exponent)
+         args.exponent = state.exponent;
+      if (!args.decay_secs)
+         args.decay_secs = state.decay_secs;
+      if (!args.total_price.amount)
+         args.total_price = state.total_price;
+      if (!args.min_rent_price.amount)
+         args.min_rent_price = state.min_rent_price;
 
+      // !!! examine checks
       if (args.current_weight_ratio == args.target_weight_ratio)
          args.target_timestamp = now;
       else
          eosio::check(args.target_timestamp > now, "target_timestamp must be in the future");
       eosio::check(args.current_weight_ratio > 0, "current_weight_ratio is too small");
       eosio::check(args.current_weight_ratio <= rentbw_ratio_frac, "current_weight_ratio is too large");
+      eosio::check(args.target_weight_ratio > 0, "target_weight_ratio is too small");
       eosio::check(args.target_weight_ratio <= args.current_weight_ratio, "weight can't grow over time");
       eosio::check(args.assumed_stake_weight >= 1,
                    "assumed_stake_weight must be at least 1; a much larger value is recommended");
@@ -134,6 +149,7 @@ void system_contract::configrentbw(rentbw_config& args) {
       eosio::check(args.total_price.symbol == core_symbol, "total_price doesn't match core symbol");
       eosio::check(args.total_price.amount > 0, "total_price must be positive");
       eosio::check(args.min_rent_price.symbol == core_symbol, "min_rent_price doesn't match core symbol");
+      eosio::check(args.min_rent_price.amount > 0, "min_rent_price must be positive");
 
       state.assumed_stake_weight = args.assumed_stake_weight;
       state.initial_weight_ratio = args.current_weight_ratio;
@@ -146,6 +162,8 @@ void system_contract::configrentbw(rentbw_config& args) {
       state.min_rent_price       = args.min_rent_price;
    };
 
+   if (!args.rent_days)
+      args.rent_days = state.rent_days;
    eosio::check(args.rent_days > 0, "rent_days must be > 0");
    state.rent_days = args.rent_days;
 
@@ -174,7 +192,7 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
 
    int64_t net_delta_available = 0;
    int64_t cpu_delta_available = 0;
-   process_rentbw_queue(core_symbol, state, orders, 2, net_delta_available, cpu_delta_available);
+   process_rentbw_queue(now, core_symbol, state, orders, 2, net_delta_available, cpu_delta_available);
    update_weight(now, state.net, net_delta_available);
    update_weight(now, state.cpu, cpu_delta_available);
    update_utilization(now, state.net);
