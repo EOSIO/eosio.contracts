@@ -127,7 +127,7 @@ void system_contract::configrentbw(rentbw_config& args) {
          args.exponent = state.exponent;
       if (!args.decay_secs)
          args.decay_secs = state.decay_secs;
-      if (!args.target_price.amount)
+      if (!args.target_price.amount && state.target_price.amount)
          args.target_price = state.target_price;
 
       // !!! examine checks
@@ -158,7 +158,7 @@ void system_contract::configrentbw(rentbw_config& args) {
 
    if (!args.rent_days)
       args.rent_days = state.rent_days;
-   if (!args.min_rent_price.amount)
+   if (!args.min_rent_price.amount && state.min_rent_price.amount)
       args.min_rent_price = state.min_rent_price;
 
    eosio::check(args.rent_days > 0, "rent_days must be > 0");
@@ -213,8 +213,8 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
       if (!frac)
          return;
       amount = int128_t(frac) * state.weight / rentbw_frac;
-      fee += calc_rentbw_price(state, state.adjusted_utilization + amount) -
-             calc_rentbw_price(state, state.adjusted_utilization);
+      fee.amount += calc_rentbw_price(state, state.adjusted_utilization + amount) -
+                    calc_rentbw_price(state, state.adjusted_utilization);
       state.utilization += amount;
       eosio::check(state.utilization <= state.weight, "market doesn't have enough resources available");
    };
@@ -226,7 +226,7 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
    eosio::check(fee <= max_payment, "calculated fee exceeds max_payment");
    eosio::check(fee >= state.min_rent_price, "calculated fee is below minimum; try renting more");
 
-   orders.emplace([&](payer, auto& order) {
+   orders.emplace(payer, [&](auto& order) {
       order.id         = orders.available_primary_key();
       order.owner      = receiver;
       order.net_weight = net_amount;
@@ -234,7 +234,7 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
       order.expires    = now + eosio::days(days);
    });
 
-   adjust_resources(payer, receiver, core_symbol, net, cpu, true);
+   adjust_resources(payer, receiver, core_symbol, net_amount, cpu_amount, true);
    adjust_resources(get_self(), reserv_account, core_symbol, net_delta_available, cpu_delta_available, true);
    channel_to_rex(payer, fee, true);
    state_sing.set(state, get_self());
