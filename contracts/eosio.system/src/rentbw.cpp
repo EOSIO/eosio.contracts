@@ -184,6 +184,27 @@ int64_t calc_rentbw_price(const rentbw_state_resource& state, double utilization
    return ceil(state.target_price.amount * pow(utilization / state.weight, state.exponent));
 }
 
+void system_contract::rentbwexec(const name& user, uint16_t max) {
+   require_auth(user);
+   rentbw_state_singleton state_sing{ get_self(), 0 };
+   rentbw_order_table     orders{ get_self(), 0 };
+   eosio::check(state_sing.exists(), "rentbw hasn't been initialized");
+   auto           state       = state_sing.get();
+   time_point_sec now         = eosio::current_time_point();
+   auto           core_symbol = get_core_symbol();
+
+   int64_t net_delta_available = 0;
+   int64_t cpu_delta_available = 0;
+   process_rentbw_queue(now, core_symbol, state, orders, max, net_delta_available, cpu_delta_available);
+   update_weight(now, state.net, net_delta_available);
+   update_weight(now, state.cpu, cpu_delta_available);
+   update_utilization(now, state.net);
+   update_utilization(now, state.cpu);
+
+   adjust_resources(get_self(), reserv_account, core_symbol, net_delta_available, cpu_delta_available, true);
+   state_sing.set(state, get_self());
+}
+
 void system_contract::rentbw(const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac,
                              const asset& max_payment) {
    require_auth(payer);
