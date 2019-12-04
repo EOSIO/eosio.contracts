@@ -39,7 +39,7 @@ namespace eosiosystem {
    using eosio::unsigned_int;
 
    inline constexpr int64_t rentbw_frac = 1000000000000000ll;  // 1.0 = 10^15
-   
+
    template<typename E, typename F>
    static inline auto has_field( F flags, E field )
    -> std::enable_if_t< std::is_integral_v<F> && std::is_unsigned_v<F> &&
