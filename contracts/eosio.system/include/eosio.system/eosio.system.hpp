@@ -1220,7 +1220,16 @@ namespace eosiosystem {
           * action is invoked.
           */
          [[eosio::action]]
-         void configrentbw(rentbw_config& args);
+         void configrentbw( rentbw_config& args );
+
+         /**
+          * Process rentbw queue and update state. Action does not execute anything related to a specific user.
+          *
+          * @param user - any account can execute this action
+          * @param max - number of queue items to process
+          */
+         [[eosio::action]]
+         void rentbwexec( const name& user, uint16_t max );
 
          /**
           * Rent NET and CPU
