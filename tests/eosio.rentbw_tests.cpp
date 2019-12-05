@@ -103,6 +103,13 @@ struct rentbw_tester : eosio_system_tester {
       return make_config([](auto&) {});
    }
 
+   template <typename F>
+   rentbw_config make_default_config(F f) {
+      rentbw_config config;
+      f(config);
+      return config;
+   }
+
    action_result configbw(const rentbw_config& config) {
       return push_action(config::system_account_name, N(configrentbw), mvo()("args", config));
    }
@@ -116,6 +123,14 @@ struct rentbw_tester : eosio_system_tester {
       return fc::raw::unpack<rentbw_state>(data);
    }
 };
+
+template <typename A, typename B, typename D>
+bool near(A a, B b, D delta) {
+   if (abs(a - b) <= delta)
+      return true;
+   elog("near: ${a} ${b}", ("a", a)("b", b));
+   return false;
+}
 
 BOOST_AUTO_TEST_SUITE(eosio_system_rentbw_tests)
 
@@ -183,31 +198,122 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
                        configbw(make_config([&](auto& c) { c.cpu.target_price = asset::from_string("-1.0000 TST"); })));
 
    // TODO: "weight can't shrink below utilization"
-}
+} // config_tests
 FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
    produce_block();
 
+   auto net_start  = (rentbw_frac * 11) / 100;
+   auto net_target = (rentbw_frac * 1) / 100;
+   auto cpu_start  = (rentbw_frac * 11) / 1000;
+   auto cpu_target = (rentbw_frac * 1) / 1000;
+
    BOOST_REQUIRE_EQUAL("", configbw(make_config([&](rentbw_config& config) {
-                          config.net.current_weight_ratio = (rentbw_frac * 11) / 100;
-                          config.net.target_weight_ratio  = (rentbw_frac * 1) / 100;
+                          config.net.current_weight_ratio = net_start;
+                          config.net.target_weight_ratio  = net_target;
                           config.net.assumed_stake_weight = stake_weight;
                           config.net.target_timestamp     = control->head_block_time() + fc::days(10);
 
-                          config.cpu.current_weight_ratio = (rentbw_frac * 11) / 1000;
-                          config.cpu.target_weight_ratio  = (rentbw_frac * 1) / 1000;
+                          config.cpu.current_weight_ratio = cpu_start;
+                          config.cpu.target_weight_ratio  = cpu_target;
                           config.cpu.assumed_stake_weight = stake_weight;
-                          config.cpu.target_timestamp     = control->head_block_time() + fc::days(10);
+                          config.cpu.target_timestamp     = control->head_block_time() + fc::days(20);
                        })));
 
-   for (int i = 11; i >= 1; --i) {
-      BOOST_REQUIRE_EQUAL(get_state().net.weight_ratio, (rentbw_frac * i) / 100);
-      BOOST_REQUIRE_EQUAL(get_state().cpu.weight_ratio, (rentbw_frac * i) / 1000);
-      produce_block(fc::days(1) - fc::milliseconds(500));
-      BOOST_REQUIRE_EQUAL("", rentbwexec(config::system_account_name, 10));
+   int64_t net;
+   int64_t cpu;
+
+   for (int i = 0; i <= 6; ++i) {
+      if (i == 2) {
+         // Leaves everything as-is, but may introduce slight rounding
+         produce_block(fc::days(1) - fc::milliseconds(500));
+         BOOST_REQUIRE_EQUAL("", configbw({}));
+      } else if (i) {
+         produce_block(fc::days(1) - fc::milliseconds(500));
+         BOOST_REQUIRE_EQUAL("", rentbwexec(config::system_account_name, 10));
+      }
+      net = net_start + i * (net_target - net_start) / 10;
+      cpu = cpu_start + i * (cpu_target - cpu_start) / 20;
+      BOOST_REQUIRE(near(get_state().net.weight_ratio, net, 1));
+      BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu, 1));
    }
-}
+
+   // Extend transition time
+   {
+      int i = 7;
+      produce_block(fc::days(1) - fc::milliseconds(500));
+      BOOST_REQUIRE_EQUAL("", configbw(make_default_config([&](rentbw_config& config) {
+                             config.net.target_timestamp = control->head_block_time() + fc::days(30);
+                             config.cpu.target_timestamp = control->head_block_time() + fc::days(40);
+                          })));
+      net_start = net = net_start + i * (net_target - net_start) / 10;
+      cpu_start = cpu = cpu_start + i * (cpu_target - cpu_start) / 20;
+      BOOST_REQUIRE(near(get_state().net.weight_ratio, net, 1));
+      BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu, 1));
+   }
+
+   for (int i = 0; i <= 5; ++i) {
+      if (i) {
+         produce_block(fc::days(1) - fc::milliseconds(500));
+         BOOST_REQUIRE_EQUAL("", rentbwexec(config::system_account_name, 10));
+      }
+      net = net_start + i * (net_target - net_start) / 30;
+      cpu = cpu_start + i * (cpu_target - cpu_start) / 40;
+      BOOST_REQUIRE(near(get_state().net.weight_ratio, net, 1));
+      BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu, 1));
+   }
+
+   // Change target, keep existing transition time
+   {
+      int i = 6;
+      produce_block(fc::days(1) - fc::milliseconds(500));
+      auto new_net_target = net_target / 10;
+      auto new_cpu_target = cpu_target / 20;
+      BOOST_REQUIRE_EQUAL("", configbw(make_default_config([&](rentbw_config& config) {
+                             config.net.target_weight_ratio = new_net_target;
+                             config.cpu.target_weight_ratio = new_cpu_target;
+                          })));
+      net_start = net = net_start + i * (net_target - net_start) / 30;
+      cpu_start = cpu = cpu_start + i * (cpu_target - cpu_start) / 40;
+      net_target      = new_net_target;
+      cpu_target      = new_cpu_target;
+      BOOST_REQUIRE(near(get_state().net.weight_ratio, net, 1));
+      BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu, 1));
+   }
+
+   for (int i = 0; i <= 10; ++i) {
+      if (i) {
+         produce_block(fc::days(1) - fc::milliseconds(500));
+         BOOST_REQUIRE_EQUAL("", rentbwexec(config::system_account_name, 10));
+      }
+      net = net_start + i * (net_target - net_start) / (30 - 6);
+      cpu = cpu_start + i * (cpu_target - cpu_start) / (40 - 6);
+      BOOST_REQUIRE(near(get_state().net.weight_ratio, net, 1));
+      BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu, 1));
+   }
+
+   // Move transition time to immediate future
+   {
+      produce_block(fc::days(1) - fc::milliseconds(500));
+      BOOST_REQUIRE_EQUAL("", configbw(make_default_config([&](rentbw_config& config) {
+                             config.net.target_timestamp = control->head_block_time() + fc::milliseconds(1000);
+                             config.cpu.target_timestamp = control->head_block_time() + fc::milliseconds(1000);
+                          })));
+      produce_blocks(2);
+   }
+
+   // Verify targets hold as time advances
+   for (int i = 0; i <= 10; ++i) {
+      BOOST_REQUIRE_EQUAL("", rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE(near(get_state().net.weight_ratio, net_target, 1));
+      BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu_target, 1));
+      produce_block(fc::days(1));
+   }
+
+   // todo: verify calculated weight
+
+} // weight_tests
 FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
