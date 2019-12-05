@@ -224,9 +224,18 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
    int64_t net;
    int64_t cpu;
 
+   auto check_weight = [&] {
+      auto state = get_state();
+      BOOST_REQUIRE(near(           //
+            state.net.weight_ratio, //
+            int64_t(state.net.assumed_stake_weight * eosio::chain::int128_t(rentbw_frac) /
+                    (state.net.weight + state.net.assumed_stake_weight)),
+            10));
+   };
+
    for (int i = 0; i <= 6; ++i) {
       if (i == 2) {
-         // Leaves everything as-is, but may introduce slight rounding
+         // Leaves config as-is, but may introduce slight rounding
          produce_block(fc::days(1) - fc::milliseconds(500));
          BOOST_REQUIRE_EQUAL("", configbw({}));
       } else if (i) {
@@ -237,6 +246,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
       cpu = cpu_start + i * (cpu_target - cpu_start) / 20;
       BOOST_REQUIRE(near(get_state().net.weight_ratio, net, 1));
       BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu, 1));
+      check_weight();
    }
 
    // Extend transition time
@@ -251,6 +261,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
       cpu_start = cpu = cpu_start + i * (cpu_target - cpu_start) / 20;
       BOOST_REQUIRE(near(get_state().net.weight_ratio, net, 1));
       BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu, 1));
+      check_weight();
    }
 
    for (int i = 0; i <= 5; ++i) {
@@ -262,6 +273,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
       cpu = cpu_start + i * (cpu_target - cpu_start) / 40;
       BOOST_REQUIRE(near(get_state().net.weight_ratio, net, 1));
       BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu, 1));
+      check_weight();
    }
 
    // Change target, keep existing transition time
@@ -280,6 +292,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
       cpu_target      = new_cpu_target;
       BOOST_REQUIRE(near(get_state().net.weight_ratio, net, 1));
       BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu, 1));
+      check_weight();
    }
 
    for (int i = 0; i <= 10; ++i) {
@@ -291,6 +304,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
       cpu = cpu_start + i * (cpu_target - cpu_start) / (40 - 6);
       BOOST_REQUIRE(near(get_state().net.weight_ratio, net, 1));
       BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu, 1));
+      check_weight();
    }
 
    // Move transition time to immediate future
@@ -308,11 +322,9 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
       BOOST_REQUIRE_EQUAL("", rentbwexec(config::system_account_name, 10));
       BOOST_REQUIRE(near(get_state().net.weight_ratio, net_target, 1));
       BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu_target, 1));
+      check_weight();
       produce_block(fc::days(1));
    }
-
-   // todo: verify calculated weight
-
 } // weight_tests
 FC_LOG_AND_RETHROW()
 
