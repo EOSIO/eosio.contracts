@@ -165,13 +165,15 @@ struct rentbw_tester : eosio_system_tester {
                      const asset& expected_fee, int64_t expected_net, int64_t expected_cpu) {
       auto before_payer    = get_account_info(payer);
       auto before_receiver = get_account_info(receiver);
+      auto before_reserve  = get_account_info(N(eosio.reserv));
       auto before_state    = get_state();
       BOOST_REQUIRE_EQUAL("", rentbw(payer, receiver, days, net_frac, cpu_frac, expected_fee));
       auto after_payer    = get_account_info(payer);
       auto after_receiver = get_account_info(receiver);
+      auto after_reserve  = get_account_info(N(eosio.reserv));
       auto after_state    = get_state();
 
-      if (false) {
+      if (true) {
          ilog("before_state.net.assumed_stake_weight:    ${x}", ("x", before_state.net.assumed_stake_weight));
          ilog("before_state.net.weight_ratio:            ${x}",
               ("x", before_state.net.weight_ratio / double(rentbw_frac)));
@@ -184,6 +186,11 @@ struct rentbw_tester : eosio_system_tester {
          ilog("expected_net:                             ${x}", ("x", expected_net));
          ilog("before_payer.liquid - after_payer.liquid: ${x}", ("x", before_payer.liquid - after_payer.liquid));
          ilog("expected_fee:                             ${x}", ("x", expected_fee));
+
+         ilog("before_reserve.net:                       ${x}", ("x", before_reserve.net));
+         ilog("after_reserve.net:                        ${x}", ("x", after_reserve.net));
+         ilog("before_reserve.cpu:                       ${x}", ("x", before_reserve.cpu));
+         ilog("after_reserve.cpu:                        ${x}", ("x", after_reserve.cpu));
       }
 
       if (payer != receiver) {
@@ -193,9 +200,12 @@ struct rentbw_tester : eosio_system_tester {
          BOOST_REQUIRE_EQUAL(before_receiver.liquid, after_receiver.liquid);
       }
       BOOST_REQUIRE_EQUAL(before_receiver.ram, after_receiver.ram);
-      BOOST_REQUIRE_EQUAL(before_receiver.net, after_receiver.net - expected_net);
-      BOOST_REQUIRE_EQUAL(before_receiver.cpu, after_receiver.cpu - expected_cpu);
+      BOOST_REQUIRE_EQUAL(after_receiver.net - before_receiver.net, expected_net);
+      BOOST_REQUIRE_EQUAL(after_receiver.cpu - before_receiver.cpu, expected_cpu);
       BOOST_REQUIRE_EQUAL(before_payer.liquid - after_payer.liquid, expected_fee);
+
+      BOOST_REQUIRE_EQUAL(before_reserve.net - after_reserve.net, expected_net);
+      BOOST_REQUIRE_EQUAL(before_reserve.cpu - after_reserve.cpu, expected_cpu);
    }
 };
 
