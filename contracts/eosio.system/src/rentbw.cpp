@@ -257,6 +257,8 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
       order.cpu_weight = cpu_amount;
       order.expires    = now + eosio::days(days);
    });
+   net_delta_available -= net_amount;
+   cpu_delta_available -= cpu_amount;
 
    adjust_resources(payer, receiver, core_symbol, net_amount, cpu_amount, true);
    adjust_resources(get_self(), reserv_account, core_symbol, net_delta_available, cpu_delta_available, true);
