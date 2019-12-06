@@ -234,10 +234,13 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
       if (!frac)
          return;
       amount = int128_t(frac) * state.weight / rentbw_frac;
-      fee.amount += calc_rentbw_price(state, state.adjusted_utilization + amount) -
-                    calc_rentbw_price(state, state.adjusted_utilization);
+      eosio::check(state.weight, "market doesn't have resources available");
+      eosio::check(state.utilization + amount <= state.weight, "market doesn't have enough resources available");
+      int64_t f = calc_rentbw_price(state, state.adjusted_utilization + amount) -
+                  calc_rentbw_price(state, state.adjusted_utilization);
+      eosio::check(f > 0, "calculated fee is below minimum; try renting more");
+      fee.amount += f;
       state.utilization += amount;
-      eosio::check(state.utilization <= state.weight, "market doesn't have enough resources available");
    };
 
    int64_t net_amount = 0;
