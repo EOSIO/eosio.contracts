@@ -72,6 +72,23 @@ struct rentbw_tester : eosio_system_tester {
 
    rentbw_tester() { create_accounts_with_resources({ N(eosio.reserv) }); }
 
+   void start_rex() {
+      create_account_with_resources(N(rexholder111), config::system_account_name, core_sym::from_string("1.0000"),
+                                    false);
+      transfer(config::system_account_name, N(rexholder111), core_sym::from_string("1001.0000"));
+      BOOST_REQUIRE_EQUAL("", stake(N(rexholder111), N(rexholder111), core_sym::from_string("500.0000"),
+                                    core_sym::from_string("500.0000")));
+      create_account_with_resources(N(proxyaccount), config::system_account_name, core_sym::from_string("1.0000"),
+                                    false, core_sym::from_string("500.0000"), core_sym::from_string("500.0000"));
+      BOOST_REQUIRE_EQUAL("",
+                          push_action(N(proxyaccount), N(regproxy), mvo()("proxy", "proxyaccount")("isproxy", true)));
+      BOOST_REQUIRE_EQUAL("", vote(N(rexholder111), {}, N(proxyaccount)));
+      BOOST_REQUIRE_EQUAL("", push_action(N(rexholder111), N(deposit),
+                                          mvo()("owner", "rexholder111")("amount", asset::from_string("1.0000 TST"))));
+      BOOST_REQUIRE_EQUAL("", push_action(N(rexholder111), N(buyrex),
+                                          mvo()("from", "rexholder111")("amount", asset::from_string("1.0000 TST"))));
+   }
+
    template <typename F>
    rentbw_config make_config(F f) {
       rentbw_config config;
@@ -118,9 +135,52 @@ struct rentbw_tester : eosio_system_tester {
       return push_action(user, N(rentbwexec), mvo()("user", user)("max", max));
    }
 
+   action_result rentbw(const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac,
+                        const asset& max_payment) {
+      return push_action(payer, N(rentbw),
+                         mvo()("payer", payer)("receiver", receiver)("days", days)("net_frac", net_frac)(
+                               "cpu_frac", cpu_frac)("max_payment", max_payment));
+   }
+
    rentbw_state get_state() {
       vector<char> data = get_row_by_account(config::system_account_name, {}, N(rent.state), N(rent.state));
       return fc::raw::unpack<rentbw_state>(data);
+   }
+
+   struct account_info {
+      int64_t ram = 0;
+      int64_t net = 0;
+      int64_t cpu = 0;
+      asset   liquid;
+   };
+
+   account_info get_account_info(account_name acc) {
+      account_info info;
+      control->get_resource_limits_manager().get_account_limits(acc, info.ram, info.net, info.cpu);
+      info.liquid = get_balance(acc);
+      return info;
+   };
+
+   void check_rentbw(const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac,
+                     const asset& max_payment) {
+      auto before_payer    = get_account_info(payer);
+      auto before_receiver = get_account_info(receiver);
+      auto before_state    = get_state();
+      BOOST_REQUIRE_EQUAL("", rentbw(payer, receiver, days, net_frac, cpu_frac, max_payment));
+      auto after_payer    = get_account_info(payer);
+      auto after_receiver = get_account_info(receiver);
+      auto after_state    = get_state();
+
+      if (payer != receiver) {
+         BOOST_REQUIRE(before_payer.ram == after_payer.ram);
+         BOOST_REQUIRE(before_payer.net == after_payer.net);
+         BOOST_REQUIRE(before_payer.cpu == after_payer.cpu);
+         BOOST_REQUIRE(before_receiver.liquid == after_receiver.liquid);
+      }
+      BOOST_REQUIRE(before_receiver.ram == after_receiver.ram);
+      // BOOST_REQUIRE(before_receiver.net == after_receiver.net);
+      // BOOST_REQUIRE(before_receiver.cpu == after_receiver.cpu);
+      // BOOST_REQUIRE(before_payer.liquid == after_payer.liquid);
    }
 };
 
@@ -326,6 +386,82 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
       produce_block(fc::days(1));
    }
 } // weight_tests
+FC_LOG_AND_RETHROW()
+
+BOOST_AUTO_TEST_CASE(rent_tests) try {
+   rentbw_tester t;
+   t.produce_block();
+
+   BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("rentbw hasn't been initialized"), //
+                       t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 4, rentbw_frac / 8,
+                                asset::from_string("1.000 TST")));
+
+   BOOST_REQUIRE_EQUAL("", t.configbw(t.make_config([&](auto& config) {
+      config.net.current_weight_ratio = rentbw_frac;
+      config.net.target_weight_ratio  = rentbw_frac;
+      config.net.assumed_stake_weight = stake_weight;
+      config.net.exponent             = 1;
+      config.net.target_price         = asset::from_string("1000000.0000 TST");
+
+      config.cpu.current_weight_ratio = rentbw_frac;
+      config.cpu.target_weight_ratio  = rentbw_frac;
+      config.cpu.assumed_stake_weight = stake_weight;
+      config.cpu.exponent             = 1;
+      config.cpu.target_price         = asset::from_string("1000000.0000 TST");
+
+      config.rent_days      = 30;
+      config.min_rent_price = asset::from_string("1.0000 TST");
+   })));
+
+   BOOST_REQUIRE_EQUAL(
+         t.wasm_assert_msg("max_payment doesn't match core symbol"), //
+         t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac, asset::from_string("1.000 TST")));
+   BOOST_REQUIRE_EQUAL(
+         t.wasm_assert_msg("market doesn't have resources available"), //
+         t.rentbw(N(bob111111111), N(alice1111111), 30, 0, rentbw_frac, asset::from_string("1.0000 TST")));
+   BOOST_REQUIRE_EQUAL(
+         t.wasm_assert_msg("market doesn't have resources available"), //
+         t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, 0, asset::from_string("1.0000 TST")));
+
+   BOOST_REQUIRE_EQUAL("", t.configbw(t.make_config([&](auto& config) {
+      // weight = stake_weight * 3/4
+      config.net.current_weight_ratio = rentbw_frac / 4;
+      config.net.target_weight_ratio  = rentbw_frac / 4;
+      config.net.assumed_stake_weight = stake_weight;
+      config.net.exponent             = 2;
+      config.net.target_price         = asset::from_string("1000000.0000 TST");
+
+      // weight = stake_weight * 4/5 * 1/2
+      config.cpu.current_weight_ratio = rentbw_frac / 5;
+      config.cpu.target_weight_ratio  = rentbw_frac / 5;
+      config.cpu.assumed_stake_weight = stake_weight / 2;
+      config.cpu.exponent             = 3;
+      config.cpu.target_price         = asset::from_string("2000000.0000 TST");
+
+      config.rent_days      = 30;
+      config.min_rent_price = asset::from_string("1.0000 TST");
+   })));
+
+   BOOST_REQUIRE_EQUAL(
+         t.wasm_assert_msg("calculated fee exceeds max_payment"), //
+         t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac, asset::from_string("1.0000 TST")));
+   BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("can't channel fees to rex"), //
+                       t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac,
+                                asset::from_string("3000000.0000 TST")));
+
+   t.start_rex();
+   t.create_account_with_resources(N(aaaaaaaaaaaa), config::system_account_name, core_sym::from_string("1.0000"), false,
+                                   core_sym::from_string("500.0000"), core_sym::from_string("500.0000"));
+   t.create_account_with_resources(N(bbbbbbbbbbbb), config::system_account_name, core_sym::from_string("1.0000"), false,
+                                   core_sym::from_string("500.0000"), core_sym::from_string("500.0000"));
+
+   t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("3000000.0000"));
+   BOOST_REQUIRE_EQUAL("", t.rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
+                                    asset::from_string("3000000.0000 TST")));
+
+   // todo: calculated fee is below minimum; try renting more
+
+} // rent_tests
 FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
