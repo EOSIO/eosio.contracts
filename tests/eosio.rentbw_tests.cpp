@@ -525,6 +525,75 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac * .05, rentbw_frac * .10,
                      asset::from_string("154499.9999 TST"), net_weight * .05, cpu_weight * .10);
    }
+
+   {
+      // net:100%, cpu:100%
+      rentbw_tester t;
+      init(t, true);
+      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("3000000.0000"));
+      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
+                     asset::from_string("3000000.0000 TST"), net_weight, cpu_weight);
+
+      // No more available for 30 days
+      BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
+                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                                   asset::from_string("1.0000 TST")));
+      t.produce_block(fc::days(29));
+      BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
+                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                                   asset::from_string("1.0000 TST")));
+      t.produce_block(fc::days(1) - fc::milliseconds(1500));
+      BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
+                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                                   asset::from_string("1.0000 TST")));
+      t.produce_block(fc::milliseconds(500));
+
+      // immediate renewal: adjusted_utilization doesn't have time to fall
+      //
+      // (2.0 ^ 2) * 1000000.0000 - 1000000.0000 =  3000000.0000
+      // (2.0 ^ 3) * 2000000.0000 - 2000000.0000 = 14000000.0000
+      //                                   total = 17000000.0000
+      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("17000000.0000"));
+      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
+                     asset::from_string("17000000.0000 TST"), 0, 0);
+
+      // No more available for 30 days
+      BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
+                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                                   asset::from_string("1.0000 TST")));
+      t.produce_block(fc::days(29));
+      BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
+                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                                   asset::from_string("1.0000 TST")));
+      t.produce_block(fc::days(1) - fc::milliseconds(1000));
+      BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
+                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                                   asset::from_string("1.0000 TST")));
+
+      // Start decay
+      t.produce_block(fc::milliseconds(1000));
+      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE(near(t.get_state().net.adjusted_utilization, net_weight, net_weight / 1000));
+      BOOST_REQUIRE(near(t.get_state().cpu.adjusted_utilization, cpu_weight, cpu_weight / 1000));
+
+      // 1 day of decay
+      t.produce_block(fc::days(1) - fc::milliseconds(500));
+      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE(near(t.get_state().net.adjusted_utilization, int64_t(net_weight * exp(-1)),
+                         int64_t(net_weight * exp(-1)) / 1000));
+      BOOST_REQUIRE(near(t.get_state().cpu.adjusted_utilization, int64_t(cpu_weight * exp(-1)),
+                         int64_t(cpu_weight * exp(-1)) / 1000));
+
+      // 1 day of decay
+      t.produce_block(fc::days(1) - fc::milliseconds(500));
+      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE(near(t.get_state().net.adjusted_utilization, int64_t(net_weight * exp(-2)),
+                         int64_t(net_weight * exp(-2)) / 1000));
+      BOOST_REQUIRE(near(t.get_state().cpu.adjusted_utilization, int64_t(cpu_weight * exp(-2)),
+                         int64_t(cpu_weight * exp(-2)) / 1000));
+   }
+
 } // rent_tests
 FC_LOG_AND_RETHROW()
 
