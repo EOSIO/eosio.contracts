@@ -343,14 +343,20 @@ namespace eosiosystem {
    // - `version` defaulted to zero,
    // - `last_update_time` the last time returns from renting, ram fees, and name bids were added to the rex pool,
    // - `current_rate_of_increase` current amount to be added to the rex pool at a rate of per 30 days,
+   // - `cummulative_proceeds` bookkeeping variable that tracks fees added to rex pool up to current time,
+   // - `proceeds` bookkeeping variable that tracks fees added to rex return pool up to current time,
    // - `return_buckets` 12-hour buckets containing amounts to be added to the rex pool and the times they become effective 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
       uint8_t                       version = 0;
+      
       time_point                    last_update_time;
       int64_t                       current_rate_of_increase = 0;
+      int64_t                       cummulative_proceeds = 0;
+      int64_t                       proceeds = 0;
       std::map<time_point, int64_t> return_buckets;
 
       static constexpr int64_t      total_duration   = 30 * useconds_per_day;
+      static constexpr int64_t      dist_interval    = 10 * 60 * 1000'000;  
       static constexpr uint8_t      hours_per_bucket = 12;
 
       uint64_t primary_key()const { return 0; }
