@@ -5278,6 +5278,7 @@ BOOST_FIXTURE_TEST_CASE( rex_return, eosio_system_tester ) try {
       auto rex_return_pool = get_rex_return_pool();
       BOOST_REQUIRE_EQUAL( false,            rex_return_pool.is_null() );
       BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["current_rate_of_increase"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 1,                rex_return_pool["return_buckets"].get_array().size() );
       int64_t t0 = rex_return_pool["last_update_time"].as<time_point>().time_since_epoch().count();
 
       produce_block( fc::hours(13) );
@@ -5310,6 +5311,7 @@ BOOST_FIXTURE_TEST_CASE( rex_return, eosio_system_tester ) try {
 
       rex_return_pool = get_rex_return_pool();
       BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["current_rate_of_increase"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["return_buckets"].get_array().size() );
 
       rex_pool = get_rex_pool();
       expected = payment.get_amount() + fee.get_amount();
@@ -5331,11 +5333,15 @@ BOOST_FIXTURE_TEST_CASE( rex_return, eosio_system_tester ) try {
       BOOST_REQUIRE_EQUAL( success(),        rentnet( bob, bob, fee ) );
       rex_return_pool = get_rex_return_pool();
       BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["current_rate_of_increase"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 1,                rex_return_pool["return_buckets"].get_array().size() );
       int64_t t1 = rex_return_pool["last_update_time"].as<time_point>().time_since_epoch().count();
       BOOST_REQUIRE_EQUAL( t1,               t0 + 3600 * 1000000ll + 500000 );
 
       produce_block( fc::hours(12) );
       BOOST_REQUIRE_EQUAL( success(),        rentnet( bob, bob, fee ) );
+      rex_return_pool = get_rex_return_pool();
+      BOOST_REQUIRE_EQUAL( 2,                rex_return_pool["return_buckets"].get_array().size() );
+      BOOST_REQUIRE_EQUAL( 2 * fee.get_amount(), rex_return_pool["current_rate_of_increase"].as<int64_t>() );
       produce_block( fc::hours(8) );
       BOOST_REQUIRE_EQUAL( success(),        rexexec( bob, 1 ) );
       rex_return_pool = get_rex_return_pool();
@@ -5351,8 +5357,34 @@ BOOST_FIXTURE_TEST_CASE( rex_return, eosio_system_tester ) try {
       BOOST_REQUIRE_EQUAL( success(),        rexexec( bob, 1 ) );
       rex_return_pool = get_rex_return_pool();
       BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["current_rate_of_increase"].as<int64_t>() );
+      BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["return_buckets"].get_array().size() );
       BOOST_TEST_REQUIRE(  within_error( init_lendable.get_amount() + 3 * fee.get_amount(),
                                          get_rex_pool()["total_lendable"].as<asset>().get_amount(), 3 ) );
+   }
+
+   {
+      const asset fee = core_sym::from_string("25.0000");
+      BOOST_REQUIRE_EQUAL( success(),        rentcpu( bob, bob, fee ) );
+      produce_block( fc::hours(13) );
+      BOOST_REQUIRE_EQUAL( success(),        rexexec( bob, 1 ) );
+      auto rex_pool_0        = get_rex_pool();
+      auto rex_return_pool_0 = get_rex_return_pool();
+      produce_block( fc::minutes(9) );
+      BOOST_REQUIRE_EQUAL( success(),        rexexec( bob, 1 ) );
+      auto rex_pool_1        = get_rex_pool();
+      auto rex_return_pool_1 = get_rex_return_pool();
+      BOOST_REQUIRE_EQUAL( rex_return_pool_0["last_update_time"].as<time_point>().time_since_epoch().count(),
+                           rex_return_pool_1["last_update_time"].as<time_point>().time_since_epoch().count());
+      BOOST_REQUIRE_EQUAL( rex_pool_0["total_lendable"].as<asset>(),
+                           rex_pool_1["total_lendable"].as<asset>());
+      produce_block( fc::minutes(1) );
+      BOOST_REQUIRE_EQUAL( success(),        rexexec( bob, 1 ) );
+      auto rex_pool_2        = get_rex_pool();
+      auto rex_return_pool_2 = get_rex_return_pool();
+      BOOST_TEST_REQUIRE( rex_return_pool_1["last_update_time"].as<time_point>().time_since_epoch().count() <
+                          rex_return_pool_2["last_update_time"].as<time_point>().time_since_epoch().count());
+      BOOST_TEST_REQUIRE( rex_pool_1["total_lendable"].as<asset>().get_amount() <
+                          rex_pool_2["total_lendable"].as<asset>().get_amount());
    }
 
 } FC_LOG_AND_RETHROW()
