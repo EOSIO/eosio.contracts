@@ -173,7 +173,7 @@ struct rentbw_tester : eosio_system_tester {
       auto after_reserve  = get_account_info(N(eosio.reserv));
       auto after_state    = get_state();
 
-      if (true) {
+      if (false) {
          ilog("before_state.net.assumed_stake_weight:    ${x}", ("x", before_state.net.assumed_stake_weight));
          ilog("before_state.net.weight_ratio:            ${x}",
               ("x", before_state.net.weight_ratio / double(rentbw_frac)));
@@ -206,6 +206,8 @@ struct rentbw_tester : eosio_system_tester {
 
       BOOST_REQUIRE_EQUAL(before_reserve.net - after_reserve.net, expected_net);
       BOOST_REQUIRE_EQUAL(before_reserve.cpu - after_reserve.cpu, expected_cpu);
+      BOOST_REQUIRE_EQUAL(after_state.net.utilization - before_state.net.utilization, expected_net);
+      BOOST_REQUIRE_EQUAL(after_state.cpu.utilization - before_state.cpu.utilization, expected_cpu);
    }
 };
 

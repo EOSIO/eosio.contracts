@@ -3,6 +3,9 @@
 
 namespace eosiosystem {
 
+void update_weight(time_point_sec now, rentbw_state_resource& res, int64_t& delta_available);
+void update_utilization(time_point_sec now, rentbw_state_resource& res);
+
 void system_contract::adjust_resources(name payer, name account, symbol core_symbol, int64_t net_delta,
                                        int64_t cpu_delta, bool must_not_be_managed) {
    if (!net_delta && !cpu_delta)
@@ -57,6 +60,8 @@ void system_contract::adjust_resources(name payer, name account, symbol core_sym
 void system_contract::process_rentbw_queue(time_point_sec now, symbol core_symbol, rentbw_state& state,
                                            rentbw_order_table& orders, uint32_t max_items, int64_t& net_delta_available,
                                            int64_t& cpu_delta_available) {
+   update_utilization(now, state.net);
+   update_utilization(now, state.cpu);
    auto idx = orders.get_index<"byexpires"_n>();
    while (max_items--) {
       auto it = idx.begin();
@@ -69,6 +74,8 @@ void system_contract::process_rentbw_queue(time_point_sec now, symbol core_symbo
    }
    state.net.utilization -= net_delta_available;
    state.cpu.utilization -= cpu_delta_available;
+   update_weight(now, state.net, net_delta_available);
+   update_weight(now, state.cpu, cpu_delta_available);
 }
 
 void update_weight(time_point_sec now, rentbw_state_resource& res, int64_t& delta_available) {
@@ -196,10 +203,6 @@ void system_contract::rentbwexec(const name& user, uint16_t max) {
    int64_t net_delta_available = 0;
    int64_t cpu_delta_available = 0;
    process_rentbw_queue(now, core_symbol, state, orders, max, net_delta_available, cpu_delta_available);
-   update_weight(now, state.net, net_delta_available);
-   update_weight(now, state.cpu, cpu_delta_available);
-   update_utilization(now, state.net);
-   update_utilization(now, state.cpu);
 
    adjust_resources(get_self(), reserv_account, core_symbol, net_delta_available, cpu_delta_available, true);
    state_sing.set(state, get_self());
@@ -224,10 +227,6 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
    int64_t net_delta_available = 0;
    int64_t cpu_delta_available = 0;
    process_rentbw_queue(now, core_symbol, state, orders, 2, net_delta_available, cpu_delta_available);
-   update_weight(now, state.net, net_delta_available);
-   update_weight(now, state.cpu, cpu_delta_available);
-   update_utilization(now, state.net);
-   update_utilization(now, state.cpu);
 
    eosio::asset fee{ 0, core_symbol };
    auto         process = [&](int64_t frac, int64_t& amount, rentbw_state_resource& state) {
