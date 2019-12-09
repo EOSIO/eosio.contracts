@@ -99,7 +99,7 @@ void update_utilization(time_point_sec now, rentbw_state_resource& res) {
       res.adjusted_utilization = //
             res.utilization +
             (res.adjusted_utilization - res.utilization) *
-                  exp((now.utc_seconds - res.utilization_timestamp.utc_seconds) / double(-res.decay_secs));
+                  exp(-double(now.utc_seconds - res.utilization_timestamp.utc_seconds) / double(res.decay_secs));
    res.utilization_timestamp = now;
 }
 
