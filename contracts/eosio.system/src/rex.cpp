@@ -623,7 +623,8 @@ namespace eosiosystem {
    {
       const time_point ct = current_time_point();
 
-      if ( _rexretpool.begin() == _rexretpool.end() || ct <= _rexretpool.begin()->last_update_time ) {
+      if ( _rexretpool.begin() == _rexretpool.end() ||
+           ct < _rexretpool.begin()->last_update_time + eosio::microseconds{rex_return_pool::dist_interval}) {
          return;
       }
 
@@ -671,6 +672,9 @@ namespace eosiosystem {
       _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& pool ) {
          pool.total_unlent.amount += change;
          pool.total_lendable       = pool.total_unlent + pool.total_lent;
+      });
+      _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& rp ) {
+         rp.cummulative_proceeds += change;
       });
    }
 
@@ -1032,6 +1036,11 @@ namespace eosiosystem {
       if ( _rexretpool.begin() == _rexretpool.end() ) {
          _rexretpool.emplace( get_self(), [&]( auto& rp ) {
             rp.last_update_time = effective_time;
+            rp.proceeds        += fee.amount;
+         });
+      } else {
+         _rexretpool.modify( _rexretpool.begin(), same_payer, [&]( auto& rp ) {
+            rp.proceeds += fee.amount;
          });
       }
 
