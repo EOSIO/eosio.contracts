@@ -27,6 +27,7 @@ namespace eosiosystem {
     _rammarket(get_self(), get_self().value),
     _rexpool(get_self(), get_self().value),
     _rexretpool(get_self(), get_self().value),
+    _rexretbuckets(get_self(), get_self().value),
     _rexfunds(get_self(), get_self().value),
     _rexbalance(get_self(), get_self().value),
     _rexorders(get_self(), get_self().value)
