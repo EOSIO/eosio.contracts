@@ -1,4 +1,4 @@
-# Step 1: Obtain Contract Source
+## Step 1: Obtain Contract Source
 
 Navigate to your contracts directory.
 
@@ -15,7 +15,7 @@ git clone https://github.com/EOSIO/eosio.contracts --branch master --single-bran
 cd eosio.contracts/contracts/eosio.token
 ```
 
-# Step 2: Create Account for Contract
+## Step 2: Create Account for Contract
 [[info]]
 | You may have to unlock your wallet first!
 
@@ -23,13 +23,13 @@ cd eosio.contracts/contracts/eosio.token
 cleos create account eosio eosio.token EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 ```
 
-# Step 3: Compile the Contract
+## Step 3: Compile the Contract
 
 ```shell
 eosio-cpp -I include -o eosio.token.wasm src/eosio.token.cpp --abigen
 ```
 
-# Step 4: Deploy the Token Contract
+## Step 4: Deploy the Token Contract
 
 ```shell
 cleos set contract eosio.token CONTRACTS_DIR/eosio.contracts/contracts/eosio.token --abi eosio.token.abi -p eosio.token@active
@@ -45,7 +45,7 @@ executed transaction: 69c68b1bd5d61a0cc146b11e89e11f02527f24e4b240731c4003ad1dc0
 warning: transaction executed locally, but may not be confirmed by the network yet         ]
 ```
 
-# Step 5: Create the Token
+## Step 5: Create the Token
 
 ```shell
 cleos push action eosio.token create '[ "eosio", "1000000000.0000 SYS"]' -p eosio.token@active
@@ -70,9 +70,9 @@ executed transaction: 0e49a421f6e75f4c5e09dd738a02d3f51bd18a0cf31894f68d335cd70d
 ```
 This command created a new token `SYS` with a precision of 4 decimals and a maximum supply of 1000000000.0000 SYS.  To create this token requires the permission of the `eosio.token` contract. For this reason, `-p eosio.token@active` was passed to authorize the request.
 
-# Step 6: Issue Tokens
+## Step 6: Issue Tokens
 
-The issuer can issue new tokens to the issuer account in our case `eosio`. 
+The issuer can issue new tokens to the issuer account in our case `eosio`.
 
 ```text
 cleos push action eosio.token issue '[ "eosio", "100.0000 SYS", "memo" ]' -p eosio@active
@@ -85,7 +85,7 @@ executed transaction: a26b29d66044ad95edf0fc04bad3073e99718bc26d27f3c006589adedb
 warning: transaction executed locally, but may not be confirmed by the network yet         ]
 ```
 
-# Step 7: Transfer Tokens
+## Step 7: Transfer Tokens
 
 Now that account `eosio` has been issued tokens, transfer some of them to account `bob`.
 
@@ -112,7 +112,7 @@ Result:
 25.00 SYS
 ```
 
-Check "eosio's" balance, notice that tokens were deducted from the account 
+Check "eosio's" balance, notice that tokens were deducted from the account
 
 ```shell
 cleos get currency balance eosio.token eosio SYS

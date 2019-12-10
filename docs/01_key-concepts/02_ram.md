@@ -1,4 +1,7 @@
-# RAM as resource
+---
+content_title: RAM as resource
+link_text: RAM as resource
+---
 
 RAM is the memory, storage space, where the blockchain stores data. If your contract needs to store data on the blockchain, like in a database, then it can store it in the blockchain's RAM using either a `multi-index table`, which is explained [here](https://developers.eos.io/eosio-home/docs/data-persistence) or a `singleton`, its definition can be found [here](https://github.com/EOSIO/eosio.cdt/blob/master/libraries/eosiolib/singleton.hpp) and a sample of its usage [here](https://github.com/EOSIO/eosio.contracts/blob/master/contracts/eosio.system/include/eosio.system/eosio.system.hpp).
 
