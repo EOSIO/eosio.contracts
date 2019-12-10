@@ -239,6 +239,11 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
    // net assertions
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("current_weight_ratio is too large"),
                        configbw(make_config([](auto& c) { c.net.current_weight_ratio = rentbw_frac + 1; })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight/target_weight_ratio is too large"),
+                       configbw(make_config([](auto& c) {
+                          c.net.assumed_stake_weight = 100000;
+                          c.net.target_weight_ratio  = 10;
+                       })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("weight can't grow over time"),
                        configbw(make_config([](auto& c) { c.net.target_weight_ratio = rentbw_frac + 1; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight must be at least 1; a much larger value is recommended"),
@@ -263,6 +268,11 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
    // cpu assertions
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("current_weight_ratio is too large"),
                        configbw(make_config([](auto& c) { c.cpu.current_weight_ratio = rentbw_frac + 1; })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight/target_weight_ratio is too large"),
+                       configbw(make_config([](auto& c) {
+                          c.cpu.assumed_stake_weight = 100000;
+                          c.cpu.target_weight_ratio  = 10;
+                       })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("weight can't grow over time"),
                        configbw(make_config([](auto& c) { c.cpu.target_weight_ratio = rentbw_frac + 1; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight must be at least 1; a much larger value is recommended"),
@@ -283,10 +293,18 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
                        configbw(make_config([&](auto& c) { c.cpu.target_price = asset::from_string("0.0000 TST"); })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price must be positive"),
                        configbw(make_config([&](auto& c) { c.cpu.target_price = asset::from_string("-1.0000 TST"); })));
-
-   // TODO: "weight can't shrink below utilization"
 } // config_tests
 FC_LOG_AND_RETHROW()
+
+/* TODO:
+
+eosio::check(days == state.rent_days, "days doesn't match configuration");
+eosio::check(net_frac >= 0, "net_frac can't be negative");
+eosio::check(cpu_frac >= 0, "cpu_frac can't be negative");
+eosio::check(net_frac <= rentbw_frac, "net can't be more than 100%");
+eosio::check(cpu_frac <= rentbw_frac, "cpu can't be more than 100%");
+eosio::check(state.net.weight >= state.net.utilization, "weight can't shrink below utilization");
+*/
 
 BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
    produce_block();
