@@ -603,6 +603,52 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
                      asset::from_string("4192561.0244 TST"), net_weight, cpu_weight);
    }
 
+   {
+      rentbw_tester t;
+      init(t, true);
+
+      // 10%, 20%
+      // (.1 ^ 2) * 1000000.0000 = 10000.0000
+      // (.2 ^ 3) * 2000000.0000 = 16000.0000
+      //                   total = 26000.0000
+      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("26000.0002"));
+      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac * .1, rentbw_frac * .2,
+                     asset::from_string("26000.0002 TST"), net_weight * .1, cpu_weight * .2);
+
+      t.produce_block(fc::days(15) - fc::milliseconds(500));
+
+      // 20%, 20%
+      // (.3 ^ 2) * 1000000.0000 - 10000.0000 =  80000.0000
+      // (.4 ^ 3) * 2000000.0000 - 16000.0000 = 112000.0000
+      //                                total = 192000.0000
+      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("191999.9999"));
+      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac * .2, rentbw_frac * .2,
+                     asset::from_string("191999.9999 TST"), net_weight * .2, cpu_weight * .2);
+
+      // Start decay
+      t.produce_block(fc::days(15) - fc::milliseconds(1000));
+      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE(near(t.get_state().net.adjusted_utilization, .3 * net_weight, 0));
+      BOOST_REQUIRE(near(t.get_state().cpu.adjusted_utilization, .4 * cpu_weight, 0));
+
+      // 1 day of decay from (30%, 40%) to (20%, 20%)
+      t.produce_block(fc::days(1) - fc::milliseconds(500));
+      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE(
+            near(t.get_state().net.adjusted_utilization, int64_t(.1 * net_weight * exp(-1) + .2 * net_weight), 0));
+      BOOST_REQUIRE(
+            near(t.get_state().cpu.adjusted_utilization, int64_t(.2 * cpu_weight * exp(-1) + .2 * cpu_weight), 0));
+
+      // 2 days of decay from (30%, 40%) to (20%, 20%)
+      t.produce_block(fc::days(1) - fc::milliseconds(500));
+      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE(
+            near(t.get_state().net.adjusted_utilization, int64_t(.1 * net_weight * exp(-2) + .2 * net_weight), 0));
+      BOOST_REQUIRE(
+            near(t.get_state().cpu.adjusted_utilization, int64_t(.2 * cpu_weight * exp(-2) + .2 * cpu_weight), 0));
+   }
+
 } // rent_tests
 FC_LOG_AND_RETHROW()
 
