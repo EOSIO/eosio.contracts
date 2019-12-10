@@ -592,6 +592,15 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
                          int64_t(net_weight * exp(-2)) / 1000));
       BOOST_REQUIRE(near(t.get_state().cpu.adjusted_utilization, int64_t(cpu_weight * exp(-2)),
                          int64_t(cpu_weight * exp(-2)) / 1000));
+
+      // 100% after 2 days of decay
+      //
+      // [((e^-2 + 1.0) ^ 2) - ((e^-2) ^ 2) ] * 1000000.0000 = 1270670.5664
+      // [((e^-2 + 1.0) ^ 3) - ((e^-2) ^ 3) ] * 2000000.0000 = 2921905.5327
+      //                                               total = 4192576.0991
+      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("4192561.0244"));
+      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
+                     asset::from_string("4192561.0244 TST"), net_weight, cpu_weight);
    }
 
 } // rent_tests
