@@ -86,7 +86,6 @@ void update_weight(time_point_sec now, rentbw_state_resource& res, int64_t& delt
                          int128_t(res.target_weight_ratio - res.initial_weight_ratio) *
                                (now.utc_seconds - res.initial_timestamp.utc_seconds) /
                                (res.target_timestamp.utc_seconds - res.initial_timestamp.utc_seconds);
-   // !!! check bounds of weight_ratio
    int64_t new_weight = res.assumed_stake_weight * int128_t(rentbw_frac) / res.weight_ratio - res.assumed_stake_weight;
    delta_available += new_weight - res.weight;
    res.weight = new_weight;
@@ -137,7 +136,6 @@ void system_contract::configrentbw(rentbw_config& args) {
       if (!args.target_price.amount && state.target_price.amount)
          args.target_price = state.target_price;
 
-      // !!! examine checks
       if (args.current_weight_ratio == args.target_weight_ratio)
          args.target_timestamp = now;
       else
@@ -148,6 +146,9 @@ void system_contract::configrentbw(rentbw_config& args) {
       eosio::check(args.target_weight_ratio <= args.current_weight_ratio, "weight can't grow over time");
       eosio::check(args.assumed_stake_weight >= 1,
                    "assumed_stake_weight must be at least 1; a much larger value is recommended");
+      eosio::check(args.assumed_stake_weight * int128_t(rentbw_frac) / args.target_weight_ratio <=
+                         std::numeric_limits<int64_t>::max(),
+                   "assumed_stake_weight/target_weight_ratio is too large");
       eosio::check(args.exponent >= 1, "exponent must be >= 1");
       eosio::check(args.decay_secs >= 1, "decay_secs must be >= 1");
       eosio::check(args.target_price.symbol == core_symbol, "target_price doesn't match core symbol");
