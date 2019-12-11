@@ -337,11 +337,11 @@ namespace eosiosystem {
 
    // `rex_return_pool` structure underlying the rex return pool table. A rex return pool table entry is defined by:
    // - `version` defaulted to zero,
-   // - `last_update_time` the last time returns from renting, ram fees, and name bids were added to the rex pool,
-   // - `current_rate_of_increase` current amount to be added to the rex pool at a rate of per 30 days,
-   // - `cummulative_proceeds` bookkeeping variable that tracks fees added to rex pool up to current time,
-   // - `proceeds` bookkeeping variable that tracks fees added to rex return pool up to current time,
-   // - `return_buckets` 12-hour buckets containing amounts to be added to the rex pool and the times they become effective
+   // - `last_dist_time` the last time proceeds from renting, ram fees, and name bids were added to the rex pool,
+   // - `pending_bucket_time` timestamp of the pending 12-hour return bucket,
+   // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket, 
+   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket, 
+   // - `current_rate_of_increase` the current rate per dist_interval at which proceeds are added to the rex pool
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
       uint8_t        version = 0;
       time_point_sec last_dist_time;
@@ -350,15 +350,18 @@ namespace eosiosystem {
       int64_t        pending_bucket_proceeds  = 0;
       int64_t        current_rate_of_increase = 0;
 
-      static constexpr int32_t total_intervals  = 30 * 144; // 30 days
-      static constexpr int32_t dist_interval    = 10 * 60;  // 10 minutes
-      static constexpr uint8_t hours_per_bucket = 12;
+      static constexpr uint32_t total_intervals  = 30 * 144; // 30 days
+      static constexpr uint32_t dist_interval    = 10 * 60;  // 10 minutes
+      static constexpr uint8_t  hours_per_bucket = 12;
 
       uint64_t primary_key()const { return 0; }
    };
 
    typedef eosio::multi_index< "rexretpool"_n, rex_return_pool > rex_return_pool_table;
 
+   // `rex_return_buckets` structure underlying the rex return buckets table. A rex return buckets table is defined by:
+   // - `version` defaulted to zero,
+   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals 
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_buckets {
       uint8_t                           version = 0;
       std::map<time_point_sec, int64_t> return_buckets;
