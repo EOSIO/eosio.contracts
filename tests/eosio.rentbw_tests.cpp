@@ -298,11 +298,6 @@ FC_LOG_AND_RETHROW()
 
 /* TODO:
 
-eosio::check(days == state.rent_days, "days doesn't match configuration");
-eosio::check(net_frac >= 0, "net_frac can't be negative");
-eosio::check(cpu_frac >= 0, "cpu_frac can't be negative");
-eosio::check(net_frac <= rentbw_frac, "net can't be more than 100%");
-eosio::check(cpu_frac <= rentbw_frac, "cpu can't be more than 100%");
 eosio::check(state.net.weight >= state.net.utilization, "weight can't shrink below utilization");
 */
 
@@ -505,6 +500,25 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
    {
       rentbw_tester t;
       init(t, false);
+      BOOST_REQUIRE_EQUAL(
+            t.wasm_assert_msg("days doesn't match configuration"), //
+            t.rentbw(N(bob111111111), N(alice1111111), 20, rentbw_frac, rentbw_frac, asset::from_string("1.0000 TST")));
+      BOOST_REQUIRE_EQUAL(                                   //
+            t.wasm_assert_msg("net_frac can't be negative"), //
+            t.rentbw(N(bob111111111), N(alice1111111), 30, -rentbw_frac, rentbw_frac,
+                     asset::from_string("1.0000 TST")));
+      BOOST_REQUIRE_EQUAL(                                   //
+            t.wasm_assert_msg("cpu_frac can't be negative"), //
+            t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, -rentbw_frac,
+                     asset::from_string("1.0000 TST")));
+      BOOST_REQUIRE_EQUAL(                                    //
+            t.wasm_assert_msg("net can't be more than 100%"), //
+            t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac + 1, rentbw_frac,
+                     asset::from_string("1.0000 TST")));
+      BOOST_REQUIRE_EQUAL(                                    //
+            t.wasm_assert_msg("cpu can't be more than 100%"), //
+            t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac + 1,
+                     asset::from_string("1.0000 TST")));
       BOOST_REQUIRE_EQUAL(
             t.wasm_assert_msg("calculated fee exceeds max_payment"), //
             t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac, asset::from_string("1.0000 TST")));
