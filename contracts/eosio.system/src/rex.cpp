@@ -642,7 +642,7 @@ namespace eosiosystem {
       int64_t        change_estimate   = current_rate * elapsed_intervals;
 
       {
-         const bool new_return_bucket = ret_pool_elem->pending_bucket_time < effective_time;
+         const bool new_return_bucket = ret_pool_elem->pending_bucket_time <= effective_time;
          int64_t        new_bucket_rate = 0;
          time_point_sec new_bucket_time = time_point_sec::min();
          _rexretpool.modify( ret_pool_elem, same_payer, [&]( auto& rp ) {
@@ -658,6 +658,7 @@ namespace eosiosystem {
                   rp.oldest_bucket_time = new_bucket_time;
                }
             }
+            rp.proceeds      -= change_estimate;
             rp.last_dist_time = effective_time;
          });
 
@@ -696,11 +697,18 @@ namespace eosiosystem {
             if ( expired_rate > 0) {
                rp.current_rate_of_increase -= expired_rate;
             }
+            if ( surplus > 0 ) {
+               change_estimate -= surplus;
+               rp.proceeds     += surplus;
+            }
          });
+      }
 
-         if ( surplus > 0 ) {
-            change_estimate -= surplus;
-         }
+      if ( change_estimate > 0 && ret_pool_elem->proceeds < 0 ) {
+         _rexretpool.modify( ret_pool_elem, same_payer, [&]( auto& rp ) {
+            change_estimate += rp.proceeds;
+            rp.proceeds      = 0;
+         });
       }
 
       if ( change_estimate > 0 ) {
@@ -1074,12 +1082,14 @@ namespace eosiosystem {
          _rexretpool.emplace( get_self(), [&]( auto& rp ) {
             rp.last_dist_time          = effective_time;
             rp.pending_bucket_proceeds = fee.amount;
-            rp.pending_bucket_time     = effective_time; 
+            rp.pending_bucket_time     = effective_time;
+            rp.proceeds                = fee.amount;
          });
          _rexretbuckets.emplace( get_self(), [&]( auto& rb ) { } );
       } else {
          _rexretpool.modify( return_pool_elem, same_payer, [&]( auto& rp ) {
             rp.pending_bucket_proceeds += fee.amount;
+            rp.proceeds                += fee.amount;
             if ( rp.pending_bucket_time == time_point_sec::maximum() ) {
                rp.pending_bucket_time = effective_time;
             }
