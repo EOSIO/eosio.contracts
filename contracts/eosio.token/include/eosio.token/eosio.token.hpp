@@ -22,7 +22,9 @@ namespace eosio {
          using contract::contract;
 
          /**
-          * Allows `issuer` account to create a token in supply of `maximum_supply`. If validation is successful a new entry in statstable for token symbol scope gets created.
+          * Allows `issuer` account to create a token in supply of
+          * `maximum_supply`. If validation is successful a new entry in
+          * statstable for token symbol scope gets created.
           *
           * @param issuer - the account that creates the token,
           * @param maximum_supply - the maximum supply set for the token created.

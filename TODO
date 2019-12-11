@@ -1,0 +1,44 @@
+Test Command For GDB:
+/home/i/eosio/eosio.cdt/build/bin/eosio-cpp -c -I/home/i/eosio/eosio.contracts/contracts/eosio.bios/include -O3 -abigen -abigen_output=/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/eosio.bios.abi -contract eosio.bios -R/home/i/eosio/eosio.contracts/contracts/eosio.bios/ricardian -R/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/ricardian -M /home/i/eosio/eosio.contracts/contracts/eosio.bios/src/eosio.bios.cpp
+
+Current compilation command for eosio.bios:
+
+/home/i/eosio/eosio.cdt/build/bin/eosio-cpp
+-c
+-I/home/i/eosio/eosio.contracts/contracts/eosio.bios/include
+-O3
+-abigen
+-abigen_output=/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/eosio.bios.abi
+-contract eosio.bios
+-R/home/i/eosio/eosio.contracts/contracts/eosio.bios/ricardian
+-R/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/ricardian
+-o
+CMakeFiles/eosio.bios.dir/src/eosio.bios.cpp.obj
+/home/i/eosio/eosio.contracts/contracts/eosio.bios/src/eosio.bios.cpp
+
+eosio-cpp should have a -M flag here.
+eosio-cpp should not include two ricardian directories here (or should it?).
+eosio-cpp should specify it's output as eosio.bios.wasm here (or should it?).
+
+eosio-cpp:
+-E Only run the preprocessor
+-MD Write a depfile containing user and system headers
+
+clang:
+-E Only run the preprocessor
+-MD Write a depfile containing user and system headers
+-M Like -MD, but also implies -E and writes to stdout by default
+
+Must have minimal command, such as:
+/home/i/eosio/eosio.cdt/build/bin/eosio-cpp -c -I/home/i/eosio/eosio.contracts/contracts/eosio.bios/include -MD /home/i/eosio/eosio.contracts/contracts/eosio.bios/src/eosio.bios.cpp
+
+After which is must collect the data from the `*.d` file and delete both the `*.d` and `*.wasm` files
+
+After discussion with Bucky I must look into the struct `Options` in file `compiler_options.cpp` and
+also in file eosio-cpp.in and eosio-cpp.in
+
+/home/i/eosio/eosio.cdt/build/bin/eosio-cpp -c -I/home/i/eosio/eosio.contracts/contracts/eosio.bios/include -O3 -abigen -abigen_output=/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/eosio.bios.abi -contract eosio.bios -R/home/i/eosio/eosio.contracts/contracts/eosio.bios/ricardian -R/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/ricardian -o CMakeFiles/eosio.bios.dir/src/eosio.bios.cpp.obj /home/i/eosio/eosio.contracts/contracts/eosio.bios/src/eosio.bios.cpp
+
+
+Test Command For Compiling And Running Tests:
+rm -r *; cmake -DBUILD_TESTS=TRUE ..; make -j2; ./tests/unit_test -t eosio_wrap_tests -l all

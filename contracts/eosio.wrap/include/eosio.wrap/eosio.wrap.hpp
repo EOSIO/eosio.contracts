@@ -34,7 +34,7 @@ namespace eosio {
           * @post Deferred transaction RAM usage is billed to 'executer'
           */
          [[eosio::action]]
-         void exec( ignore<name> executer, ignore<transaction> trx );
+         void exec( name executer, transaction trx );
 
          using exec_action = eosio::action_wrapper<"exec"_n, &wrap::exec>;
    };
