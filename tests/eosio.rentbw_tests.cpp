@@ -296,11 +296,6 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
 } // config_tests
 FC_LOG_AND_RETHROW()
 
-/* TODO:
-
-eosio::check(state.net.weight >= state.net.utilization, "weight can't shrink below utilization");
-*/
-
 BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
    produce_block();
 
@@ -537,6 +532,31 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
             t.rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, 10, 10, asset::from_string("3000000.0000 TST")));
       t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
                      asset::from_string("3000000.0000 TST"), net_weight, cpu_weight);
+
+      BOOST_REQUIRE_EQUAL( //
+            t.wasm_assert_msg("weight can't shrink below utilization"),
+            t.configbw(t.make_default_config([&](auto& config) {
+               config.net.current_weight_ratio = rentbw_frac / 4 + 1;
+               config.net.target_weight_ratio  = rentbw_frac / 4 + 1;
+               config.cpu.current_weight_ratio = rentbw_frac / 5;
+               config.cpu.target_weight_ratio  = rentbw_frac / 5;
+            })));
+      BOOST_REQUIRE_EQUAL( //
+            t.wasm_assert_msg("weight can't shrink below utilization"),
+            t.configbw(t.make_default_config([&](auto& config) {
+               config.net.current_weight_ratio = rentbw_frac / 4;
+               config.net.target_weight_ratio  = rentbw_frac / 4;
+               config.cpu.current_weight_ratio = rentbw_frac / 5 + 1;
+               config.cpu.target_weight_ratio  = rentbw_frac / 5 + 1;
+            })));
+      BOOST_REQUIRE_EQUAL( //
+            "",            //
+            t.configbw(t.make_default_config([&](auto& config) {
+               config.net.current_weight_ratio = rentbw_frac / 4;
+               config.net.target_weight_ratio  = rentbw_frac / 4;
+               config.cpu.current_weight_ratio = rentbw_frac / 5;
+               config.cpu.target_weight_ratio  = rentbw_frac / 5;
+            })));
    }
 
    // net:30%, cpu:40%, then net:5%, cpu:10%
