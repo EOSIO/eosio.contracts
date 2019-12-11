@@ -4776,9 +4776,9 @@ BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::to
    }
 
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("voter holding REX tokens must vote for at least 21 producers or for a proxy"),
-                        vote( alice, { producer_names.begin(), producer_names.begin() + 20 } ) );
+                        vote( alice, std::vector<account_name>( producer_names.begin(), producer_names.begin() + 20 ) ) );
    BOOST_REQUIRE_EQUAL( success(),
-                        vote( alice, { producer_names.begin(), producer_names.begin() + 21 } ) );
+                        vote( alice, std::vector<account_name>( producer_names.begin(), producer_names.begin() + 21 ) ) );
 
    BOOST_TEST_REQUIRE( stake2votes( asset( get_voter_info( alice )["staked"].as<int64_t>(), symbol{CORE_SYM} ) )
                        == get_producer_info(producer_names[0])["total_votes"].as<double>() );
@@ -4812,7 +4812,7 @@ BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::to
    produce_block( fc::days(31) );
    BOOST_REQUIRE_EQUAL( success(), sellrex( alice, get_rex_balance( alice ) ) );
    BOOST_REQUIRE_EQUAL( 0,         get_rex_balance( alice ).get_amount() );
-   BOOST_REQUIRE_EQUAL( success(), vote( alice, { producer_names[0], producer_names[4] } ) );
+   BOOST_REQUIRE_EQUAL( success(), vote( alice, std::vector<account_name>( producer_names[0], producer_names[4] ) ) );
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("must vote for at least 21 producers or for a proxy before buying REX"),
                         buyrex( alice, core_sym::from_string("1.0000") ) );
 
@@ -4868,7 +4868,7 @@ BOOST_FIXTURE_TEST_CASE( update_rex_vote, eosio_system_tester, * boost::unit_tes
    BOOST_TEST_REQUIRE( within_one( curr_rex_pool["total_lendable"].as<asset>().get_amount(),
                                    init_rex_pool["total_lendable"].as<asset>().get_amount() + rent.get_amount() ) );
 
-   BOOST_REQUIRE_EQUAL( success(),                              vote( alice, { producer_names.begin(), producer_names.begin() + 21 } ) );
+   BOOST_REQUIRE_EQUAL( success(),                              vote( alice, std::vector<account_name>( producer_names.begin(), producer_names.begin() + 21 ) ) );
    BOOST_TEST_REQUIRE( within_one( (purchase + rent).get_amount(), get_voter_info(alice)["staked"].as<int64_t>() - init_stake_amount ) );
    BOOST_TEST_REQUIRE( within_one( (purchase + rent).get_amount(), get_rex_vote_stake(alice).get_amount() ) );
    BOOST_TEST_REQUIRE ( stake2votes(purchase + rent + init_stake) ==
