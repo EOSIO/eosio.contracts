@@ -6,6 +6,7 @@ namespace eosiosystem {
 
    using eosio::current_time_point;
    using eosio::token;
+   using eosio::seconds;
 
    void system_contract::deposit( const name& owner, const asset& amount )
    {
@@ -621,8 +622,8 @@ namespace eosiosystem {
     */
    void system_contract::update_rex_pool()
    {
-      auto get_elapsed_intervals = [&](const time_point_sec& t1, const time_point_sec& t0) -> uint32_t {
-         return (t1.sec_since_epoch() - t0.sec_since_epoch()) / rex_return_pool::dist_interval;
+      auto get_elapsed_intervals = [&]( const time_point_sec& t1, const time_point_sec& t0 ) -> uint32_t {
+         return ( t1.sec_since_epoch() - t0.sec_since_epoch() ) / rex_return_pool::dist_interval;
       };
 
       const time_point_sec ct             = current_time_point();
@@ -637,13 +638,13 @@ namespace eosiosystem {
       }
 
       const int64_t  current_rate      = ret_pool_elem->current_rate_of_increase;
-      const uint32_t elapsed_intervals = get_elapsed_intervals(effective_time, ret_pool_elem->last_dist_time);
+      const uint32_t elapsed_intervals = get_elapsed_intervals( effective_time, ret_pool_elem->last_dist_time );
       int64_t        change_estimate   = current_rate * elapsed_intervals;
 
       {
          const bool new_return_bucket = ret_pool_elem->pending_bucket_time < effective_time;
          int64_t        new_bucket_rate = 0;
-         time_point_sec new_bucket_time{0};
+         time_point_sec new_bucket_time = time_point_sec::min();
          _rexretpool.modify( ret_pool_elem, same_payer, [&]( auto& rp ) {
             if ( new_return_bucket ) {
                int64_t remainder = rp.pending_bucket_proceeds % rex_return_pool::total_intervals;
@@ -667,7 +668,7 @@ namespace eosiosystem {
          }
       }
 
-      const time_point_sec time_threshold = effective_time - eosio::seconds(rex_return_pool::total_intervals * rex_return_pool::dist_interval);
+      const time_point_sec time_threshold = effective_time - seconds(rex_return_pool::total_intervals * rex_return_pool::dist_interval);
       if ( ret_pool_elem->oldest_bucket_time <= time_threshold ) {
          int64_t expired_rate = 0;
          int64_t surplus      = 0;
@@ -677,10 +678,12 @@ namespace eosiosystem {
             while ( iter != return_buckets.end() && iter->first <= time_threshold ) {
                auto next = iter;
                ++next;
-               const uint32_t overtime = get_elapsed_intervals( effective_time, iter->first + rex_return_pool::total_intervals );
+               const uint32_t overtime = get_elapsed_intervals( effective_time,
+                                                                iter->first + seconds(rex_return_pool::total_intervals * rex_return_pool::dist_interval) );
                surplus      += iter->second * overtime;
                expired_rate += iter->second;
                return_buckets.erase(iter);
+               iter = next;
             }
          });
 
@@ -690,7 +693,6 @@ namespace eosiosystem {
             } else {
                rp.oldest_bucket_time = time_point_sec::min();
             }
-
             if ( expired_rate > 0) {
                rp.current_rate_of_increase -= expired_rate;
             }
@@ -1059,7 +1061,7 @@ namespace eosiosystem {
    void system_contract::add_to_rex_return_pool( const asset& fee )
    {
       update_rex_pool();
-      if ( fee.amount <= 0) {
+      if ( fee.amount <= 0 ) {
          return;
       }
 
