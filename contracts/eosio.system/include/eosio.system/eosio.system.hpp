@@ -341,7 +341,8 @@ namespace eosiosystem {
    // - `pending_bucket_time` timestamp of the pending 12-hour return bucket,
    // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket, 
    // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket, 
-   // - `current_rate_of_increase` the current rate per dist_interval at which proceeds are added to the rex pool
+   // - `current_rate_of_increase` the current rate per dist_interval at which proceeds are added to the rex pool,
+   // - `proceeds` the maximum amount of proceeds that can be added to the rex pool at any given time
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
       uint8_t        version = 0;
       time_point_sec last_dist_time;
@@ -349,10 +350,12 @@ namespace eosiosystem {
       time_point_sec oldest_bucket_time       = time_point_sec::min();
       int64_t        pending_bucket_proceeds  = 0;
       int64_t        current_rate_of_increase = 0;
+      int64_t        proceeds                 = 0;
 
       static constexpr uint32_t total_intervals  = 30 * 144; // 30 days
       static constexpr uint32_t dist_interval    = 10 * 60;  // 10 minutes
       static constexpr uint8_t  hours_per_bucket = 12;
+      static_assert( total_intervals * dist_interval == 30 * seconds_per_day );
 
       uint64_t primary_key()const { return 0; }
    };
