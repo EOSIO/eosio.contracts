@@ -4878,11 +4878,7 @@ BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::to
                        == get_producer_info(producer_names[20])["total_votes"].as<double>() );
 
    BOOST_REQUIRE_EQUAL( success(), updaterex( alice ) );
-
-   produce_blocks( 1 );
    produce_block( fc::days(10) );
-   produce_blocks( 1 );
-
    BOOST_TEST_REQUIRE( get_producer_info(producer_names[20])["total_votes"].as<double>()
                        < stake2votes( asset( get_voter_info( alice )["staked"].as<int64_t>(), symbol{CORE_SYM} ) ) );
 
@@ -4890,10 +4886,7 @@ BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::to
    BOOST_TEST_REQUIRE( stake2votes( asset( get_voter_info( alice )["staked"].as<int64_t>(), symbol{CORE_SYM} ) )
                        == get_producer_info(producer_names[20])["total_votes"].as<double>() );
 
-   produce_blocks( 1 );
    produce_block( fc::hours(19 * 24 + 23) );
-   produce_blocks( 1 );
-
    BOOST_REQUIRE_EQUAL( success(),                                       rexexec( alice, 1 ) );
    const asset   init_rex             = get_rex_balance( alice );
    const auto    current_rex_pool     = get_rex_pool();
@@ -4907,16 +4900,10 @@ BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::to
    BOOST_REQUIRE_EQUAL( get_voter_info( alice )["staked"].as<int64_t>(), init_stake + get_rex_vote_stake(alice).get_amount() );
    BOOST_TEST_REQUIRE( stake2votes( asset( get_voter_info( alice )["staked"].as<int64_t>(), symbol{CORE_SYM} ) )
                        == get_producer_info(producer_names[0])["total_votes"].as<double>() );
-   
-   produce_blocks( 1 );
    produce_block( fc::days(31) );
-   produce_blocks( 1 );
    BOOST_REQUIRE_EQUAL( success(), sellrex( alice, get_rex_balance( alice ) ) );
    BOOST_REQUIRE_EQUAL( 0,         get_rex_balance( alice ).get_amount() );
-   std::vector<account_name> two_producers;
-   two_producers.push_back( producer_names[0] );
-   two_producers.push_back( producer_names[4] );
-   BOOST_REQUIRE_EQUAL( success(), vote( alice, two_producers ) );
+   BOOST_REQUIRE_EQUAL( success(), vote( alice, { producer_names[0], producer_names[4] } ) );
    BOOST_REQUIRE_EQUAL( wasm_assert_msg("must vote for at least 21 producers or for a proxy before buying REX"),
                         buyrex( alice, core_sym::from_string("1.0000") ) );
 
