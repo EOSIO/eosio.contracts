@@ -45,3 +45,7 @@ also in file eosio-cpp.in and eosio-cpp.in
 
 Test Command For Compiling And Running Tests:
 rm -r *; cmake -DBUILD_TESTS=TRUE ..; make -j2; ./tests/unit_test -t eosio_wrap_tests -l all
+
+================================================================================
+
+/home/i/eosio/eosio.cdt/build/bin/eosio-cpp -c -I/home/i/eosio/eosio.contracts/contracts/eosio.bios/include -O3 -abigen -abigen_output=/home/i/eosio/eosio.contracts/tagit/contracts/eosio.bios/eosio.bios.abi -contract eosio.bios -R/home/i/eosio/eosio.contracts/contracts/eosio.bios/ricardian -R/home/i/eosio/eosio.contracts/tagit/contracts/eosio.bios/ricardian -M /home/i/eosio/eosio.contracts/contracts/eosio.bios/src/eosio.bios.cpp
