@@ -502,8 +502,8 @@ namespace eosiosystem {
       rentbw_config_resource  cpu;              // CPU market configuration
       uint32_t                rent_days;        // `rentbw` `days` argument must match this. Set this to 0 to preserve the
                                                 //     existing setting.
-      asset                   min_rent_price;   // Rents below this amount are rejected. This needs to be large enough to cover
-                                                //    RAM costs. Set this to 0 to preserve the existing setting.
+      asset                   min_rent_price;   // Rents below this amount are rejected. Set this to 0 to preserve the
+                                                //     existing setting.
    };
 
    struct rentbw_state_resource {
