@@ -5271,13 +5271,18 @@ BOOST_FIXTURE_TEST_CASE( rex_return, eosio_system_tester ) try {
    }
 
    {
-      const asset fee = core_sym::from_string("30.0000");
+      const asset    fee                 = core_sym::from_string("30.0000");
+      const uint32_t bucket_interval_sec = fc::hours(12).to_seconds();
+      const uint32_t current_time_sec    = control->pending_block_time().sec_since_epoch();
+      const time_point_sec expected_pending_bucket_time{current_time_sec - current_time_sec % bucket_interval_sec + bucket_interval_sec};
       BOOST_REQUIRE_EQUAL( success(),        rentcpu( bob, bob, fee ) );
       auto rex_return_pool = get_rex_return_pool();
       BOOST_REQUIRE_EQUAL( false,            rex_return_pool.is_null() );
       BOOST_REQUIRE_EQUAL( 0,                rex_return_pool["current_rate_of_increase"].as<int64_t>() );
       BOOST_REQUIRE_EQUAL( 0,                get_rex_return_buckets()["return_buckets"].get_array().size() );
-      int32_t t0 = rex_return_pool["last_dist_time"].as<time_point_sec>().sec_since_epoch();
+      BOOST_REQUIRE_EQUAL( expected_pending_bucket_time.sec_since_epoch(),
+                           rex_return_pool["pending_bucket_time"].as<time_point_sec>().sec_since_epoch() );
+      int32_t t0 = rex_return_pool["pending_bucket_time"].as<time_point_sec>().sec_since_epoch();
 
       produce_block( fc::hours(13) );
       BOOST_REQUIRE_EQUAL( success(),        rexexec( bob, 1 ) );
