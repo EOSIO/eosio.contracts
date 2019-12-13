@@ -341,25 +341,29 @@ namespace eosiosystem {
 
    // `rex_return_pool` structure underlying the rex return pool table. A rex return pool table entry is defined by:
    // - `version` defaulted to zero,
-   // - `last_dist_time` the last time proceeds from renting, ram fees, and name bids were added to the rex pool,
+   // - `last_distribution_time` the last time proceeds from renting, ram fees, and name bids were added to the rex pool,
    // - `pending_bucket_time` timestamp of the pending 12-hour return bucket,
-   // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket, 
-   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket, 
-   // - `current_rate_of_increase` the current rate per dist_interval at which proceeds are added to the rex pool,
+   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket,
+   // - `current_rate_of_increase` the current rate per distribution interval at which proceeds are added to the rex pool,
    // - `proceeds` the maximum amount of proceeds that can be added to the rex pool at any given time
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
       uint8_t        version = 0;
-      time_point_sec last_dist_time;
-      time_point_sec pending_bucket_time      = time_point_sec::maximum();
-      time_point_sec oldest_bucket_time       = time_point_sec::min();
+      time_point_sec last_distribution_time;
+      time_point_sec pending_bucket_time;
       int64_t        pending_bucket_proceeds  = 0;
       int64_t        current_rate_of_increase = 0;
       int64_t        proceeds                 = 0;
 
-      static constexpr uint32_t total_intervals  = 30 * 144; // 30 days
-      static constexpr uint32_t dist_interval    = 10 * 60;  // 10 minutes
-      static constexpr uint8_t  hours_per_bucket = 12;
-      static_assert( total_intervals * dist_interval == 30 * seconds_per_day );
+      static constexpr uint32_t distribution_window_sec      = 30 * seconds_per_day;  // 30 days
+      static constexpr uint32_t bucket_interval_sec          = 12 * seconds_per_hour; // 12 hours
+
+      static_assert( distribution_window_sec % bucket_interval_sec == 0, "whole number of bucket intervals must fit into exactly 30 days" );
+
+      static constexpr uint32_t distribution_interval_sec    = 10 * 60;  // 10 minutes
+
+      static_assert( bucket_interval_sec % distribution_interval_sec == 0, "whole number of distribution intervals must fit into a single bucket interval" );
+
+      static constexpr uint32_t total_distribution_intervals = distribution_window_sec / distribution_interval_sec; // number of distribution intervals that exactly cover the distribution window
 
       uint64_t primary_key()const { return 0; }
    };
@@ -368,7 +372,7 @@ namespace eosiosystem {
 
    // `rex_return_buckets` structure underlying the rex return buckets table. A rex return buckets table is defined by:
    // - `version` defaulted to zero,
-   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals 
+   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_buckets {
       uint8_t                           version = 0;
       std::map<time_point_sec, int64_t> return_buckets;
