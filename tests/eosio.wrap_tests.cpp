@@ -232,6 +232,11 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
    BOOST_REQUIRE_EQUAL( "exec", name{trace->action_traces[0].act.name} );
    BOOST_REQUIRE_EQUAL( "alice", name{trace->action_traces[0].act.authorization[0].actor} );
    BOOST_REQUIRE_EQUAL( "active", name{trace->action_traces[0].act.authorization[0].permission} );
+
+   // TODO: Come back later after deprecating deferred in `eosio.msig`.
+   // TODO: Change test to get the deferred trx.
+   //       Basically make this test work with: Old `eosio.msig` and new `eosio.wrap`.
+   // TODO: Schedule meeting for next Wednesday.
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( wrap_with_msig_unapprove, eosio_wrap_tester ) try {
