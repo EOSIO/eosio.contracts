@@ -39,8 +39,8 @@ namespace eosio {
           *  This action issues to `to` account a `quantity` of tokens.
           *
           * @param to - the account to issue tokens to, it must be the same as the issuer,
-          * @param quntity - the amount of tokens to be issued,
-          * @memo - the memo string that accompanies the token issue transaction.
+          * @param quantity - the amount of tokens to be issued,
+          * @param memo - the memo string that accompanies the token issue transaction.
           */
          [[eosio::action]]
          void issue( const name& to, const asset& quantity, const string& memo );
