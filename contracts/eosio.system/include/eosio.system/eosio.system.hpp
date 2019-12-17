@@ -61,8 +61,10 @@ namespace eosiosystem {
 
    static constexpr uint32_t seconds_per_year      = 52 * 7 * 24 * 3600;
    static constexpr uint32_t seconds_per_day       = 24 * 3600;
+   static constexpr uint32_t seconds_per_hour      = 3600;
    static constexpr int64_t  useconds_per_year     = int64_t(seconds_per_year) * 1000'000ll;
    static constexpr int64_t  useconds_per_day      = int64_t(seconds_per_day) * 1000'000ll;
+   static constexpr int64_t  useconds_per_hour     = int64_t(seconds_per_hour) * 1000'000ll;
    static constexpr uint32_t blocks_per_day        = 2 * seconds_per_day; // half seconds per day
 
    static constexpr int64_t  min_activated_stake   = 150'000'000'0000;
@@ -336,6 +338,45 @@ namespace eosiosystem {
 
    typedef eosio::multi_index< "rexpool"_n, rex_pool > rex_pool_table;
 
+   // `rex_return_pool` structure underlying the rex return pool table. A rex return pool table entry is defined by:
+   // - `version` defaulted to zero,
+   // - `last_dist_time` the last time proceeds from renting, ram fees, and name bids were added to the rex pool,
+   // - `pending_bucket_time` timestamp of the pending 12-hour return bucket,
+   // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket,
+   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket,
+   // - `current_rate_of_increase` the current rate per dist_interval at which proceeds are added to the rex pool,
+   // - `proceeds` the maximum amount of proceeds that can be added to the rex pool at any given time
+   struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
+      uint8_t        version = 0;
+      time_point_sec last_dist_time;
+      time_point_sec pending_bucket_time      = time_point_sec::maximum();
+      time_point_sec oldest_bucket_time       = time_point_sec::min();
+      int64_t        pending_bucket_proceeds  = 0;
+      int64_t        current_rate_of_increase = 0;
+      int64_t        proceeds                 = 0;
+
+      static constexpr uint32_t total_intervals  = 30 * 144; // 30 days
+      static constexpr uint32_t dist_interval    = 10 * 60;  // 10 minutes
+      static constexpr uint8_t  hours_per_bucket = 12;
+      static_assert( total_intervals * dist_interval == 30 * seconds_per_day );
+
+      uint64_t primary_key()const { return 0; }
+   };
+
+   typedef eosio::multi_index< "rexretpool"_n, rex_return_pool > rex_return_pool_table;
+
+   // `rex_return_buckets` structure underlying the rex return buckets table. A rex return buckets table is defined by:
+   // - `version` defaulted to zero,
+   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals
+   struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_buckets {
+      uint8_t                           version = 0;
+      std::map<time_point_sec, int64_t> return_buckets;
+
+      uint64_t primary_key()const { return 0; }
+   };
+
+   typedef eosio::multi_index< "retbuckets"_n, rex_return_buckets > rex_return_buckets_table;
+
    // `rex_fund` structure underlying the rex fund table. A rex fund table entry is defined by:
    // - `version` defaulted to zero,
    // - `owner` the owner of the rex fund,
@@ -439,15 +480,16 @@ namespace eosiosystem {
                                              //    total rented by REX at the time the rentbw market is first activated. Set
                                              //    this to 0 to preserve the existing setting; this avoids sudden price jumps.
                                              //    For new chains which don't need to phase out staking and REX, 10^12 is
-                                             //    probably a good value. 
+                                             //    probably a good value.
       time_point_sec target_timestamp;       // Stop automatic weight_ratio shrinkage at this time. Once this
                                              //    time hits, weight_ratio will be target_weight_ratio. Ignored if
                                              //    current_weight_ratio == target_weight_ratio. Set this to 0 to preserve the
                                              //    existing setting.
       double         exponent;               // Exponent of resource price curve. Must be >= 1. Set this to 0 to preserve the
                                              //    existing setting.
-      uint32_t       decay_secs;             // Number of seconds for adjusted resource utilization to decay to instantaneous
-                                             //    utilization within exp(-1). Set this to 0 to preserve the existing setting.
+      uint32_t       decay_secs;             // Number of seconds for the gap between adjusted resource utilization and
+                                             //    instantaneous utilization to shrink by 63%. Set this to 0 to preserve the
+                                             //    existing setting.
       asset          target_price;           // Fee needed to rent the entire resource market weight. Set this to 0 to
                                              //    preserve the existing setting.
    };
@@ -476,13 +518,13 @@ namespace eosiosystem {
       time_point_sec target_timestamp        = {};                // Stop automatic weight_ratio shrinkage at this time. Once this
                                                                   //    time hits, weight_ratio will be target_weight_ratio.
       double         exponent                = 0;                 // Exponent of resource price curve.
-      uint32_t       decay_secs              = 0;                 // Number of seconds for adjusted resource utilization to
-                                                                  //    decay to instantaneous utilization within exp(-1).
+      uint32_t       decay_secs              = 0;                 // Number of seconds for the gap between adjusted resource
+                                                                  //    utilization and instantaneous utilization to shrink by 63%.
       asset          target_price            = {};                // Fee needed to rent the entire resource market weight.
       int64_t        utilization             = 0;                 // Instantaneous resource utilization. This is the current
                                                                   //    amount sold. utilization <= weight.
-      int64_t        adjusted_utilization    = 0;                 // Adjusted resource utilization. This >= utilization. It
-                                                                  //    grows instantly but decays exponentially.
+      int64_t        adjusted_utilization    = 0;                 // Adjusted resource utilization. This is >= utilization and
+                                                                  //    <= weight. It grows instantly but decays exponentially.
       time_point_sec utilization_timestamp   = {};                // When adjusted_utilization was last updated
    };
 
@@ -522,22 +564,24 @@ namespace eosiosystem {
    class [[eosio::contract("eosio.system")]] system_contract : public native {
 
       private:
-         voters_table            _voters;
-         producers_table         _producers;
-         producers_table2        _producers2;
-         global_state_singleton  _global;
-         global_state2_singleton _global2;
-         global_state3_singleton _global3;
-         global_state4_singleton _global4;
-         eosio_global_state      _gstate;
-         eosio_global_state2     _gstate2;
-         eosio_global_state3     _gstate3;
-         eosio_global_state4     _gstate4;
-         rammarket               _rammarket;
-         rex_pool_table          _rexpool;
-         rex_fund_table          _rexfunds;
-         rex_balance_table       _rexbalance;
-         rex_order_table         _rexorders;
+         voters_table             _voters;
+         producers_table          _producers;
+         producers_table2         _producers2;
+         global_state_singleton   _global;
+         global_state2_singleton  _global2;
+         global_state3_singleton  _global3;
+         global_state4_singleton  _global4;
+         eosio_global_state       _gstate;
+         eosio_global_state2      _gstate2;
+         eosio_global_state3      _gstate3;
+         eosio_global_state4      _gstate4;
+         rammarket                _rammarket;
+         rex_pool_table           _rexpool;
+         rex_return_pool_table    _rexretpool;
+         rex_return_buckets_table _rexretbuckets;
+         rex_fund_table           _rexfunds;
+         rex_balance_table        _rexbalance;
+         rex_order_table          _rexorders;
 
       public:
          static constexpr eosio::name active_permission{"active"_n};
@@ -1169,7 +1213,7 @@ namespace eosiosystem {
 
          /**
           * Rent NET and CPU
-          * 
+          *
           * @param payer - the resource buyer
           * @param receiver - the resource receiver
           * @param days - number of days of resource availability. Must match market configuration.
@@ -1247,6 +1291,7 @@ namespace eosiosystem {
 
          // defined in rex.cpp
          void runrex( uint16_t max );
+         void update_rex_pool();
          void update_resource_limits( const name& from, const name& receiver, int64_t delta_net, int64_t delta_cpu );
          void check_voting_requirement( const name& owner,
                                         const char* error_msg = "must vote for at least 21 producers or for a proxy before buying REX" )const;
@@ -1268,6 +1313,7 @@ namespace eosiosystem {
          static time_point_sec get_rex_maturity();
          asset add_to_rex_balance( const name& owner, const asset& payment, const asset& rex_received );
          asset add_to_rex_pool( const asset& payment );
+         void add_to_rex_return_pool( const asset& fee );
          void process_rex_maturities( const rex_balance_table::const_iterator& bitr );
          void consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
                                        const asset& rex_in_sell_order );

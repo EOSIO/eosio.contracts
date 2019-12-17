@@ -6,6 +6,7 @@ namespace eosiosystem {
 
    using eosio::current_time_point;
    using eosio::token;
+   using eosio::seconds;
 
    void system_contract::deposit( const name& owner, const asset& amount )
    {
@@ -452,15 +453,13 @@ namespace eosiosystem {
     */
    void system_contract::add_loan_to_rex_pool( const asset& payment, int64_t rented_tokens, bool new_loan )
    {
+      add_to_rex_return_pool( payment );
       _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rt ) {
          // add payment to total_rent
          rt.total_rent.amount    += payment.amount;
          // move rented_tokens from total_unlent to total_lent
          rt.total_unlent.amount  -= rented_tokens;
          rt.total_lent.amount    += rented_tokens;
-         // add payment to total_unlent
-         rt.total_unlent.amount  += payment.amount;
-         rt.total_lendable.amount = rt.total_unlent.amount + rt.total_lent.amount;
          // increment loan_num if a new loan is being created
          if ( new_loan ) {
             rt.loan_num++;
@@ -512,6 +511,8 @@ namespace eosiosystem {
    void system_contract::runrex( uint16_t max )
    {
       check( rex_system_initialized(), "rex system not initialized yet" );
+
+      update_rex_pool();
 
       const auto& pool = _rexpool.begin();
 
@@ -616,6 +617,108 @@ namespace eosiosystem {
 
    }
 
+   /**
+    * @brief Adds returns from the REX return pool to the REX pool
+    */
+   void system_contract::update_rex_pool()
+   {
+      auto get_elapsed_intervals = [&]( const time_point_sec& t1, const time_point_sec& t0 ) -> uint32_t {
+         return ( t1.sec_since_epoch() - t0.sec_since_epoch() ) / rex_return_pool::dist_interval;
+      };
+
+      const time_point_sec ct             = current_time_point();
+      const uint32_t       cts            = ct.sec_since_epoch();
+      const time_point_sec effective_time{cts - cts % rex_return_pool::dist_interval};
+
+      const auto ret_pool_elem    = _rexretpool.begin();
+      const auto ret_buckets_elem = _rexretbuckets.begin();
+
+      if ( ret_pool_elem == _rexretpool.end() || effective_time <= ret_pool_elem->last_dist_time ) {
+         return;
+      }
+
+      const int64_t  current_rate      = ret_pool_elem->current_rate_of_increase;
+      const uint32_t elapsed_intervals = get_elapsed_intervals( effective_time, ret_pool_elem->last_dist_time );
+      int64_t        change_estimate   = current_rate * elapsed_intervals;
+
+      {
+         const bool new_return_bucket = ret_pool_elem->pending_bucket_time <= effective_time;
+         int64_t        new_bucket_rate = 0;
+         time_point_sec new_bucket_time = time_point_sec::min();
+         _rexretpool.modify( ret_pool_elem, same_payer, [&]( auto& rp ) {
+            if ( new_return_bucket ) {
+               int64_t remainder = rp.pending_bucket_proceeds % rex_return_pool::total_intervals;
+               new_bucket_rate   = ( rp.pending_bucket_proceeds - remainder ) / rex_return_pool::total_intervals;
+               new_bucket_time   = rp.pending_bucket_time;
+               rp.current_rate_of_increase += new_bucket_rate;
+               change_estimate             += remainder + new_bucket_rate * get_elapsed_intervals( effective_time, rp.pending_bucket_time );
+               rp.pending_bucket_proceeds   = 0;
+               rp.pending_bucket_time       = time_point_sec::maximum();
+               if ( new_bucket_time < rp.oldest_bucket_time ) {
+                  rp.oldest_bucket_time = new_bucket_time;
+               }
+            }
+            rp.proceeds      -= change_estimate;
+            rp.last_dist_time = effective_time;
+         });
+
+         if ( new_return_bucket ) {
+            _rexretbuckets.modify( ret_buckets_elem, same_payer, [&]( auto& rb ) {
+               rb.return_buckets[new_bucket_time] = new_bucket_rate;
+            });
+         }
+      }
+
+      const time_point_sec time_threshold = effective_time - seconds(rex_return_pool::total_intervals * rex_return_pool::dist_interval);
+      if ( ret_pool_elem->oldest_bucket_time <= time_threshold ) {
+         int64_t expired_rate = 0;
+         int64_t surplus      = 0;
+         _rexretbuckets.modify( ret_buckets_elem, same_payer, [&]( auto& rb ) {
+            auto& return_buckets = rb.return_buckets;
+            auto iter = return_buckets.begin();
+            while ( iter != return_buckets.end() && iter->first <= time_threshold ) {
+               auto next = iter;
+               ++next;
+               const uint32_t overtime = get_elapsed_intervals( effective_time,
+                                                                iter->first + seconds(rex_return_pool::total_intervals * rex_return_pool::dist_interval) );
+               surplus      += iter->second * overtime;
+               expired_rate += iter->second;
+               return_buckets.erase(iter);
+               iter = next;
+            }
+         });
+
+         _rexretpool.modify( ret_pool_elem, same_payer, [&]( auto& rp ) {
+            if ( !ret_buckets_elem->return_buckets.empty() ) {
+               rp.oldest_bucket_time = ret_buckets_elem->return_buckets.begin()->first;
+            } else {
+               rp.oldest_bucket_time = time_point_sec::min();
+            }
+            if ( expired_rate > 0) {
+               rp.current_rate_of_increase -= expired_rate;
+            }
+            if ( surplus > 0 ) {
+               change_estimate -= surplus;
+               rp.proceeds     += surplus;
+            }
+         });
+      }
+
+      if ( change_estimate > 0 && ret_pool_elem->proceeds < 0 ) {
+         _rexretpool.modify( ret_pool_elem, same_payer, [&]( auto& rp ) {
+            change_estimate += rp.proceeds;
+            rp.proceeds      = 0;
+         });
+      }
+
+      if ( change_estimate > 0 ) {
+         _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& pool ) {
+            pool.total_unlent.amount += change_estimate;
+            pool.total_lendable       = pool.total_unlent + pool.total_lent;
+         });
+      }
+   }
+
    template <typename T>
    int64_t system_contract::rent_rex( T& table, const name& from, const name& receiver, const asset& payment, const asset& fund )
    {
@@ -678,7 +781,7 @@ namespace eosiosystem {
       asset stake_change( 0, core_symbol() );
       bool  success = false;
 
-      const int64_t unlent_lower_bound = ( uint128_t(2) * rexitr->total_lent.amount ) / 10;
+      const int64_t unlent_lower_bound = rexitr->total_lent.amount / 10;
       const int64_t available_unlent   = rexitr->total_unlent.amount - unlent_lower_bound; // available_unlent <= 0 is possible
       if ( proceeds.amount <= available_unlent ) {
          const int64_t init_vote_stake_amount = bitr->vote_stake.amount;
@@ -813,15 +916,13 @@ namespace eosiosystem {
     *
     * @param from - account from which asset is transfered to REX pool
     * @param amount - amount of tokens to be transfered
+    * @param required - if true, asserts when the system is not configured to channel fees into REX
     */
    void system_contract::channel_to_rex( const name& from, const asset& amount, bool required )
    {
 #if CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
       if ( rex_available() ) {
-         _rexpool.modify( _rexpool.begin(), same_payer, [&]( auto& rp ) {
-            rp.total_unlent.amount   += amount.amount;
-            rp.total_lendable.amount += amount.amount;
-         });
+         add_to_rex_return_pool( amount );
          // inline transfer to rex_account
          token::transfer_action transfer_act{ token_account, { from, active_permission } };
          transfer_act.send( from, rex_account, amount,
@@ -961,6 +1062,42 @@ namespace eosiosystem {
       }
 
       return rex_received;
+   }
+
+   /**
+    * @brief Adds an amount of core tokens to the REX return pool
+    *
+    * @param fee - amount to be added
+    */
+   void system_contract::add_to_rex_return_pool( const asset& fee )
+   {
+      update_rex_pool();
+      if ( fee.amount <= 0 ) {
+         return;
+      }
+
+      const time_point_sec ct              = current_time_point();
+      const uint32_t       cts             = ct.sec_since_epoch();
+      const uint32_t       bucket_interval = rex_return_pool::hours_per_bucket * seconds_per_hour;
+      const time_point_sec effective_time{cts - cts % bucket_interval + bucket_interval};
+      const auto return_pool_elem = _rexretpool.begin();
+      if ( return_pool_elem == _rexretpool.end() ) {
+         _rexretpool.emplace( get_self(), [&]( auto& rp ) {
+            rp.last_dist_time          = effective_time;
+            rp.pending_bucket_proceeds = fee.amount;
+            rp.pending_bucket_time     = effective_time;
+            rp.proceeds                = fee.amount;
+         });
+         _rexretbuckets.emplace( get_self(), [&]( auto& rb ) { } );
+      } else {
+         _rexretpool.modify( return_pool_elem, same_payer, [&]( auto& rp ) {
+            rp.pending_bucket_proceeds += fee.amount;
+            rp.proceeds                += fee.amount;
+            if ( rp.pending_bucket_time == time_point_sec::maximum() ) {
+               rp.pending_bucket_time = effective_time;
+            }
+         });
+      }
    }
 
    /**

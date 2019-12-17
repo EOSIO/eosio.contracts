@@ -1,9 +1,18 @@
 #include <eosio.system/eosio.system.hpp>
-#include <math.h>
+#include <eosio/action.hpp>
+#include <algorithm>
+#include <cmath>
 
 namespace eosiosystem {
 
 void update_weight(time_point_sec now, rentbw_state_resource& res, int64_t& delta_available);
+
+/**
+ *  @pre  now >= res.utilization_timestamp
+ *  @post res.utilization <= new res.adjusted_utilization
+ *  @post if res.utilization < old res.adjusted_utilization, then new res.adjusted_utilization <= old res.adjusted_utilization
+ *  @post if res.utilization >= old res.adjusted_utilization, then new res.adjusted_utilization == res.utilization
+ */
 void update_utilization(time_point_sec now, rentbw_state_resource& res);
 
 void system_contract::adjust_resources(name payer, name account, symbol core_symbol, int64_t net_delta,
@@ -79,26 +88,30 @@ void system_contract::process_rentbw_queue(time_point_sec now, symbol core_symbo
 }
 
 void update_weight(time_point_sec now, rentbw_state_resource& res, int64_t& delta_available) {
-   if (now >= res.target_timestamp)
+   if (now >= res.target_timestamp) {
       res.weight_ratio = res.target_weight_ratio;
-   else
+   } else {
       res.weight_ratio = res.initial_weight_ratio + //
                          int128_t(res.target_weight_ratio - res.initial_weight_ratio) *
                                (now.utc_seconds - res.initial_timestamp.utc_seconds) /
                                (res.target_timestamp.utc_seconds - res.initial_timestamp.utc_seconds);
-   int64_t new_weight = res.assumed_stake_weight * int128_t(rentbw_frac) / res.weight_ratio - res.assumed_stake_weight;
+   }
+   int64_t new_weight    = res.assumed_stake_weight * int128_t(rentbw_frac) / res.weight_ratio - res.assumed_stake_weight;
    delta_available += new_weight - res.weight;
    res.weight = new_weight;
 }
 
 void update_utilization(time_point_sec now, rentbw_state_resource& res) {
-   if (res.utilization >= res.adjusted_utilization)
+   if (now <= res.utilization_timestamp) return;
+
+   if (res.utilization >= res.adjusted_utilization) {
       res.adjusted_utilization = res.utilization;
-   else
-      res.adjusted_utilization = //
-            res.utilization +
-            (res.adjusted_utilization - res.utilization) *
-                  exp(-double(now.utc_seconds - res.utilization_timestamp.utc_seconds) / double(res.decay_secs));
+   } else {
+      int64_t diff  = res.adjusted_utilization - res.utilization;
+      int64_t delta = diff * std::exp(-double(now.utc_seconds - res.utilization_timestamp.utc_seconds) / double(res.decay_secs));
+      delta = std::clamp( delta, 0ll, diff);
+      res.adjusted_utilization = res.utilization + delta;
+   }
    res.utilization_timestamp = now;
 }
 
@@ -109,11 +122,18 @@ void system_contract::configrentbw(rentbw_config& args) {
    rentbw_state_singleton state_sing{ get_self(), 0 };
    auto                   state = state_sing.get_or_default();
 
+   eosio::check(eosio::is_account(reserv_account), "eosio.reserv account must first be created");
+
    int64_t net_delta_available = 0;
    int64_t cpu_delta_available = 0;
    if (state_sing.exists()) {
+      update_utilization(now, state.net);
+      update_utilization(now, state.cpu);
       update_weight(now, state.net, net_delta_available);
       update_weight(now, state.cpu, cpu_delta_available);
+   } else {
+      state.net.utilization_timestamp = now;
+      state.cpu.utilization_timestamp = now;
    }
 
    auto update = [&](auto& state, auto& args) {
@@ -183,13 +203,15 @@ void system_contract::configrentbw(rentbw_config& args) {
    update_weight(now, state.cpu, cpu_delta_available);
    eosio::check(state.net.weight >= state.net.utilization, "weight can't shrink below utilization");
    eosio::check(state.cpu.weight >= state.cpu.utilization, "weight can't shrink below utilization");
+   state.net.adjusted_utilization = std::min(state.net.adjusted_utilization, state.net.weight);
+   state.cpu.adjusted_utilization = std::min(state.cpu.adjusted_utilization, state.cpu.weight);
 
    adjust_resources(get_self(), reserv_account, core_symbol, net_delta_available, cpu_delta_available, true);
    state_sing.set(state, get_self());
 } // system_contract::configrentbw
 
 int64_t calc_rentbw_price(const rentbw_state_resource& state, double utilization) {
-   return ceil(state.target_price.amount * pow(utilization / state.weight, state.exponent));
+   return std::ceil(state.target_price.amount * std::pow(utilization / state.weight, state.exponent));
 }
 
 void system_contract::rentbwexec(const name& user, uint16_t max) {
