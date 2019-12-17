@@ -342,8 +342,8 @@ namespace eosiosystem {
    // - `version` defaulted to zero,
    // - `last_dist_time` the last time proceeds from renting, ram fees, and name bids were added to the rex pool,
    // - `pending_bucket_time` timestamp of the pending 12-hour return bucket,
-   // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket, 
-   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket, 
+   // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket,
+   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket,
    // - `current_rate_of_increase` the current rate per dist_interval at which proceeds are added to the rex pool,
    // - `proceeds` the maximum amount of proceeds that can be added to the rex pool at any given time
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
@@ -367,7 +367,7 @@ namespace eosiosystem {
 
    // `rex_return_buckets` structure underlying the rex return buckets table. A rex return buckets table is defined by:
    // - `version` defaulted to zero,
-   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals 
+   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_buckets {
       uint8_t                           version = 0;
       std::map<time_point_sec, int64_t> return_buckets;
@@ -518,8 +518,8 @@ namespace eosiosystem {
       time_point_sec target_timestamp        = {};                // Stop automatic weight_ratio shrinkage at this time. Once this
                                                                   //    time hits, weight_ratio will be target_weight_ratio.
       double         exponent                = 0;                 // Exponent of resource price curve.
-      uint32_t       decay_secs              = 0;                 // Number of seconds for adjusted resource utilization to
-                                                                  //    decay to instantaneous utilization within exp(-1).
+      uint32_t       decay_secs;             = 0;                 // Number of seconds for the gap between adjusted resource
+                                                                  //    utilization and instantaneous utilization to shrink by 63%.
       asset          target_price            = {};                // Fee needed to rent the entire resource market weight.
       int64_t        utilization             = 0;                 // Instantaneous resource utilization. This is the current
                                                                   //    amount sold. utilization <= weight.
