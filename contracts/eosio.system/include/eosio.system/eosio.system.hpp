@@ -510,7 +510,7 @@ namespace eosiosystem {
       time_point_sec target_timestamp        = {};                // Stop automatic weight_ratio shrinkage at this time. Once this
                                                                   //    time hits, weight_ratio will be target_weight_ratio.
       double         exponent                = 0;                 // Exponent of resource price curve.
-      uint32_t       decay_secs;             = 0;                 // Number of seconds for the gap between adjusted resource
+      uint32_t       decay_secs              = 0;                 // Number of seconds for the gap between adjusted resource
                                                                   //    utilization and instantaneous utilization to shrink by 63%.
       asset          target_price            = {};                // Fee needed to rent the entire resource market weight.
       int64_t        utilization             = 0;                 // Instantaneous resource utilization. This is the current
