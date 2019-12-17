@@ -80,18 +80,6 @@ namespace eosiosystem {
    static constexpr int64_t  default_inflation_pay_factor  = 50000;   // producers pay share = 10000 / 50000 = 20% of the inflation
    static constexpr int64_t  default_votepay_factor        = 40000;   // per-block pay share = 10000 / 40000 = 25% of the producer pay
 
-   /**
-    * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
-    * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
-    *    delegate their vote to a proxy.
-    * - Producers register in order to be voted for, and can claim per-block and per-vote rewards.
-    * - Users can buy and sell RAM at a market-determined price.
-    * - Users can bid on premium names.
-    * - A resource exchange system (REX) allows token holders to lend their tokens,
-    *    and users to rent CPU and Network resources in return for a market-determined fee.
-    * - A resource market separate from REX: `rentbw`
-    */
-
    // A name bid, which consists of:
    // - a `newname` name that the bid is for
    // - a `high_bidder` account name that is the one with the highest bid so far
@@ -563,7 +551,15 @@ namespace eosiosystem {
                                > rentbw_order_table;
 
    /**
-    * The EOSIO system contract. The EOSIO system contract governs ram market, voters, producers, global state.
+    * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
+    * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
+    *    delegate their vote to a proxy.
+    * - Producers register in order to be voted for, and can claim per-block and per-vote rewards.
+    * - Users can buy and sell RAM at a market-determined price.
+    * - Users can bid on premium names.
+    * - A resource exchange system (REX) allows token holders to lend their tokens,
+    *    and users to rent CPU and Network resources in return for a market-determined fee.
+    * - A resource market separate from REX: `rentbw`.
     */
    class [[eosio::contract("eosio.system")]] system_contract : public native {
 
