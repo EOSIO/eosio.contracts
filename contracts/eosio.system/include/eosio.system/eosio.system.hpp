@@ -80,18 +80,6 @@ namespace eosiosystem {
    static constexpr int64_t  default_inflation_pay_factor  = 50000;   // producers pay share = 10000 / 50000 = 20% of the inflation
    static constexpr int64_t  default_votepay_factor        = 40000;   // per-block pay share = 10000 / 40000 = 25% of the producer pay
 
-   /**
-    * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
-    * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
-    *    delegate their vote to a proxy.
-    * - Producers register in order to be voted for, and can claim per-block and per-vote rewards.
-    * - Users can buy and sell RAM at a market-determined price.
-    * - Users can bid on premium names.
-    * - A resource exchange system (REX) allows token holders to lend their tokens,
-    *    and users to rent CPU and Network resources in return for a market-determined fee.
-    * - A resource market separate from REX: `rentbw`
-    */
-
    // A name bid, which consists of:
    // - a `newname` name that the bid is for
    // - a `high_bidder` account name that is the one with the highest bid so far
@@ -346,8 +334,8 @@ namespace eosiosystem {
    // - `version` defaulted to zero,
    // - `last_dist_time` the last time proceeds from renting, ram fees, and name bids were added to the rex pool,
    // - `pending_bucket_time` timestamp of the pending 12-hour return bucket,
-   // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket, 
-   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket, 
+   // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket,
+   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket,
    // - `current_rate_of_increase` the current rate per dist_interval at which proceeds are added to the rex pool,
    // - `proceeds` the maximum amount of proceeds that can be added to the rex pool at any given time
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
@@ -371,7 +359,7 @@ namespace eosiosystem {
 
    // `rex_return_buckets` structure underlying the rex return buckets table. A rex return buckets table is defined by:
    // - `version` defaulted to zero,
-   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals 
+   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_buckets {
       uint8_t                           version = 0;
       std::map<time_point_sec, int64_t> return_buckets;
@@ -563,7 +551,15 @@ namespace eosiosystem {
                                > rentbw_order_table;
 
    /**
-    * The EOSIO system contract. The EOSIO system contract governs ram market, voters, producers, global state.
+    * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
+    * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
+    *    delegate their vote to a proxy.
+    * - Producers register in order to be voted for, and can claim per-block and per-vote rewards.
+    * - Users can buy and sell RAM at a market-determined price.
+    * - Users can bid on premium names.
+    * - A resource exchange system (REX) allows token holders to lend their tokens,
+    *    and users to rent CPU and Network resources in return for a market-determined fee.
+    * - A resource market separate from REX: `rentbw`.
     */
    class [[eosio::contract("eosio.system")]] system_contract : public native {
 
