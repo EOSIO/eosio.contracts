@@ -484,15 +484,16 @@ namespace eosiosystem {
                                              //    total rented by REX at the time the rentbw market is first activated. Set
                                              //    this to 0 to preserve the existing setting; this avoids sudden price jumps.
                                              //    For new chains which don't need to phase out staking and REX, 10^12 is
-                                             //    probably a good value. 
+                                             //    probably a good value.
       time_point_sec target_timestamp;       // Stop automatic weight_ratio shrinkage at this time. Once this
                                              //    time hits, weight_ratio will be target_weight_ratio. Ignored if
                                              //    current_weight_ratio == target_weight_ratio. Set this to 0 to preserve the
                                              //    existing setting.
       double         exponent;               // Exponent of resource price curve. Must be >= 1. Set this to 0 to preserve the
                                              //    existing setting.
-      uint32_t       decay_secs;             // Number of seconds for adjusted resource utilization to decay to instantaneous
-                                             //    utilization within exp(-1). Set this to 0 to preserve the existing setting.
+      uint32_t       decay_secs;             // Number of seconds for the gap between adjusted resource utilization and
+                                             //    instantaneous utilization to shrink by 63%. Set this to 0 to preserve the
+                                             //    existing setting.
       asset          target_price;           // Fee needed to rent the entire resource market weight. Set this to 0 to
                                              //    preserve the existing setting.
    };
@@ -526,8 +527,8 @@ namespace eosiosystem {
       asset          target_price            = {};                // Fee needed to rent the entire resource market weight.
       int64_t        utilization             = 0;                 // Instantaneous resource utilization. This is the current
                                                                   //    amount sold. utilization <= weight.
-      int64_t        adjusted_utilization    = 0;                 // Adjusted resource utilization. This >= utilization. It
-                                                                  //    grows instantly but decays exponentially.
+      int64_t        adjusted_utilization    = 0;                 // Adjusted resource utilization. This is >= utilization and
+                                                                  //    <= weight. It grows instantly but decays exponentially.
       time_point_sec utilization_timestamp   = {};                // When adjusted_utilization was last updated
    };
 
@@ -1233,7 +1234,7 @@ namespace eosiosystem {
 
          /**
           * Rent NET and CPU
-          * 
+          *
           * @param payer - the resource buyer
           * @param receiver - the resource receiver
           * @param days - number of days of resource availability. Must match market configuration.
