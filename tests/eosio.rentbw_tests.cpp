@@ -515,7 +515,7 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
             t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac + 1,
                      asset::from_string("1.0000 TST")));
       BOOST_REQUIRE_EQUAL(
-            t.wasm_assert_msg("calculated fee exceeds max_payment"), //
+            t.wasm_assert_msg("max_payment is less than calculated fee: 3000000.0000 TST"), //
             t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac, asset::from_string("1.0000 TST")));
       BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("can't channel fees to rex"), //
                           t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac,
@@ -573,9 +573,9 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       // (.35 ^ 2) * 1000000.0000 -  90000.0000 =  32500.0000
       // (.5  ^ 3) * 2000000.0000 - 128000.0000 = 122000.0000
       //                                  total = 154500.0000
-      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("154499.9999"));
+      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("154500.0000"));
       t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac * .05, rentbw_frac * .10,
-                     asset::from_string("154499.9999 TST"), net_weight * .05, cpu_weight * .10);
+                     asset::from_string("154500.0000 TST"), net_weight * .05, cpu_weight * .10);
    }
 
    {
@@ -650,9 +650,9 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       // [((e^-2 + 1.0) ^ 2) - ((e^-2) ^ 2) ] * 1000000.0000 = 1270670.5664
       // [((e^-2 + 1.0) ^ 3) - ((e^-2) ^ 3) ] * 2000000.0000 = 2921905.5327
       //                                               total = 4192576.0991
-      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("4192561.0244"));
+      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("4192561.0246"));
       t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
-                     asset::from_string("4192561.0244 TST"), net_weight, cpu_weight);
+                     asset::from_string("4192561.0246 TST"), net_weight, cpu_weight);
    }
 
    {
@@ -673,9 +673,9 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       // (.3 ^ 2) * 1000000.0000 - 10000.0000 =  80000.0000
       // (.4 ^ 3) * 2000000.0000 - 16000.0000 = 112000.0000
       //                                total = 192000.0000
-      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("191999.9999"));
+      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("192000.0001"));
       t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac * .2, rentbw_frac * .2,
-                     asset::from_string("191999.9999 TST"), net_weight * .2, cpu_weight * .2);
+                     asset::from_string("192000.0001 TST"), net_weight * .2, cpu_weight * .2);
 
       // Start decay
       t.produce_block(fc::days(15) - fc::milliseconds(1000));
