@@ -18,10 +18,6 @@ namespace eosiosystem {
    using eosio::public_key;
 
    /**
-    * @addtogroup eosiosystem
-    * @{
-    */
-   /**
     * A weighted permission.
     *
     * @details Defines a weighted permission, that is a permission which has a weight associated.
