@@ -540,9 +540,8 @@ namespace eosiosystem {
    };
 
    struct [[eosio::table("rent.state"),eosio::contract("eosio.system")]] rentbw_state {
-      static constexpr uint32_t default_rent_days      = 30 * seconds_per_day; // 30 day resource rentals
-      static constexpr int64_t  default_min_rent_price = 100ll;                // 0.0100 SYS
-                                                                               //   (assuming get_core_symbol() == symbol("SYS", 4))
+      static constexpr uint32_t default_rent_days      = 30;      // 30 day resource rentals
+      static constexpr int64_t  default_min_rent_price = 100ll;   // 0.0100 SYS (assuming get_core_symbol() == symbol("SYS", 4))
 
       uint8_t                 version        = 0;
       rentbw_state_resource   net            = {};                 // NET market state
