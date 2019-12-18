@@ -1270,7 +1270,7 @@ namespace eosiosystem {
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
          using setinflation_action = eosio::action_wrapper<"setinflation"_n, &system_contract::setinflation>;
-         using configcpu_action = eosio::action_wrapper<"configrentbw"_n, &system_contract::configrentbw>;
+         using configrentbw_action = eosio::action_wrapper<"configrentbw"_n, &system_contract::configrentbw>;
          using rentbwexec_action = eosio::action_wrapper<"rentbwexec"_n, &system_contract::rentbwexec>;
          using rentbw_action = eosio::action_wrapper<"rentbw"_n, &system_contract::rentbw>;
 
