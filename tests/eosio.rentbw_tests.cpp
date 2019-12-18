@@ -231,8 +231,8 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_price doesn't match core symbol"), configbw(make_config([&](auto& c) {
                           c.min_rent_price = asset::from_string("1000000.000 TST");
                        })));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_price must be positive"),
-                       configbw(make_config([&](auto& c) { c.min_rent_price = asset::from_string("0.0000 TST"); })));
+   //BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_price must be positive"),
+   //                    configbw(make_config([&](auto& c) { c.min_rent_price = asset::from_string("0.0000 TST"); }))); // needed only if min_rent_price does not have default
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_price must be positive"),
                        configbw(make_config([&](auto& c) { c.min_rent_price = asset::from_string("-1.0000 TST"); })));
 
@@ -260,8 +260,8 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price doesn't match core symbol"), configbw(make_config([&](auto& c) {
                           c.net.target_price = asset::from_string("1000000.000 TST");
                        })));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price must be positive"),
-                       configbw(make_config([&](auto& c) { c.net.target_price = asset::from_string("0.0000 TST"); })));
+   //BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price must be positive"),
+   //                    configbw(make_config([&](auto& c) { c.net.target_price = asset::from_string("0.0000 TST"); }))); // needed only if target_price does not have default
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price must be positive"),
                        configbw(make_config([&](auto& c) { c.net.target_price = asset::from_string("-1.0000 TST"); })));
 
@@ -289,8 +289,8 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price doesn't match core symbol"), configbw(make_config([&](auto& c) {
                           c.cpu.target_price = asset::from_string("1000000.000 TST");
                        })));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price must be positive"),
-                       configbw(make_config([&](auto& c) { c.cpu.target_price = asset::from_string("0.0000 TST"); })));
+   //BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price must be positive"),
+   //                    configbw(make_config([&](auto& c) { c.cpu.target_price = asset::from_string("0.0000 TST"); }))); // needed only if target_price does not have default
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price must be positive"),
                        configbw(make_config([&](auto& c) { c.cpu.target_price = asset::from_string("-1.0000 TST"); })));
 } // config_tests
