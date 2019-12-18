@@ -226,8 +226,8 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
                        push_action(N(alice1111111), N(configrentbw), mvo()("args", make_config())));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("rentbw hasn't been initialized"), rentbwexec(N(alice1111111), 10));
 
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("rent_days must be > 0"),
-                       configbw(make_config([&](auto& c) { c.rent_days = 0; })));
+   //BOOST_REQUIRE_EQUAL(wasm_assert_msg("rent_days must be > 0"),
+   //                    configbw(make_config([&](auto& c) { c.rent_days = 0; }))); // needed only if rent_days does not have default
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_price doesn't match core symbol"), configbw(make_config([&](auto& c) {
                           c.min_rent_price = asset::from_string("1000000.000 TST");
                        })));
@@ -255,8 +255,8 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
                        })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("exponent must be >= 1"),
                        configbw(make_config([&](auto& c) { c.net.exponent = .999; })));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("decay_secs must be >= 1"),
-                       configbw(make_config([&](auto& c) { c.net.decay_secs = 0; })));
+   //BOOST_REQUIRE_EQUAL(wasm_assert_msg("decay_secs must be >= 1"),
+   //                    configbw(make_config([&](auto& c) { c.net.decay_secs = 0; }))); // needed only if decay_secs does not have default
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price doesn't match core symbol"), configbw(make_config([&](auto& c) {
                           c.net.target_price = asset::from_string("1000000.000 TST");
                        })));
@@ -284,8 +284,8 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
                        })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("exponent must be >= 1"),
                        configbw(make_config([&](auto& c) { c.cpu.exponent = .999; })));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("decay_secs must be >= 1"),
-                       configbw(make_config([&](auto& c) { c.cpu.decay_secs = 0; })));
+   //BOOST_REQUIRE_EQUAL(wasm_assert_msg("decay_secs must be >= 1"),
+   //                    configbw(make_config([&](auto& c) { c.cpu.decay_secs = 0; }))); // needed only if decay_secs does not have default
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price doesn't match core symbol"), configbw(make_config([&](auto& c) {
                           c.cpu.target_price = asset::from_string("1000000.000 TST");
                        })));
