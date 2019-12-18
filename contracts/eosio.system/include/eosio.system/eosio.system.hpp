@@ -496,15 +496,16 @@ namespace eosiosystem {
    };
 
    struct rentbw_state_resource {
-      static constexpr double   default_exponent   = 2.0;                 // Exponent of 2.0 means that the price to rent a
-                                                                          //    tiny amount of resources increases linearly
-                                                                          //    with utilization.
-      static constexpr uint32_t default_decay_secs = 1 * seconds_per_day; // 1 day; if 100% of bandwidth resources are in a
-                                                                          //    single loan, then, assuming no further renting,
-                                                                          //    1 day after it expires the adjusted utilization
-                                                                          //    will be at approximately 37% and after 3 days the
-                                                                          //    adjusted utilization will be at least than 5%.
-
+      static constexpr double   default_exponent   = 2.0;                  // Exponent of 2.0 means that the price to rent a
+                                                                           //    tiny amount of resources increases linearly
+                                                                           //    with utilization.
+      static constexpr uint32_t default_decay_secs = 1 * seconds_per_day;  // 1 day; if 100% of bandwidth resources are in a
+                                                                           //    single loan, then, assuming no further renting,
+                                                                           //    1 day after it expires the adjusted utilization
+                                                                           //    will be at approximately 37% and after 3 days the
+                                                                           //    adjusted utilization will be at least than 5%.
+      static constexpr int64_t  default_target_price = 100'000'000'0000ll; // 100000000.0000 SYS
+                                                                           //   (assuming get_core_symbol() == symbol("SYS", 4));
 
       uint8_t        version                 = 0;
       int64_t        weight                  = 0;                  // resource market weight. calculated; varies over time.
@@ -531,7 +532,9 @@ namespace eosiosystem {
    };
 
    struct [[eosio::table("rent.state"),eosio::contract("eosio.system")]] rentbw_state {
-      static constexpr uint32_t default_rent_days  = 30 * seconds_per_day; // 30 day resource rentals
+      static constexpr uint32_t default_rent_days      = 30 * seconds_per_day; // 30 day resource rentals
+      static constexpr int64_t  default_min_rent_price = 100ll;                // 0.0100 SYS
+                                                                               //   (assuming get_core_symbol() == symbol("SYS", 4))
 
       uint8_t                 version        = 0;
       rentbw_state_resource   net            = {};                 // NET market state
