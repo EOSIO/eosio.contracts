@@ -210,8 +210,11 @@ void system_contract::configrentbw(rentbw_config& args) {
    state_sing.set(state, get_self());
 } // system_contract::configrentbw
 
-int64_t calc_rentbw_price(const rentbw_state_resource& state, double utilization) {
-   return std::ceil(state.target_price.amount * std::pow(utilization / state.weight, state.exponent));
+int64_t calc_rentbw_fee(const rentbw_state_resource& state, int64_t utilization_increase) {
+   double start_utilization = state.adjusted_utilization;
+   double end_utilization   = state.adjusted_utilization + utilization_increase;
+   return std::ceil(state.target_price.amount * std::pow(end_utilization / state.weight, state.exponent))
+            - std::ceil(state.target_price.amount * std::pow(start_utilization / state.weight, state.exponent));
 }
 
 void system_contract::rentbwexec(const name& user, uint16_t max) {
@@ -258,8 +261,7 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
       amount = int128_t(frac) * state.weight / rentbw_frac;
       eosio::check(state.weight, "market doesn't have resources available");
       eosio::check(state.utilization + amount <= state.weight, "market doesn't have enough resources available");
-      int64_t f = calc_rentbw_price(state, state.adjusted_utilization + amount) -
-                  calc_rentbw_price(state, state.adjusted_utilization);
+      int64_t f = calc_rentbw_fee(state, amount);
       eosio::check(f > 0, "calculated fee is below minimum; try renting more");
       fee.amount += f;
       state.utilization += amount;
