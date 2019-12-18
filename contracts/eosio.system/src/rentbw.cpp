@@ -213,8 +213,11 @@ void system_contract::configrentbw(rentbw_config& args) {
 int64_t calc_rentbw_fee(const rentbw_state_resource& state, int64_t utilization_increase) {
    double start_utilization = state.adjusted_utilization;
    double end_utilization   = state.adjusted_utilization + utilization_increase;
-   return std::ceil(state.target_price.amount * std::pow(end_utilization / state.weight, state.exponent))
-            - std::ceil(state.target_price.amount * std::pow(start_utilization / state.weight, state.exponent));
+
+   double fee = state.target_price.amount * std::pow(end_utilization / state.weight, state.exponent) -
+                  state.target_price.amount * std::pow(start_utilization / state.weight, state.exponent);
+
+   return std::ceil(fee);
 }
 
 void system_contract::rentbwexec(const name& user, uint16_t max) {
@@ -271,7 +274,11 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
    int64_t cpu_amount = 0;
    process(net_frac, net_amount, state.net);
    process(cpu_frac, cpu_amount, state.cpu);
-   eosio::check(fee <= max_payment, "calculated fee exceeds max_payment");
+   if (fee > max_payment) {
+      std::string error_msg = "max_payment is less than calculated fee: ";
+      error_msg += fee.to_string();
+      eosio::check(false, error_msg);
+   }
    eosio::check(fee >= state.min_rent_price, "calculated fee is below minimum; try renting more");
 
    orders.emplace(payer, [&](auto& order) {
