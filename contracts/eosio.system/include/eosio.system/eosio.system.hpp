@@ -38,7 +38,7 @@ namespace eosiosystem {
    using eosio::time_point_sec;
    using eosio::unsigned_int;
 
-   inline constexpr int64_t rentbw_frac = 1000000000000000ll;  // 1.0 = 10^15
+   inline constexpr int64_t rentbw_frac = 1'000'000'000'000'000ll;  // 1.0 = 10^15
 
    template<typename E, typename F>
    static inline auto has_field( F flags, E field )
@@ -504,36 +504,48 @@ namespace eosiosystem {
    };
 
    struct rentbw_state_resource {
+      static constexpr double   default_exponent   = 2.0;                 // Exponent of 2.0 means that the price to rent a
+                                                                          //    tiny amount of resources increases linearly
+                                                                          //    with utilization.
+      static constexpr uint32_t default_decay_secs = 1 * seconds_per_day; // 1 day; if 100% of bandwidth resources are in a
+                                                                          //    single loan, then, assuming no further renting,
+                                                                          //    1 day after it expires the adjusted utilization
+                                                                          //    will be at approximately 37% and after 3 days the
+                                                                          //    adjusted utilization will be at least than 5%.
+
+
       uint8_t        version                 = 0;
-      int64_t        weight                  = 0;                 // resource market weight. calculated; varies over time.
-                                                                  //    1 represents the same amount of resources as 1
-                                                                  //    satoshi of SYS staked.
-      int64_t        weight_ratio            = 0;                 // resource market weight ratio:
-                                                                  //    assumed_stake_weight / (assumed_stake_weight + weight).
-                                                                  //    calculated; varies over time. 1x = 10^15. 0.01x = 10^13.
-      int64_t        assumed_stake_weight    = 0;                 // Assumed stake weight for ratio calculations.
-      int64_t        initial_weight_ratio    = rentbw_frac;       // Initial weight_ratio used for linear shrinkage.
-      int64_t        target_weight_ratio     = rentbw_frac / 100; // Linearly shrink the weight_ratio to this amount.
-      time_point_sec initial_timestamp       = {};                // When weight_ratio shrinkage started
-      time_point_sec target_timestamp        = {};                // Stop automatic weight_ratio shrinkage at this time. Once this
-                                                                  //    time hits, weight_ratio will be target_weight_ratio.
-      double         exponent                = 0;                 // Exponent of resource price curve.
-      uint32_t       decay_secs              = 0;                 // Number of seconds for the gap between adjusted resource
-                                                                  //    utilization and instantaneous utilization to shrink by 63%.
-      asset          target_price            = {};                // Fee needed to rent the entire resource market weight.
-      int64_t        utilization             = 0;                 // Instantaneous resource utilization. This is the current
-                                                                  //    amount sold. utilization <= weight.
-      int64_t        adjusted_utilization    = 0;                 // Adjusted resource utilization. This is >= utilization and
-                                                                  //    <= weight. It grows instantly but decays exponentially.
-      time_point_sec utilization_timestamp   = {};                // When adjusted_utilization was last updated
+      int64_t        weight                  = 0;                  // resource market weight. calculated; varies over time.
+                                                                   //    1 represents the same amount of resources as 1
+                                                                   //    satoshi of SYS staked.
+      int64_t        weight_ratio            = 0;                  // resource market weight ratio:
+                                                                   //    assumed_stake_weight / (assumed_stake_weight + weight).
+                                                                   //    calculated; varies over time. 1x = 10^15. 0.01x = 10^13.
+      int64_t        assumed_stake_weight    = 0;                  // Assumed stake weight for ratio calculations.
+      int64_t        initial_weight_ratio    = rentbw_frac;        // Initial weight_ratio used for linear shrinkage.
+      int64_t        target_weight_ratio     = rentbw_frac / 100;  // Linearly shrink the weight_ratio to this amount.
+      time_point_sec initial_timestamp       = {};                 // When weight_ratio shrinkage started
+      time_point_sec target_timestamp        = {};                 // Stop automatic weight_ratio shrinkage at this time. Once this
+                                                                   //    time hits, weight_ratio will be target_weight_ratio.
+      double         exponent                = default_exponent;   // Exponent of resource price curve.
+      uint32_t       decay_secs              = default_decay_secs; // Number of seconds for the gap between adjusted resource
+                                                                   //    utilization and instantaneous utilization to shrink by 63%.
+      asset          target_price            = {};                 // Fee needed to rent the entire resource market weight.
+      int64_t        utilization             = 0;                  // Instantaneous resource utilization. This is the current
+                                                                   //    amount sold. utilization <= weight.
+      int64_t        adjusted_utilization    = 0;                  // Adjusted resource utilization. This is >= utilization and
+                                                                   //    <= weight. It grows instantly but decays exponentially.
+      time_point_sec utilization_timestamp   = {};                 // When adjusted_utilization was last updated
    };
 
    struct [[eosio::table("rent.state"),eosio::contract("eosio.system")]] rentbw_state {
+      static constexpr uint32_t default_rent_days  = 30 * seconds_per_day; // 30 day resource rentals
+
       uint8_t                 version        = 0;
-      rentbw_state_resource   net            = {}; // NET market state
-      rentbw_state_resource   cpu            = {}; // CPU market state
-      uint32_t                rent_days      = 0;  // `rentbw` `days` argument must match this.
-      asset                   min_rent_price = {}; // Rents below this amount are rejected
+      rentbw_state_resource   net            = {};                 // NET market state
+      rentbw_state_resource   cpu            = {};                 // CPU market state
+      uint32_t                rent_days      = default_rent_days;  // `rentbw` `days` argument must match this.
+      asset                   min_rent_price = {};                 // Rents below this amount are rejected
 
       uint64_t primary_key()const { return 0; }
    };
