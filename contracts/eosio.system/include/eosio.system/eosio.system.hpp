@@ -502,10 +502,10 @@ namespace eosiosystem {
       static constexpr uint32_t default_decay_secs = 1 * seconds_per_day;  // 1 day; if 100% of bandwidth resources are in a
                                                                            //    single loan, then, assuming no further renting,
                                                                            //    1 day after it expires the adjusted utilization
-                                                                           //    will be at approximately 37% and after 3 days the
-                                                                           //    adjusted utilization will be at least than 5%.
+                                                                           //    will be at approximately 37% and after 3 days
+                                                                           //    the adjusted utilization will be less than 5%.
       static constexpr int64_t  default_target_price = 100'000'000'0000ll; // 100000000.0000 SYS
-                                                                           //   (assuming get_core_symbol() == symbol("SYS", 4));
+                                                                           //   (assuming get_core_symbol() == symbol("SYS", 4))
 
       uint8_t        version                 = 0;
       int64_t        weight                  = 0;                  // resource market weight. calculated; varies over time.
