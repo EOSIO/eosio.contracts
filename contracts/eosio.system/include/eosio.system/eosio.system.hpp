@@ -486,21 +486,21 @@ namespace eosiosystem {
                                              //    current_weight_ratio == target_weight_ratio. Set this to 0 to preserve the
                                              //    existing setting.
       double         exponent;               // Exponent of resource price curve. Must be >= 1. Set this to 0 to preserve the
-                                             //    existing setting.
+                                             //    existing setting or use the default.
       uint32_t       decay_secs;             // Number of seconds for the gap between adjusted resource utilization and
                                              //    instantaneous utilization to shrink by 63%. Set this to 0 to preserve the
-                                             //    existing setting.
-      asset          target_price;           // Fee needed to rent the entire resource market weight. Set this to 0 to
-                                             //    preserve the existing setting.
+                                             //    existing setting or use the default.
+      asset          target_price;           // Fee needed to rent the entire resource market weight. Set the amount of this
+                                             //    asset to 0 to preserve the existing setting or use the default.
    };
 
    struct rentbw_config {
       rentbw_config_resource  net;              // NET market configuration
       rentbw_config_resource  cpu;              // CPU market configuration
       uint32_t                rent_days;        // `rentbw` `days` argument must match this. Set this to 0 to preserve the
-                                                //     existing setting.
-      asset                   min_rent_price;   // Rents below this amount are rejected. Set this to 0 to preserve the
-                                                //     existing setting.
+                                                //     existing setting or use the default.
+      asset                   min_rent_price;   // Rents below this amount are rejected. Set the amount of this asset to 0 to
+                                                //     preserve the existing setting or use the default.
    };
 
    struct rentbw_state_resource {
