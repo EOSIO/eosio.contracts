@@ -29,12 +29,12 @@ FC_REFLECT(rentbw_config_resource,                                              
            (exponent)(decay_secs)(target_price))
 
 struct rentbw_config {
-   rentbw_config_resource net            = {};
-   rentbw_config_resource cpu            = {};
-   uint32_t               rent_days      = {};
-   asset                  min_rent_price = asset{};
+   rentbw_config_resource net          = {};
+   rentbw_config_resource cpu          = {};
+   uint32_t               rent_days    = {};
+   asset                  min_rent_fee = asset{};
 };
-FC_REFLECT(rentbw_config, (net)(cpu)(rent_days)(min_rent_price))
+FC_REFLECT(rentbw_config, (net)(cpu)(rent_days)(min_rent_fee))
 
 struct rentbw_state_resource {
    uint8_t        version;
@@ -62,9 +62,9 @@ struct rentbw_state {
    rentbw_state_resource net;
    rentbw_state_resource cpu;
    uint32_t              rent_days;
-   asset                 min_rent_price;
+   asset                 min_rent_fee;
 };
-FC_REFLECT(rentbw_state, (version)(net)(cpu)(rent_days)(min_rent_price))
+FC_REFLECT(rentbw_state, (version)(net)(cpu)(rent_days)(min_rent_fee))
 
 using namespace eosio_system;
 
@@ -109,8 +109,8 @@ struct rentbw_tester : eosio_system_tester {
       config.cpu.decay_secs           = fc::days(1).to_seconds();
       config.cpu.target_price         = asset::from_string("1000000.0000 TST");
 
-      config.rent_days      = 30;
-      config.min_rent_price = asset::from_string("1.0000 TST");
+      config.rent_days    = 30;
+      config.min_rent_fee = asset::from_string("1.0000 TST");
 
       f(config);
       return config;
@@ -228,13 +228,13 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
 
    //BOOST_REQUIRE_EQUAL(wasm_assert_msg("rent_days must be > 0"),
    //                    configbw(make_config([&](auto& c) { c.rent_days = 0; }))); // needed only if rent_days does not have default
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_price doesn't match core symbol"), configbw(make_config([&](auto& c) {
-                          c.min_rent_price = asset::from_string("1000000.000 TST");
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_fee doesn't match core symbol"), configbw(make_config([&](auto& c) {
+                          c.min_rent_fee = asset::from_string("1000000.000 TST");
                        })));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_price must be positive"),
-                       configbw(make_config([&](auto& c) { c.min_rent_price = asset::from_string("0.0000 TST"); })));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_price must be positive"),
-                       configbw(make_config([&](auto& c) { c.min_rent_price = asset::from_string("-1.0000 TST"); })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_fee must be positive"),
+                       configbw(make_config([&](auto& c) { c.min_rent_fee = asset::from_string("0.0000 TST"); })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_fee must be positive"),
+                       configbw(make_config([&](auto& c) { c.min_rent_fee = asset::from_string("-1.0000 TST"); })));
 
    // net assertions
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("current_weight_ratio is too large"),
@@ -445,8 +445,8 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
          config.cpu.exponent             = 1;
          config.cpu.target_price         = asset::from_string("1000000.0000 TST");
 
-         config.rent_days      = 30;
-         config.min_rent_price = asset::from_string("1.0000 TST");
+         config.rent_days    = 30;
+         config.min_rent_fee = asset::from_string("1.0000 TST");
       })));
 
       BOOST_REQUIRE_EQUAL(
@@ -477,8 +477,8 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
          config.cpu.exponent             = 3;
          config.cpu.target_price         = asset::from_string("2000000.0000 TST");
 
-         config.rent_days      = 30;
-         config.min_rent_price = asset::from_string("1.0000 TST");
+         config.rent_days    = 30;
+         config.min_rent_fee = asset::from_string("1.0000 TST");
       })));
 
       if (rex)
