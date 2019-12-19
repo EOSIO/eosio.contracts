@@ -210,12 +210,53 @@ void system_contract::configrentbw(rentbw_config& args) {
    state_sing.set(state, get_self());
 } // system_contract::configrentbw
 
+/**
+ *  @pre 0 < state.target_price.amount
+ *  @pre 1.0 <= state.exponent
+ *  @pre 0 <= state.utilization <= state.adjusted_utilization <= state.weight
+ *  @pre 0 <= utilization_increase <= (state.weight - state.utilization)
+ */
 int64_t calc_rentbw_fee(const rentbw_state_resource& state, int64_t utilization_increase) {
-   double start_utilization = state.adjusted_utilization;
-   double end_utilization   = state.adjusted_utilization + utilization_increase;
+   if( utilization_increase <= 0 ) return 0;
 
-   double fee = state.target_price.amount * std::pow(end_utilization / state.weight, state.exponent) -
-                  state.target_price.amount * std::pow(start_utilization / state.weight, state.exponent);
+   // Let p(u) = price as a function of the utilization fraction u which is defined for u in [0.0, 1.0].
+   // Let f(u) = integral of the price function p(x) from x = 0.0 to x = u, again defined for u in [0.0, 1.0].
+
+   // Returns f(double(end_utilization)/state.weight) - f(double(start_utilization)/state.weight) which is equivalent to
+   // the integral of p(x) from x = double(start_utilization)/state.weight to x = double(end_utilization)/state.weight.
+   // @pre 0 <= start_utilization <= end_utilization <= state.weight
+   auto price_integral_delta = [&state](int64_t start_utilization, int64_t end_utilization) -> double {
+      return state.target_price.amount * std::pow(double(end_utilization) / state.weight, state.exponent) -
+               state.target_price.amount * std::pow(double(start_utilization) / state.weight, state.exponent);
+   };
+
+   // Returns p(double(utilization)/state.weight).
+   // @pre 0 <= utilization <= state.weight
+   auto price_function = [&state](int64_t utilization) -> double {
+      // state.exponent >= 1.0, therefore the exponent passed into std::pow is >= 0.0.
+      // Since the exponent passed into std::pow could be 0.0 and simultaneously so could double(utilization)/state.weight,
+      // the safest thing to do is handle that as a special case explicitly rather than relying on std::pow to return 1.0
+      // instead of triggering a domain error.
+      double new_exponent = state.exponent - 1.0;
+      if (new_exponent <= 0.0)
+         return state.target_price.amount;
+      else
+         return state.exponent * state.target_price.amount * std::pow(double(utilization) / state.weight, new_exponent);
+   };
+
+   double  fee = 0.0;
+   int64_t start_utilization = state.utilization;
+   int64_t end_utilization   = start_utilization + utilization_increase;
+
+   if (start_utilization < state.adjusted_utilization) {
+      fee += price_function(state.adjusted_utilization) *
+               std::min(utilization_increase, state.adjusted_utilization - start_utilization) / state.weight;
+      start_utilization = state.adjusted_utilization;
+   }
+
+   if (start_utilization < end_utilization) {
+      fee += price_integral_delta(start_utilization, end_utilization);
+   }
 
    return std::ceil(fee);
 }

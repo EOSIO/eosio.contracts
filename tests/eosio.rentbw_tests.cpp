@@ -602,12 +602,12 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
 
       // immediate renewal: adjusted_utilization doesn't have time to fall
       //
-      // (2.0 ^ 2) * 1000000.0000 - 1000000.0000 =  3000000.0000
-      // (2.0 ^ 3) * 2000000.0000 - 2000000.0000 = 14000000.0000
-      //                                   total = 17000000.0000
-      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("17000000.0000"));
+      // 2 * (1.0 ^ 1) * 1000000.0000 = 2000000.0000
+      // 3 * (1.0 ^ 2) * 2000000.0000 = 6000000.0000
+      //                        total = 8000000.0000
+      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("8000000.0000"));
       t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
-                     asset::from_string("17000000.0000 TST"), 0, 0);
+                     asset::from_string("8000000.0000 TST"), 0, 0);
 
       // No more available for 30 days
       BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
@@ -647,12 +647,12 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
 
       // 100% after 2 days of decay
       //
-      // [((e^-2 + 1.0) ^ 2) - ((e^-2) ^ 2) ] * 1000000.0000 = 1270670.5664
-      // [((e^-2 + 1.0) ^ 3) - ((e^-2) ^ 3) ] * 2000000.0000 = 2921905.5327
-      //                                               total = 4192576.0991
-      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("4192561.0246"));
+      // [ [2 * ((e^-2) ^ 1)]*(e^-2 - 0.0) + ((1.0) ^ 2) - ((e^-2) ^ 2) ] * 1000000.0000 = 1018315.6389
+      // [ [3 * ((e^-2) ^ 2)]*(e^-2 - 0.0) + ((1.0) ^ 3) - ((e^-2) ^ 3) ] * 2000000.0000 = 2009915.0087
+      //                                                                           total = 3028230.6476
+      t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("3028229.8795"));
       t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
-                     asset::from_string("4192561.0246 TST"), net_weight, cpu_weight);
+                     asset::from_string("3028229.8795 TST"), net_weight, cpu_weight);
    }
 
    {
