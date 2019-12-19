@@ -491,7 +491,7 @@ namespace eosiosystem {
                                              //    instantaneous utilization to shrink by 63%. Set this to 0 to preserve the
                                              //    existing setting or use the default.
       asset          target_price;           // Fee needed to rent the entire resource market weight. Set the amount of this
-                                             //    asset to 0 to preserve the existing setting or use the default.
+                                             //    asset to 0 to preserve the existing setting.
    };
 
    struct rentbw_config {
@@ -500,7 +500,7 @@ namespace eosiosystem {
       uint32_t                rent_days;        // `rentbw` `days` argument must match this. Set this to 0 to preserve the
                                                 //     existing setting or use the default.
       asset                   min_rent_price;   // Rents below this amount are rejected. Set the amount of this asset to 0 to
-                                                //     preserve the existing setting or use the default.
+                                                //     preserve the existing setting.
    };
 
    struct rentbw_state_resource {
@@ -512,8 +512,6 @@ namespace eosiosystem {
                                                                            //    1 day after it expires the adjusted utilization
                                                                            //    will be at approximately 37% and after 3 days
                                                                            //    the adjusted utilization will be less than 5%.
-      static constexpr int64_t  default_target_price = 100'000'000'0000ll; // 100000000.0000 SYS
-                                                                           //   (assuming get_core_symbol() == symbol("SYS", 4))
 
       uint8_t        version                 = 0;
       int64_t        weight                  = 0;                  // resource market weight. calculated; varies over time.
@@ -541,7 +539,6 @@ namespace eosiosystem {
 
    struct [[eosio::table("rent.state"),eosio::contract("eosio.system")]] rentbw_state {
       static constexpr uint32_t default_rent_days      = 30;      // 30 day resource rentals
-      static constexpr int64_t  default_min_rent_price = 100ll;   // 0.0100 SYS (assuming get_core_symbol() == symbol("SYS", 4))
 
       uint8_t                 version        = 0;
       rentbw_state_resource   net            = {};                 // NET market state

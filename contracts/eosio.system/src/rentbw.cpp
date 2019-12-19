@@ -153,12 +153,8 @@ void system_contract::configrentbw(rentbw_config& args) {
          args.exponent = state.exponent;
       if (!args.decay_secs)
          args.decay_secs = state.decay_secs;
-      if (!args.target_price.amount) {
-         if (state.target_price.amount)
-            args.target_price = state.target_price;
-         else
-            args.target_price.amount = rentbw_state_resource::default_target_price;
-      }
+      if (!args.target_price.amount && state.target_price.amount)
+         args.target_price = state.target_price;
 
       if (args.current_weight_ratio == args.target_weight_ratio)
          args.target_timestamp = now;
@@ -190,12 +186,8 @@ void system_contract::configrentbw(rentbw_config& args) {
 
    if (!args.rent_days)
       args.rent_days = state.rent_days;
-   if (!args.min_rent_price.amount) {
-      if (state.min_rent_price.amount)
-         args.min_rent_price = state.min_rent_price;
-      else
-         args.min_rent_price.amount = rentbw_state::default_min_rent_price;
-   }
+   if (!args.min_rent_price.amount && state.min_rent_price.amount)
+      args.min_rent_price = state.min_rent_price;
 
    eosio::check(args.rent_days > 0, "rent_days must be > 0");
    eosio::check(args.min_rent_price.symbol == core_symbol, "min_rent_price doesn't match core symbol");
