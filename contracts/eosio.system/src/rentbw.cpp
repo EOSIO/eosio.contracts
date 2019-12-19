@@ -136,65 +136,90 @@ void system_contract::configrentbw(rentbw_config& args) {
       state.cpu.utilization_timestamp = now;
    }
 
-   auto update = [&](auto& state, auto& args) {
-      if (!args.current_weight_ratio) {
-         if (state.weight_ratio)
-            args.current_weight_ratio = state.weight_ratio;
-         else
-            args.current_weight_ratio = state.initial_weight_ratio;
-      }
-      if (!args.target_weight_ratio)
-         args.target_weight_ratio = state.target_weight_ratio;
-      if (!args.assumed_stake_weight)
-         args.assumed_stake_weight = state.assumed_stake_weight;
-      if (!args.target_timestamp.utc_seconds)
-         args.target_timestamp = state.target_timestamp;
-      if (!args.exponent)
-         args.exponent = state.exponent;
-      if (!args.decay_secs)
-         args.decay_secs = state.decay_secs;
-      if (!args.target_price.amount && state.target_price.amount)
-         args.target_price = state.target_price;
-
-      if (args.current_weight_ratio == args.target_weight_ratio)
-         args.target_timestamp = now;
-      else
-         eosio::check(args.target_timestamp > now, "target_timestamp must be in the future");
-      eosio::check(args.current_weight_ratio > 0, "current_weight_ratio is too small");
-      eosio::check(args.current_weight_ratio <= rentbw_frac, "current_weight_ratio is too large");
-      eosio::check(args.target_weight_ratio > 0, "target_weight_ratio is too small");
-      eosio::check(args.target_weight_ratio <= args.current_weight_ratio, "weight can't grow over time");
-      eosio::check(args.assumed_stake_weight >= 1,
-                   "assumed_stake_weight must be at least 1; a much larger value is recommended");
-      eosio::check(args.assumed_stake_weight * int128_t(rentbw_frac) / args.target_weight_ratio <=
-                         std::numeric_limits<int64_t>::max(),
-                   "assumed_stake_weight/target_weight_ratio is too large");
-      eosio::check(args.exponent >= 1, "exponent must be >= 1");
-      eosio::check(args.decay_secs >= 1, "decay_secs must be >= 1");
-      eosio::check(args.target_price.symbol == core_symbol, "target_price doesn't match core symbol");
-      eosio::check(args.target_price.amount > 0, "target_price must be positive");
-
-      state.assumed_stake_weight = args.assumed_stake_weight;
-      state.initial_weight_ratio = args.current_weight_ratio;
-      state.target_weight_ratio  = args.target_weight_ratio;
-      state.initial_timestamp    = now;
-      state.target_timestamp     = args.target_timestamp;
-      state.exponent             = args.exponent;
-      state.decay_secs           = args.decay_secs;
-      state.target_price         = args.target_price;
+   auto is_default_asset = []( const eosio::asset& a ) -> bool {
+      return a.amount == 0 && a.symbol == symbol{};
    };
 
-   if (!args.rent_days)
-      args.rent_days = state.rent_days;
-   if (!args.min_rent_fee.amount && state.min_rent_fee.amount)
-      args.min_rent_fee = state.min_rent_fee;
+   auto update = [&](auto& state, auto& args) {
+      if (!args.current_weight_ratio) {
+         if (state.weight_ratio) {
+            *args.current_weight_ratio = state.weight_ratio;
+         } else {
+            *args.current_weight_ratio = state.initial_weight_ratio;
+         }
+      }
 
-   eosio::check(args.rent_days > 0, "rent_days must be > 0");
-   eosio::check(args.min_rent_fee.symbol == core_symbol, "min_rent_fee doesn't match core symbol");
-   eosio::check(args.min_rent_fee.amount > 0, "min_rent_fee must be positive");
+      if (!args.target_weight_ratio) {
+         *args.target_weight_ratio = state.target_weight_ratio;
+      }
 
-   state.rent_days    = args.rent_days;
-   state.min_rent_fee = args.min_rent_fee;
+      if (!args.assumed_stake_weight) {
+         eosio::check(state.assumed_stake_weight != 0, "assumed_stake_weight does not have a default value");
+         *args.assumed_stake_weight = state.assumed_stake_weight;
+      }
+
+      if (*args.current_weight_ratio == *args.target_weight_ratio) {
+         *args.target_timestamp = now;
+      } else {
+         if (!args.target_timestamp) {
+            eosio::check(state.target_timestamp.utc_seconds != 0, "target_timestamp does not have a default value");
+            *args.target_timestamp = state.target_timestamp;
+         }
+         eosio::check(*args.target_timestamp > now, "target_timestamp must be in the future");
+      }
+
+      if (!args.exponent) {
+         *args.exponent = state.exponent;
+      }
+
+      if (!args.decay_secs) {
+         *args.decay_secs = state.decay_secs;
+      }
+
+      if (!args.target_price) {
+         eosio::check(!is_default_asset(state.target_price), "target_price does not have a default value");
+         *args.target_price = state.target_price;
+      }
+
+      eosio::check(*args.current_weight_ratio > 0, "current_weight_ratio is too small");
+      eosio::check(*args.current_weight_ratio <= rentbw_frac, "current_weight_ratio is too large");
+      eosio::check(*args.target_weight_ratio > 0, "target_weight_ratio is too small");
+      eosio::check(*args.target_weight_ratio <= *args.current_weight_ratio, "weight can't grow over time");
+      eosio::check(*args.assumed_stake_weight >= 1,
+                   "assumed_stake_weight must be at least 1; a much larger value is recommended");
+      eosio::check(*args.assumed_stake_weight * int128_t(rentbw_frac) / *args.target_weight_ratio <=
+                         std::numeric_limits<int64_t>::max(),
+                   "assumed_stake_weight/target_weight_ratio is too large");
+      eosio::check(*args.exponent >= 1, "exponent must be >= 1");
+      eosio::check(*args.decay_secs >= 1, "decay_secs must be >= 1");
+      eosio::check(args.target_price->symbol == core_symbol, "target_price doesn't match core symbol");
+      eosio::check(args.target_price->amount > 0, "target_price must be positive");
+
+      state.assumed_stake_weight = *args.assumed_stake_weight;
+      state.initial_weight_ratio = *args.current_weight_ratio;
+      state.target_weight_ratio  = *args.target_weight_ratio;
+      state.initial_timestamp    = now;
+      state.target_timestamp     = *args.target_timestamp;
+      state.exponent             = *args.exponent;
+      state.decay_secs           = *args.decay_secs;
+      state.target_price         = *args.target_price;
+   };
+
+   if (!args.rent_days) {
+      *args.rent_days = state.rent_days;
+   }
+
+   if (!args.min_rent_fee) {
+      eosio::check(!is_default_asset(state.min_rent_fee), "min_rent_fee does not have a default value");
+      *args.min_rent_fee = state.min_rent_fee;
+   }
+
+   eosio::check(*args.rent_days > 0, "rent_days must be > 0");
+   eosio::check(args.min_rent_fee->symbol == core_symbol, "min_rent_fee doesn't match core symbol");
+   eosio::check(args.min_rent_fee->amount > 0, "min_rent_fee must be positive");
+
+   state.rent_days    = *args.rent_days;
+   state.min_rent_fee = *args.min_rent_fee;
 
    update(state.net, args.net);
    update(state.cpu, args.cpu);

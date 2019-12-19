@@ -16,13 +16,13 @@ inline constexpr int64_t rentbw_frac  = 1'000'000'000'000'000ll; // 1.0 = 10^15
 inline constexpr int64_t stake_weight = 100'000'000'0000ll; // 10^12
 
 struct rentbw_config_resource {
-   int64_t        current_weight_ratio = {};
-   int64_t        target_weight_ratio  = {};
-   int64_t        assumed_stake_weight = {};
-   time_point_sec target_timestamp     = {};
-   double         exponent             = {};
-   uint32_t       decay_secs           = {};
-   asset          target_price         = asset{};
+   fc::optional<int64_t>        current_weight_ratio = {};
+   fc::optional<int64_t>        target_weight_ratio  = {};
+   fc::optional<int64_t>        assumed_stake_weight = {};
+   fc::optional<time_point_sec> target_timestamp     = {};
+   fc::optional<double>         exponent             = {};
+   fc::optional<uint32_t>       decay_secs           = {};
+   fc::optional<asset>          target_price         = {};
 };
 FC_REFLECT(rentbw_config_resource,                                                             //
            (current_weight_ratio)(target_weight_ratio)(assumed_stake_weight)(target_timestamp) //
@@ -31,8 +31,8 @@ FC_REFLECT(rentbw_config_resource,                                              
 struct rentbw_config {
    rentbw_config_resource net          = {};
    rentbw_config_resource cpu          = {};
-   uint32_t               rent_days    = {};
-   asset                  min_rent_fee = asset{};
+   fc::optional<uint32_t> rent_days    = {};
+   fc::optional<asset>    min_rent_fee = {};
 };
 FC_REFLECT(rentbw_config, (net)(cpu)(rent_days)(min_rent_fee))
 
@@ -128,7 +128,35 @@ struct rentbw_tester : eosio_system_tester {
    }
 
    action_result configbw(const rentbw_config& config) {
-      return push_action(config::system_account_name, N(configrentbw), mvo()("args", config));
+      // Verbose solution needed to work around bug in abi_serializer that fails if optional values aren't explicitly
+      // specified with a null value.
+
+      auto optional_to_variant = []( const auto& v ) -> fc::variant {
+         return (!v ? fc::variant() : fc::variant(*v));
+      };
+
+      auto resource_conf_vo = [&optional_to_variant](const rentbw_config_resource& c ) {
+         return   mvo("current_weight_ratio", optional_to_variant(c.current_weight_ratio))
+                     ("target_weight_ratio",  optional_to_variant(c.target_weight_ratio))
+                     ("assumed_stake_weight", optional_to_variant(c.assumed_stake_weight))
+                     ("target_timestamp",     optional_to_variant(c.target_timestamp))
+                     ("exponent",             optional_to_variant(c.exponent))
+                     ("decay_secs",           optional_to_variant(c.decay_secs))
+                     ("target_price",         optional_to_variant(c.target_price))
+         ;
+      };
+
+      auto conf = mvo("net",          resource_conf_vo(config.net))
+                     ("cpu",          resource_conf_vo(config.cpu))
+                     ("rent_days",    optional_to_variant(config.rent_days))
+                     ("min_rent_fee", optional_to_variant(config.min_rent_fee))
+      ;
+
+      //idump((fc::json::to_pretty_string(conf)));
+      return push_action(config::system_account_name, N(configrentbw), mvo()("args", std::move(conf)));
+
+      // If abi_serializer worked correctly, the following is all that would be needed:
+      //return push_action(config::system_account_name, N(configrentbw), mvo()("args", config));
    }
 
    action_result rentbwexec(name user, uint16_t max) {
@@ -226,11 +254,13 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
                        push_action(N(alice1111111), N(configrentbw), mvo()("args", make_config())));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("rentbw hasn't been initialized"), rentbwexec(N(alice1111111), 10));
 
-   //BOOST_REQUIRE_EQUAL(wasm_assert_msg("rent_days must be > 0"),
-   //                    configbw(make_config([&](auto& c) { c.rent_days = 0; }))); // needed only if rent_days does not have default
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("rent_days must be > 0"),
+                       configbw(make_config([&](auto& c) { c.rent_days = 0; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_fee doesn't match core symbol"), configbw(make_config([&](auto& c) {
                           c.min_rent_fee = asset::from_string("1000000.000 TST");
                        })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_fee does not have a default value"),
+                       configbw(make_config([&](auto& c) { c.min_rent_fee = {}; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_fee must be positive"),
                        configbw(make_config([&](auto& c) { c.min_rent_fee = asset::from_string("0.0000 TST"); })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_fee must be positive"),
@@ -246,8 +276,12 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
                        })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("weight can't grow over time"),
                        configbw(make_config([](auto& c) { c.net.target_weight_ratio = rentbw_frac + 1; })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight does not have a default value"),
+                       configbw(make_config([](auto& c) { c.net.assumed_stake_weight = {}; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight must be at least 1; a much larger value is recommended"),
                        configbw(make_config([](auto& c) { c.net.assumed_stake_weight = 0; })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_timestamp does not have a default value"),
+                       configbw(make_config([&](auto& c) { c.net.target_timestamp = {}; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_timestamp must be in the future"),
                        configbw(make_config([&](auto& c) { c.net.target_timestamp = control->head_block_time(); })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_timestamp must be in the future"), configbw(make_config([&](auto& c) {
@@ -255,8 +289,10 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
                        })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("exponent must be >= 1"),
                        configbw(make_config([&](auto& c) { c.net.exponent = .999; })));
-   //BOOST_REQUIRE_EQUAL(wasm_assert_msg("decay_secs must be >= 1"),
-   //                    configbw(make_config([&](auto& c) { c.net.decay_secs = 0; }))); // needed only if decay_secs does not have default
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("decay_secs must be >= 1"),
+                       configbw(make_config([&](auto& c) { c.net.decay_secs = 0; })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price does not have a default value"),
+                       configbw(make_config([&](auto& c) { c.net.target_price = {}; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price doesn't match core symbol"), configbw(make_config([&](auto& c) {
                           c.net.target_price = asset::from_string("1000000.000 TST");
                        })));
@@ -275,8 +311,12 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
                        })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("weight can't grow over time"),
                        configbw(make_config([](auto& c) { c.cpu.target_weight_ratio = rentbw_frac + 1; })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight does not have a default value"),
+                       configbw(make_config([](auto& c) { c.cpu.assumed_stake_weight = {}; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight must be at least 1; a much larger value is recommended"),
                        configbw(make_config([](auto& c) { c.cpu.assumed_stake_weight = 0; })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_timestamp does not have a default value"),
+                       configbw(make_config([&](auto& c) { c.cpu.target_timestamp = {}; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_timestamp must be in the future"),
                        configbw(make_config([&](auto& c) { c.cpu.target_timestamp = control->head_block_time(); })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_timestamp must be in the future"), configbw(make_config([&](auto& c) {
@@ -284,8 +324,10 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
                        })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("exponent must be >= 1"),
                        configbw(make_config([&](auto& c) { c.cpu.exponent = .999; })));
-   //BOOST_REQUIRE_EQUAL(wasm_assert_msg("decay_secs must be >= 1"),
-   //                    configbw(make_config([&](auto& c) { c.cpu.decay_secs = 0; }))); // needed only if decay_secs does not have default
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("decay_secs must be >= 1"),
+                       configbw(make_config([&](auto& c) { c.cpu.decay_secs = 0; })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price does not have a default value"),
+                       configbw(make_config([&](auto& c) { c.cpu.target_price = {}; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("target_price doesn't match core symbol"), configbw(make_config([&](auto& c) {
                           c.cpu.target_price = asset::from_string("1000000.000 TST");
                        })));
