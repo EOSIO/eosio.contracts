@@ -495,12 +495,12 @@ namespace eosiosystem {
    };
 
    struct rentbw_config {
-      rentbw_config_resource  net;              // NET market configuration
-      rentbw_config_resource  cpu;              // CPU market configuration
-      uint32_t                rent_days;        // `rentbw` `days` argument must match this. Set this to 0 to preserve the
-                                                //     existing setting or use the default.
-      asset                   min_rent_price;   // Rents below this amount are rejected. Set the amount of this asset to 0 to
-                                                //     preserve the existing setting.
+      rentbw_config_resource  net;           // NET market configuration
+      rentbw_config_resource  cpu;           // CPU market configuration
+      uint32_t                rent_days;     // `rentbw` `days` argument must match this. Set this to 0 to preserve the
+                                             //     existing setting or use the default.
+      asset                   min_rent_fee;  // Rental fees below this amount are rejected. Set the amount of this asset to 0
+                                             //     to preserve the existing setting.
    };
 
    struct rentbw_state_resource {
@@ -538,13 +538,13 @@ namespace eosiosystem {
    };
 
    struct [[eosio::table("rent.state"),eosio::contract("eosio.system")]] rentbw_state {
-      static constexpr uint32_t default_rent_days      = 30;      // 30 day resource rentals
+      static constexpr uint32_t default_rent_days = 30; // 30 day resource rentals
 
-      uint8_t                 version        = 0;
-      rentbw_state_resource   net            = {};                 // NET market state
-      rentbw_state_resource   cpu            = {};                 // CPU market state
-      uint32_t                rent_days      = default_rent_days;  // `rentbw` `days` argument must match this.
-      asset                   min_rent_price = {};                 // Rents below this amount are rejected
+      uint8_t                 version      = 0;
+      rentbw_state_resource   net          = {};                 // NET market state
+      rentbw_state_resource   cpu          = {};                 // CPU market state
+      uint32_t                rent_days    = default_rent_days;  // `rentbw` `days` argument must match this.
+      asset                   min_rent_fee = {};                 // Rental fees below this amount are rejected
 
       uint64_t primary_key()const { return 0; }
    };

@@ -186,15 +186,15 @@ void system_contract::configrentbw(rentbw_config& args) {
 
    if (!args.rent_days)
       args.rent_days = state.rent_days;
-   if (!args.min_rent_price.amount && state.min_rent_price.amount)
-      args.min_rent_price = state.min_rent_price;
+   if (!args.min_rent_fee.amount && state.min_rent_fee.amount)
+      args.min_rent_fee = state.min_rent_fee;
 
    eosio::check(args.rent_days > 0, "rent_days must be > 0");
-   eosio::check(args.min_rent_price.symbol == core_symbol, "min_rent_price doesn't match core symbol");
-   eosio::check(args.min_rent_price.amount > 0, "min_rent_price must be positive");
+   eosio::check(args.min_rent_fee.symbol == core_symbol, "min_rent_fee doesn't match core symbol");
+   eosio::check(args.min_rent_fee.amount > 0, "min_rent_fee must be positive");
 
-   state.rent_days      = args.rent_days;
-   state.min_rent_price = args.min_rent_price;
+   state.rent_days    = args.rent_days;
+   state.min_rent_fee = args.min_rent_fee;
 
    update(state.net, args.net);
    update(state.cpu, args.cpu);
@@ -320,7 +320,7 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
       error_msg += fee.to_string();
       eosio::check(false, error_msg);
    }
-   eosio::check(fee >= state.min_rent_price, "calculated fee is below minimum; try renting more");
+   eosio::check(fee >= state.min_rent_fee, "calculated fee is below minimum; try renting more");
 
    orders.emplace(payer, [&](auto& order) {
       order.id         = orders.available_primary_key();
