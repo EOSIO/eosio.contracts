@@ -469,38 +469,49 @@ namespace eosiosystem {
    };
 
    struct rentbw_config_resource {
-      int64_t        current_weight_ratio;   // Immediately set weight_ratio to this amount. 1x = 10^15. 0.01x = 10^13. Set this
-                                             //    to 0 to preserve the existing setting or use the default; this avoids sudden
-                                             //    price jumps. For new chains which don't need to gradually phase out staking
-                                             //    and REX, 0.01x (10^13) is a good value for both current_weight_ratio and
-                                             //    target_weight_ratio.
-      int64_t        target_weight_ratio;    // Linearly shrink weight_ratio to this amount. 1x = 10^15. 0.01x = 10^13. Set this
-                                             //    to 0 to preserve the existing setting or use the default.
-      int64_t        assumed_stake_weight;   // Assumed stake weight for ratio calculations. Use the sum of total staked and
-                                             //    total rented by REX at the time the rentbw market is first activated. Set
-                                             //    this to 0 to preserve the existing setting; this avoids sudden price jumps.
-                                             //    For new chains which don't need to phase out staking and REX, 10^12 is
-                                             //    probably a good value.
-      time_point_sec target_timestamp;       // Stop automatic weight_ratio shrinkage at this time. Once this
-                                             //    time hits, weight_ratio will be target_weight_ratio. Ignored if
-                                             //    current_weight_ratio == target_weight_ratio. Set this to 0 to preserve the
-                                             //    existing setting.
-      double         exponent;               // Exponent of resource price curve. Must be >= 1. Set this to 0 to preserve the
-                                             //    existing setting or use the default.
-      uint32_t       decay_secs;             // Number of seconds for the gap between adjusted resource utilization and
-                                             //    instantaneous utilization to shrink by 63%. Set this to 0 to preserve the
-                                             //    existing setting or use the default.
-      asset          target_price;           // Fee needed to rent the entire resource market weight. Set the amount of this
-                                             //    asset to 0 to preserve the existing setting.
+      std::optional<int64_t>        current_weight_ratio;   // Immediately set weight_ratio to this amount. 1x = 10^15. 0.01x = 10^13.
+                                                            //    Do not specify to preserve the existing setting or use the default;
+                                                            //    this avoids sudden price jumps. For new chains which don't need
+                                                            //    to gradually phase out staking and REX, 0.01x (10^13) is a good
+                                                            //    value for both current_weight_ratio and target_weight_ratio.
+      std::optional<int64_t>        target_weight_ratio;    // Linearly shrink weight_ratio to this amount. 1x = 10^15. 0.01x = 10^13.
+                                                            //    Do not specify to preserve the existing setting or use the default.
+      std::optional<int64_t>        assumed_stake_weight;   // Assumed stake weight for ratio calculations. Use the sum of total
+                                                            //    staked and total rented by REX at the time the rentbw market
+                                                            //    is first activated. Do not specify to preserve the existing
+                                                            //    setting (no default exists); this avoids sudden price jumps.
+                                                            //    For new chains which don't need to phase out staking and REX,
+                                                            //    10^12 is probably a good value.
+      std::optional<time_point_sec> target_timestamp;       // Stop automatic weight_ratio shrinkage at this time. Once this
+                                                            //    time hits, weight_ratio will be target_weight_ratio. Ignored
+                                                            //    if current_weight_ratio == target_weight_ratio. Do not specify
+                                                            //    this to preserve the existing setting (no default exists).
+      std::optional<double>         exponent;               // Exponent of resource price curve. Must be >= 1. Do not specify
+                                                            //    to preserve the existing setting or use the default.
+      std::optional<uint32_t>       decay_secs;             // Number of seconds for the gap between adjusted resource
+                                                            //    utilization and instantaneous resource utilization to shrink
+                                                            //    by 63%. Do not specify to preserve the existing setting or
+                                                            //    use the default.
+      std::optional<asset>          min_price;              // Fee needed to rent the entire resource market weight at the
+                                                            //    minimum price. Do not specify to preserve the existing
+                                                            //    setting or use the default.
+      std::optional<asset>          max_price;              // Fee needed to rent the entire resource market weight at the
+                                                            //    maximum price. Do not specify to preserve the existing
+                                                            //    setting (no default exists).
+
+      EOSLIB_SERIALIZE( rentbw_config_resource, (current_weight_ratio)(target_weight_ratio)(assumed_stake_weight)
+                                                (target_timestamp)(exponent)(decay_secs)(min_price)(max_price)    )
    };
 
    struct rentbw_config {
-      rentbw_config_resource  net;              // NET market configuration
-      rentbw_config_resource  cpu;              // CPU market configuration
-      uint32_t                rent_days;        // `rentbw` `days` argument must match this. Set this to 0 to preserve the
-                                                //     existing setting or use the default.
-      asset                   min_rent_price;   // Rents below this amount are rejected. Set the amount of this asset to 0 to
-                                                //     preserve the existing setting.
+      rentbw_config_resource  net;           // NET market configuration
+      rentbw_config_resource  cpu;           // CPU market configuration
+      std::optional<uint32_t> rent_days;     // `rentbw` `days` argument must match this. Do not specify to preserve the
+                                             //     existing setting or use the default.
+      std::optional<asset>    min_rent_fee;  // Rental fees below this amount are rejected. Do not specify to preserve the
+                                             //     existing setting (no default exists).
+
+      EOSLIB_SERIALIZE( rentbw_config, (net)(cpu)(rent_days)(min_rent_fee) )
    };
 
    struct rentbw_state_resource {
@@ -529,7 +540,10 @@ namespace eosiosystem {
       double         exponent                = default_exponent;   // Exponent of resource price curve.
       uint32_t       decay_secs              = default_decay_secs; // Number of seconds for the gap between adjusted resource
                                                                    //    utilization and instantaneous utilization to shrink by 63%.
-      asset          target_price            = {};                 // Fee needed to rent the entire resource market weight.
+      asset          min_price               = {};                 // Fee needed to rent the entire resource market weight at
+                                                                   //    the minimum price (defaults to 0).
+      asset          max_price               = {};                 // Fee needed to rent the entire resource market weight at
+                                                                   //    the maximum price.
       int64_t        utilization             = 0;                  // Instantaneous resource utilization. This is the current
                                                                    //    amount sold. utilization <= weight.
       int64_t        adjusted_utilization    = 0;                  // Adjusted resource utilization. This is >= utilization and
@@ -538,13 +552,13 @@ namespace eosiosystem {
    };
 
    struct [[eosio::table("rent.state"),eosio::contract("eosio.system")]] rentbw_state {
-      static constexpr uint32_t default_rent_days      = 30;      // 30 day resource rentals
+      static constexpr uint32_t default_rent_days = 30; // 30 day resource rentals
 
-      uint8_t                 version        = 0;
-      rentbw_state_resource   net            = {};                 // NET market state
-      rentbw_state_resource   cpu            = {};                 // CPU market state
-      uint32_t                rent_days      = default_rent_days;  // `rentbw` `days` argument must match this.
-      asset                   min_rent_price = {};                 // Rents below this amount are rejected
+      uint8_t                 version      = 0;
+      rentbw_state_resource   net          = {};                 // NET market state
+      rentbw_state_resource   cpu          = {};                 // CPU market state
+      uint32_t                rent_days    = default_rent_days;  // `rentbw` `days` argument must match this.
+      asset                   min_rent_fee = {};                 // Rental fees below this amount are rejected
 
       uint64_t primary_key()const { return 0; }
    };

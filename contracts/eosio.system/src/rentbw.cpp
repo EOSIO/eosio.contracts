@@ -136,65 +136,106 @@ void system_contract::configrentbw(rentbw_config& args) {
       state.cpu.utilization_timestamp = now;
    }
 
-   auto update = [&](auto& state, auto& args) {
-      if (!args.current_weight_ratio) {
-         if (state.weight_ratio)
-            args.current_weight_ratio = state.weight_ratio;
-         else
-            args.current_weight_ratio = state.initial_weight_ratio;
-      }
-      if (!args.target_weight_ratio)
-         args.target_weight_ratio = state.target_weight_ratio;
-      if (!args.assumed_stake_weight)
-         args.assumed_stake_weight = state.assumed_stake_weight;
-      if (!args.target_timestamp.utc_seconds)
-         args.target_timestamp = state.target_timestamp;
-      if (!args.exponent)
-         args.exponent = state.exponent;
-      if (!args.decay_secs)
-         args.decay_secs = state.decay_secs;
-      if (!args.target_price.amount && state.target_price.amount)
-         args.target_price = state.target_price;
-
-      if (args.current_weight_ratio == args.target_weight_ratio)
-         args.target_timestamp = now;
-      else
-         eosio::check(args.target_timestamp > now, "target_timestamp must be in the future");
-      eosio::check(args.current_weight_ratio > 0, "current_weight_ratio is too small");
-      eosio::check(args.current_weight_ratio <= rentbw_frac, "current_weight_ratio is too large");
-      eosio::check(args.target_weight_ratio > 0, "target_weight_ratio is too small");
-      eosio::check(args.target_weight_ratio <= args.current_weight_ratio, "weight can't grow over time");
-      eosio::check(args.assumed_stake_weight >= 1,
-                   "assumed_stake_weight must be at least 1; a much larger value is recommended");
-      eosio::check(args.assumed_stake_weight * int128_t(rentbw_frac) / args.target_weight_ratio <=
-                         std::numeric_limits<int64_t>::max(),
-                   "assumed_stake_weight/target_weight_ratio is too large");
-      eosio::check(args.exponent >= 1, "exponent must be >= 1");
-      eosio::check(args.decay_secs >= 1, "decay_secs must be >= 1");
-      eosio::check(args.target_price.symbol == core_symbol, "target_price doesn't match core symbol");
-      eosio::check(args.target_price.amount > 0, "target_price must be positive");
-
-      state.assumed_stake_weight = args.assumed_stake_weight;
-      state.initial_weight_ratio = args.current_weight_ratio;
-      state.target_weight_ratio  = args.target_weight_ratio;
-      state.initial_timestamp    = now;
-      state.target_timestamp     = args.target_timestamp;
-      state.exponent             = args.exponent;
-      state.decay_secs           = args.decay_secs;
-      state.target_price         = args.target_price;
+   auto is_default_asset = []( const eosio::asset& a ) -> bool {
+      return a.amount == 0 && a.symbol == symbol{};
    };
 
-   if (!args.rent_days)
-      args.rent_days = state.rent_days;
-   if (!args.min_rent_price.amount && state.min_rent_price.amount)
-      args.min_rent_price = state.min_rent_price;
+   auto update = [&](auto& state, auto& args) {
+      if (!args.current_weight_ratio) {
+         if (state.weight_ratio) {
+            *args.current_weight_ratio = state.weight_ratio;
+         } else {
+            *args.current_weight_ratio = state.initial_weight_ratio;
+         }
+      }
 
-   eosio::check(args.rent_days > 0, "rent_days must be > 0");
-   eosio::check(args.min_rent_price.symbol == core_symbol, "min_rent_price doesn't match core symbol");
-   eosio::check(args.min_rent_price.amount > 0, "min_rent_price must be positive");
+      if (!args.target_weight_ratio) {
+         *args.target_weight_ratio = state.target_weight_ratio;
+      }
 
-   state.rent_days      = args.rent_days;
-   state.min_rent_price = args.min_rent_price;
+      if (!args.assumed_stake_weight) {
+         eosio::check(state.assumed_stake_weight != 0, "assumed_stake_weight does not have a default value");
+         *args.assumed_stake_weight = state.assumed_stake_weight;
+      }
+
+      if (*args.current_weight_ratio == *args.target_weight_ratio) {
+         *args.target_timestamp = now;
+      } else {
+         if (!args.target_timestamp) {
+            eosio::check(state.target_timestamp.utc_seconds != 0, "target_timestamp does not have a default value");
+            *args.target_timestamp = state.target_timestamp;
+         }
+         eosio::check(*args.target_timestamp > now, "target_timestamp must be in the future");
+      }
+
+      if (!args.exponent) {
+         *args.exponent = state.exponent;
+      }
+
+      if (!args.decay_secs) {
+         *args.decay_secs = state.decay_secs;
+      }
+
+      if (!args.max_price) {
+         eosio::check(!is_default_asset(state.max_price), "max_price does not have a default value");
+         *args.max_price = state.max_price;
+      }
+
+      if (!args.min_price) {
+         if (is_default_asset(state.min_price)) {
+            *args.min_price = *args.max_price; // just to copy symbol of max_price
+            args.min_price->amount = 0;        // min_price has a default of zero.
+         } else {
+            *args.min_price = state.min_price;
+         }
+      }
+
+      eosio::check(*args.current_weight_ratio > 0, "current_weight_ratio is too small");
+      eosio::check(*args.current_weight_ratio <= rentbw_frac, "current_weight_ratio is too large");
+      eosio::check(*args.target_weight_ratio > 0, "target_weight_ratio is too small");
+      eosio::check(*args.target_weight_ratio <= *args.current_weight_ratio, "weight can't grow over time");
+      eosio::check(*args.assumed_stake_weight >= 1,
+                   "assumed_stake_weight must be at least 1; a much larger value is recommended");
+      eosio::check(*args.assumed_stake_weight * int128_t(rentbw_frac) / *args.target_weight_ratio <=
+                         std::numeric_limits<int64_t>::max(),
+                   "assumed_stake_weight/target_weight_ratio is too large");
+      eosio::check(*args.exponent >= 1.0, "exponent must be >= 1");
+      eosio::check(*args.decay_secs >= 1, "decay_secs must be >= 1");
+      eosio::check(args.max_price->symbol == core_symbol, "max_price doesn't match core symbol");
+      eosio::check(args.max_price->amount > 0, "max_price must be positive");
+      eosio::check(args.min_price->symbol == core_symbol, "min_price doesn't match core symbol");
+      eosio::check(args.min_price->amount >= 0, "min_price must be non-negative");
+      eosio::check(args.min_price->amount <= args.max_price->amount, "min_price cannot exceed max_price");
+      if (*args.exponent == 1.0) {
+         eosio::check(args.min_price->amount == args.max_price->amount, "min_price and max_price must be the same if the exponent is 1");
+      }
+
+      state.assumed_stake_weight = *args.assumed_stake_weight;
+      state.initial_weight_ratio = *args.current_weight_ratio;
+      state.target_weight_ratio  = *args.target_weight_ratio;
+      state.initial_timestamp    = now;
+      state.target_timestamp     = *args.target_timestamp;
+      state.exponent             = *args.exponent;
+      state.decay_secs           = *args.decay_secs;
+      state.min_price            = *args.min_price;
+      state.max_price            = *args.max_price;
+   };
+
+   if (!args.rent_days) {
+      *args.rent_days = state.rent_days;
+   }
+
+   if (!args.min_rent_fee) {
+      eosio::check(!is_default_asset(state.min_rent_fee), "min_rent_fee does not have a default value");
+      *args.min_rent_fee = state.min_rent_fee;
+   }
+
+   eosio::check(*args.rent_days > 0, "rent_days must be > 0");
+   eosio::check(args.min_rent_fee->symbol == core_symbol, "min_rent_fee doesn't match core symbol");
+   eosio::check(args.min_rent_fee->amount > 0, "min_rent_fee must be positive");
+
+   state.rent_days    = *args.rent_days;
+   state.min_rent_fee = *args.min_rent_fee;
 
    update(state.net, args.net);
    update(state.cpu, args.cpu);
@@ -210,12 +251,64 @@ void system_contract::configrentbw(rentbw_config& args) {
    state_sing.set(state, get_self());
 } // system_contract::configrentbw
 
+/**
+ *  @pre 0 <= state.min_price.amount <= state.max_price.amount
+ *  @pre 0 < state.max_price.amount
+ *  @pre 1.0 <= state.exponent
+ *  @pre 0 <= state.utilization <= state.adjusted_utilization <= state.weight
+ *  @pre 0 <= utilization_increase <= (state.weight - state.utilization)
+ */
 int64_t calc_rentbw_fee(const rentbw_state_resource& state, int64_t utilization_increase) {
-   double start_utilization = state.adjusted_utilization;
-   double end_utilization   = state.adjusted_utilization + utilization_increase;
+   if( utilization_increase <= 0 ) return 0;
 
-   double fee = state.target_price.amount * std::pow(end_utilization / state.weight, state.exponent) -
-                  state.target_price.amount * std::pow(start_utilization / state.weight, state.exponent);
+   // Let p(u) = price as a function of the utilization fraction u which is defined for u in [0.0, 1.0].
+   // Let f(u) = integral of the price function p(x) from x = 0.0 to x = u, again defined for u in [0.0, 1.0].
+
+   // In particular we choose f(u) = min_price * u + ((max_price - min_price) / exponent) * (u ^ exponent).
+   // And so p(u) = min_price + (max_price - min_price) * (u ^ (exponent - 1.0)).
+
+   // Returns f(double(end_utilization)/state.weight) - f(double(start_utilization)/state.weight) which is equivalent to
+   // the integral of p(x) from x = double(start_utilization)/state.weight to x = double(end_utilization)/state.weight.
+   // @pre 0 <= start_utilization <= end_utilization <= state.weight
+   auto price_integral_delta = [&state](int64_t start_utilization, int64_t end_utilization) -> double {
+      double coefficient = (state.max_price.amount - state.min_price.amount) / state.exponent;
+      double start_u     = double(start_utilization) / state.weight;
+      double end_u       = double(end_utilization) / state.weight;
+      return state.min_price.amount * end_u - state.min_price.amount * start_u +
+               coefficient * std::pow(end_u, state.exponent) - coefficient * std::pow(start_u, state.exponent);
+   };
+
+   // Returns p(double(utilization)/state.weight).
+   // @pre 0 <= utilization <= state.weight
+   auto price_function = [&state](int64_t utilization) -> double {
+      double price = state.min_price.amount;
+      // state.exponent >= 1.0, therefore the exponent passed into std::pow is >= 0.0.
+      // Since the exponent passed into std::pow could be 0.0 and simultaneously so could double(utilization)/state.weight,
+      // the safest thing to do is handle that as a special case explicitly rather than relying on std::pow to return 1.0
+      // instead of triggering a domain error.
+      double new_exponent = state.exponent - 1.0;
+      if (new_exponent <= 0.0) {
+         return state.max_price.amount;
+      } else {
+         price += (state.max_price.amount - state.min_price.amount) * std::pow(double(utilization) / state.weight, new_exponent);
+      }
+
+      return price;
+   };
+
+   double  fee = 0.0;
+   int64_t start_utilization = state.utilization;
+   int64_t end_utilization   = start_utilization + utilization_increase;
+
+   if (start_utilization < state.adjusted_utilization) {
+      fee += price_function(state.adjusted_utilization) *
+               std::min(utilization_increase, state.adjusted_utilization - start_utilization) / state.weight;
+      start_utilization = state.adjusted_utilization;
+   }
+
+   if (start_utilization < end_utilization) {
+      fee += price_integral_delta(start_utilization, end_utilization);
+   }
 
    return std::ceil(fee);
 }
@@ -279,7 +372,7 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
       error_msg += fee.to_string();
       eosio::check(false, error_msg);
    }
-   eosio::check(fee >= state.min_rent_price, "calculated fee is below minimum; try renting more");
+   eosio::check(fee >= state.min_rent_fee, "calculated fee is below minimum; try renting more");
 
    orders.emplace(payer, [&](auto& order) {
       order.id         = orders.available_primary_key();
