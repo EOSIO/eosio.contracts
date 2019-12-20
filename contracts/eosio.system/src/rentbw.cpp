@@ -252,7 +252,6 @@ void system_contract::configrentbw(rentbw_config& args) {
 } // system_contract::configrentbw
 
 /**
- *  @pre 0 == state.min_price.amount (for now)
  *  @pre 0 <= state.min_price.amount <= state.max_price.amount
  *  @pre 0 < state.max_price.amount
  *  @pre 1.0 <= state.exponent
