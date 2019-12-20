@@ -148,32 +148,8 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    datastream<const char*> ds( prop.packed_transaction.data(), prop.packed_transaction.size() );
    ds >> trx_header;
    check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
-
-   approvals apptable( get_self(), proposer.value );
-   auto apps_it = apptable.find( proposal_name.value );
-   std::vector<permission_level> approvals;
-   invalidations inv_table( get_self(), get_self().value );
-   if ( apps_it != apptable.end() ) {
-      approvals.reserve( apps_it->provided_approvals.size() );
-      for ( auto& p : apps_it->provided_approvals ) {
-         auto it = inv_table.find( p.level.actor.value );
-         if ( it == inv_table.end() || it->last_invalidation_time < p.time ) {
-            approvals.push_back(p.level);
-         }
-      }
-      apptable.erase(apps_it);
-   } else {
-      old_approvals old_apptable( get_self(), proposer.value );
-      auto& apps = old_apptable.get( proposal_name.value, "proposal not found" );
-      for ( auto& level : apps.provided_approvals ) {
-         auto it = inv_table.find( level.actor.value );
-         if ( it == inv_table.end() ) {
-            approvals.push_back( level );
-         }
-      }
-      old_apptable.erase(apps);
-   }
-   auto packed_provided_approvals = pack(approvals);
+   
+   auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name));
    auto res =  check_transaction_authorization(
                   prop.packed_transaction.data(), prop.packed_transaction.size(),
                   (const char*)0, 0,
@@ -201,6 +177,33 @@ void multisig::invalidate( name account ) {
       inv_table.modify( it, account, [&](auto& i) {
             i.last_invalidation_time = current_time_point();
          });
+   }
+}
+
+std::vector<permission_level> multisig::_get_approvals(name proposer, name proposal_name) {
+   approvals apptable( get_self(), proposer.value );
+   auto apps_it = apptable.find( proposal_name.value );
+   std::vector<permission_level> approvals;
+   invalidations inv_table( get_self(), get_self().value );
+   if ( apps_it != apptable.end() ) {
+      approvals.reserve( apps_it->provided_approvals.size() );
+      for ( auto& p : apps_it->provided_approvals ) {
+         auto it = inv_table.find( p.level.actor.value );
+         if ( it == inv_table.end() || it->last_invalidation_time < p.time ) {
+            approvals.push_back(p.level);
+         }
+      }
+      apptable.erase(apps_it);
+   } else {
+      old_approvals old_apptable( get_self(), proposer.value );
+      auto& apps = old_apptable.get( proposal_name.value, "proposal not found" );
+      for ( auto& level : apps.provided_approvals ) {
+         auto it = inv_table.find( level.actor.value );
+         if ( it == inv_table.end() ) {
+            approvals.push_back( level );
+         }
+      }
+      old_apptable.erase(apps);
    }
 }
 

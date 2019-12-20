@@ -163,8 +163,9 @@ namespace eosio {
          // Table for which a proposal and its prospective proposed transaction
          // are stored; of which the primary key is the proposer.
          struct [[eosio::table]] proposal {
-            name                            proposal_name;
-            std::vector<char>               packed_transaction;
+            name                                proposal_name;
+            std::vector<char>                   packed_transaction;
+            // eosio::binary_extension<time_point> earliest_exec_time(eosio::microseconds::maximum());
 
             uint64_t primary_key()const { return proposal_name.value; }
          };
@@ -216,7 +217,7 @@ namespace eosio {
          };
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
 
-       // Helper functions for which 
-       std::vector<std::pair<>> _get_approvals();
+         // Helper functions for which to get the approvals of a given tables.
+         std::vector<permission_level> _get_approvals(name proposer, name proposal_name);
    };
 } /// namespace eosio
