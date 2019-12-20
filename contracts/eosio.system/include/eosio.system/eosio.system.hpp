@@ -498,7 +498,7 @@ namespace eosiosystem {
                                                             //    setting or use the default.
       std::optional<asset>          max_price;              // Fee needed to rent the entire resource market weight at the
                                                             //    maximum price. For example, this could be set to 10% of total
-                                                            //    total token supply. Do not specify to preserve the existing
+                                                            //    token supply. Do not specify to preserve the existing
                                                             //    setting (no default exists).
 
       EOSLIB_SERIALIZE( rentbw_config_resource, (current_weight_ratio)(target_weight_ratio)(assumed_stake_weight)
