@@ -8,7 +8,8 @@
 namespace eosio {
 
    /**
-    * The `eosio.msig` system contract allows for creation of proposed transactions which require authorization from a list of accounts, approval of the proposed transactions by those accounts required to approve it, and finally, it also allows the execution of the approved transactions on the blockchain.
+    * \brief eosio.msig contract
+    * \details The `eosio.msig` system contract allows for creation of proposed transactions which require authorization from a list of accounts, approval of the proposed transactions by those accounts required to approve it, and finally, it also allows the execution of the approved transactions on the blockchain.
     *
     * In short, the workflow to propose, review, approve and then executed a transaction it can be described by the following:
     * - first you create a transaction json file,
