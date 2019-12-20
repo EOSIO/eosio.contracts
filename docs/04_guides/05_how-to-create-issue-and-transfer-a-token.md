@@ -1,5 +1,3 @@
-## How to create, issue and transfer a token
-
 ## Step 1: Obtain Contract Source
 
 Navigate to your contracts directory.
@@ -74,7 +72,7 @@ This command created a new token `SYS` with a precision of 4 decimals and a maxi
 
 ## Step 6: Issue Tokens
 
-The issuer can issue new tokens to the issuer account in our case `eosio`. 
+The issuer can issue new tokens to the issuer account in our case `eosio`.
 
 ```text
 cleos push action eosio.token issue '[ "eosio", "100.0000 SYS", "memo" ]' -p eosio@active
@@ -114,7 +112,7 @@ Result:
 25.00 SYS
 ```
 
-Check "eosio's" balance, notice that tokens were deducted from the account 
+Check "eosio's" balance, notice that tokens were deducted from the account
 
 ```shell
 cleos get currency balance eosio.token eosio SYS
