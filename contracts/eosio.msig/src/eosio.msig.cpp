@@ -41,7 +41,7 @@ void multisig::propose( ignore<name> proposer,
    std::vector<char> pkd_trans;
    pkd_trans.resize(size);
    memcpy((char*)pkd_trans.data(), trx_pos, size);
-   proptable.emplace( _proposer, [&]( auto& prop ) {
+   proptable.emplace( _proposer, [&]( auto& prop ) { // TODO: Set to max value of time here.
       prop.proposal_name       = _proposal_name;
       prop.packed_transaction  = pkd_trans;
    });
@@ -148,7 +148,32 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    datastream<const char*> ds( prop.packed_transaction.data(), prop.packed_transaction.size() );
    ds >> trx_header;
    check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
-   
+
+   // approvals apptable( get_self(), proposer.value );
+   // auto apps_it = apptable.find( proposal_name.value );
+   // std::vector<permission_level> approvals;
+   // invalidations inv_table( get_self(), get_self().value );
+   // if ( apps_it != apptable.end() ) {
+   //    approvals.reserve( apps_it->provided_approvals.size() );
+   //    for ( auto& p : apps_it->provided_approvals ) {
+   //       auto it = inv_table.find( p.level.actor.value );
+   //       if ( it == inv_table.end() || it->last_invalidation_time < p.time ) {
+   //          approvals.push_back(p.level);
+   //       }
+   //    }
+   //    apptable.erase(apps_it);
+   // } else {
+   //    old_approvals old_apptable( get_self(), proposer.value );
+   //    auto& apps = old_apptable.get( proposal_name.value, "proposal not found" );
+   //    for ( auto& level : apps.provided_approvals ) {
+   //       auto it = inv_table.find( level.actor.value );
+   //       if ( it == inv_table.end() ) {
+   //          approvals.push_back( level );
+   //       }
+   //    }
+   //    old_apptable.erase(apps);
+   // }
+   // auto packed_provided_approvals = pack(approvals);
    auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name));
    auto res =  check_transaction_authorization(
                   prop.packed_transaction.data(), prop.packed_transaction.size(),
@@ -180,7 +205,7 @@ void multisig::invalidate( name account ) {
    }
 }
 
-std::vector<permission_level> multisig::_get_approvals(name proposer, name proposal_name) {
+std::vector<permission_level> multisig::_get_approvals(const name& proposer, const name& proposal_name) {
    approvals apptable( get_self(), proposer.value );
    auto apps_it = apptable.find( proposal_name.value );
    std::vector<permission_level> approvals;
@@ -205,6 +230,7 @@ std::vector<permission_level> multisig::_get_approvals(name proposer, name propo
       }
       old_apptable.erase(apps);
    }
+   return approvals;
 }
 
 } /// namespace eosio

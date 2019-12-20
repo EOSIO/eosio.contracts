@@ -160,12 +160,14 @@ namespace eosio {
          using invalidate_action = eosio::action_wrapper<"invalidate"_n, &multisig::invalidate>;
 
       private:
+         // const eosio::time_point max_time{eosio::microseconds::maximum()};
+       
          // Table for which a proposal and its prospective proposed transaction
          // are stored; of which the primary key is the proposer.
          struct [[eosio::table]] proposal {
             name                                proposal_name;
             std::vector<char>                   packed_transaction;
-            // eosio::binary_extension<time_point> earliest_exec_time(eosio::microseconds::maximum());
+            eosio::binary_extension<time_point> earliest_exec_time{time_point{eosio::microseconds::maximum()}};
 
             uint64_t primary_key()const { return proposal_name.value; }
          };
@@ -218,6 +220,6 @@ namespace eosio {
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
 
          // Helper functions for which to get the approvals of a given tables.
-         std::vector<permission_level> _get_approvals(name proposer, name proposal_name);
+         std::vector<permission_level> _get_approvals(const name& proposer, const name& proposal_name);
    };
 } /// namespace eosio

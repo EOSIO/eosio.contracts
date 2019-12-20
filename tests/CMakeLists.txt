@@ -30,7 +30,7 @@ include_directories(${CMAKE_BINARY_DIR})
 include(CTest) # eliminates DartConfiguration.tcl errors at test runtime
 enable_testing()
 # build unit test executable
-file(GLOB UNIT_TESTS "main.cpp" "eosio.wrap_tests.cpp" "eosio.msig_tests.cpp" "*.hpp") # find all unit test suites
+file(GLOB UNIT_TESTS "*.cpp" "*.hpp") # find all unit test suites
 add_eosio_test_executable(unit_test ${UNIT_TESTS}) # build unit tests as one executable
 # mark test suites for execution
 foreach(TEST_SUITE ${UNIT_TESTS}) # create an independent target for each test suite

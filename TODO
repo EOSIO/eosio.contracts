@@ -1,7 +1,36 @@
 Command for testing:
 ```
-rm -r *; cmake -DEOSIO_CDT_ROOT=/Users/john.debord/cdts/v1.7.0-rc1/build -DCMAKE_PREFIX_PATH=/Users/john.debord/cmake-script-tests/develop/build -DBUILD_TESTS=TRUE ..; make -j20; ./tests/unit_test --run_test=eosio_wrap_tests/wrap_exec_direct -l all -- --verbose
+rm -r *; cmake -DEOSIO_CDT_ROOT=/Users/john.debord/cdts/v1.7.0-rc1/build -DCMAKE_PREFIX_PATH=/Users/john.debord/cmake-script-tests/develop/build -DBUILD_TESTS=TRUE ..; make -j20; ./tests/unit_test --run_test=eosio_wrap_tests/wrap_exec_direct -l all -r detailed -- --verbose 
 ```
 
 Command for dependencies:
 /home/i/eosio/eosio.cdt/build/bin/eosio-cpp -c -I/home/i/eosio/eosio.contracts/contracts/eosio.bios/include -O3 -abigen -abigen_output=/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/eosio.bios.abi -contract eosio.bios -R/home/i/eosio/eosio.contracts/contracts/eosio.bios/ricardian -R/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/ricardian -M /home/i/eosio/eosio.contracts/contracts/eosio.bios/src/eosio.bios.cpp
+
+================================================================================
+
+* Make another field `delayed_sec_time` when extracting.
+
+`approve` (all of which after current logic)
+- If latest execution time is !equal to max
+  - Exit Early (don't fail)
+- Call helper to get the set of approvals
+- Then pack it
+- Call `check_transaction_authorization` to see if approvals succeed
+- If succeeds?
+  - Change earliest_exec_time to specified time
+  * specified_time == (delay_secs + current_time)
+- If no success
+  - Exit Early (don't fail)
+*** Write test case so that exec_time is set correctly ***
+
+`unapprove` (all of which after current logic)
+- If latest execution time is equal to max
+  - Exit Early (don't fail)
+- Call helper to get the set of approvals
+- Then pack it
+- Call `check_transaction_authorization` to see if approvals succeed
+- If succeeds?
+  - Exit Early (don't fail)
+- If no success
+  - Change earliest_exec_time to max
+*** Write test case so that exec_time is set correctly ***
