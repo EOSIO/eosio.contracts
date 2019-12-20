@@ -484,11 +484,15 @@ namespace eosiosystem {
                                                             //    utilization and instantaneous resource utilization to shrink
                                                             //    by 63%. Do not specify to preserve the existing setting or
                                                             //    use the default.
-      std::optional<asset>          target_price;           // Fee needed to rent the entire resource market weight. Do not
-                                                            //    specify to preserve the existing setting (no default exists).
+      std::optional<asset>          min_price;              // Fee needed to rent the entire resource market weight at the
+                                                            //    minimum price. Do not specify to preserve the existing
+                                                            //    setting or use the default.
+      std::optional<asset>          max_price;              // Fee needed to rent the entire resource market weight at the
+                                                            //    maximum price. Do not specify to preserve the existing
+                                                            //    setting (no default exists).
 
       EOSLIB_SERIALIZE( rentbw_config_resource, (current_weight_ratio)(target_weight_ratio)(assumed_stake_weight)
-                                                (target_timestamp)(exponent)(decay_secs)(target_price)            )
+                                                (target_timestamp)(exponent)(decay_secs)(min_price)(max_price)    )
    };
 
    struct rentbw_config {
@@ -528,7 +532,10 @@ namespace eosiosystem {
       double         exponent                = default_exponent;   // Exponent of resource price curve.
       uint32_t       decay_secs              = default_decay_secs; // Number of seconds for the gap between adjusted resource
                                                                    //    utilization and instantaneous utilization to shrink by 63%.
-      asset          target_price            = {};                 // Fee needed to rent the entire resource market weight.
+      asset          min_price               = {};                 // Fee needed to rent the entire resource market weight at
+                                                                   //    the minimum price (defaults to 0).
+      asset          max_price               = {};                 // Fee needed to rent the entire resource market weight at
+                                                                   //    the maximum price.
       int64_t        utilization             = 0;                  // Instantaneous resource utilization. This is the current
                                                                    //    amount sold. utilization <= weight.
       int64_t        adjusted_utilization    = 0;                  // Adjusted resource utilization. This is >= utilization and
