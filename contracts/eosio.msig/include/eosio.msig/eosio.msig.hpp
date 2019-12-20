@@ -8,13 +8,27 @@
 namespace eosio {
 
    /**
-    * The `eosio.msig` system contract allows for creation of proposed transactions which require authorization from a list of accounts, approval of the proposed transactions by those accounts required to approve it, and finally, it also allows the execution of the approved transactions on the blockchain.
+    * The `eosio.msig` system contract allows for creation of proposed
+    * transactions which require authorization from a list of accounts, approval
+    * of the proposed transactions by those accounts required to approve it, and
+    * finally, it also allows the execution of the approved transactions on the
+    * blockchain.
     *
-    * In short, the workflow to propose, review, approve and then executed a transaction it can be described by the following:
+    * In short, the workflow to propose, review, approve and then executed a
+    * transaction it can be described by the following:
     * - first you create a transaction json file,
-    * - then you submit this proposal to the `eosio.msig` contract, and you also insert the account permissions required to approve this proposal into the command that submits the proposal to the blockchain,
-    * - the proposal then gets stored on the blockchain by the `eosio.msig` contract, and is accessible for review and approval to those accounts required to approve it,
-    * - after each of the appointed accounts required to approve the proposed transactions reviews and approves it, you can execute the proposed transaction. The `eosio.msig` contract will execute it automatically, but not before validating that the transaction has not expired, it is not cancelled, and it has been signed by all the permissions in the initial proposal's required permission list.
+    * - then you submit this proposal to the `eosio.msig` contract, and you also
+    *   insert the account permissions required to approve this proposal into
+    *   the command that submits the proposal to the blockchain,
+    * - the proposal then gets stored on the blockchain by the `eosio.msig`
+    *   contract, and is accessible for review and approval to those accounts
+    *   required to approve it,
+    * - after each of the appointed accounts required to approve the proposed
+    *   transactions reviews and approves it, you can execute the proposed
+    *   transaction. The `eosio.msig` contract will execute it automatically,
+    *   but not before validating that the transaction has not expired, it is
+    *   not cancelled, and it has been signed by all the permissions in the
+    *   initial proposal's required permission list.
     */
    class [[eosio::contract("eosio.msig")]] multisig : public contract {
       public:
@@ -23,19 +37,24 @@ namespace eosio {
          /**
           * Create proposal
           *
-          * @details Creates a proposal containing one transaction.
-          * Allows an account `proposer` to make a proposal `proposal_name` which has `requested`
-          * permission levels expected to approve the proposal, and if approved by all expected
-          * permission levels then `trx` transaction can we executed by this proposal.
-          * The `proposer` account is authorized and the `trx` transaction is verified if it was
-          * authorized by the provided keys and permissions, and if the proposal name doesn’t
-          * already exist; if all validations pass the `proposal_name` and `trx` trasanction are
-          * saved in the proposals table and the `requested` permission levels to the
-          * approvals table (for the `proposer` context). Storage changes are billed to `proposer`.
+          * @details Creates a proposal containing one transaction.  Allows an
+          * account `proposer` to make a proposal `proposal_name` which has
+          * `requested` permission levels expected to approve the proposal, and
+          * if approved by all expected permission levels then `trx` transaction
+          * can we executed by this proposal.  The `proposer` account is
+          * authorized and the `trx` transaction is verified if it was
+          * authorized by the provided keys and permissions, and if the proposal
+          * name doesn’t already exist; if all validations pass the
+          * `proposal_name` and `trx` trasanction are saved in the proposals
+          * table and the `requested` permission levels to the approvals table
+          * (for the `proposer` context). Storage changes are billed to
+          * `proposer`.
           *
           * @param proposer - The account proposing a transaction
-          * @param proposal_name - The name of the proposal (should be unique for proposer)
-          * @param requested - Permission levels expected to approve the proposal
+          * @param proposal_name - The name of the proposal (should be unique
+          * for proposer)
+          * @param requested - Permission levels expected to approve the
+          * proposal
           * @param trx - Proposed transaction
           */
          [[eosio::action]]
@@ -44,15 +63,18 @@ namespace eosio {
          /**
           * Approve proposal
           *
-          * @details Approves an existing proposal
-          * Allows an account, the owner of `level` permission, to approve a proposal `proposal_name`
-          * proposed by `proposer`. If the proposal's requested approval list contains the `level`
-          * permission then the `level` permission is moved from internal `requested_approvals` list to
-          * internal `provided_approvals` list of the proposal, thus persisting the approval for
-          * the `proposal_name` proposal. Storage changes are billed to `proposer`.
+          * @details Approves an existing proposal Allows an account, the owner
+          * of `level` permission, to approve a proposal `proposal_name`
+          * proposed by `proposer`. If the proposal's requested approval list
+          * contains the `level` permission then the `level` permission is moved
+          * from internal `requested_approvals` list to internal
+          * `provided_approvals` list of the proposal, thus persisting the
+          * approval for the `proposal_name` proposal. Storage changes are
+          * billed to `proposer`.
           *
           * @param proposer - The account proposing a transaction
-          * @param proposal_name - The name of the proposal (should be unique for proposer)
+          * @param proposal_name - The name of the proposal (should be unique
+          * for proposer)
           * @param level - Permission level approving the transaction
           * @param proposal_hash - Transaction's checksum
           */
@@ -62,13 +84,15 @@ namespace eosio {
          /**
           * Revoke proposal
           *
-          * @details Revokes an existing proposal
-          * This action is the reverse of the `approve` action: if all validations pass
-          * the `level` permission is erased from internal `provided_approvals` and added to the internal
-          * `requested_approvals` list, and thus un-approve or revoke the proposal.
+          * @details Revokes an existing proposal This action is the reverse of
+          * the `approve` action: if all validations pass the `level` permission
+          * is erased from internal `provided_approvals` and added to the
+          * internal `requested_approvals` list, and thus un-approve or revoke
+          * the proposal.
           *
           * @param proposer - The account proposing a transaction
-          * @param proposal_name - The name of the proposal (should be an existing proposal)
+          * @param proposal_name - The name of the proposal (should be an
+          * existing proposal)
           * @param level - Permission level revoking approval for proposal
           */
          [[eosio::action]]
@@ -79,12 +103,17 @@ namespace eosio {
           * @details Cancels an existing proposal
           *
           * @param proposer - The account proposing a transaction
-          * @param proposal_name - The name of the proposal (should be an existing proposal)
-          * @param canceler - The account cancelling the proposal (only the proposer can cancel an unexpired transaction, and the canceler has to be different than the proposer)
+          * @param proposal_name - The name of the proposal (should be an
+          * existing proposal)
+          * @param canceler - The account cancelling the proposal (only the
+          * proposer can cancel an unexpired transaction, and the canceler has
+          * to be different than the proposer)
           *
-          * Allows the `canceler` account to cancel the `proposal_name` proposal, created by a `proposer`,
-          * only after time has expired on the proposed transaction. It removes corresponding entries from
-          * internal proptable and from approval (or old approvals) tables as well.
+          * Allows the `canceler` account to cancel the `proposal_name`
+          * proposal, created by a `proposer`, only after time has expired on
+          * the proposed transaction. It removes corresponding entries from
+          * internal proptable and from approval (or old approvals) tables as
+          * well.
           */
          [[eosio::action]]
          void cancel( name proposer, name proposal_name, name canceler );
@@ -100,11 +129,13 @@ namespace eosio {
           * - proposed transaction is not expired,
           * - and approval accounts are not found in invalidations table.
           *
-          * If all preconditions are met the transaction is executed as a deferred transaction,
-          * and the proposal is erased from the proposals table.
+          * If all preconditions are met the transaction is executed as a
+          * deferred transaction, and the proposal is erased from the proposals
+          * table.
           *
           * @param proposer - The account proposing a transaction
-          * @param proposal_name - The name of the proposal (should be an existing proposal)
+          * @param proposal_name - The name of the proposal (should be an
+          * existing proposal)
           * @param executer - The account executing the transaction
           */
          [[eosio::action]]
@@ -112,8 +143,9 @@ namespace eosio {
          /**
           * Invalidate proposal
           *
-          * @details Allows an `account` to invalidate itself, that is, its name is added to
-          * the invalidations table and this table will be cross referenced when exec is performed.
+          * @details Allows an `account` to invalidate itself, that is, its name
+          * is added to the invalidations table and this table will be cross
+          * referenced when exec is performed.
           *
           * @param account - The account invalidating the transaction
           */
@@ -128,15 +160,19 @@ namespace eosio {
          using invalidate_action = eosio::action_wrapper<"invalidate"_n, &multisig::invalidate>;
 
       private:
+         // Table for which a proposal and its prospective proposed transaction
+         // are stored; of which the primary key is the proposer.
          struct [[eosio::table]] proposal {
             name                            proposal_name;
             std::vector<char>               packed_transaction;
 
             uint64_t primary_key()const { return proposal_name.value; }
          };
-
          typedef eosio::multi_index< "proposal"_n, proposal > proposals;
-
+       
+         // Table for which a proposal, its requested authorizations, and its
+         // provided authorizations are stored; of which the primary key is the
+         // proposer.
          struct [[eosio::table]] old_approvals_info {
             name                            proposal_name;
             std::vector<permission_level>   requested_approvals;
@@ -146,17 +182,23 @@ namespace eosio {
          };
          typedef eosio::multi_index< "approvals"_n, old_approvals_info > old_approvals;
 
+         // Structure for which a permission level may be stored together with a
+         // time-point.
          struct approval {
             permission_level level;
             time_point       time;
          };
 
+         // Table for which a proposal, its requested authorizations, and its
+         // provided authorizations are stored; of which the primary key is the
+         // proposer.
          struct [[eosio::table]] approvals_info {
             uint8_t                 version = 1;
             name                    proposal_name;
-            //requested approval doesn't need to cointain time, but we want requested approval
-            //to be of exact the same size ad provided approval, in this case approve/unapprove
-            //doesn't change serialized data size. So, we use the same type.
+            // Requested approval doesn't need to contain time, but we want
+            // requested approval to be of exact the same size ad provided
+            // approval, in this case approve/unapprove doesn't change
+            // serialized data size. Therefore, we use the same type.
             std::vector<approval>   requested_approvals;
             std::vector<approval>   provided_approvals;
 
@@ -164,13 +206,17 @@ namespace eosio {
          };
          typedef eosio::multi_index< "approvals2"_n, approvals_info > approvals;
 
+         // Table for which the time oc the last invalidation is known; of which
+         // the primary key is the account.
          struct [[eosio::table]] invalidation {
             name         account;
             time_point   last_invalidation_time;
 
             uint64_t primary_key() const { return account.value; }
          };
-
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
+
+       // Helper functions for which 
+       std::vector<std::pair<>> _get_approvals();
    };
 } /// namespace eosio

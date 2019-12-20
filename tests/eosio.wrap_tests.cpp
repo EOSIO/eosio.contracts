@@ -165,7 +165,7 @@ BOOST_AUTO_TEST_SUITE(eosio_wrap_tests)
 BOOST_FIXTURE_TEST_CASE( wrap_exec_direct, eosio_wrap_tester ) try {
    transaction trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
    signed_transaction wrap_trx( wrap_exec( N(alice), trx ), {}, {} );
-   
+
    wrap_trx.sign( get_private_key( N(alice), "active" ), control->get_chain_id() );
    for( const auto& actor : {N(prod1), N(prod2), N(prod3), N(prod4)} ) {
       wrap_trx.sign( get_private_key( actor, "active" ), control->get_chain_id() );
@@ -208,9 +208,9 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
             { {N(alice), N(active)},
               {N(prod1), N(active)}, {N(prod2), N(active)}, {N(prod3), N(active)}, {N(prod4), N(active)}, {N(prod5), N(active)} },
             wrap_trx );
-   
+
    approve( N(carol), N(first), N(alice) ); // alice must approve since she is the executer of the wrap::exec action
-   
+
    // More than 2/3 of block producers approve
    approve( N(carol), N(first), N(prod1) );
    approve( N(carol), N(first), N(prod2) );
@@ -232,7 +232,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { deferred_trx_trace = t; }
    } );
-   
+
    produce_block();
    wdump((fc::json::to_pretty_string(trx_trace)));
    wdump((fc::json::to_pretty_string(deferred_trx_trace)));
@@ -370,7 +370,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig_producers_change, eosio_wrap_tester ) tr
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { deferred_trx_trace = t; }
    } );
-   
+
    produce_block();
    wdump((fc::json::to_pretty_string(trx_trace)));
    wdump((fc::json::to_pretty_string(deferred_trx_trace)));
