@@ -1,0 +1,7 @@
+Command for testing:
+```
+rm -r *; cmake -DEOSIO_CDT_ROOT=/Users/john.debord/cdts/v1.7.0-rc1/build -DCMAKE_PREFIX_PATH=/Users/john.debord/cmake-script-tests/develop/build -DBUILD_TESTS=TRUE ..; make -j20; ./tests/unit_test --run_test=eosio_wrap_tests/wrap_exec_direct -l all -- --verbose
+```
+
+Command for dependencies:
+/home/i/eosio/eosio.cdt/build/bin/eosio-cpp -c -I/home/i/eosio/eosio.contracts/contracts/eosio.bios/include -O3 -abigen -abigen_output=/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/eosio.bios.abi -contract eosio.bios -R/home/i/eosio/eosio.contracts/contracts/eosio.bios/ricardian -R/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/ricardian -M /home/i/eosio/eosio.contracts/contracts/eosio.bios/src/eosio.bios.cpp
