@@ -4,8 +4,8 @@ CDT_DIR=/usr/local/eosio.cdt/eosio.cdt
 CDT_SRC_DIR=/root/eosio.cdt
 CONTRACTS_SRC_DIR=/root/eosio-contracts
 
-mkdir -p docs/_standardese_generated
-pushd docs/_standardese_generated
+mkdir -p docs/standardese_generated
+pushd docs/standardese_generated
 pwd
 
 pushd $CONTRACTS_SRC_DIR/contracts/eosio.system/include 
@@ -21,7 +21,6 @@ standardese \
     --input.blacklist_file fpconv.h \
     --input.blacklist_file fpconv.license \
     --input.blacklist_file powers.h \
-    --input.blacklist_ext . \
     --input.blacklist_ext .md \
     --input.blacklist_ext .txt \
     --input.blacklist_ext .png \
@@ -43,4 +42,3 @@ standardese \
     ../../contracts/
     
 popd
-

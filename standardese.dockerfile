@@ -65,10 +65,10 @@ run cp -a tool/standardese /usr/local/bin
 workdir /root
 run mkdir -p /root/eosio-contracts/src
 copy docs /root/eosio-contracts/docs
-copy generate-doc /root/eosio-contracts
+copy standardese /root/eosio-contracts
 copy contracts /root/eosio-contracts/contracts
 workdir /root/eosio-contracts
-run bash generate-doc
+run bash standardese
 
-# result is in /root/eosio-contracts/docs/_standardese_generated
-run ls -al /root/eosio-contracts/docs/_standardese_generated
+# result is in /root/eosio-contracts/docs/standardese_generated
+run ls -al /root/eosio-contracts/docs/standardese_generated
