@@ -35,10 +35,12 @@ standardese \
     -I $CDT_DIR/include/libcxx/ \
     -I $CDT_SRC_DIR/libraries/eosiolib/contracts \
     -I $CONTRACTS_SRC_DIR/contracts/eosio.bios/include \
-    -I $CONTRACTS_SRC_DIR/contracts/eosio.msig/include \
-    -I $CONTRACTS_SRC_DIR/contracts/eosio.system/include \
-    -I $CONTRACTS_SRC_DIR/contracts/eosio.token/include \
     -I $CONTRACTS_SRC_DIR/contracts/eosio.wrap/include \
-    ../../contracts/
-    
+    -I $CONTRACTS_SRC_DIR/contracts/eosio.msig/include \
+    -I $CONTRACTS_SRC_DIR/contracts/eosio.token/include \
+    ../../contracts/eosio.bios \
+    ../../contracts/eosio.wrap \
+    ../../contracts/eosio.msig \
+    ../../contracts/eosio.token
+
 popd
