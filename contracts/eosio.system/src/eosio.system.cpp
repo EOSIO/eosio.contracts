@@ -67,16 +67,14 @@ namespace eosiosystem {
    void system_contract::setram( uint64_t max_ram_size ) {
       require_auth( get_self() );
 
-      check( _gstate.max_ram_size < max_ram_size, "ram may only be increased" ); /// decreasing ram might result market maker issues
+      check( _gstate.max_ram_size < max_ram_size, "ram may only be increased" ); // decreasing ram might result market maker issues
       check( max_ram_size < 1024ll*1024*1024*1024*1024, "ram size is unrealistic" );
       check( max_ram_size > _gstate.total_ram_bytes_reserved, "attempt to set max below reserved" );
 
       auto delta = int64_t(max_ram_size) - int64_t(_gstate.max_ram_size);
       auto itr = _rammarket.find(ramcore_symbol.raw());
 
-      /**
-       *  Increase the amount of ram for sale based upon the change in max ram size.
-       */
+      // Increase the amount of ram for sale based upon the change in max ram size.
       _rammarket.modify( itr, same_payer, [&]( auto& m ) {
          m.base.balance.amount += delta;
       });
@@ -93,9 +91,7 @@ namespace eosiosystem {
       auto new_ram = (cbt.slot - _gstate2.last_ram_increase.slot)*_gstate2.new_ram_per_block;
       _gstate.max_ram_size += new_ram;
 
-      /**
-       *  Increase the amount of ram for sale based upon the change in max ram size.
-       */
+      // Increase the amount of ram for sale based upon the change in max ram size.
       _rammarket.modify( itr, same_payer, [&]( auto& m ) {
          m.base.balance.amount += new_ram;
       });
@@ -310,15 +306,11 @@ namespace eosiosystem {
       _global4.set( _gstate4, get_self() );
    }
 
-   /**
-    *  Called after a new account is created. This code enforces resource-limits rules
-    *  for new accounts as well as new account naming conventions.
-    *
-    *  Account names containing '.' symbols must have a suffix equal to the name of the creator.
-    *  This allows users who buy a premium name (shorter than 12 characters with no dots) to be the only ones
-    *  who can create accounts with the creator's name as a suffix.
-    *
-    */
+   // Called after a new account is created. This code enforces resource-limits rules
+   // for new accounts as well as new account naming conventions.
+   // Account names containing '.' symbols must have a suffix equal to the name of the creator.
+   // This allows users who buy a premium name (shorter than 12 characters with no dots) to be the only ones
+   // who can create accounts with the creator's name as a suffix.
    void native::newaccount( const name&       creator,
                             const name&       newact,
                             ignore<authority> owner,
@@ -397,4 +389,4 @@ namespace eosiosystem {
       open_act.send( rex_account, core, get_self() );
    }
 
-} /// eosio.system
+} // eosio.system

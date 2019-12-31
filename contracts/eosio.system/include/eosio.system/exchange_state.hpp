@@ -45,4 +45,4 @@ namespace eosiosystem {
    };
 
    typedef eosio::multi_index< "rammarket"_n, exchange_state > rammarket;
-} /// namespace eosiosystem
+} // namespace eosiosystem

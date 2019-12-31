@@ -21,18 +21,16 @@ namespace eosiosystem {
       // is eventually completely removed, at which point this line can be removed.
       _gstate2.last_block_num = timestamp;
 
-      /** until activation, no new rewards are paid */
+      // until activation, no new rewards are paid
       if( _gstate.thresh_activated_stake_time == time_point() )
          return;
 
-      if( _gstate.last_pervote_bucket_fill == time_point() )  /// start the presses
+      if( _gstate.last_pervote_bucket_fill == time_point() )  // start the presses
          _gstate.last_pervote_bucket_fill = current_time_point();
 
 
-      /**
-       * At startup the initial producer may not be one that is registered / elected
-       * and therefore there may be no producer object for them.
-       */
+      // At startup the initial producer may not be one that is registered / elected and 
+      // therefore there may be no producer object for them.
       auto prod = _producers.find( producer.value );
       if ( prod != _producers.end() ) {
          _gstate.total_unpaid_blocks++;
@@ -41,7 +39,7 @@ namespace eosiosystem {
          });
       }
 
-      /// only update block producers once every minute, block_timestamp is in half seconds
+      // only update block producers once every minute, block_timestamp is in half seconds
       if( timestamp.slot - _gstate.last_producer_schedule_update.slot > 120 ) {
          update_elected_producers( timestamp );
 
@@ -118,8 +116,8 @@ namespace eosiosystem {
 
       auto prod2 = _producers2.find( owner.value );
 
-      /// New metric to be used in pervote pay calculation. Instead of vote weight ratio, we combine vote weight and
-      /// time duration the vote weight has been held into one metric.
+      // New metric to be used in pervote pay calculation. Instead of vote weight ratio, we combine vote weight and
+      // time duration the vote weight has been held into one metric.
       const auto last_claim_plus_3days = prod.last_claim_time + microseconds(3 * useconds_per_day);
 
       bool crossed_threshold       = (last_claim_plus_3days <= ct);
@@ -188,4 +186,4 @@ namespace eosiosystem {
       }
    }
 
-} //namespace eosiosystem
+} // namespace eosiosystem

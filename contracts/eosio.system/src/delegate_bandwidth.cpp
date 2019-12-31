@@ -22,9 +22,8 @@ namespace eosiosystem {
    using eosio::time_point_sec;
    using eosio::token;
 
-   /**
-    *  This action will buy an exact amount of ram and bill the payer the current market price.
-    */
+
+   // This action will buy an exact amount of ram and bill the payer the current market price.
    void system_contract::buyrambytes( const name& payer, const name& receiver, uint32_t bytes ) {
       auto itr = _rammarket.find(ramcore_symbol.raw());
       const int64_t ram_reserve   = itr->base.balance.amount;
@@ -35,14 +34,12 @@ namespace eosiosystem {
    }
 
 
-   /**
-    *  When buying ram the payer irreversiblly transfers quant to system contract and only
-    *  the receiver may reclaim the tokens via the sellram action. The receiver pays for the
-    *  storage of all database records associated with this action.
-    *
-    *  RAM is a scarce resource whose supply is defined by global properties max_ram_size. RAM is
-    *  priced using the bancor algorithm such that price-per-byte with a constant reserve ratio of 100:1.
-    */
+
+   // When buying ram the payer irreversiblly transfers quant to system contract and only
+   // the receiver may reclaim the tokens via the sellram action. The receiver pays for the
+   // storage of all database records associated with this action.
+   // RAM is a scarce resource whose supply is defined by global properties max_ram_size. RAM is
+   // priced using the bancor algorithm such that price-per-byte with a constant reserve ratio of 100:1.
    void system_contract::buyram( const name& payer, const name& receiver, const asset& quant )
    {
       require_auth( payer );
@@ -52,7 +49,7 @@ namespace eosiosystem {
       check( quant.amount > 0, "must purchase a positive amount" );
 
       auto fee = quant;
-      fee.amount = ( fee.amount + 199 ) / 200; /// .5% fee (round up)
+      fee.amount = ( fee.amount + 199 ) / 200; // .5% fee (round up)
       // fee.amount cannot be 0 since that is only possible if quant.amount is 0 which is not allowed by the assert above.
       // If quant.amount == 1, then fee.amount == 1,
       // otherwise if quant.amount > 1, then 0 < fee.amount < quant.amount.
@@ -105,12 +102,10 @@ namespace eosiosystem {
       }
    }
 
-  /**
-    *  The system contract now buys and sells RAM allocations at prevailing market prices.
-    *  This may result in traders buying RAM today in anticipation of potential shortages
-    *  tomorrow. Overall this will result in the market balancing the supply and demand
-    *  for RAM over time.
-    */
+   // The system contract now buys and sells RAM allocations at prevailing market prices.
+   // This may result in traders buying RAM today in anticipation of potential shortages
+   // tomorrow. Overall this will result in the market balancing the supply and demand
+   // for RAM over time.
    void system_contract::sellram( const name& account, int64_t bytes ) {
       require_auth( account );
       update_ram_supply();
@@ -125,7 +120,7 @@ namespace eosiosystem {
       asset tokens_out;
       auto itr = _rammarket.find(ramcore_symbol.raw());
       _rammarket.modify( itr, same_payer, [&]( auto& es ) {
-         /// the cast to int64_t of bytes is safe because we certify bytes is <= quota which is limited by prior purchases
+         // the cast to int64_t of bytes is safe because we certify bytes is <= quota which is limited by prior purchases
          tokens_out = es.direct_convert( asset(bytes, ram_symbol), core_symbol());
       });
 
@@ -134,7 +129,7 @@ namespace eosiosystem {
       _gstate.total_ram_bytes_reserved -= static_cast<decltype(_gstate.total_ram_bytes_reserved)>(bytes); // bytes > 0 is asserted above
       _gstate.total_ram_stake          -= tokens_out.amount;
 
-      //// this shouldn't happen, but just in case it does we should prevent it
+      // this shouldn't happen, but just in case it does we should prevent it
       check( _gstate.total_ram_stake >= 0, "error, attempt to unstake more tokens than previously staked" );
 
       userres.modify( res_itr, account, [&]( auto& res ) {
@@ -152,7 +147,7 @@ namespace eosiosystem {
          token::transfer_action transfer_act{ token_account, { {ram_account, active_permission}, {account, active_permission} } };
          transfer_act.send( ram_account, account, asset(tokens_out), "sell ram" );
       }
-      auto fee = ( tokens_out.amount + 199 ) / 200; /// .5% fee (round up)
+      auto fee = ( tokens_out.amount + 199 ) / 200; // .5% fee (round up)
       // since tokens_out.amount was asserted to be at least 2 earlier, fee.amount < tokens_out.amount
       if ( fee > 0 ) {
          token::transfer_action transfer_act{ token_account, { {account, active_permission} } };
@@ -162,7 +157,7 @@ namespace eosiosystem {
    }
 
    void validate_b1_vesting( int64_t stake ) {
-      const int64_t base_time = 1527811200; /// 2018-06-01
+      const int64_t base_time = 1527811200; // 2018-06-01
       const int64_t max_claimable = 100'000'000'0000ll;
       const int64_t claimable = int64_t(max_claimable * double(current_time_point().sec_since_epoch() - base_time) / (10*seconds_per_year) );
 
@@ -321,7 +316,7 @@ namespace eosiosystem {
                });
                need_deferred_trx = true;
             } // else stake increase requested with no existing row in refunds_tbl -> nothing to do with refunds_tbl
-         } /// end if is_delegating_to_self || is_undelegating
+         } // end if is_delegating_to_self || is_undelegating
 
          if ( need_deferred_trx ) {
             eosio::transaction out;
@@ -413,4 +408,4 @@ namespace eosiosystem {
    }
 
 
-} //namespace eosiosystem
+} // namespace eosiosystem

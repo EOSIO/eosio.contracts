@@ -38,9 +38,11 @@ standardese \
     -I $CONTRACTS_SRC_DIR/contracts/eosio.wrap/include \
     -I $CONTRACTS_SRC_DIR/contracts/eosio.msig/include \
     -I $CONTRACTS_SRC_DIR/contracts/eosio.token/include \
+    -I $CONTRACTS_SRC_DIR/contracts/eosio.system/include \
     ../../contracts/eosio.bios \
     ../../contracts/eosio.wrap \
     ../../contracts/eosio.msig \
-    ../../contracts/eosio.token
+    ../../contracts/eosio.token \
+    ../../contracts/eosio.system
 
 popd
