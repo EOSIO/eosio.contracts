@@ -1,6 +1,6 @@
 # eosio.contracts
 
-## Version : 1.8.3
+## Version : 1.9.0
 
 The design of the EOSIO blockchain calls for a number of smart contracts that are run at a privileged permission level in order to support functions such as block producer registration and voting, token staking for CPU and network bandwidth, RAM purchasing, multi-sig, etc.  These smart contracts are referred to as the bios, system, msig, wrap (formerly known as sudo) and token contracts.
 
@@ -15,8 +15,8 @@ The following unprivileged contract(s) are also part of the system.
    * [eosio.token](./contracts/eosio.token)
 
 Dependencies:
-* [eosio.cdt v1.6.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.6.3)
-* [eosio v1.8.x](https://github.com/EOSIO/eos/releases/tag/v1.8.6) (optional dependency only needed to build unit tests)
+* [eosio.cdt v1.7.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.7.0-rc1)
+* [eosio v2.0.x](https://github.com/EOSIO/eos/releases/tag/v2.0.0-rc2) (optional dependency only needed to build unit tests)
 
 To build the contracts follow the instructions in [`Build and deploy` section](./docs/02_build-and-deploy.md).
 
