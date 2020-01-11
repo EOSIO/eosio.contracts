@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/latest/index</loc>
+    <loc>https://eosio.github.io//eosio.contracts/latest/build-and-deploy</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/latest/build-and-deploy</loc>
+    <loc>https://eosio.github.io//eosio.contracts/latest</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://eosio.github.io//eosio.contracts/latest/guides/how-to-buy-ram</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
@@ -21,22 +26,12 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/latest/guides/index</loc>
+    <loc>https://eosio.github.io//eosio.contracts/latest/guides</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/latest/guides/how-to-create-issue-and-transfer-a-token</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://eosio.github.io//eosio.contracts/latest/guides/upgrading-the-eosio.system-contract</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://eosio.github.io//eosio.contracts/latest/action-reference/eosio.bios</loc>
+    <loc>https://eosio.github.io//eosio.contracts/latest/action-reference/eosio.bios/index</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
@@ -46,17 +41,22 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/latest/action-reference/eosio.system/index</loc>
+    <loc>https://eosio.github.io//eosio.contracts/latest/action-reference/eosio.system/exchange_state</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/latest/action-reference/eosio.system/rex.results</loc>
+    <loc>https://eosio.github.io//eosio.contracts/latest/action-reference/eosio.system</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://eosio.github.io//eosio.contracts/latest/action-reference/eosio.wrap/index</loc>
+    <loc>https://eosio.github.io//eosio.contracts/latest/action-reference/eosio.system/native</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://eosio.github.io//eosio.contracts/latest/action-reference/eosio.wrap</loc>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
