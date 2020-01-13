@@ -47,10 +47,10 @@ void multisig::propose( ignore<name> proposer,
    pkd_trans.resize(size);
    memcpy((char*)pkd_trans.data(), trx_pos, size);
    proptable.emplace( _proposer, [&]( auto& prop ) {
-      prop.proposal_name                 = _proposal_name;
-      prop.packed_transaction            = pkd_trans;
-      prop.earliest_exec_time.value_or() = time_point{eosio::microseconds::maximum()};
-      prop.delay_seconds.value_or()      = _delay_seconds;
+      prop.proposal_name      = _proposal_name;
+      prop.packed_transaction = pkd_trans;
+      prop.earliest_exec_time = time_point{eosio::microseconds::maximum()};
+      prop.delay_seconds      = _delay_seconds;
       // prop.earliest_exec_time = (exec_time != eosio::microseconds::maximum()) ? exec_time : eosio::microseconds::maximum();
    });
 
@@ -118,10 +118,10 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
                      (const char*)0, 0,
                      packed_provided_approvals.data(), packed_provided_approvals.size()
                   );
-      if (res == 0) {
+      if (res > 0) {
          auto prop_it = proptable.find( proposal_name.value );
          proptable.modify( prop_it, proposer, [&]( auto& p ) {
-            p.earliest_exec_time.value_or() = time_point{prop.delay_seconds.value_or() + current_time_point()};
+            p.earliest_exec_time = time_point{prop.delay_seconds.value_or() + current_time_point()};
          });
       } else {
          return;
@@ -162,27 +162,27 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
    //   - `return`.
    // - If does not succeed.
    //   - Change `earliest_exec_time` to `eosio::microseconds::maximum()`.
-   proposals proptable( get_self(), proposer.value );
-   auto& prop = proptable.get( proposal_name.value, "proposal not found" );
+   // proposals proptable( get_self(), proposer.value );
+   // auto& prop = proptable.get( proposal_name.value, "proposal not found" );
    
-   if (prop.earliest_exec_time.value_or() == time_point{eosio::microseconds::maximum()}) {
-      return; 
-   } else {
-      auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name));
-      auto res =  check_transaction_authorization(
-                     prop.packed_transaction.data(), prop.packed_transaction.size(),
-                     (const char*)0, 0,
-                     packed_provided_approvals.data(), packed_provided_approvals.size()
-                  );
-      if (res == 0) {
-         return;
-      } else {
-         auto prop_it = proptable.find( proposal_name.value );
-         proptable.modify( prop_it, proposer, [&]( auto& p ) {
-            p.earliest_exec_time.value_or() = time_point{eosio::microseconds::maximum()};
-         });
-      }
-   }
+   // if (prop.earliest_exec_time.value_or() == time_point{eosio::microseconds::maximum()}) {
+   //    return; 
+   // } else {
+   //    auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name));
+   //    auto res =  check_transaction_authorization(
+   //                   prop.packed_transaction.data(), prop.packed_transaction.size(),
+   //                   (const char*)0, 0,
+   //                   packed_provided_approvals.data(), packed_provided_approvals.size()
+   //                );
+   //    if (res > 0) {
+   //       return;
+   //    } else {
+   //       auto prop_it = proptable.find( proposal_name.value );
+   //       proptable.modify( prop_it, proposer, [&]( auto& p ) {
+   //          p.earliest_exec_time = time_point{eosio::microseconds::maximum()};
+   //       });
+   //    }
+   // }
 }
 
 void multisig::cancel( name proposer, name proposal_name, name canceler ) {
