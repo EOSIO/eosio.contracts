@@ -1,30 +1,38 @@
-Command for testing:
+Command For Testing:
+====================
 ```
-rm -r *; cmake -DEOSIO_CDT_ROOT=/Users/john.debord/cdts/v1.7.0-rc1/build -DCMAKE_PREFIX_PATH=/Users/john.debord/cmake-script-tests/develop/build -DBUILD_TESTS=TRUE ..; make -j20; ./tests/unit_test --run_test=eosio_wrap_tests/wrap_exec_direct -l all -r detailed -- --verbose 
+make -j20; ./tests/unit_test --run_test=eosio_msig_tests/check_earliest_exec_time_for_approve_and_unapprove -l all -r detailed -- --verbose
 ```
 
-Command for dependencies:
-/home/i/eosio/eosio.cdt/build/bin/eosio-cpp -c -I/home/i/eosio/eosio.contracts/contracts/eosio.bios/include -O3 -abigen -abigen_output=/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/eosio.bios.abi -contract eosio.bios -R/home/i/eosio/eosio.contracts/contracts/eosio.bios/ricardian -R/home/i/eosio/eosio.contracts/build0/contracts/eosio.bios/ricardian -M /home/i/eosio/eosio.contracts/contracts/eosio.bios/src/eosio.bios.cpp
+```
+rm -r *; cmake -DEOSIO_CDT_ROOT=/Users/john.debord/2cdts/develop/build -DCMAKE_PREFIX_PATH=/Users/john.debord/2eoss/develop/build -DBUILD_TESTS=TRUE ..; make -j20; ./tests/unit_test --run_test=eosio_wrap_tests/wrap_exec_direct -l all -r detailed -- --verbose 
+```
 
-================================================================================
+Command For Dependencies:
+=========================
+```
+/Users/john.debord/2cdts/add-m-flag/build/bin/eosio-cpp -c -I/Users/john.debord/eosio.contracts/contracts/eosio.bios/include -O3 -abigen -abigen_output=/Users/john.debord/eosio.contracts/build/contracts/eosio.bios/eosio.bios.abi -contract eosio.bios -R/Users/john.debord/eosio.contracts/contracts/eosio.bios/ricardian -R/Users/john.debord/eosio.contracts/build/contracts/eosio.bios/ricardian -M /Users/john.debord/eosio.contracts/contracts/eosio.bios/src/eosio.bios.cpp
+```
 
-* Make another field `delayed_sec_time` when extracting.
-
+New `approve` Logic:
+====================
 `approve` (all of which after current logic)
-- If latest execution time is !equal to max
+- If `earliest_exec_time` is !equal to max
   - Exit Early (don't fail)
 - Call helper to get the set of approvals
 - Then pack it
 - Call `check_transaction_authorization` to see if approvals succeed
 - If succeeds?
-  - Change earliest_exec_time to specified time
-  * specified_time == (delay_secs + current_time)
+  - Change `earliest_exec_time` to specified time
+    "specified time" == (delay_secs + current_time)
 - If no success
-  - Exit Early (don't fail)
+  - Exit early (don't fail)
 *** Write test case so that exec_time is set correctly ***
 
+New `unapprove` Logic:
+======================
 `unapprove` (all of which after current logic)
-- If latest execution time is equal to max
+- If `earliest_exec_time` is equal to max
   - Exit Early (don't fail)
 - Call helper to get the set of approvals
 - Then pack it
@@ -32,165 +40,33 @@ Command for dependencies:
 - If succeeds?
   - Exit Early (don't fail)
 - If no success
-  - Change earliest_exec_time to max
+  - Change `earliest_exec_time` to max
 *** Write test case so that exec_time is set correctly ***
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 To Think About:
 ===============
 How to divide computation among transactions while still preserving the atomicity of the transaction
 Think of some means of aborting it as well
 Think of some means of not committing results if the whole series of computatins wasn't atomic
+- `wait_weight`
+     wait   = time_point
+     weight = the magic accumulative authorization number
 
 Purpose of Deferred Transaction:
 ================================
 Just to automate transactions that a server could do for yourself
 
-wait_weight
-===========
-wait   = time_point
-weight = the magic accumulative authorization number
+Notes:
+======
+`check_transaction_authorization` (`eosio.msig.cpp`) will have to be reworked?
 
-TODO:
-=====
-- check out the multi-sig contract
-- study check_transaction_authorization function
-- ask Luis for the docs
-- think use-case three endgame.
-- how do we handle legacy perwmission wait-weights
-
-Game Plan
-=========
-Might just have to start in file: https://github.com/EOSIO/eos/blob/master/libraries/chain/wasm_interface.cpp.
-Then find where deferred transactions are defined.
-Then deprecate 'em.
-Then implement a new strategy for emulating them.
-
-Check the authority check.
-
-TODO
-====
-- Haircut
-- Car Maintainance
-- Car Detailing
-- Christmas Gifts
-- Clothes
-
-MORE TODO:
-==========
-Update to not using the N macro in the tests.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-TODO THIS WEEK
-==============
-[ ] Review This Link: https://github.com/EOSIO/spec-repo/blob/master/esr_deprecate_deferred.md.
-[ ] Detail car.
-[ ] Car tune-up/brakes/oil/the works.
-[ ] Gifts for family.
-[ ] Finish all wrap tests.
-[ ] Meeting with Areg on Wednesday.
-[ ] Meeting with Areg on Wednesday.
-
-[ ] Submit eosio.cdt PR (new flag).
-[ ] Submit eos PR (_n operator).
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Build off of develop from now on.
-Line 177 check_transaction_authorization `eosio.msig.cpp`
-
-.. Instead of:
+In `eosio.msig.cpp` `send_deferred` will have to be replaced:
 .. ```
 .. send_deferred( (uint128_t(proposer.value) << 64) | proposal_name.value, executer,
 ..                   prop.packed_transaction.data(), prop.packed_transaction.size() );
 .. ```
 
-
-Forget first three ignores.
+Forget first three ignores in `propose`:
 ```
 void multisig::propose( ignore<name> proposer,
                         ignore<name> proposal_name,
@@ -198,232 +74,30 @@ void multisig::propose( ignore<name> proposer,
                         ignore<transaction> trx ) // Deserialize `trx` at the beginning (check for ctx free trx)
 ```
 
-
-Determine the earliest time at which you can execute a trx.
+Determine the earliest time at which you can execute a trx:
 ```
 fc::unsigned_int       delay_sec           = 0UL; /// number of seconds to delay this transaction for during which it may be canceled.
 ```
 
-
-```
-struct [[eosio::table]] proposal {
-    name                            proposal_name;
-    std::vector<char>               packed_transaction;
-
-    uint64_t primary_key()const { return proposal_name.value; }
-    // ADD BIN EXT (default to the max val of time).
-};
-```
 - Anytime approve or unnapprove are called:
-
-
-Give me current set of approvals (refacter that from exec)
+  Give me current set of approvals (refacter that from exec)?
 
 FIRST STEP:
-===========
+-----------
 - Given this proposal
   - Give me the proposers that haven't been invalidated
 
 SECOND STEP:
-============
+-----------
 - Introduce the `earliest_exec_time` to the `proposal` struct
-- Add the logic to approve and unapprove that will set and reset effectively based on checking the current set of authorizations
+- Add the logic to `approve` and `unapprove` that will set and reset effectively based on checking the current set of authorizations
 
 THIRD STEP:
-===========
+-----------
 - Add test that does a propose transaction and checks the time (max). Then does
-  approval once (sees time hasn't changed), then does one approval (sees the
+  an approval once (sees time hasn't changed), then does one approval (sees the
   `exec_time` changes)
-
-[ ] Start the process of refactoring out getting the approvals out into a seperate function (verify test integrity).
-[ ] Adding the bin ext. field (start test that was said in THIRD STEP).
 
 *unpack trx using fc::variant (ask around).
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-releasse/1.8.x-rel
-releasse/2.0.x-rel
-develop
-
-================================================================================
-
-Make sure that I'm able to:
-1) Build the contracts:
-   nodeos v1.8                 => contracts v1.8.3                => 1.6 cdt
-     rm -r *; cmake -DEOSIO_CDT_ROOT=/Users/john.debord/cdts/v1.6.3/build/ -DCMAKE_PREFIX_PATH=/Users/john.debord/cmake-script-tests/1.8/build -DBUILD_TESTS=TRUE ..; make -j20
-   nodeos v2.0                 => contracts v1.9.0-rc4            => 1.7 cdt
-     rm -r *; cmake -DEOSIO_CDT_ROOT=/Users/john.debord/cdts/v1.7.0-rc1/build -DCMAKE_PREFIX_PATH=/Users/john.debord/cmake-script-tests/2.0/build -DBUILD_TESTS=TRUE ..; make -j20
-   nodeos vdevelop             => contracts vdevelop              => 1.7 cdt
-     rm -r *; cmake -DEOSIO_CDT_ROOT=/Users/john.debord/cdts/v1.7.0-rc1/build -DCMAKE_PREFIX_PATH=/Users/john.debord/cmake-script-tests/develop/build -DBUILD_TESTS=TRUE ..; make -j20
-2) Build the contracts:
-   nodeos v1.8     => contracts v
-   nodeos v2.0     => contracts v
-   nodeos vdevelop => contracts v
-   with eosio installed:
-   rm -r *; cmake -DBUILD_TESTS=TRUE ..; make -j20
-
-Method:
-- Make all changes
-- Build the specific branch
-
-- Build the contracts (branch develop) with:
-  rm -r *; cmake -DBUILD_TESTS=TRUE -DCMAKE_PREFIX_PATH=/home/i/eos/build/ ..; make -j20
-  
-- Install eos; (make sure the file was touched); /usr/local/lib/cmake/eosio/EosioTester.cmake
-- Build the contracts (branch develop) with:
-  rm -r *; cmake -DBUILD_TESTS=TRUE ..; make -j20
-
-================================================================================
-
 Review This Link: https://github.com/EOSIO/spec-repo/blob/master/esr_deprecate_deferred.md
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-NOTES FOR THE MEETINGS:
-=======================
-Switched my work to get based off of develop.
-Took me a while yesterday to get it all up and running for a multitude of different branches of eos, eosio.cdt, and eosio.contracts.
-
-Right away, with no changes to `eosio.msig`, these tests fail in `eosio.msig`:
-  fatal error: in "eosio_msig_tests/update_system_contract_all_approve": Caught Unexpected Exception
-    - Narrowed down to line 425: `set_code( N(eosio.token), contracts::token_wasm() );`
-  fatal error: in "eosio_msig_tests/update_system_contract_major_approve": Caught Unexpected Exception
-    - Narrowed down to line 551: `set_code( N(eosio.token), contracts::token_wasm() );`
-Tested on branch `develop`; said tests work.
-Tested on my branch; said tests don't work.
-
-Adding the bin ext field to the struct `proposal`.
-Questions:
-How do I initialize the bin ext type like so inside of the struct?
-
-Refactoring out getting the approvals in `exec` into its own function, `_get_approvals`.
-Questions:

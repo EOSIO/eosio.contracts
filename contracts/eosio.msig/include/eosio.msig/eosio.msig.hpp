@@ -58,7 +58,7 @@ namespace eosio {
           * @param trx - Proposed transaction
           */
          [[eosio::action]]
-         void propose(ignore<name> proposer, ignore<name> proposal_name,
+         void propose(ignore<name> proposer, ignore<name> proposal_name, ignore<time_point> delay_seconds,
                ignore<std::vector<permission_level>> requested, ignore<transaction> trx);
          /**
           * Approve proposal
@@ -160,22 +160,21 @@ namespace eosio {
          using invalidate_action = eosio::action_wrapper<"invalidate"_n, &multisig::invalidate>;
 
       private:
-         // const eosio::time_point max_time{eosio::microseconds::maximum()};
-       
          // Table for which a proposal and its prospective proposed transaction
-         // are stored; of which the primary key is the proposer.
+         // is stored; the primary key is the proposer.
          struct [[eosio::table]] proposal {
             name                                proposal_name;
             std::vector<char>                   packed_transaction;
-            eosio::binary_extension<time_point> earliest_exec_time{time_point{eosio::microseconds::maximum()}};
+            eosio::binary_extension<time_point> earliest_exec_time;
+            eosio::binary_extension<time_point> delay_seconds;
+            // eosio::binary_extension<time_point> earliest_exec_time{time_point{eosio::microseconds::maximum()}};
 
             uint64_t primary_key()const { return proposal_name.value; }
          };
          typedef eosio::multi_index< "proposal"_n, proposal > proposals;
        
          // Table for which a proposal, its requested authorizations, and its
-         // provided authorizations are stored; of which the primary key is the
-         // proposer.
+         // provided authorizations are stored; the primary key is the proposer.
          struct [[eosio::table]] old_approvals_info {
             name                            proposal_name;
             std::vector<permission_level>   requested_approvals;
@@ -193,13 +192,12 @@ namespace eosio {
          };
 
          // Table for which a proposal, its requested authorizations, and its
-         // provided authorizations are stored; of which the primary key is the
-         // proposer.
+         // provided authorizations are stored; the primary key is the proposer.
          struct [[eosio::table]] approvals_info {
             uint8_t                 version = 1;
             name                    proposal_name;
             // Requested approval doesn't need to contain time, but we want
-            // requested approval to be of exact the same size ad provided
+            // requested approval to be of exact the same size as provided
             // approval, in this case approve/unapprove doesn't change
             // serialized data size. Therefore, we use the same type.
             std::vector<approval>   requested_approvals;
@@ -209,8 +207,8 @@ namespace eosio {
          };
          typedef eosio::multi_index< "approvals2"_n, approvals_info > approvals;
 
-         // Table for which the time oc the last invalidation is known; of which
-         // the primary key is the account.
+         // Table for which the time of the last invalidation is known; the
+         // primary key is the account.
          struct [[eosio::table]] invalidation {
             name         account;
             time_point   last_invalidation_time;
@@ -219,7 +217,8 @@ namespace eosio {
          };
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
 
-         // Helper functions for which to get the approvals of a given tables.
+      private:
+         // Helper functions for which to get the approvals of a given table.
          std::vector<permission_level> _get_approvals(const name& proposer, const name& proposal_name);
    };
 } /// namespace eosio
