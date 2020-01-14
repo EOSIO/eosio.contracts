@@ -43,21 +43,8 @@ public:
       name              proposal_name;
       std::vector<char> packed_transaction;
       time_point        earliest_exec_time;
-      time_point        delay_seconds;
+      uint32_t          delay_seconds;
    };
-
-   // template<typename DataStream>
-   // DataStream& operator>>(DataStream& ds, proposal_mirror_struct& pms) {
-   //    // name              proposal_name;
-   //    // std::vector<char> packed_transaction;
-   //    // time_point        earliest_exec_time;
-   //    // time_point        delay_seconds;
-   //    ds >> pms.proposal_name;
-   //    ds >> pms.packed_transaction;
-   //    ds >> pms.earliest_exec_time;
-   //    ds >> pms.delay_seconds;
-   //    return ds;
-   // }
 
    transaction_trace_ptr create_account_with_resources( account_name a, account_name creator, asset ramfunds, bool multisig,
                                                         asset net = core_sym::from_string("10.0000"), asset cpu = core_sym::from_string("10.0000") ) {
@@ -148,7 +135,7 @@ public:
       const auto& db  = control->db();
       const auto* tbl = db.find<table_id_object, by_code_scope_table>(boost::make_tuple(N(eosio.msig), proposer, N(proposal)));
       time_point result;
-   
+
       if (tbl) {
          const auto *obj = db.find<key_value_object, by_scope_primary>(boost::make_tuple(tbl->id, proposal_name.to_uint64_t()));
          if (obj) {
@@ -157,18 +144,11 @@ public:
             proposal_mirror_struct pms;
             fc::raw::unpack(ds, pms);
             result = pms.earliest_exec_time;
-
-            std::cout << "---------------------------------\n";
-            std::cout << "pms.proposal_name: "                                     << pms.proposal_name << std::endl;
-            std::cout << "pms.packed_transaction.size(): "                         << pms.packed_transaction.size() << std::endl;
-            std::cout << "pms.earliest_exec_time.sec_since_epoch(): "              << pms.earliest_exec_time.sec_since_epoch() << std::endl;
-            std::cout << "pms.delay_seconds.sec_since_epoch(): "                   << pms.delay_seconds.sec_since_epoch() << std::endl;
-            std::cout << "time_point{microseconds::maximum()}.sec_since_epoch(): " << time_point{microseconds::maximum()}.sec_since_epoch() << std::endl;
-            
-            std::cout << "---------------------------------\n";
-            std::cout << fc::to_hex(obj->value.data(), obj->value.size()) << std::endl;
-            std::cout << "---------------------------------\n";
+         } else {
+            throw;
          }
+      } else {
+         throw;
       }
       return result;
    }
@@ -233,30 +213,34 @@ transaction eosio_msig_tester::reqauth( account_name from, const vector<permissi
 BOOST_AUTO_TEST_SUITE(eosio_msig_tests)
 
 BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove, eosio_msig_tester ) try {
+   static const uint32_t delay_seconds = 10;
    auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   trx.delay_sec = delay_seconds;
 
    push_action( N(alice), N(propose), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
-                  ("delay_seconds", time_point{control->pending_block_time()})
                   ("requested",     vector<permission_level>{{ N(alice), config::active_name }})
    );
    BOOST_REQUIRE_EQUAL( time_point{microseconds::maximum()}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ).sec_since_epoch() );
    
-   // push_action( N(alice), N(approve), mvo()
-   //                ("proposer",      "alice")
-   //                ("proposal_name", "first")
-   //                ("level",         permission_level{ N(alice), config::active_name })
-   // );
-   // BOOST_REQUIRE_EQUAL( time_point{control->pending_block_time()}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ).sec_since_epoch() );
+   push_action( N(alice), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( time_point{control->pending_block_time() + fc::seconds(delay_seconds)}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ).sec_since_epoch() );
    
-   // push_action( N(alice), N(unapprove), mvo()
-   //                ("proposer",      "alice")
-   //                ("proposal_name", "first")
-   //                ("level",         permission_level{ N(alice), config::active_name })
-   // );
-   // BOOST_REQUIRE_EQUAL( time_point{microseconds::maximum()}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ).sec_since_epoch() );
+   push_action( N(alice), N(unapprove), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( time_point{microseconds::maximum()}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ).sec_since_epoch() );
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove_multiple, eosio_msig_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {

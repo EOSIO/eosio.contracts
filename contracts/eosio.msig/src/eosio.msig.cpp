@@ -8,24 +8,20 @@ namespace eosio {
 
 void multisig::propose( ignore<name> proposer,
                         ignore<name> proposal_name,
-                        // ignore<time_point> exec_time,
-                        ignore<time_point> delay_seconds,
                         ignore<std::vector<permission_level>> requested,
                         ignore<transaction> trx )
 {
    name _proposer;
    name _proposal_name;
-   // time_point _exec_time;
-   time_point _delay_seconds;
    std::vector<permission_level> _requested;
    transaction_header _trx_header;
 
-   _ds >> _proposer >> _proposal_name >> _delay_seconds >> _requested;
-   // _ds >> _proposer >> _proposal_name >> _exec_time >> _requested;
+   _ds >> _proposer >> _proposal_name >> _requested;
 
    const char* trx_pos = _ds.pos();
-   size_t size    = _ds.remaining();
+   size_t size = _ds.remaining();
    _ds >> _trx_header;
+   uint32_t delay_seconds = _trx_header.delay_sec.value;
 
    require_auth( _proposer );
    check( _trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
@@ -41,7 +37,6 @@ void multisig::propose( ignore<name> proposer,
                );
 
    check( res > 0, "transaction authorization failed" );
-   // check( exec_time < current_time_point(), "impossible to send a transaction backward in time" );
 
    std::vector<char> pkd_trans;
    pkd_trans.resize(size);
@@ -50,13 +45,12 @@ void multisig::propose( ignore<name> proposer,
       prop.proposal_name      = _proposal_name;
       prop.packed_transaction = pkd_trans;
       prop.earliest_exec_time = time_point{eosio::microseconds::maximum()};
-      prop.delay_seconds      = _delay_seconds;
-      // prop.earliest_exec_time = (exec_time != eosio::microseconds::maximum()) ? exec_time : eosio::microseconds::maximum();
+      prop.delay_seconds      = delay_seconds;
    });
 
    approvals apptable( get_self(), _proposer.value );
    apptable.emplace( _proposer, [&]( auto& a ) {
-      a.proposal_name       = _proposal_name;
+      a.proposal_name = _proposal_name;
       a.requested_approvals.reserve( _requested.size() );
       for ( auto& level : _requested ) {
          a.requested_approvals.push_back( approval{ level, time_point{ microseconds{0} } } );
@@ -100,6 +94,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
    }
 
    /// New logic.
+   // - Assert that `earliest_exec_time` exists.
    // - If `earliest_exec_time` is not equal to `eosio::microseconds::maximum()`.
    //   - `return`.
    // - Call `_get_approvals` to get the set of approvals.
@@ -109,8 +104,11 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
    //   - Change `earliest_exec_time` to specified time. ("specified time" == (delay_seconds + current_time())).
    // - If does not succeed.
    //   - `return`.
-   if (prop.earliest_exec_time.value_or() != time_point{eosio::microseconds::maximum()}) {
-      return; 
+   
+   check( prop.earliest_exec_time.has_value(), "`earliest_exec_time` does not exist" );
+   
+   if (prop.earliest_exec_time.value() != time_point{eosio::microseconds::maximum()}) {
+      return;
    } else {
       auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name));
       auto res =  check_transaction_authorization(
@@ -121,7 +119,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
       if (res > 0) {
          auto prop_it = proptable.find( proposal_name.value );
          proptable.modify( prop_it, proposer, [&]( auto& p ) {
-            p.earliest_exec_time = time_point{prop.delay_seconds.value_or() + current_time_point()};
+             p.earliest_exec_time = time_point{current_time_point() + time_point_sec{prop.delay_seconds.value()}};
          });
       } else {
          return;
@@ -153,6 +151,7 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
    }
 
    /// New logic.
+   // - Assert that `earliest_exec_time` exists.
    // - If `earliest_exec_time` is equal to `eosio::microseconds::maximum()`.
    //   - `return`.
    // - Call `_get_approvals` to get the set of approvals.
@@ -162,27 +161,30 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
    //   - `return`.
    // - If does not succeed.
    //   - Change `earliest_exec_time` to `eosio::microseconds::maximum()`.
-   // proposals proptable( get_self(), proposer.value );
-   // auto& prop = proptable.get( proposal_name.value, "proposal not found" );
    
-   // if (prop.earliest_exec_time.value_or() == time_point{eosio::microseconds::maximum()}) {
-   //    return; 
-   // } else {
-   //    auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name));
-   //    auto res =  check_transaction_authorization(
-   //                   prop.packed_transaction.data(), prop.packed_transaction.size(),
-   //                   (const char*)0, 0,
-   //                   packed_provided_approvals.data(), packed_provided_approvals.size()
-   //                );
-   //    if (res > 0) {
-   //       return;
-   //    } else {
-   //       auto prop_it = proptable.find( proposal_name.value );
-   //       proptable.modify( prop_it, proposer, [&]( auto& p ) {
-   //          p.earliest_exec_time = time_point{eosio::microseconds::maximum()};
-   //       });
-   //    }
-   // }
+   proposals proptable( get_self(), proposer.value );
+   auto& prop = proptable.get( proposal_name.value, "proposal not found" );
+
+   check( prop.earliest_exec_time.has_value(), "`earliest_exec_time` does not exist" );
+   
+   if (prop.earliest_exec_time.value() == time_point{eosio::microseconds::maximum()}) {
+      return; 
+   } else {
+      auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name));
+      auto res =  check_transaction_authorization(
+                     prop.packed_transaction.data(), prop.packed_transaction.size(),
+                     (const char*)0, 0,
+                     packed_provided_approvals.data(), packed_provided_approvals.size()
+                  );
+      if (res > 0) {
+         return;
+      } else {
+         auto prop_it = proptable.find( proposal_name.value );
+         proptable.modify( prop_it, proposer, [&]( auto& p ) {
+            p.earliest_exec_time = time_point{eosio::microseconds::maximum()};
+         });
+      }
+   }
 }
 
 void multisig::cancel( name proposer, name proposal_name, name canceler ) {
