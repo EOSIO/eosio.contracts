@@ -224,6 +224,19 @@ namespace eosio {
 
       private:
          // Helper functions for which to get the approvals of a given table.
-         std::vector<permission_level> _get_approvals(const name& proposer, const name& proposal_name);
+         std::vector<permission_level> _get_approvals(const name& proposer, const name& proposal_name, bool remove) const;
+   };
+
+   template<typename Function>
+   struct scope_exit {
+   public:
+      scope_exit(Function&& f) : _f{f} {}
+      scope_exit(const scope_exit&) = delete;
+      scope_exit& operator=(const scope_exit&) = delete;
+      ~scope_exit() { if (!_canceled) _f(); }
+      void cancel() { _canceled = true; }
+   private:
+      Function _f;
+      bool _canceled = false;
    };
 } /// namespace eosio

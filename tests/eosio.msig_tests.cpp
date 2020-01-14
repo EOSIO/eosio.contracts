@@ -131,11 +131,11 @@ public:
       return asset( result, symbol(CORE_SYM) );
    }
 
-   time_point get_earliest_exec_time( const name& proposer, const name& proposal_name ) {
+   uint32_t get_earliest_exec_time( const name& proposer, const name& proposal_name ) {
       const auto& db  = control->db();
       const auto* tbl = db.find<table_id_object, by_code_scope_table>(boost::make_tuple(N(eosio.msig), proposer, N(proposal)));
       time_point result;
-
+   
       if (tbl) {
          const auto *obj = db.find<key_value_object, by_scope_primary>(boost::make_tuple(tbl->id, proposal_name.to_uint64_t()));
          if (obj) {
@@ -150,7 +150,7 @@ public:
       } else {
          throw;
       }
-      return result;
+      return result.sec_since_epoch();
    }
 
    transaction_trace_ptr push_action( const account_name& signer, const action_name& name, const variant_object& data, bool auth = true ) {
@@ -213,9 +213,12 @@ transaction eosio_msig_tester::reqauth( account_name from, const vector<permissi
 BOOST_AUTO_TEST_SUITE(eosio_msig_tests)
 
 BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove, eosio_msig_tester ) try {
-   static const uint32_t delay_seconds = 10;
+   static const uint32_t delay_sec = 1000;
+   static const uint32_t maximum_sec_since_epoch = time_point{microseconds::maximum()}.sec_since_epoch();
+   static const uint32_t time_point_delay = time_point{microseconds::maximum()}.sec_since_epoch();
+   
    auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
-   trx.delay_sec = delay_seconds;
+   trx.delay_sec = delay_sec;
 
    push_action( N(alice), N(propose), mvo()
                   ("proposer",      "alice")
@@ -223,24 +226,70 @@ BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove, eos
                   ("trx",           trx)
                   ("requested",     vector<permission_level>{{ N(alice), config::active_name }})
    );
-   BOOST_REQUIRE_EQUAL( time_point{microseconds::maximum()}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ).sec_since_epoch() );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
    
    push_action( N(alice), N(approve), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("level",         permission_level{ N(alice), config::active_name })
    );
-   BOOST_REQUIRE_EQUAL( time_point{control->pending_block_time() + fc::seconds(delay_seconds)}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ).sec_since_epoch() );
+   BOOST_REQUIRE_EQUAL( time_point{control->pending_block_time() + fc::seconds(delay_sec)}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ) );
    
    push_action( N(alice), N(unapprove), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("level",         permission_level{ N(alice), config::active_name })
    );
-   BOOST_REQUIRE_EQUAL( time_point{microseconds::maximum()}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ).sec_since_epoch() );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove_multiple, eosio_msig_tester ) try {
+   static const uint32_t delay_sec = 1000;
+   static const uint32_t maximum_sec_since_epoch = time_point{microseconds::maximum()}.sec_since_epoch();
+   static const uint32_t time_point_delay = time_point{microseconds::maximum()}.sec_since_epoch();
+   
+   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name},
+                                  permission_level{N(bob), config::active_name},
+                                  permission_level{N(carol), config::active_name}}, abi_serializer_max_time );
+   trx.delay_sec = delay_sec;
+
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx)
+                  ("requested",     vector<permission_level>{{ N(alice), config::active_name },
+                                                             { N(bob), config::active_name },
+                                                             { N(carol), config::active_name }})
+   );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
+   
+   push_action( N(alice), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
+   
+   push_action( N(bob), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(bob), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
+   
+   push_action( N(carol), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(carol), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( time_point{control->pending_block_time() + fc::seconds(delay_sec)}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ) );
+   
+   push_action( N(alice), N(unapprove), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {

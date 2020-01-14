@@ -110,7 +110,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
    if (prop.earliest_exec_time.value() != time_point{eosio::microseconds::maximum()}) {
       return;
    } else {
-      auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name));
+      auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name, false));
       auto res =  check_transaction_authorization(
                      prop.packed_transaction.data(), prop.packed_transaction.size(),
                      (const char*)0, 0,
@@ -129,7 +129,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
 
 void multisig::unapprove( name proposer, name proposal_name, permission_level level ) {
    require_auth( level );
-
+   
    approvals apptable( get_self(), proposer.value );
    auto apps_it = apptable.find( proposal_name.value );
    if ( apps_it != apptable.end() ) {
@@ -164,13 +164,13 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
    
    proposals proptable( get_self(), proposer.value );
    auto& prop = proptable.get( proposal_name.value, "proposal not found" );
-
+   
    check( prop.earliest_exec_time.has_value(), "`earliest_exec_time` does not exist" );
    
    if (prop.earliest_exec_time.value() == time_point{eosio::microseconds::maximum()}) {
       return; 
    } else {
-      auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name));
+      auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name, false));
       auto res =  check_transaction_authorization(
                      prop.packed_transaction.data(), prop.packed_transaction.size(),
                      (const char*)0, 0,
@@ -221,7 +221,7 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    ds >> trx_header;
    check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
 
-   auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name));
+   auto packed_provided_approvals = pack(_get_approvals(proposer, proposal_name, true));
    auto res =  check_transaction_authorization(
                   prop.packed_transaction.data(), prop.packed_transaction.size(),
                   (const char*)0, 0,
@@ -252,7 +252,7 @@ void multisig::invalidate( name account ) {
    }
 }
 
-std::vector<permission_level> multisig::_get_approvals(const name& proposer, const name& proposal_name) {
+std::vector<permission_level> multisig::_get_approvals(const name& proposer, const name& proposal_name, bool remove) const {
    approvals apptable( get_self(), proposer.value );
    auto apps_it = apptable.find( proposal_name.value );
    std::vector<permission_level> approvals;
@@ -265,7 +265,9 @@ std::vector<permission_level> multisig::_get_approvals(const name& proposer, con
             approvals.push_back(p.level);
          }
       }
-      apptable.erase(apps_it);
+      if (remove) {
+         apptable.erase(apps_it);
+      }
    } else {
       old_approvals old_apptable( get_self(), proposer.value );
       auto& apps = old_apptable.get( proposal_name.value, "proposal not found" );
@@ -275,7 +277,9 @@ std::vector<permission_level> multisig::_get_approvals(const name& proposer, con
             approvals.push_back( level );
          }
       }
-      old_apptable.erase(apps);
+      if (remove) {
+         old_apptable.erase(apps);
+      }
    }
    return approvals;
 }
