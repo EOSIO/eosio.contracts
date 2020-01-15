@@ -3,6 +3,9 @@
 #include <eosio.token/eosio.token.hpp>
 #include <eosio/tester.hpp>
 
+#define BOOST_TEST_MAIN
+#include <boost/test/included/unit_test.hpp>
+
 using namespace eosio;
 using eosiobios::bios;
 
@@ -59,26 +62,22 @@ struct msig_tester {
 
 }; // msig_tester
 
-TEST_CASE(propose_approve_execute, [] {
-   msig_tester t;
-
-   t.propose("alice"_n, "first"_n, { { "alice"_n, "active"_n } },
-             t.chain.make_transaction(
-                   { bios::reqauth_action{ "eosio"_n, { "alice"_n, "active"_n } }.to_action("alice"_n) }));
+BOOST_FIXTURE_TEST_CASE(propose_approve_execute, msig_tester) {
+   propose("alice"_n, "first"_n, { { "alice"_n, "active"_n } },
+           chain.make_transaction(
+              { bios::reqauth_action{ "eosio"_n, { "alice"_n, "active"_n } }.to_action("alice"_n) }));
 
    // fail to execute before approval
-   t.exec("alice"_n, "first"_n, "alice"_n, "transaction authorization failed");
+   exec("alice"_n, "first"_n, "alice"_n, "transaction authorization failed");
 
    // approve and execute
-   t.approve("alice"_n, "first"_n, { "alice"_n, "active"_n });
-   TESTER_REQUIRE(!t.chain.exec_deferred());
-   t.exec("alice"_n, "first"_n, "alice"_n);
+   approve("alice"_n, "first"_n, { "alice"_n, "active"_n });
+   BOOST_TEST(!chain.exec_deferred());
+   exec("alice"_n, "first"_n, "alice"_n);
 
-   auto receipt = t.chain.exec_deferred();
-   TESTER_REQUIRE(!t.chain.exec_deferred());
-   TESTER_REQUIRE(receipt);
+   auto receipt = chain.exec_deferred();
+   BOOST_TEST(!chain.exec_deferred());
+   BOOST_TEST(receipt.has_value());
    expect(*receipt);
-   TESTER_REQUIRE_EQUAL(std::get<0>(*receipt).action_traces.size(), 1);
-}) // propose_approve_execute
-
-TEST_ENTRY
+   BOOST_TEST(std::get<0>(*receipt).action_traces.size() == 1);
+} // propose_approve_execute
