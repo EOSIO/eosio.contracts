@@ -165,14 +165,8 @@ namespace eosio {
          struct [[eosio::table]] proposal {
             name                                proposal_name;
             std::vector<char>                   packed_transaction;
-            eosio::binary_extension<time_point> earliest_exec_time; // TODO: Must `assert` if not setting it for the first time (except `propose`).
-            eosio::binary_extension<uint32_t>   delay_seconds; // TODO: Only if we assert, can we can keep this type.
-            // TODO: extract `delay_sec` from `transaction_header`.
-            
-            // eosio::binary_extension<time_point> earliest_exec_time{time_point{eosio::microseconds::maximum()}};
-            // TODO: test the differences between a default constructed `earliest_exec_time` and not.
-            //       when exteacting row, and deserialize, show that `has_value` == false (only for old tables).
-            //       Add test-case that handles the transition.
+            eosio::binary_extension<time_point> earliest_exec_time;
+            eosio::binary_extension<uint32_t>   delay_seconds;
 
             uint64_t primary_key()const { return proposal_name.value; }
          };

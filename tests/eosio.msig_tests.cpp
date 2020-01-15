@@ -587,7 +587,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
    transaction trx;
    abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
 
-   // propose action
+   //propose action
    push_action( N(alice), N(propose), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
@@ -713,7 +713,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
    transaction trx;
    abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
 
-   // propose action
+   //propose action
    push_action( N(alice), N(propose), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
@@ -884,35 +884,19 @@ BOOST_FIXTURE_TEST_CASE( approve_execute_old, eosio_msig_tester ) try {
                   ("trx",           trx)
                   ("requested", vector<permission_level>{{ N(alice), config::active_name }})
    );
-
+   
    set_code( N(eosio.msig), contracts::msig_wasm() );
    set_abi( N(eosio.msig), contracts::msig_abi().data() );
    produce_blocks();
 
-   //approve and execute with new version
-   push_action( N(alice), N(approve), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+   // assert due to the old table being incompatable with the new table
+   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(approve), mvo()
+                                         ("proposer",      "alice")
+                                         ("proposal_name", "first")
+                                         ("level",         permission_level{ N(alice), config::active_name })
+                            ), eosio_assert_message_exception,
+                               eosio_assert_message_is("`earliest_exec_time` does not exist")
    );
-
-   transaction_trace_ptr trace;
-   control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
-      const auto& t = std::get<0>(p);
-      if( t->scheduled ) { trace = t; }
-   } );
-
-   push_action( N(alice), N(exec), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("executer",      "alice")
-   );
-
-   BOOST_REQUIRE( bool(trace) );
-   BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
-   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
-
 } FC_LOG_AND_RETHROW()
 
 
@@ -936,27 +920,19 @@ BOOST_FIXTURE_TEST_CASE( approve_unapprove_old, eosio_msig_tester ) try {
                   ("proposal_name", "first")
                   ("level",         permission_level{ N(alice), config::active_name })
    );
-
+   
    set_code( N(eosio.msig), contracts::msig_wasm() );
    set_abi( N(eosio.msig), contracts::msig_abi().data() );
    produce_blocks();
-
-   //unapprove with old version
-   push_action( N(alice), N(unapprove), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+   
+   //assert due to the old table being incompatable with the new table
+   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(unapprove), mvo()
+                                         ("proposer",      "alice")
+                                         ("proposal_name", "first")
+                                         ("level",         permission_level{ N(alice), config::active_name })
+                            ), eosio_assert_message_exception,
+                               eosio_assert_message_is("`earliest_exec_time` does not exist")
    );
-
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
-                                          ("proposer",      "alice")
-                                          ("proposal_name", "first")
-                                          ("executer",      "alice")
-                            ),
-                            eosio_assert_message_exception,
-                            eosio_assert_message_is("transaction authorization failed")
-   );
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( approve_by_two_old, eosio_msig_tester ) try {
@@ -982,7 +958,7 @@ BOOST_FIXTURE_TEST_CASE( approve_by_two_old, eosio_msig_tester ) try {
    set_code( N(eosio.msig), contracts::msig_wasm() );
    set_abi( N(eosio.msig), contracts::msig_abi().data() );
    produce_blocks();
-
+   
    //fail because approval by bob is missing
    BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
                                           ("proposer",      "alice")
@@ -992,30 +968,15 @@ BOOST_FIXTURE_TEST_CASE( approve_by_two_old, eosio_msig_tester ) try {
                             eosio_assert_message_exception,
                             eosio_assert_message_is("transaction authorization failed")
    );
-
-   //approve and execute with new version
-   push_action( N(bob), N(approve), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(bob), config::active_name })
+   
+   //assert due to the old table being incompatable with the new table
+   BOOST_REQUIRE_EXCEPTION( push_action( N(bob), N(approve), mvo()
+                                         ("proposer",      "alice")
+                                         ("proposal_name", "first")
+                                         ("level",         permission_level{ N(bob), config::active_name })
+                            ), eosio_assert_message_exception,
+                               eosio_assert_message_is("`earliest_exec_time` does not exist")
    );
-
-   transaction_trace_ptr trace;
-   control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
-      const auto& t = std::get<0>(p);
-      if( t->scheduled ) { trace = t; }
-   } );
-
-   push_action( N(alice), N(exec), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("executer",      "alice")
-   );
-
-   BOOST_REQUIRE( bool(trace) );
-   BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
-   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
 
 } FC_LOG_AND_RETHROW()
 
