@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include <eosio/binary_extension.hpp>
 #include <eosio/eosio.hpp>
 #include <eosio/ignore.hpp>
@@ -217,20 +219,48 @@ namespace eosio {
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
 
       private:
-         // Helper functions for which to get the approvals of a given table.
-         std::vector<permission_level> _get_approvals(const name& proposer, const name& proposal_name, bool remove) const;
-   };
+         // Helper functions for which to get the approvals perform any needed
+         // table operations.
+         template<typename Function>
+         std::vector<permission_level> _get_approvals_and_possibly_modify_table(name proposer, name proposal_name, Function&& f) {
+             approvals approval_table( get_self(), proposer.value );
+             auto approval_table_iter = approval_table.find( proposal_name.value );
+             std::vector<permission_level> approvals;
+             invalidations invalidations_table( get_self(), get_self().value );
+             
+             if ( approval_table_iter != approval_table.end() ) {
+                 approvals.reserve( approval_table_iter->provided_approvals.size() );
+                 for ( auto& permission : approval_table_iter->provided_approvals ) {
+                     auto iter = invalidations_table.find( permission.level.actor.value );
+                     if ( iter == invalidations_table.end() || iter->last_invalidation_time < permission.time ) {
+                         approvals.push_back(permission.level);
+                     }
+                 }
+                 f( approval_table, approval_table_iter );
+             } else {
+                 old_approvals old_approval_table( get_self(), proposer.value );
+                 auto& old_approvals_iter = old_approval_table.get( proposal_name.value, "proposal not found" );
+                 for ( auto& permission : old_approvals_iter.provided_approvals ) {
+                     auto iter = invalidations_table.find( permission.actor.value );
+                     if ( iter == invalidations_table.end() ) {
+                         approvals.push_back( permission );
+                     }
+                 }
+                 f( old_approval_table, old_approvals_iter );
+             }
+             return approvals;
+         }
 
-   template<typename Function>
-   struct scope_exit {
-   public:
-      scope_exit(Function&& f) : _f{f} {}
-      scope_exit(const scope_exit&) = delete;
-      scope_exit& operator=(const scope_exit&) = delete;
-      ~scope_exit() { if (!_canceled) _f(); }
-      void cancel() { _canceled = true; }
-   private:
-      Function _f;
-      bool _canceled = false;
+         // Helper functions for which to check if a given set of approvals is
+         // authorized.
+         template<typename RowType>
+         bool _trx_is_authorized(std::vector<char> approvals, const RowType& row) {
+             auto result =  check_transaction_authorization(
+                               row.packed_transaction.data(), row.packed_transaction.size(),
+                               (const char*)0, 0,
+                               approvals.data(), approvals.size()
+                            );
+             return (result == 1) ? true : false;
+         }
    };
 } /// namespace eosio
