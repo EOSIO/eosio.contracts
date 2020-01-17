@@ -10,6 +10,7 @@ if [[ "$BUILDKITE" == 'true' ]]; then
 fi
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
 CDT_COMMANDS="dpkg -i $MOUNTED_DIR/eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:\\\$PATH"
+echo "\\\$PATH"
 PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build/tests"
 TEST_COMMANDS="ctest -j $JOBS --output-on-failure -T Test"
 COMMANDS="$PRE_COMMANDS && $TEST_COMMANDS"
