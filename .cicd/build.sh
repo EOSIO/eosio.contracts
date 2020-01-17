@@ -22,7 +22,9 @@ COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
 # Test CDT binary download to prevent failures due to eosio.cdt pipeline.
 INDEX='1'
 echo "$ curl -sSf $CDT_URL --output eosio.cdt.deb"
-until $(curl -sSf $CDT_URL --output eosio.cdt.deb); do
+
+sleep 3600
+while ! $(curl -sSf $CDT_URL --output eosio.cdt.deb); do
     echo "ERROR: Expected CDT binary for commit ${CDT_COMMIT:0:7} from $CDT_VERSION. It does not exist at $CDT_URL!"
     printf "There must be a successful build against ${CDT_COMMIT:0:7} \033]1339;url=https://buildkite.com/EOSIO/eosio-dot-cdt/builds?commit=$CDT_COMMIT;content=here\a for this package to exist.\n"
     echo "Attempt $INDEX, retry in 60 seconds..."
