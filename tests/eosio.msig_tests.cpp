@@ -39,6 +39,12 @@ public:
       abi_ser.set_abi(abi, abi_serializer_max_time);
    }
 
+   struct proposal_mirror_struct {
+      name              proposal_name;
+      std::vector<char> packed_transaction;
+      time_point        earliest_exec_time;
+   };
+
    transaction_trace_ptr create_account_with_resources( account_name a, account_name creator, asset ramfunds, bool multisig,
                                                         asset net = core_sym::from_string("10.0000"), asset cpu = core_sym::from_string("10.0000") ) {
       signed_transaction trx;
@@ -103,6 +109,7 @@ public:
                                 ("memo", "")
                                 );
    }
+    
    asset get_balance( const account_name& act ) {
       //return get_currency_balance( config::system_account_name, symbol(CORE_SYMBOL), act );
       //temporary code. current get_currency_balancy uses table name N(accounts) from currency.h
@@ -121,6 +128,28 @@ public:
          }
       }
       return asset( result, symbol(CORE_SYM) );
+   }
+
+   uint32_t get_earliest_exec_time( const name& proposer, const name& proposal_name ) {
+      const auto& db  = control->db();
+      const auto* tbl = db.find<table_id_object, by_code_scope_table>(boost::make_tuple(N(eosio.msig), proposer, N(proposal)));
+      time_point result;
+   
+      if (tbl) {
+         const auto *obj = db.find<key_value_object, by_scope_primary>(boost::make_tuple(tbl->id, proposal_name.to_uint64_t()));
+         if (obj) {
+            // `earliest_exec_time` is the third field in the serialization.
+            fc::datastream<const char *> ds(obj->value.data(), obj->value.size());
+            proposal_mirror_struct pms;
+            fc::raw::unpack(ds, pms);
+            result = pms.earliest_exec_time;
+         } else {
+            throw;
+         }
+      } else {
+         throw;
+      }
+      return result.sec_since_epoch();
    }
 
    transaction_trace_ptr push_action( const account_name& signer, const action_name& name, const variant_object& data, bool auth = true ) {
@@ -149,6 +178,8 @@ public:
 
    abi_serializer abi_ser;
 };
+
+FC_REFLECT( eosio_msig_tester::proposal_mirror_struct, (proposal_name) (packed_transaction) (earliest_exec_time) );
 
 transaction eosio_msig_tester::reqauth( account_name from, const vector<permission_level>& auths, const fc::microseconds& max_serialization_time ) {
    fc::variants v;
@@ -179,6 +210,86 @@ transaction eosio_msig_tester::reqauth( account_name from, const vector<permissi
 }
 
 BOOST_AUTO_TEST_SUITE(eosio_msig_tests)
+
+BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove, eosio_msig_tester ) try {
+   static const uint32_t delay_sec = 1000;
+   static const uint32_t maximum_sec_since_epoch = time_point{microseconds::maximum()}.sec_since_epoch();
+   static const uint32_t time_point_delay = time_point{microseconds::maximum()}.sec_since_epoch();
+   
+   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   trx.delay_sec = delay_sec;
+
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx)
+                  ("requested",     vector<permission_level>{{ N(alice), config::active_name }})
+   );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
+   
+   push_action( N(alice), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( time_point{control->pending_block_time() + fc::seconds(delay_sec)}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ) );
+   
+   push_action( N(alice), N(unapprove), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove_multiple, eosio_msig_tester ) try {
+   static const uint32_t delay_sec = 1000;
+   static const uint32_t maximum_sec_since_epoch = time_point{microseconds::maximum()}.sec_since_epoch();
+   static const uint32_t time_point_delay = time_point{microseconds::maximum()}.sec_since_epoch();
+   
+   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name},
+                                  permission_level{N(bob), config::active_name},
+                                  permission_level{N(carol), config::active_name}}, abi_serializer_max_time );
+   trx.delay_sec = delay_sec;
+
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx)
+                  ("requested",     vector<permission_level>{{ N(alice), config::active_name },
+                                                             { N(bob), config::active_name },
+                                                             { N(carol), config::active_name }})
+   );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
+   
+   push_action( N(alice), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
+   
+   push_action( N(bob), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(bob), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
+   
+   push_action( N(carol), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(carol), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( time_point{control->pending_block_time() + fc::seconds(delay_sec)}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ) );
+   
+   push_action( N(alice), N(unapprove), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {
    auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
@@ -223,7 +334,6 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {
    BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
 } FC_LOG_AND_RETHROW()
-
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_unapprove, eosio_msig_tester ) try {
    auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
@@ -476,7 +586,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
    transaction trx;
    abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
 
-   // propose action
+   //propose action
    push_action( N(alice), N(propose), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
@@ -602,7 +712,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
    transaction trx;
    abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
 
-   // propose action
+   //propose action
    push_action( N(alice), N(propose), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
@@ -760,6 +870,34 @@ BOOST_FIXTURE_TEST_CASE( propose_invalidate_approve, eosio_msig_tester ) try {
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
 } FC_LOG_AND_RETHROW()
 
+// BOOST_FIXTURE_TEST_CASE( approve_execute_old, eosio_msig_tester ) try {
+//    set_code( N(eosio.msig), contracts::util::msig_wasm_old() );
+//    set_abi( N(eosio.msig), contracts::util::msig_abi_old().data() );
+//    produce_blocks();
+// 
+//    //propose with old version of eosio.msig
+//    auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+//    push_action( N(alice), N(propose), mvo()
+//                   ("proposer",      "alice")
+//                   ("proposal_name", "first")
+//                   ("trx",           trx)
+//                   ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+//    );
+//    
+//    set_code( N(eosio.msig), contracts::msig_wasm() );
+//    set_abi( N(eosio.msig), contracts::msig_abi().data() );
+//    produce_blocks();
+// 
+//    // assert due to the old table being incompatable with the new table
+//    BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(approve), mvo()
+//                                          ("proposer",      "alice")
+//                                          ("proposal_name", "first")
+//                                          ("level",         permission_level{ N(alice), config::active_name })
+//                             ), eosio_assert_message_exception,
+//                                eosio_assert_message_is("`earliest_exec_time` does not exist")
+//    );
+// } FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE( approve_execute_old, eosio_msig_tester ) try {
    set_code( N(eosio.msig), contracts::util::msig_wasm_old() );
    set_abi( N(eosio.msig), contracts::util::msig_abi_old().data() );
@@ -784,26 +922,59 @@ BOOST_FIXTURE_TEST_CASE( approve_execute_old, eosio_msig_tester ) try {
                   ("proposal_name", "first")
                   ("level",         permission_level{ N(alice), config::active_name })
    );
-
+   
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
    [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
-
+   
    push_action( N(alice), N(exec), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("executer",      "alice")
    );
-
+   
    BOOST_REQUIRE( bool(trace) );
    BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
-
 } FC_LOG_AND_RETHROW()
 
+// BOOST_FIXTURE_TEST_CASE( approve_unapprove_old, eosio_msig_tester ) try {
+//    set_code( N(eosio.msig), contracts::util::msig_wasm_old() );
+//    set_abi( N(eosio.msig), contracts::util::msig_abi_old().data() );
+//    produce_blocks();
+// 
+//    //propose with old version of eosio.msig
+//    auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+//    push_action( N(alice), N(propose), mvo()
+//                   ("proposer",      "alice")
+//                   ("proposal_name", "first")
+//                   ("trx",           trx)
+//                   ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+//    );
+// 
+//    //approve with old version
+//    push_action( N(alice), N(approve), mvo()
+//                   ("proposer",      "alice")
+//                   ("proposal_name", "first")
+//                   ("level",         permission_level{ N(alice), config::active_name })
+//    );
+//    
+//    set_code( N(eosio.msig), contracts::msig_wasm() );
+//    set_abi( N(eosio.msig), contracts::msig_abi().data() );
+//    produce_blocks();
+//    
+//    //assert due to the old table being incompatable with the new table
+//    BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(unapprove), mvo()
+//                                          ("proposer",      "alice")
+//                                          ("proposal_name", "first")
+//                                          ("level",         permission_level{ N(alice), config::active_name })
+//                             ), eosio_assert_message_exception,
+//                                eosio_assert_message_is("`earliest_exec_time` does not exist")
+//    );
+// } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( approve_unapprove_old, eosio_msig_tester ) try {
    set_code( N(eosio.msig), contracts::util::msig_wasm_old() );
@@ -847,6 +1018,51 @@ BOOST_FIXTURE_TEST_CASE( approve_unapprove_old, eosio_msig_tester ) try {
    );
 
 } FC_LOG_AND_RETHROW()
+
+// BOOST_FIXTURE_TEST_CASE( approve_by_two_old, eosio_msig_tester ) try {
+//    set_code( N(eosio.msig), contracts::util::msig_wasm_old() );
+//    set_abi( N(eosio.msig), contracts::util::msig_abi_old().data() );
+//    produce_blocks();
+// 
+//    auto trx = reqauth( N(alice), vector<permission_level>{ { N(alice), config::active_name }, { N(bob), config::active_name } }, abi_serializer_max_time );
+//    push_action( N(alice), N(propose), mvo()
+//                   ("proposer",      "alice")
+//                   ("proposal_name", "first")
+//                   ("trx",           trx)
+//                   ("requested", vector<permission_level>{ { N(alice), config::active_name }, { N(bob), config::active_name } })
+//    );
+// 
+//    //approve by alice
+//    push_action( N(alice), N(approve), mvo()
+//                   ("proposer",      "alice")
+//                   ("proposal_name", "first")
+//                   ("level",         permission_level{ N(alice), config::active_name })
+//    );
+// 
+//    set_code( N(eosio.msig), contracts::msig_wasm() );
+//    set_abi( N(eosio.msig), contracts::msig_abi().data() );
+//    produce_blocks();
+//    
+//    //fail because approval by bob is missing
+//    BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+//                                           ("proposer",      "alice")
+//                                           ("proposal_name", "first")
+//                                           ("executer",      "alice")
+//                             ),
+//                             eosio_assert_message_exception,
+//                             eosio_assert_message_is("transaction authorization failed")
+//    );
+//    
+//    //assert due to the old table being incompatable with the new table
+//    BOOST_REQUIRE_EXCEPTION( push_action( N(bob), N(approve), mvo()
+//                                          ("proposer",      "alice")
+//                                          ("proposal_name", "first")
+//                                          ("level",         permission_level{ N(bob), config::active_name })
+//                             ), eosio_assert_message_exception,
+//                                eosio_assert_message_is("`earliest_exec_time` does not exist")
+//    );
+// 
+// } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( approve_by_two_old, eosio_msig_tester ) try {
    set_code( N(eosio.msig), contracts::util::msig_wasm_old() );

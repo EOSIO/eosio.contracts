@@ -129,8 +129,9 @@ namespace eosio {
 
       private:
          struct [[eosio::table]] proposal {
-            name                            proposal_name;
-            std::vector<char>               packed_transaction;
+            name                                proposal_name;
+            std::vector<char>                   packed_transaction;
+            eosio::binary_extension<time_point> earliest_exec_time;
 
             uint64_t primary_key()const { return proposal_name.value; }
          };
@@ -172,5 +173,61 @@ namespace eosio {
          };
 
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
+
+      transaction_header _get_trx_header(const char* ptr, size_t sz) {
+         datastream<const char*> ds{ptr, sz};
+         transaction_header trx_header;
+         ds >> trx_header;
+         return trx_header;
+      }
+
+      template<typename ProposalType, typename Function>
+      bool _resolve_approvals(name proposer, name proposal_name, ProposalType prop, Function&& table_op) {
+         std::vector<permission_level> approvals = _get_approvals_and_adjust_table(proposer, proposal_name, table_op);
+         if ( _trx_is_authorized(approvals, prop.packed_transaction) ) {
+            return true;
+         } else {
+            return false;
+         }
+      }
+
+      bool _trx_is_authorized(const std::vector<permission_level>& approvals, const std::vector<char>& packed_trx) {
+         auto packed_requeted = pack(approvals);
+         return check_transaction_authorization(
+            packed_trx.data(), packed_trx.size(),
+            (const char*)0, 0,
+            packed_requeted.data(), packed_requeted.size()
+         );
+      }
+
+      template<typename Function>
+      std::vector<permission_level> _get_approvals_and_adjust_table(name proposer, name proposal_name, Function&& f) {
+         approvals approval_table( get_self(), proposer.value );
+         auto approval_table_iter = approval_table.find( proposal_name.value );
+         std::vector<permission_level> approvals;
+         invalidations invalidations_table( get_self(), get_self().value );
+
+         if ( approval_table_iter != approval_table.end() ) {
+            approvals.reserve( approval_table_iter->provided_approvals.size() );
+            for ( auto& permission : approval_table_iter->provided_approvals ) {
+               auto iter = invalidations_table.find( permission.level.actor.value );
+               if ( iter == invalidations_table.end() || iter->last_invalidation_time < permission.time ) {
+                  approvals.push_back(permission.level);
+               }
+            }
+            f( approval_table, approval_table_iter );
+         } else {
+            old_approvals old_approval_table( get_self(), proposer.value );
+            auto& old_approvals_iter = old_approval_table.get( proposal_name.value, "proposal not found" );
+            for ( auto& permission : old_approvals_iter.provided_approvals ) {
+               auto iter = invalidations_table.find( permission.actor.value );
+               if ( iter == invalidations_table.end() ) {
+                  approvals.push_back( permission );
+               }
+            }
+            f( old_approval_table, old_approvals_iter );
+         }
+         return approvals;
+      }
    };
 } /// namespace eosio
