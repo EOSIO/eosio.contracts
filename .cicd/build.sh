@@ -19,6 +19,16 @@ CDT_COMMANDS="apt-get install -y wget && wget -q $CDT_URL -O eosio.cdt.deb && dp
 PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build"
 BUILD_COMMANDS="cmake -DBUILD_TESTS=true .. && make -j $JOBS"
 COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
+# Test CDT binary download to prevent failures due to eosio.cdt pipeline.
+INDEX='1'
+until $(wget -q $CDT_URL -O eosio.cdt.deb); do
+    echo "ERROR: Expected CDT binary for commit $CDT_COMMIT does not exist at $CDT_URL!"
+    printf "There must be a successful build against ${CDT_COMMIT:0:7} \033]1339;url=https://buildkite.com/EOSIO/eosio-dot-cdt/builds?commit=$CDT_COMMIT;content=here\a for this package to exist.\n"
+    echo "Attempt $INDEX, retry in 60 seconds..."
+    echo ''
+    INDEX=$(( $INDEX + 1 ))
+    sleep 60
+done
 # retry docker pull to protect against failures due to race conditions with eosio pipeline
 INDEX='1'
 echo "$ docker pull $DOCKER_IMAGE"
