@@ -15,10 +15,21 @@ else
     export DOCKER_IMAGE
 fi
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
-CDT_COMMANDS="apt-get install -y wget && wget -q $CDT_URL -O eosio.cdt.deb && dpkg -i eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:\\\$PATH"
+CDT_COMMANDS="dpkg -i $MOUNTED_DIR/eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/\\\$(ls /usr/opt/eosio.cdt/)/bin:\\\$PATH"
 PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build"
 BUILD_COMMANDS="cmake .. && make -j $JOBS"
 COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
+# Test CDT binary download to prevent failures due to eosio.cdt pipeline.
+INDEX='1'
+echo "$ curl -sSf $CDT_URL --output eosio.cdt.deb"
+while ! $(curl -sSf $CDT_URL --output eosio.cdt.deb); do
+    echo "ERROR: Expected CDT binary for commit ${CDT_COMMIT:0:7} from $CDT_VERSION. It does not exist at $CDT_URL!"
+    printf "There must be a successful build against ${CDT_COMMIT:0:7} \033]1339;url=https://buildkite.com/EOSIO/eosio-dot-cdt/builds?commit=$CDT_COMMIT;content=here\a for this package to exist.\n"
+    echo "Attempt $INDEX, retry in 60 seconds..."
+    echo ''
+    INDEX=$(( $INDEX + 1 ))
+    sleep 60
+done
 # retry docker pull to protect against failures due to race conditions with eosio pipeline
 INDEX='1'
 echo "$ docker pull $DOCKER_IMAGE"
