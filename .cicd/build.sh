@@ -15,15 +15,13 @@ else
     export DOCKER_IMAGE
 fi
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
-CDT_COMMANDS="dpkg -i eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/\\\$(ls /usr/opt/eosio.cdt/)/bin:\\\$PATH"
+CDT_COMMANDS="dpkg -i $MOUNTED_DIR/eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/\\\$(ls /usr/opt/eosio.cdt/)/bin:\\\$PATH"
 PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build"
 BUILD_COMMANDS="cmake -DBUILD_TESTS=true .. && make -j $JOBS"
 COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
 # Test CDT binary download to prevent failures due to eosio.cdt pipeline.
 INDEX='1'
 echo "$ curl -sSf $CDT_URL --output eosio.cdt.deb"
-
-sleep 3600
 while ! $(curl -sSf $CDT_URL --output eosio.cdt.deb); do
     echo "ERROR: Expected CDT binary for commit ${CDT_COMMIT:0:7} from $CDT_VERSION. It does not exist at $CDT_URL!"
     printf "There must be a successful build against ${CDT_COMMIT:0:7} \033]1339;url=https://buildkite.com/EOSIO/eosio-dot-cdt/builds?commit=$CDT_COMMIT;content=here\a for this package to exist.\n"
