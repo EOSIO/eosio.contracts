@@ -15,7 +15,7 @@ namespace eosio {
 
    /**
     * eosio.token contract defines the structures and actions that allow users to create, issue, and manage
-    * tokens on eosio based blockchains.
+    * tokens on EOSIO based blockchains.
     */
    class [[eosio::contract("eosio.token")]] token : public contract {
       public:
