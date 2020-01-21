@@ -587,7 +587,7 @@ namespace eosiosystem {
 
 
          /**
-          * Activates a protocol feature
+          * The activate action, activates a protocol feature
           *
           * @param feature_digest - hash of the protocol feature to activate.
           */
@@ -614,9 +614,7 @@ namespace eosiosystem {
                           const asset& stake_net_quantity, const asset& stake_cpu_quantity, bool transfer );
 
          /**
-          * Setrex action.
-          *
-          * @details Sets total_rent balance of REX pool to the passed value.
+          * Setrex action, sets total_rent balance of REX pool to the passed value.
           * @param balance - amount to set the REX pool balance.
           */
          [[eosio::action]]
@@ -637,9 +635,7 @@ namespace eosiosystem {
          void deposit( const name& owner, const asset& amount );
 
          /**
-          * Withdraw from REX fund action.
-          *
-          * @details Withdraws core tokens from user REX fund.
+          * Withdraw from REX fund action, withdraws core tokens from user REX fund.
           * An inline token transfer to user balance is executed.
           *
           * @param owner - REX fund owner account,
@@ -649,7 +645,7 @@ namespace eosiosystem {
          void withdraw( const name& owner, const asset& amount );
 
          /**
-          * Buyrex action. Buys REX in exchange for tokens taken out of user's REX fund by transfering
+          * Buyrex action, buys REX in exchange for tokens taken out of user's REX fund by transfering
           * core tokens from user REX fund and converts them to REX stake. By buying REX, user is
           * lending tokens in order to be rented as CPU or NET resourses.
           * Storage change is billed to 'from' account.
@@ -668,7 +664,7 @@ namespace eosiosystem {
          void buyrex( const name& from, const asset& amount );
 
          /**
-          * Unstaketorex action. Use staked core tokens to buy REX.
+          * Unstaketorex action, uses staked core tokens to buy REX.
           * Storage change is billed to 'owner' account.
           *
           * @param owner - owner of staked tokens,
@@ -687,7 +683,7 @@ namespace eosiosystem {
          void unstaketorex( const name& owner, const name& receiver, const asset& from_net, const asset& from_cpu );
 
          /**
-          * Sellrex action. Sells REX in exchange for core tokens by converting REX stake back into core tokens
+          * Sellrex action, sells REX in exchange for core tokens by converting REX stake back into core tokens
           * at current exchange rate. If order cannot be processed, it gets queued until there is enough
           * in REX pool to fill order, and will be processed within 30 days at most. If successful, user
           * votes are updated, that is, proceeds are deducted from user's voting power. In case sell order
@@ -700,7 +696,7 @@ namespace eosiosystem {
          void sellrex( const name& from, const asset& rex );
 
          /**
-          * Cnclrexorder action. Cancels unfilled REX sell order by owner if one exists.
+          * Cnclrexorder action, cancels unfilled REX sell order by owner if one exists.
           *
           * @param owner - owner account name.
           *
@@ -710,7 +706,7 @@ namespace eosiosystem {
          void cnclrexorder( const name& owner );
 
          /**
-          * Rentcpu action. Use payment to rent as many SYS tokens as possible as determined by market price and
+          * Rentcpu action, uses payment to rent as many SYS tokens as possible as determined by market price and
           * stake them for CPU for the benefit of receiver, after 30 days the rented core delegation of CPU
           * will expire. At expiration, if balance is greater than or equal to `loan_payment`, `loan_payment`
           * is taken out of loan balance and used to renew the loan. Otherwise, the loan is closed and user
@@ -730,7 +726,7 @@ namespace eosiosystem {
          void rentcpu( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund );
 
          /**
-          * Rentnet action. Use payment to rent as many SYS tokens as possible as determined by market price and
+          * Rentnet action, uses payment to rent as many SYS tokens as possible as determined by market price and
           * stake them for NET for the benefit of receiver, after 30 days the rented core delegation of NET
           * will expire. At expiration, if balance is greater than or equal to `loan_payment`, `loan_payment`
           * is taken out of loan balance and used to renew the loan. Otherwise, the loan is closed and user
@@ -750,7 +746,7 @@ namespace eosiosystem {
          void rentnet( const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund );
 
          /**
-          * Fundcpuloan action. Transfers tokens from REX fund to the fund of a specific CPU loan in order to
+          * Fundcpuloan action, transfers tokens from REX fund to the fund of a specific CPU loan in order to
           * be used for loan renewal at expiry.
           *
           * @param from - loan creator account,
@@ -761,7 +757,7 @@ namespace eosiosystem {
          void fundcpuloan( const name& from, uint64_t loan_num, const asset& payment );
 
          /**
-          * Fundnetloan action. Transfers tokens from REX fund to the fund of a specific NET loan in order to
+          * Fundnetloan action, transfers tokens from REX fund to the fund of a specific NET loan in order to
           * be used for loan renewal at expiry.
           *
           * @param from - loan creator account,
@@ -772,7 +768,7 @@ namespace eosiosystem {
          void fundnetloan( const name& from, uint64_t loan_num, const asset& payment );
 
          /**
-          * Defcpuloan action. Withdraws tokens from the fund of a specific CPU loan and adds them to REX fund.
+          * Defcpuloan action, withdraws tokens from the fund of a specific CPU loan and adds them to REX fund.
           *
           * @param from - loan creator account,
           * @param loan_num - loan id,
@@ -782,7 +778,7 @@ namespace eosiosystem {
          void defcpuloan( const name& from, uint64_t loan_num, const asset& amount );
 
          /**
-          * Defnetloan action. Withdraws tokens from the fund of a specific NET loan and adds them to REX fund.
+          * Defnetloan action, withdraws tokens from the fund of a specific NET loan and adds them to REX fund.
           *
           * @param from - loan creator account,
           * @param loan_num - loan id,
@@ -792,7 +788,7 @@ namespace eosiosystem {
          void defnetloan( const name& from, uint64_t loan_num, const asset& amount );
 
          /**
-          * Updaterex action. Updates REX owner vote weight to current value of held REX tokens.
+          * Updaterex action, updates REX owner vote weight to current value of held REX tokens.
           *
           * @param owner - REX owner account.
           */
@@ -800,7 +796,7 @@ namespace eosiosystem {
          void updaterex( const name& owner );
 
          /**
-          * Rexexec action. Processes max CPU loans, max NET loans, and max queued sellrex orders.
+          * Rexexec action, processes max CPU loans, max NET loans, and max queued sellrex orders.
           * Action does not execute anything related to a specific user.
           *
           * @param user - any account can execute this action,
@@ -810,7 +806,7 @@ namespace eosiosystem {
          void rexexec( const name& user, uint16_t max );
 
          /**
-          * Consolidate action. Consolidates REX maturity buckets into one bucket that can be sold after 4 days
+          * Consolidate action, consolidates REX maturity buckets into one bucket that can be sold after 4 days
           * starting from the end of the day.
           *
           * @param owner - REX owner account name.
@@ -819,7 +815,7 @@ namespace eosiosystem {
          void consolidate( const name& owner );
 
          /**
-          * Mvtosavings action. Moves a specified amount of REX into savings bucket. REX savings bucket
+          * Mvtosavings action, moves a specified amount of REX into savings bucket. REX savings bucket
           * never matures. In order for it to be sold, it has to be moved explicitly
           * out of that bucket. Then the moved amount will have the regular maturity
           * period of 4 days starting from the end of the day.
@@ -831,7 +827,7 @@ namespace eosiosystem {
          void mvtosavings( const name& owner, const asset& rex );
 
          /**
-          * Mvfrsavings action. Moves a specified amount of REX out of savings bucket. The moved amount
+          * Mvfrsavings action, moves a specified amount of REX out of savings bucket. The moved amount
           * will have the regular REX maturity period of 4 days.
           *
           * @param owner - REX owner account name.
@@ -841,7 +837,7 @@ namespace eosiosystem {
          void mvfrsavings( const name& owner, const asset& rex );
 
          /**
-          * Closerex action. Deletes owner records from REX tables and frees used RAM. Owner must not have
+          * Closerex action, deletes owner records from REX tables and frees used RAM. Owner must not have
           * an outstanding REX balance.
           *
           * @param owner - user account name.
@@ -855,7 +851,7 @@ namespace eosiosystem {
          void closerex( const name& owner );
 
          /**
-          * Undelegate bandwitdh action. Decreases the total tokens delegated by `from` to `receiver` and/or
+          * Undelegate bandwitdh action, decreases the total tokens delegated by `from` to `receiver` and/or
           * frees the memory associated with the delegation if there is nothing
           * left to delegate.
           * This will cause an immediate reduction in net/cpu bandwidth of the
@@ -886,7 +882,7 @@ namespace eosiosystem {
                             const asset& unstake_net_quantity, const asset& unstake_cpu_quantity );
 
          /**
-          * Buy ram action. Increases receiver's ram quota based upon current price and quantity of
+          * Buy ram action, increases receiver's ram quota based upon current price and quantity of
           * tokens provided. An inline transfer from receiver to system contract of
           * tokens will be executed.
           *
@@ -909,7 +905,7 @@ namespace eosiosystem {
          void buyrambytes( const name& payer, const name& receiver, uint32_t bytes );
 
          /**
-          * Sell ram action. Reduces quota by bytes and then performs an inline transfer of tokens
+          * Sell ram action, reduces quota by bytes and then performs an inline transfer of tokens
           * to receiver based upon the average purchase price of the original quota.
           *
           * @param account - the ram seller account,
@@ -919,7 +915,7 @@ namespace eosiosystem {
          void sellram( const name& account, int64_t bytes );
 
          /**
-          * Refund action. This action is called after the delegation-period to claim all pending
+          * Refund action, this action is called after the delegation-period to claim all pending
           * unstaked tokens belonging to owner.
           *
           * @param owner - the owner of the tokens claimed.
@@ -930,7 +926,7 @@ namespace eosiosystem {
          // functions defined in voting.cpp
 
          /**
-          * Register producer action. Register producer action, indicates that a particular account wishes to become a producer,
+          * Register producer action, indicates that a particular account wishes to become a producer,
           * this action will create a `producer_config` and a `producer_info` object for `producer` scope
           * in producers tables.
           *
@@ -946,9 +942,7 @@ namespace eosiosystem {
          void regproducer( const name& producer, const public_key& producer_key, const std::string& url, uint16_t location );
 
          /**
-          * Register producer action.
-          *
-          * @details Register producer action, indicates that a particular account wishes to become a producer,
+          * Register producer action, indicates that a particular account wishes to become a producer,
           * this action will create a `producer_config` and a `producer_info` object for `producer` scope
           * in producers tables.
           *
@@ -964,23 +958,23 @@ namespace eosiosystem {
          void regproducer2( const name& producer, const eosio::block_signing_authority& producer_authority, const std::string& url, uint16_t location );
 
          /**
-          * Unregister producer action. Deactivate the block producer with account name `producer`.
+          * Unregister producer action, deactivates the block producer with account name `producer`.
           *
-          * @details Deactivate the block producer with account name `producer`.
+          * Deactivate the block producer with account name `producer`.
           * @param producer - the block producer account to unregister.
           */
          [[eosio::action]]
          void unregprod( const name& producer );
 
          /**
-          * Set ram action sets the ram supply
+          * Set ram action sets the ram supply.
           * @param max_ram_size - the amount of ram supply to set.
           */
          [[eosio::action]]
          void setram( uint64_t max_ram_size );
 
          /**
-          * Set ram rate action. Sets the rate of increase of RAM in bytes per block. It is capped by the uint16_t to
+          * Set ram rate action, sets the rate of increase of RAM in bytes per block. It is capped by the uint16_t to
           * a maximum rate of 3 TB per year. If update_ram_supply hasn't been called for the most recent block,
           * then new ram will be allocated at the old rate up to the present block before switching the rate.
           *
@@ -990,7 +984,7 @@ namespace eosiosystem {
          void setramrate( uint16_t bytes_per_block );
 
          /**
-          * Vote producer action. Votes for a set of producers. This action updates the list of `producers` voted for,
+          * Vote producer action, votes for a set of producers. This action updates the list of `producers` voted for,
           * for `voter` account. If voting for a `proxy`, the producer votes will not change until the
           * proxy updates their own vote. Voter can vote for a proxy __or__ a list of at most 30 producers.
           * Storage change is billed to `voter`.
@@ -1016,7 +1010,7 @@ namespace eosiosystem {
          void voteproducer( const name& voter, const name& proxy, const std::vector<name>& producers );
 
          /**
-          * Register proxy action. Set `proxy` account as proxy.
+          * Register proxy action, sets `proxy` account as proxy.
           * An account marked as a proxy can vote with the weight of other accounts which
           * have selected it as a proxy. Other accounts must refresh their voteproducer to
           * update the proxy's weight.
@@ -1032,7 +1026,7 @@ namespace eosiosystem {
          void regproxy( const name& proxy, bool isproxy );
 
          /**
-          * Set the blockchain parameters Set the blockchain parameters. By tunning these parameters a degree of
+          * Set the blockchain parameters. By tunning these parameters a degree of
           * customization can be achieved.
           * @param params - New blockchain parameters to set.
           */
@@ -1040,7 +1034,7 @@ namespace eosiosystem {
          void setparams( const eosio::blockchain_parameters& params );
 
          /**
-          * Claim rewards action. Claim block producing and vote rewards.
+          * Claim rewards action, claims block producing and vote rewards.
           * @param owner - producer account claiming per-block and per-vote rewards.
           */
          [[eosio::action]]
@@ -1055,14 +1049,14 @@ namespace eosiosystem {
          void setpriv( const name& account, uint8_t is_priv );
 
          /**
-          * Remove producer action. Deactivates a producer by name, if not found asserts.
+          * Remove producer action, deactivates a producer by name, if not found asserts.
           * @param producer - the producer account to deactivate.
           */
          [[eosio::action]]
          void rmvproducer( const name& producer );
 
          /**
-          * Update revision action.  Updates the current revision.
+          * Update revision action, updates the current revision.
           * @param revision - it has to be incremented by 1 compared with current revision.
           *
           * @pre Current revision can not be higher than 254, and has to be smaller
@@ -1072,7 +1066,7 @@ namespace eosiosystem {
          void updtrevision( uint8_t revision );
 
          /**
-          * Bid name action. Allows an account `bidder` to place a bid for a name `newname`.
+          * Bid name action, allows an account `bidder` to place a bid for a name `newname`.
           * @param bidder - the account placing the bid,
           * @param newname - the name the bid is placed for,
           * @param bid - the amount of system tokens payed for the bid.
@@ -1091,7 +1085,7 @@ namespace eosiosystem {
          void bidname( const name& bidder, const name& newname, const asset& bid );
 
          /**
-          * Bid refund action. Allows the account `bidder` to get back the amount it bid so far on a `newname` name.
+          * Bid refund action, allows the account `bidder` to get back the amount it bid so far on a `newname` name.
           *
           * @param bidder - the account that gets refunded,
           * @param newname - the name for which the bid was placed and now it gets refunded for.
@@ -1101,18 +1095,15 @@ namespace eosiosystem {
 
          /**
           * Change the annual inflation rate of the core token supply and specify how
-          *          the new issued tokens will be distributed based on the following structure.
-
+          * the new issued tokens will be distributed based on the following structure.
           *
           * @param annual_rate - Annual inflation rate of the core token supply.
           *     (eg. For 5% Annual inflation => annual_rate=500
           *          For 1.5% Annual inflation => annual_rate=150
-          *
           * @param inflation_pay_factor - Inverse of the fraction of the inflation used to reward block producers.
           *     The remaining inflation will be sent to the `eosio.saving` account.
           *     (eg. For 20% of inflation going to block producer rewards   => inflation_pay_factor = 50000
           *          For 100% of inflation going to block producer rewards  => inflation_pay_factor = 10000).
-          *
           * @param votepay_factor - Inverse of the fraction of the block producer rewards to be distributed proportional to blocks produced.
           *     The remaining rewards will be distributed proportional to votes received.
           *     (eg. For 25% of block producer rewards going towards block pay => votepay_factor = 40000
