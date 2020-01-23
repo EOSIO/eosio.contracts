@@ -109,7 +109,7 @@ public:
                                 ("memo", "")
                                 );
    }
-    
+
    asset get_balance( const account_name& act ) {
       //return get_currency_balance( config::system_account_name, symbol(CORE_SYMBOL), act );
       //temporary code. current get_currency_balancy uses table name N(accounts) from currency.h
@@ -134,7 +134,7 @@ public:
       const auto& db  = control->db();
       const auto* tbl = db.find<table_id_object, by_code_scope_table>(boost::make_tuple(N(eosio.msig), proposer, N(proposal)));
       time_point result;
-   
+
       if (tbl) {
          const auto *obj = db.find<key_value_object, by_scope_primary>(boost::make_tuple(tbl->id, proposal_name.to_uint64_t()));
          if (obj) {
@@ -215,7 +215,7 @@ BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove, eos
    static const uint32_t delay_sec = 1000;
    static const uint32_t maximum_sec_since_epoch = time_point{microseconds::maximum()}.sec_since_epoch();
    static const uint32_t time_point_delay = time_point{microseconds::maximum()}.sec_since_epoch();
-   
+
    auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
    trx.delay_sec = delay_sec;
 
@@ -226,14 +226,14 @@ BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove, eos
                   ("requested",     vector<permission_level>{{ N(alice), config::active_name }})
    );
    BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
-   
+
    push_action( N(alice), N(approve), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("level",         permission_level{ N(alice), config::active_name })
    );
    BOOST_REQUIRE_EQUAL( time_point{control->pending_block_time() + fc::seconds(delay_sec)}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ) );
-   
+
    push_action( N(alice), N(unapprove), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
@@ -246,7 +246,7 @@ BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove_mult
    static const uint32_t delay_sec = 1000;
    static const uint32_t maximum_sec_since_epoch = time_point{microseconds::maximum()}.sec_since_epoch();
    static const uint32_t time_point_delay = time_point{microseconds::maximum()}.sec_since_epoch();
-   
+
    auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name},
                                   permission_level{N(bob), config::active_name},
                                   permission_level{N(carol), config::active_name}}, abi_serializer_max_time );
@@ -261,28 +261,28 @@ BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove_mult
                                                              { N(carol), config::active_name }})
    );
    BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
-   
+
    push_action( N(alice), N(approve), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("level",         permission_level{ N(alice), config::active_name })
    );
    BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
-   
+
    push_action( N(bob), N(approve), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("level",         permission_level{ N(bob), config::active_name })
    );
    BOOST_REQUIRE_EQUAL( maximum_sec_since_epoch, get_earliest_exec_time( N(alice), N(first) ) );
-   
+
    push_action( N(carol), N(approve), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("level",         permission_level{ N(carol), config::active_name })
    );
    BOOST_REQUIRE_EQUAL( time_point{control->pending_block_time() + fc::seconds(delay_sec)}.sec_since_epoch(), get_earliest_exec_time( N(alice), N(first) ) );
-   
+
    push_action( N(alice), N(unapprove), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
@@ -894,20 +894,20 @@ BOOST_FIXTURE_TEST_CASE( approve_execute_old, eosio_msig_tester ) try {
                   ("proposal_name", "first")
                   ("level",         permission_level{ N(alice), config::active_name })
    );
-   
+
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
    [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
-   
+
    push_action( N(alice), N(exec), mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("executer",      "alice")
    );
-   
+
    BOOST_REQUIRE( bool(trace) );
    BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
