@@ -181,6 +181,17 @@ namespace eosio {
          return trx_header;
       }
 
+      std::tuple<std::vector<action>, std::vector<action>> _get_actions(const char* ptr, size_t sz) {
+         datastream<const char*> ds{ptr, sz};
+         transaction_header trx_header;
+         std::vector<action> context_free_actions;
+         std::vector<action> actions;
+         ds >> trx_header;
+         ds >> context_free_actions;
+         ds >> actions;
+         return { context_free_actions, actions };
+      }
+
       template<typename ProposalType, typename Function>
       bool _resolve_approvals(name proposer, name proposal_name, ProposalType prop, Function&& table_op) {
          std::vector<permission_level> approvals = _get_approvals_and_adjust_table(proposer, proposal_name, table_op);
@@ -201,7 +212,7 @@ namespace eosio {
       }
 
       template<typename Function>
-      std::vector<permission_level> _get_approvals_and_adjust_table(name proposer, name proposal_name, Function&& f) {
+      std::vector<permission_level> _get_approvals_and_adjust_table(name proposer, name proposal_name, Function&& table_op) {
          approvals approval_table( get_self(), proposer.value );
          auto approval_table_iter = approval_table.find( proposal_name.value );
          std::vector<permission_level> approvals;
@@ -215,7 +226,7 @@ namespace eosio {
                   approvals.push_back(permission.level);
                }
             }
-            f( approval_table, approval_table_iter );
+            table_op( approval_table, approval_table_iter );
          } else {
             old_approvals old_approval_table( get_self(), proposer.value );
             auto& old_approvals_iter = old_approval_table.get( proposal_name.value, "proposal not found" );
@@ -225,7 +236,7 @@ namespace eosio {
                   approvals.push_back( permission );
                }
             }
-            f( old_approval_table, old_approvals_iter );
+            table_op( old_approval_table, old_approvals_iter );
          }
          return approvals;
       }

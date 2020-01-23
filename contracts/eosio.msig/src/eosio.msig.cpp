@@ -185,9 +185,7 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
 
    proposals proptable( get_self(), proposer.value );
    auto& prop = proptable.get( proposal_name.value, "proposal not found" );
-   transaction_header trx_header;
-   datastream<const char*> ds( prop.packed_transaction.data(), prop.packed_transaction.size() );
-   ds >> trx_header;
+   transaction_header trx_header = _get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
    check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
 
    auto table_op = [](auto&& table, auto&& table_iter) { table.erase(table_iter); };
@@ -199,8 +197,17 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    //  Else fail.
    //  *** add test that triggers this failure of not meeting the time contraints. ***
 
-   send_deferred( (uint128_t(proposer.value) << 64) | proposal_name.value, executer,
-                  prop.packed_transaction.data(), prop.packed_transaction.size() );
+   check( prop.earliest_exec_time.value() <= time_point{current_time_point()}, "`earliest_exec_time` cannot execute just yet" );
+
+   auto [context_free_actions, actions] = _get_actions(prop.packed_transaction.data(), prop.packed_transaction.size());
+   
+   for (const auto& act : context_free_actions) {
+      act.send();
+   }
+   
+   for (const auto& act : actions) {
+      act.send();
+   }
 
    proptable.erase(prop);
 }
