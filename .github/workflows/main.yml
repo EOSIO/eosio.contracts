@@ -45,4 +45,5 @@ jobs:
       - name: Parallel Test
         run: | 
           tar -xzf ubuntu-1804-build/build.tar.gz
+          ./.cicd/helpers/dependency-info.sh
           ./.cicd/test.sh
