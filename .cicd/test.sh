@@ -7,6 +7,9 @@ if [[ "$BUILDKITE" == 'true' ]]; then
     CDT_URL="$(buildkite-agent meta-data get cdt-url)"
     CDT_VERSION="$(buildkite-agent meta-data get cdt-version)"
     DOCKER_IMAGE="$(buildkite-agent meta-data get docker-image)"
+else # Actions
+    . ./.cicd/helpers/dependency-info.sh
+    DOCKER_IMAGE=${DOCKER_IMAGE:-eosio/ci-contracts-builder:base-ubuntu-18.04-$EOSIO_COMMIT}
 fi
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
 CDT_COMMANDS="dpkg -i $MOUNTED_DIR/eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:\\\$PATH"
