@@ -5,7 +5,7 @@
         "dependencies": // dependencies to pull for a build of contracts, by branch, tag, or commit hash
         {
             "eosio": "329071ae8ae7c8e467f42079ebdb09e675d7e702", // eventually update to release/2.0.x
-            "eosio.cdt": "aad0c4729b848c9cbe409aa1fdd917797a4d91e7" // eventually update to release/1.7.x
+            "eosio.cdt": "09d5953997ad4558ee41cdbd1604e89be88f068e" // eventually update to release/1.7.x
         }
     }
 }
