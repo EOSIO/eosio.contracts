@@ -14,6 +14,7 @@ else
     export CDT_VERSION
     export DOCKER_IMAGE
 fi
+echo "Test."
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
 CDT_COMMANDS="dpkg -i $MOUNTED_DIR/eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/\\\$(ls /usr/opt/eosio.cdt/)/bin:\\\$PATH"
 PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build"
