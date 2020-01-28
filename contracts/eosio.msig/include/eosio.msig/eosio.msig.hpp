@@ -175,7 +175,6 @@ namespace eosio {
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
 
       private:
-
          transaction_header _get_trx_header(const char* ptr, size_t sz) {
             datastream<const char*> ds{ptr, sz};
             transaction_header trx_header;

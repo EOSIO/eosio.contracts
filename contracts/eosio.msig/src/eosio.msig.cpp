@@ -191,26 +191,32 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    auto table_op = [](auto&& table, auto&& table_iter) { table.erase(table_iter); };
    check( _resolve_approvals(proposer, proposal_name, prop, table_op), "transaction authorization failed" );
 
-   // /// TODO:
-   // //  Enforce that `earliest_exec_time` exists.
-   // //  Enforce that `earliest_exec_time` is <= `current_time_point()`
-   // //  Else fail.
-   // //  *** add test that triggers this failure of not meeting the time contraints. ***
-   // 
-   // check( prop.earliest_exec_time.value() <= time_point{current_time_point()}, "`earliest_exec_time` cannot execute just yet" );
-   // 
-   // auto [context_free_actions, actions] = _get_actions(prop.packed_transaction.data(), prop.packed_transaction.size());
-   // 
-   // for (const auto& act : context_free_actions) {
-   //    act.send();
-   // }
-   // 
-   // for (const auto& act : actions) {
-   //    act.send();
-   // }
+   /// TODO:
+   //  [X] Enforce that `earliest_exec_time` exists.
+   //  [X] Enforce that `earliest_exec_time` is <= `current_time_point()`
+   //  [X] Else fail.
+   //  [ ] *** add test that triggers this failure of not meeting the time contraints. ***
 
-   send_deferred( (uint128_t(proposer.value) << 64) | proposal_name.value, executer,
-                  prop.packed_transaction.data(), prop.packed_transaction.size() );
+   /// TODO For Monday:
+   // [ ]  Fix the suggestions Areg has made.
+   // [ ]  Make sure each test is consistently checking the same thing.
+   // [ ]  Do the same thing to the `eosio.wrap` tests.
+   // [ ]  Do any more refactoring that needs to be done.
+   // [ ]  Documentation: Make a short little tutorial on `deferred_transactions` and
+   //      inline actions to clear up any confusion.
+   // [X]  Make sure the pipelines are updated correctly.
+   
+   check( prop.earliest_exec_time.value() <= time_point{current_time_point()}, "`earliest_exec_time` cannot execute just yet" );
+   
+   auto [context_free_actions, actions] = _get_actions(prop.packed_transaction.data(), prop.packed_transaction.size());
+   
+   for (const auto& act : context_free_actions) {
+      act.send();
+   }
+   
+   for (const auto& act : actions) {
+      act.send();
+   }
 
    proptable.erase(prop);
 }
