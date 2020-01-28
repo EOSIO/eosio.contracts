@@ -1,6 +1,7 @@
 #include <boost/test/unit_test.hpp>
 #include <eosio/testing/tester.hpp>
 #include <eosio/chain/abi_serializer.hpp>
+#include <eosio/chain/global_property_object.hpp>
 #include <eosio/chain/wast_to_wasm.hpp>
 
 #include <Runtime/Runtime.h>
@@ -444,6 +445,20 @@ BOOST_FIXTURE_TEST_CASE( propose_with_wrong_requested_auth, eosio_msig_tester ) 
 
 
 BOOST_FIXTURE_TEST_CASE( big_transaction, eosio_msig_tester ) try {
+   create_account(N(eosio.bios));
+   set_code(N(eosio.bios), contracts::bios_wasm());
+   set_abi(N(eosio.bios), contracts::bios_abi().data());
+
+   produce_blocks();
+
+   // Change `default_max_inline_action_size` to 512 KB.
+   eosio::chain::chain_config params = control->get_global_properties().configuration;
+   params.max_inline_action_size = 512 * 1024;
+   base_tester::push_action( config::system_account_name, N(setparams), config::system_account_name, mutable_variant_object()
+                              ("params", params) );
+
+   produce_blocks();
+
    vector<permission_level> perm = { { N(alice), config::active_name }, { N(bob), config::active_name } };
    auto wasm = contracts::util::exchange_wasm();
 
@@ -492,19 +507,38 @@ BOOST_FIXTURE_TEST_CASE( big_transaction, eosio_msig_tester ) try {
                   ("level",         permission_level{ N(bob), config::active_name })
    );
 
-   ///////////////////
-   ///////////////////
-   // TODO NOT WORKING
-   ///////////////////
-   ///////////////////
-   // BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
-   //                                        ("proposer",      "alice")
-   //                                        ("proposal_name", "first")
-   //                                        ("executer",      "alice")
-   //                          ),
-   //                          eosio_assert_message_exception,
-   //                          eosio_assert_message_is("inline action too big")
-   // );
+   transaction_trace_ptr trx_trace;
+   trx_trace = push_action( N(alice), N(exec), mvo()
+                             ("proposer",      "alice")
+                             ("proposal_name", "first")
+                             ("executer",      "alice")
+   );
+
+   wdump((fc::json::to_pretty_string(trx_trace)));
+
+   BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
+   BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
+
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[0].action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].creator_action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].closest_unnotified_ancestor_action_ordinal );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), action_name{trx_trace->action_traces[0].receiver} );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), name{trx_trace->action_traces[0].act.account} );
+   BOOST_REQUIRE_EQUAL( N(exec), name{trx_trace->action_traces[0].act.name} );
+   BOOST_REQUIRE_EQUAL( N(alice), name{trx_trace->action_traces[0].act.authorization[0].actor} );
+   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[0].act.authorization[0].permission} );
+
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{2}, trx_trace->action_traces[1].action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[1].creator_action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[1].closest_unnotified_ancestor_action_ordinal );
+   BOOST_REQUIRE_EQUAL( N(eosio), action_name{trx_trace->action_traces[1].receiver} );
+   BOOST_REQUIRE_EQUAL( N(eosio), name{trx_trace->action_traces[1].act.account} );
+   BOOST_REQUIRE_EQUAL( N(setcode), name{trx_trace->action_traces[1].act.name} );
+   BOOST_REQUIRE_EQUAL( N(alice), name{trx_trace->action_traces[1].act.authorization[0].actor} );
+   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[1].act.authorization[0].permission} );
+   BOOST_REQUIRE_EQUAL( N(bob), name{trx_trace->action_traces[1].act.authorization[1].actor} );
+   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[1].act.authorization[1].permission} );
 } FC_LOG_AND_RETHROW()
 
 

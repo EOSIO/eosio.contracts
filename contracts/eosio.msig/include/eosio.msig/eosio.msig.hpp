@@ -7,6 +7,9 @@
 
 namespace eosio {
 
+   transaction_header get_trx_header(const char* ptr, size_t sz);
+   bool trx_is_authorized(const std::vector<permission_level>& approvals, const std::vector<char>& packed_trx);
+
    /**
     * The `eosio.msig` system contract allows for creation of proposed transactions which require authorization from a list of accounts, approval of the proposed transactions by those accounts required to approve it, and finally, it also allows the execution of the approved transactions on the blockchain.
     *
@@ -175,45 +178,18 @@ namespace eosio {
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
 
       private:
-         transaction_header _get_trx_header(const char* ptr, size_t sz) {
-            datastream<const char*> ds{ptr, sz};
-            transaction_header trx_header;
-            ds >> trx_header;
-            return trx_header;
-         }
-
-         std::tuple<std::vector<action>, std::vector<action>> _get_actions(const char* ptr, size_t sz) {
-            datastream<const char*> ds{ptr, sz};
-            transaction_header trx_header;
-            std::vector<action> context_free_actions;
-            std::vector<action> actions;
-            ds >> trx_header;
-            ds >> context_free_actions;
-            ds >> actions;
-            return { context_free_actions, actions };
-         }
-
-         template<typename ProposalType, typename Function>
-         bool _resolve_approvals(name proposer, name proposal_name, ProposalType prop, Function&& table_op) {
-            std::vector<permission_level> approvals = _get_approvals_and_adjust_table(proposer, proposal_name, table_op);
-            if ( _trx_is_authorized(approvals, prop.packed_transaction) ) {
+         template<typename Function>
+         bool approvals_satisfy_trx_authorization(name proposer, name proposal_name, const std::vector<char>& packed_trx, Function&& table_op) {
+            std::vector<permission_level> approvals = get_approvals_and_adjust_table(proposer, proposal_name, table_op);
+            if ( trx_is_authorized(approvals, packed_trx) ) {
                return true;
             } else {
                return false;
             }
          }
 
-         bool _trx_is_authorized(const std::vector<permission_level>& approvals, const std::vector<char>& packed_trx) {
-            auto packed_requeted = pack(approvals);
-            return check_transaction_authorization(
-               packed_trx.data(), packed_trx.size(),
-               (const char*)0, 0,
-               packed_requeted.data(), packed_requeted.size()
-            );
-         }
-
          template<typename Function>
-         std::vector<permission_level> _get_approvals_and_adjust_table(name proposer, name proposal_name, Function&& table_op) {
+         std::vector<permission_level> get_approvals_and_adjust_table(name proposer, name proposal_name, Function&& table_op) {
             approvals approval_table( get_self(), proposer.value );
             auto approval_table_iter = approval_table.find( proposal_name.value );
             std::vector<permission_level> approvals;

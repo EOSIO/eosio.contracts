@@ -14,13 +14,12 @@ void multisig::propose( ignore<name> proposer,
    name _proposer;
    name _proposal_name;
    std::vector<permission_level> _requested;
-   transaction_header _trx_header;
 
    _ds >> _proposer >> _proposal_name >> _requested;
 
    const char* trx_pos = _ds.pos();
    size_t size = _ds.remaining();
-   _trx_header = _get_trx_header(trx_pos, size);
+   transaction_header _trx_header = get_trx_header(trx_pos, size);
    require_auth( _proposer );
    check( _trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
 
@@ -90,7 +89,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
          });
    }
 
-   transaction_header trx_header = _get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
+   transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
    check( prop.earliest_exec_time.has_value() || (trx_header.delay_sec.value == 0), "no `earliest_exec_time` and no `delay_sec` is not 0" );
 
    if (prop.earliest_exec_time.has_value()) {
@@ -98,7 +97,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
          return;
       } else {
          auto table_op = [](auto&&, auto&&){};
-         if ( _resolve_approvals(proposer, proposal_name, prop, table_op) ) {
+         if ( approvals_satisfy_trx_authorization(proposer, proposal_name, prop.packed_transaction, table_op) ) {
             auto prop_it = proptable.find( proposal_name.value );
             proptable.modify( prop_it, proposer, [&]( auto& p ) {
                   p.earliest_exec_time = current_time_point() + eosio::seconds(trx_header.delay_sec.value);
@@ -136,7 +135,7 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
    proposals proptable( get_self(), proposer.value );
    auto& prop = proptable.get( proposal_name.value, "proposal not found" );
 
-   transaction_header trx_header = _get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
+   transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
    check( prop.earliest_exec_time.has_value() || (trx_header.delay_sec.value == 0), "no `earliest_exec_time` and no `delay_sec` is not 0" );
 
    if (prop.earliest_exec_time.has_value()) {
@@ -144,7 +143,7 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
          return;
       } else {
          auto table_op = [](auto&&, auto&&){};
-         if ( _resolve_approvals(proposer, proposal_name, prop, table_op) ) {
+         if ( approvals_satisfy_trx_authorization(proposer, proposal_name, prop.packed_transaction, table_op) ) {
             return;
          } else {
             auto prop_it = proptable.find( proposal_name.value );
@@ -185,11 +184,12 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
 
    proposals proptable( get_self(), proposer.value );
    auto& prop = proptable.get( proposal_name.value, "proposal not found" );
-   transaction_header trx_header = _get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
+   transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
    check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
 
    auto table_op = [](auto&& table, auto&& table_iter) { table.erase(table_iter); };
-   check( _resolve_approvals(proposer, proposal_name, prop, table_op), "transaction authorization failed" );
+   bool ok = approvals_satisfy_trx_authorization(proposer, proposal_name, prop.packed_transaction, table_op);
+   check( ok, "transaction authorization failed" );
 
    /// TODO:
    //  [X] Enforce that `earliest_exec_time` exists.
@@ -198,22 +198,30 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    //  [ ] *** add test that triggers this failure of not meeting the time contraints. ***
 
    /// TODO For Monday:
-   // [ ]  Fix the suggestions Areg has made.
-   // [ ]  Make sure each test is consistently checking the same thing.
-   // [ ]  Do the same thing to the `eosio.wrap` tests.
-   // [ ]  Do any more refactoring that needs to be done.
+   // [X]  Fix the suggestions Areg has made.
+   // [X]  Make sure each test is consistently checking the same thing.
+   // [X]  Do the same thing to the `eosio.wrap` tests.
+   // [X]  Do any more refactoring that needs to be done.
+   // [ ]  Replace uses of deferred transactions in the system contract and its tests.
    // [ ]  Documentation: Make a short little tutorial on `deferred_transactions` and
    //      inline actions to clear up any confusion.
    // [X]  Make sure the pipelines are updated correctly.
-   
-   check( prop.earliest_exec_time.value() <= time_point{current_time_point()}, "`earliest_exec_time` cannot execute just yet" );
-   
-   auto [context_free_actions, actions] = _get_actions(prop.packed_transaction.data(), prop.packed_transaction.size());
-   
+
+   check( prop.earliest_exec_time.value() <= time_point{current_time_point()} ||
+          trx_header.delay_sec == eosio::unsigned_int{0}, "`earliest_exec_time` cannot execute just yet" );
+
+   datastream<const char*> ds = {prop.packed_transaction.data(), prop.packed_transaction.size()};
+   transaction_header _;
+   std::vector<action> context_free_actions;
+   std::vector<action> actions;
+   ds >> _;
+   ds >> context_free_actions;
+   ds >> actions;
+
    for (const auto& act : context_free_actions) {
       act.send();
    }
-   
+
    for (const auto& act : actions) {
       act.send();
    }
@@ -235,6 +243,22 @@ void multisig::invalidate( name account ) {
             i.last_invalidation_time = current_time_point();
          });
    }
+}
+
+transaction_header get_trx_header(const char* ptr, size_t sz) {
+   datastream<const char*> ds{ptr, sz};
+   transaction_header trx_header;
+   ds >> trx_header;
+   return trx_header;
+}
+
+bool trx_is_authorized(const std::vector<permission_level>& approvals, const std::vector<char>& packed_trx) {
+   auto packed_requeted = pack(approvals);
+   return check_transaction_authorization(
+      packed_trx.data(), packed_trx.size(),
+      (const char*)0, 0,
+      packed_requeted.data(), packed_requeted.size()
+   );
 }
 
 } /// namespace eosio
