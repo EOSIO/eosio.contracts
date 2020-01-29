@@ -445,13 +445,13 @@ BOOST_FIXTURE_TEST_CASE( propose_with_wrong_requested_auth, eosio_msig_tester ) 
 
 
 BOOST_FIXTURE_TEST_CASE( big_transaction, eosio_msig_tester ) try {
+   //change `default_max_inline_action_size` to 512 KB
    create_account(N(eosio.bios));
    set_code(N(eosio.bios), contracts::bios_wasm());
    set_abi(N(eosio.bios), contracts::bios_abi().data());
 
    produce_blocks();
 
-   // Change `default_max_inline_action_size` to 512 KB.
    eosio::chain::chain_config params = control->get_global_properties().configuration;
    params.max_inline_action_size = 512 * 1024;
    base_tester::push_action( config::system_account_name, N(setparams), config::system_account_name, mutable_variant_object()
