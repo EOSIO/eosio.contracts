@@ -176,64 +176,80 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( stake_unstake, eosio_system_tester ) try {
    cross_15_percent_threshold();
-
+   
    produce_blocks( 10 );
    produce_block( fc::hours(3*24) );
-
+   
    BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000"), get_balance( "alice1111111" ) );
    transfer( "eosio", "alice1111111", core_sym::from_string("1000.0000"), "eosio" );
-
+   
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000.0000"), get_balance( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "alice1111111", core_sym::from_string("200.0000"), core_sym::from_string("100.0000") ) );
-
+   
    auto total = get_total_stake("alice1111111");
    BOOST_REQUIRE_EQUAL( core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
    BOOST_REQUIRE_EQUAL( core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
-
+   
    const auto init_eosio_stake_balance = get_balance( N(eosio.stake) );
    BOOST_REQUIRE_EQUAL( success(), stake( "alice1111111", "alice1111111", core_sym::from_string("200.0000"), core_sym::from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( init_eosio_stake_balance + core_sym::from_string("300.0000"), get_balance( N(eosio.stake) ) );
    BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "alice1111111", core_sym::from_string("200.0000"), core_sym::from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
-
+   
    produce_block( fc::hours(3*24-1) );
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                                                    ("owner", N(alice1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( init_eosio_stake_balance + core_sym::from_string("300.0000"), get_balance( N(eosio.stake) ) );
    //after 3 days funds should be released
    produce_block( fc::hours(1) );
+   base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                           ("owner", N(alice1111111))
+   );
    produce_blocks(1);
+   
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000.0000"), get_balance( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( init_eosio_stake_balance, get_balance( N(eosio.stake) ) );
-
+   
    BOOST_REQUIRE_EQUAL( success(), stake( "alice1111111", "bob111111111", core_sym::from_string("200.0000"), core_sym::from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    total = get_total_stake("bob111111111");
    BOOST_REQUIRE_EQUAL( core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
    BOOST_REQUIRE_EQUAL( core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
-
+   
    total = get_total_stake( "alice1111111" );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("210.0000").get_amount(), total["net_weight"].as<asset>().get_amount() );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("110.0000").get_amount(), total["cpu_weight"].as<asset>().get_amount() );
-
+   
    REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_sym::from_string("300.0000")), get_voter_info( "alice1111111" ) );
-
+   
    auto bytes = total["ram_bytes"].as_uint64();
    BOOST_REQUIRE_EQUAL( true, 0 < bytes );
-
+   
    //unstake from bob111111111
    BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "bob111111111", core_sym::from_string("200.0000"), core_sym::from_string("100.0000") ) );
    total = get_total_stake("bob111111111");
    BOOST_REQUIRE_EQUAL( core_sym::from_string("10.0000"), total["net_weight"].as<asset>());
    BOOST_REQUIRE_EQUAL( core_sym::from_string("10.0000"), total["cpu_weight"].as<asset>());
    produce_block( fc::hours(3*24-1) );
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                                                    ("owner", N(alice1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    //after 3 days funds should be released
    produce_block( fc::hours(1) );
+   base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                           ("owner", N(alice1111111))
+   );
    produce_blocks(1);
-
    REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_sym::from_string("0.0000") ), get_voter_info( "alice1111111" ) );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000.0000"), get_balance( "alice1111111" ) );
@@ -272,11 +288,19 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake_with_transfer, eosio_system_tester ) try 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
 
    produce_block( fc::hours(3*24-1) );
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                                                    ("owner", N(alice1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    //after 3 days funds should be released
 
    produce_block( fc::hours(1) );
+   base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                           ("owner", N(alice1111111))
+   );
    produce_blocks(1);
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1300.0000"), get_balance( "alice1111111" ) );
@@ -336,11 +360,19 @@ BOOST_FIXTURE_TEST_CASE( stake_while_pending_refund, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
 
    produce_block( fc::hours(3*24-1) );
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                                                    ("owner", N(alice1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    //after 3 days funds should be released
 
    produce_block( fc::hours(1) );
+   base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                           ("owner", N(alice1111111))
+   );
    produce_blocks(1);
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1300.0000"), get_balance( "alice1111111" ) );
@@ -603,7 +635,15 @@ BOOST_FIXTURE_TEST_CASE( adding_stake_partial_unstake, eosio_system_tester ) try
    produce_block( fc::days(2) );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("550.0000"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                                                    ("owner", N(alice1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_block( fc::days(1) );
+   base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                           ("owner", N(alice1111111))
+   );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("850.0000"), get_balance( "alice1111111" ) );
 
@@ -976,7 +1016,15 @@ BOOST_FIXTURE_TEST_CASE( vote_for_producer, eosio_system_tester, * boost::unit_t
    BOOST_TEST_REQUIRE( 0.0 == prod["total_votes"].as_double() );
 
    //carol1111111 should receive funds in 3 days
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(carol1111111), mutable_variant_object()
+                                                                                    ("owner", N(carol1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_block( fc::days(3) );
+   base_tester::push_action( config::system_account_name, N(refund), N(carol1111111), mutable_variant_object()
+                                                           ("owner", N(carol1111111))
+   );
    produce_block();
    BOOST_REQUIRE_EQUAL( core_sym::from_string("3000.0000"), get_balance( "carol1111111" ) );
 

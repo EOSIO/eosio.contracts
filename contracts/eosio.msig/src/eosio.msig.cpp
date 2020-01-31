@@ -41,7 +41,7 @@ void multisig::propose( ignore<name> proposer,
    proptable.emplace( _proposer, [&]( auto& prop ) {
       prop.proposal_name      = _proposal_name;
       prop.packed_transaction = pkd_trans;
-      prop.earliest_exec_time = time_point{eosio::microseconds::maximum()};
+      prop.earliest_exec_time = std::optional<time_point>{};
    });
 
    approvals apptable( get_self(), _proposer.value );
@@ -90,22 +90,32 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
    }
 
    transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
-   check( prop.earliest_exec_time.has_value() || (trx_header.delay_sec.value == 0), "no `earliest_exec_time` and no `delay_sec` is not 0" );
 
-   if (prop.earliest_exec_time.has_value()) {
-      if ( prop.earliest_exec_time.value() != time_point{eosio::microseconds::maximum()} ) {
+   eosio::print("here0\n");
+   if ( prop.earliest_exec_time.has_value() ) {
+      eosio::print("here1\n");
+      eosio::print(prop.earliest_exec_time.has_value());
+      if ( prop.earliest_exec_time.value().has_value() ) {
          return;
       } else {
          auto table_op = [](auto&&, auto&&){};
          if ( approvals_satisfy_trx_authorization(proposer, proposal_name, prop.packed_transaction, table_op) ) {
             auto prop_it = proptable.find( proposal_name.value );
             proptable.modify( prop_it, proposer, [&]( auto& p ) {
-                  p.earliest_exec_time = current_time_point() + eosio::seconds(trx_header.delay_sec.value);
-               });
+               eosio::print("************\n");
+               eosio::print(current_time_point().sec_since_epoch());
+               eosio::print("\n");
+               eosio::print(trx_header.delay_sec.value);
+               eosio::print("\n************\n");
+               eosio::print_f("approve: current_time = %, delay_sec = %\n", current_time_point().sec_since_epoch(), trx_header.delay_sec.value );
+               p.earliest_exec_time = std::optional<time_point>{ current_time_point() + eosio::seconds(trx_header.delay_sec.value)};
+            });
          } else {
             return;
          }
       }
+   } else {
+      check( trx_header.delay_sec.value == 0, "old proposals are not allowed to have non-zero `delay_sec`; cancel and retry" );
    }
 }
 
@@ -135,23 +145,23 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
    proposals proptable( get_self(), proposer.value );
    auto& prop = proptable.get( proposal_name.value, "proposal not found" );
 
-   transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
-   check( prop.earliest_exec_time.has_value() || (trx_header.delay_sec.value == 0), "no `earliest_exec_time` and no `delay_sec` is not 0" );
-
-   if (prop.earliest_exec_time.has_value()) {
-      if ( prop.earliest_exec_time.value() == time_point{eosio::microseconds::maximum()} ) {
-         return;
-      } else {
+   if ( prop.earliest_exec_time.has_value() ) {
+      if ( prop.earliest_exec_time.value().has_value() ) {
          auto table_op = [](auto&&, auto&&){};
          if ( approvals_satisfy_trx_authorization(proposer, proposal_name, prop.packed_transaction, table_op) ) {
             return;
          } else {
             auto prop_it = proptable.find( proposal_name.value );
             proptable.modify( prop_it, proposer, [&]( auto& p ) {
-               p.earliest_exec_time = time_point{eosio::microseconds::maximum()};
+               p.earliest_exec_time = std::optional<time_point>{};
             });
          }
+      } else {
+         return;
       }
+   } else {
+      transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
+      check( trx_header.delay_sec.value == 0, "old proposals are not allowed to have non-zero `delay_sec`; cancel and retry" );
    }
 }
 
@@ -191,25 +201,17 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    bool ok = approvals_satisfy_trx_authorization(proposer, proposal_name, prop.packed_transaction, table_op);
    check( ok, "transaction authorization failed" );
 
-   /// TODO:
-   //  [X] Enforce that `earliest_exec_time` exists.
-   //  [X] Enforce that `earliest_exec_time` is <= `current_time_point()`
-   //  [X] Else fail.
-   //  [ ] *** add test that triggers this failure of not meeting the time contraints. ***
-
-   /// TODO For Monday:
-   // [X]  Fix the suggestions Areg has made.
-   // [X]  Make sure each test is consistently checking the same thing.
-   // [X]  Do the same thing to the `eosio.wrap` tests.
-   // [X]  Do any more refactoring that needs to be done.
-   // [ ]  Replace uses of deferred transactions in the system contract and its tests.
-   // [ ]  Documentation: Make a short little tutorial on `deferred_transactions` and
-   //      inline actions to clear up any confusion.
-   // [X]  Make sure the pipelines are updated correctly.
-
-   check( prop.earliest_exec_time.value() <= time_point{current_time_point()} ||
-          trx_header.delay_sec == eosio::unsigned_int{0}, "`earliest_exec_time` cannot execute just yet" );
-
+   if ( prop.earliest_exec_time.has_value() && prop.earliest_exec_time.value().has_value() ) {
+      eosio::print("-------\n");
+      eosio::print(prop.earliest_exec_time.value().value().sec_since_epoch());
+      eosio::print("\n");
+      eosio::print(current_time_point().sec_since_epoch());
+      eosio::print("\n-------\n");
+      check( prop.earliest_exec_time.value().value() <= current_time_point(), "too early to execute" );
+   } else {
+      check( trx_header.delay_sec.value == 0, "old proposals are not allowed to have non-zero `delay_sec`; cancel and retry" );
+   }
+   
    datastream<const char*> ds = {prop.packed_transaction.data(), prop.packed_transaction.size()};
    transaction_header _;
    std::vector<action> context_free_actions;

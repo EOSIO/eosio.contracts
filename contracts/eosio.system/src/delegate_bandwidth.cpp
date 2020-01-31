@@ -323,18 +323,18 @@ namespace eosiosystem {
             } // else stake increase requested with no existing row in refunds_tbl -> nothing to do with refunds_tbl
          } /// end if is_delegating_to_self || is_undelegating
 
-         if ( need_deferred_trx ) {
-            eosio::transaction out;
-            out.actions.emplace_back( permission_level{from, active_permission},
-                                      get_self(), "refund"_n,
-                                      from
-            );
-            out.delay_sec = refund_delay_sec;
-            eosio::cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
-            out.send( from.value, from, true );
-         } else {
-            eosio::cancel_deferred( from.value );
-         }
+         // if ( need_deferred_trx ) {
+         //    eosio::transaction out;
+         //    out.actions.emplace_back( permission_level{from, active_permission},
+         //                              get_self(), "refund"_n,
+         //                              from
+         //    );
+         //    out.delay_sec = refund_delay_sec;
+         //    eosio::cancel_deferred( from.value ); // TODO: Remove this line when replacing deferred trxs is fixed
+         //    out.send( from.value, from, true );
+         // } else {
+         //    eosio::cancel_deferred( from.value );
+         // }
 
          auto transfer_amount = net_balance + cpu_balance;
          if ( 0 < transfer_amount.amount ) {

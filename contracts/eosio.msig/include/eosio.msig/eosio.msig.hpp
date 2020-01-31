@@ -132,9 +132,9 @@ namespace eosio {
 
       private:
          struct [[eosio::table]] proposal {
-            name                                proposal_name;
-            std::vector<char>                   packed_transaction;
-            eosio::binary_extension<time_point> earliest_exec_time;
+            name                                                 proposal_name;
+            std::vector<char>                                    packed_transaction;
+            eosio::binary_extension< std::optional<time_point> > earliest_exec_time;
 
             uint64_t primary_key()const { return proposal_name.value; }
          };
