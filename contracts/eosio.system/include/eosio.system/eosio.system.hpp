@@ -179,6 +179,10 @@ namespace eosiosystem {
       EOSLIB_SERIALIZE( eosio_global_state4, (continuous_rate)(inflation_pay_factor)(votepay_factor) )
    };
 
+   inline eosio::block_signing_authority convert_to_block_signing_authority( const eosio::public_key& producer_key ) {
+      return eosio::block_signing_authority_v0{ .threshold = 1, .keys = {{producer_key, 1}} };
+   }
+
    // Defines `producer_info` structure to be stored in `producer_info` table, added after version 1.0
    struct [[eosio::table, eosio::contract("eosio.system")]] producer_info {
       name                                                     owner;
@@ -196,9 +200,56 @@ namespace eosiosystem {
       bool     active()const      { return is_active;                               }
       void     deactivate()       { producer_key = public_key(); producer_authority.reset(); is_active = false; }
 
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
-                        (unpaid_blocks)(last_claim_time)(location)(producer_authority) )
+      eosio::block_signing_authority get_producer_authority()const {
+         if( producer_authority.has_value() ) {
+            bool zero_threshold = std::visit( [](auto&& auth ) -> bool {
+               return (auth.threshold == 0);
+            }, *producer_authority );
+            // zero_threshold could be true despite the validation done in regproducer2 because the v1.9.0 eosio.system
+            // contract has a bug which may have modified the producer table such that the producer_authority field
+            // contains a default constructed eosio::block_signing_authority (which has a 0 threshold and so is invalid).
+            if( !zero_threshold ) return *producer_authority;
+         }
+         return convert_to_block_signing_authority( producer_key );
+      }
+
+      // The unregprod and claimrewards actions modify unrelated fields of the producers table and under the default
+      // serialization behavior they would increase the size of the serialized table if the producer_authority field
+      // was not already present. This is acceptable (though not necessarily desired) because those two actions require
+      // the authority of the producer who pays for the table rows.
+      // However, the rmvproducer action and the onblock transaction would also modify the producer table in a similar
+      // way and increasing its serialized size is not acceptable in that context.
+      // So, a custom serialization is defined to handle the binary_extension producer_authority
+      // field in the desired way. (Note: v1.9.0 did not have this custom serialization behavior.)
+
+      template<typename DataStream>
+      friend DataStream& operator << ( DataStream& ds, const producer_info& t ) {
+         ds << t.owner
+            << t.total_votes
+            << t.producer_key
+            << t.is_active
+            << t.url
+            << t.unpaid_blocks
+            << t.last_claim_time
+            << t.location;
+
+         if( !t.producer_authority.has_value() ) return ds;
+
+         return ds << t.producer_authority;
+      }
+
+      template<typename DataStream>
+      friend DataStream& operator >> ( DataStream& ds, producer_info& t ) {
+         return ds >> t.owner
+                   >> t.total_votes
+                   >> t.producer_key
+                   >> t.is_active
+                   >> t.url
+                   >> t.unpaid_blocks
+                   >> t.last_claim_time
+                   >> t.location
+                   >> t.producer_authority;
+      }
    };
 
    // Defines new producer info structure to be stored in new producer info table, added after version 1.3.0
@@ -343,8 +394,8 @@ namespace eosiosystem {
    // - `version` defaulted to zero,
    // - `last_dist_time` the last time proceeds from renting, ram fees, and name bids were added to the rex pool,
    // - `pending_bucket_time` timestamp of the pending 12-hour return bucket,
-   // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket, 
-   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket, 
+   // - `oldest_bucket_time` cached timestamp of the oldest 12-hour return bucket,
+   // - `pending_bucket_proceeds` proceeds in the pending 12-hour return bucket,
    // - `current_rate_of_increase` the current rate per dist_interval at which proceeds are added to the rex pool,
    // - `proceeds` the maximum amount of proceeds that can be added to the rex pool at any given time
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_pool {
@@ -368,7 +419,7 @@ namespace eosiosystem {
 
    // `rex_return_buckets` structure underlying the rex return buckets table. A rex return buckets table is defined by:
    // - `version` defaulted to zero,
-   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals 
+   // - `return_buckets` buckets of proceeds accumulated in 12-hour intervals
    struct [[eosio::table,eosio::contract("eosio.system")]] rex_return_buckets {
       uint8_t                           version = 0;
       std::map<time_point_sec, int64_t> return_buckets;
