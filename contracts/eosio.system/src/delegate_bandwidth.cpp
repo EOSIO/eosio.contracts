@@ -263,8 +263,6 @@ namespace eosiosystem {
          //create/update/delete refund
          auto net_balance = stake_net_delta;
          auto cpu_balance = stake_cpu_delta;
-         // // // bool need_deferred_trx = false;
-
 
          // net and cpu are same sign by assertions in delegatebw and undelegatebw
          // redundant assertion also at start of changebw to protect against misuse of changebw
