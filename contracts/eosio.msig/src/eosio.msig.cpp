@@ -91,10 +91,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
 
    transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
 
-   eosio::print("here0\n");
    if ( prop.earliest_exec_time.has_value() ) {
-      eosio::print("here1\n");
-      eosio::print(prop.earliest_exec_time.has_value());
       if ( prop.earliest_exec_time.value().has_value() ) {
          return;
       } else {
@@ -102,12 +99,6 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
          if ( approvals_satisfy_trx_authorization(proposer, proposal_name, prop.packed_transaction, table_op) ) {
             auto prop_it = proptable.find( proposal_name.value );
             proptable.modify( prop_it, proposer, [&]( auto& p ) {
-               eosio::print("************\n");
-               eosio::print(current_time_point().sec_since_epoch());
-               eosio::print("\n");
-               eosio::print(trx_header.delay_sec.value);
-               eosio::print("\n************\n");
-               eosio::print_f("approve: current_time = %, delay_sec = %\n", current_time_point().sec_since_epoch(), trx_header.delay_sec.value );
                p.earliest_exec_time = std::optional<time_point>{ current_time_point() + eosio::seconds(trx_header.delay_sec.value)};
             });
          } else {
@@ -202,11 +193,6 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    check( ok, "transaction authorization failed" );
 
    if ( prop.earliest_exec_time.has_value() && prop.earliest_exec_time.value().has_value() ) {
-      eosio::print("-------\n");
-      eosio::print(prop.earliest_exec_time.value().value().sec_since_epoch());
-      eosio::print("\n");
-      eosio::print(current_time_point().sec_since_epoch());
-      eosio::print("\n-------\n");
       check( prop.earliest_exec_time.value().value() <= current_time_point(), "too early to execute" );
    } else {
       check( trx_header.delay_sec.value == 0, "old proposals are not allowed to have non-zero `delay_sec`; cancel and retry" );
