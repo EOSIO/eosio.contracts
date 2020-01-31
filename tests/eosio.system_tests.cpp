@@ -176,27 +176,27 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( stake_unstake, eosio_system_tester ) try {
    cross_15_percent_threshold();
-   
+
    produce_blocks( 10 );
    produce_block( fc::hours(3*24) );
-   
+
    BOOST_REQUIRE_EQUAL( core_sym::from_string("0.0000"), get_balance( "alice1111111" ) );
    transfer( "eosio", "alice1111111", core_sym::from_string("1000.0000"), "eosio" );
-   
+
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000.0000"), get_balance( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( success(), stake( "eosio", "alice1111111", core_sym::from_string("200.0000"), core_sym::from_string("100.0000") ) );
-   
+
    auto total = get_total_stake("alice1111111");
    BOOST_REQUIRE_EQUAL( core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
    BOOST_REQUIRE_EQUAL( core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
-   
+
    const auto init_eosio_stake_balance = get_balance( N(eosio.stake) );
    BOOST_REQUIRE_EQUAL( success(), stake( "alice1111111", "alice1111111", core_sym::from_string("200.0000"), core_sym::from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( init_eosio_stake_balance + core_sym::from_string("300.0000"), get_balance( N(eosio.stake) ) );
    BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "alice1111111", core_sym::from_string("200.0000"), core_sym::from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
-   
+
    produce_block( fc::hours(3*24-1) );
    BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
                                                                                     ("owner", N(alice1111111)) ),
@@ -212,25 +212,25 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake, eosio_system_tester ) try {
                                                            ("owner", N(alice1111111))
    );
    produce_blocks(1);
-   
+
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000.0000"), get_balance( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( init_eosio_stake_balance, get_balance( N(eosio.stake) ) );
-   
+
    BOOST_REQUIRE_EQUAL( success(), stake( "alice1111111", "bob111111111", core_sym::from_string("200.0000"), core_sym::from_string("100.0000") ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    total = get_total_stake("bob111111111");
    BOOST_REQUIRE_EQUAL( core_sym::from_string("210.0000"), total["net_weight"].as<asset>());
    BOOST_REQUIRE_EQUAL( core_sym::from_string("110.0000"), total["cpu_weight"].as<asset>());
-   
+
    total = get_total_stake( "alice1111111" );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("210.0000").get_amount(), total["net_weight"].as<asset>().get_amount() );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("110.0000").get_amount(), total["cpu_weight"].as<asset>().get_amount() );
-   
+
    REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_sym::from_string("300.0000")), get_voter_info( "alice1111111" ) );
-   
+
    auto bytes = total["ram_bytes"].as_uint64();
    BOOST_REQUIRE_EQUAL( true, 0 < bytes );
-   
+
    //unstake from bob111111111
    BOOST_REQUIRE_EQUAL( success(), unstake( "alice1111111", "bob111111111", core_sym::from_string("200.0000"), core_sym::from_string("100.0000") ) );
    total = get_total_stake("bob111111111");
@@ -2679,7 +2679,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
                               ("params", params) );
 
    produce_blocks();
-   
+
    //install multisig contract
    abi_serializer msig_abi_ser = initialize_multisig();
    auto producer_names = active_and_vote_producers();
@@ -3285,11 +3285,11 @@ BOOST_FIXTURE_TEST_CASE( multiple_namebids, eosio_system_tester ) try {
       const asset initial_names_balance = get_balance(N(eosio.names));
       BOOST_REQUIRE_EQUAL( success(),
                            bidname( "alice", "prefb", core_sym::from_string("1.1001") ) );
-      
+
       base_tester::push_action( config::system_account_name, N(bidrefund), vector<account_name>{ N(bob) }, mvo()
                                                               ("bidder", "bob")
                                                               ("newname", "prefb") );
-      
+
       BOOST_REQUIRE_EQUAL( core_sym::from_string( "9997.9997" ), get_balance("bob") );
       BOOST_REQUIRE_EQUAL( core_sym::from_string( "9998.8999" ), get_balance("alice") );
       BOOST_REQUIRE_EQUAL( initial_names_balance + core_sym::from_string("0.1001"), get_balance(N(eosio.names)) );
@@ -3305,7 +3305,7 @@ BOOST_FIXTURE_TEST_CASE( multiple_namebids, eosio_system_tester ) try {
       base_tester::push_action( config::system_account_name, N(bidrefund), vector<account_name>{ N(carl) }, mvo()
                                                               ("bidder", "carl")
                                                               ("newname", "prefd") );
-      
+
       BOOST_REQUIRE_EQUAL( core_sym::from_string( "9999.0000" ), get_balance("carl") );
       BOOST_REQUIRE_EQUAL( core_sym::from_string( "9998.0100" ), get_balance("david") );
    }
@@ -4533,11 +4533,11 @@ BOOST_FIXTURE_TEST_CASE( ramfee_namebid_to_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(),                        bidname( carol, N(rndmbid), core_sym::from_string("23.7000") ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("23.7000"), get_balance( N(eosio.names) ) );
    BOOST_REQUIRE_EQUAL( success(),                        bidname( alice, N(rndmbid), core_sym::from_string("29.3500") ) );
-   
+
    base_tester::push_action( config::system_account_name, N(bidrefund), vector<account_name>{ N(carolaccount) }, mvo()
                                                            ("bidder", "carolaccount")
                                                            ("newname", "rndmbid") );
-   
+
    BOOST_REQUIRE_EQUAL( core_sym::from_string("29.3500"), get_balance( N(eosio.names) ));
 
    produce_block();
@@ -4549,11 +4549,11 @@ BOOST_FIXTURE_TEST_CASE( ramfee_namebid_to_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(),                        buyrex( frank, core_sym::from_string("5.0000") ) );
    BOOST_REQUIRE_EQUAL( get_balance( N(eosio.rex) ),      cur_rex_balance + core_sym::from_string("34.3500") );
    BOOST_REQUIRE_EQUAL( 0,                                get_balance( N(eosio.names) ).get_amount() );
-   
+
    cur_rex_balance = get_balance( N(eosio.rex) );
    produce_block( fc::hours(30*24 + 13) );
    produce_blocks( 1 );
-   
+
    BOOST_REQUIRE_EQUAL( success(),                        rexexec( alice, 1 ) );
    BOOST_REQUIRE_EQUAL( cur_rex_balance,                  get_rex_pool()["total_lendable"].as<asset>() );
    BOOST_REQUIRE_EQUAL( get_rex_pool()["total_lendable"].as<asset>(),
@@ -5504,7 +5504,7 @@ BOOST_FIXTURE_TEST_CASE( rex_return, eosio_system_tester ) try {
       BOOST_REQUIRE_EQUAL( success(),        rexexec( bob, 1 ) );
       BOOST_REQUIRE_EQUAL( 0,                get_rex_return_buckets()["return_buckets"].get_array().size() );
    }
-   
+
 } FC_LOG_AND_RETHROW()
 
 

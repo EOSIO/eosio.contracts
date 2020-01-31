@@ -197,7 +197,7 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    } else {
       check( trx_header.delay_sec.value == 0, "old proposals are not allowed to have non-zero `delay_sec`; cancel and retry" );
    }
-   
+
    datastream<const char*> ds = {prop.packed_transaction.data(), prop.packed_transaction.size()};
    transaction_header _;
    std::vector<action> context_free_actions;

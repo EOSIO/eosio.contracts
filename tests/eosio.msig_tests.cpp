@@ -245,7 +245,7 @@ BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove, eos
    // `delay_sec` field of the `transaction_header` in the initial proposal), if
    // the specified authorizations are met (in this case they are).
    BOOST_REQUIRE_EQUAL( calculate_test_exec_time(delay_sec), get_earliest_exec_time(N(alice), N(first))->sec_since_epoch() );
-   
+
    transaction_trace_ptr trx_trace;
    trx_trace = push_action( N(alice), N(unapprove), mvo()
                              ("proposer",      "alice")
@@ -256,13 +256,13 @@ BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove, eos
    // constructed state of a `std::optional` if the specified authorizations are
    // not met.
    BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
-   
+
    wdump((fc::json::to_pretty_string(trx_trace)));
-   
+
    BOOST_REQUIRE( bool(trx_trace) );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 1, trx_trace->action_traces.size() );
-   
+
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[0].action_ordinal );
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].creator_action_ordinal );
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].closest_unnotified_ancestor_action_ordinal );

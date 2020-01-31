@@ -180,7 +180,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_exec_direct, eosio_wrap_tester ) try {
    BOOST_REQUIRE( bool(trx_trace) );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
-   
+
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[0].action_ordinal );
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].creator_action_ordinal );
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].closest_unnotified_ancestor_action_ordinal );
@@ -191,7 +191,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_exec_direct, eosio_wrap_tester ) try {
    BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[0].act.authorization[0].permission} );
    BOOST_REQUIRE_EQUAL( N(eosio.wrap), name{trx_trace->action_traces[0].act.authorization[1].actor} );
    BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[0].act.authorization[1].permission} );
-   
+
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{2}, trx_trace->action_traces[1].action_ordinal );
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[1].creator_action_ordinal );
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[1].closest_unnotified_ancestor_action_ordinal );
@@ -232,7 +232,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
    BOOST_REQUIRE( bool(trx_trace) );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 3, trx_trace->action_traces.size() );
-   
+
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[0].action_ordinal );
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].creator_action_ordinal );
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].closest_unnotified_ancestor_action_ordinal );
@@ -359,7 +359,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig_producers_change, eosio_wrap_tester ) tr
    BOOST_REQUIRE( bool(trx_trace) );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 3, trx_trace->action_traces.size() );
-   
+
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[0].action_ordinal );
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].creator_action_ordinal );
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].closest_unnotified_ancestor_action_ordinal );
