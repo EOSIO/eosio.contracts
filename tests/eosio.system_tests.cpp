@@ -918,8 +918,8 @@ BOOST_FIXTURE_TEST_CASE( producer_wtmsig_transition, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(), stake( N(alice1111111), core_sym::from_string("100000000.0000"), core_sym::from_string("100000000.0000") ) );
    BOOST_REQUIRE_EQUAL( success(), vote( N(alice1111111), { N(alice1111111) } ) );
 
-   auto alice_prod_info1 = get_producer_info( N(alice1111111) );
-   wdump((alice_prod_info1));
+   //auto alice_prod_info1 = get_producer_info( N(alice1111111) );
+   //wdump((alice_prod_info1));
 
    produce_block();
    produce_block( fc::minutes(2) );
@@ -938,7 +938,6 @@ BOOST_FIXTURE_TEST_CASE( producer_wtmsig_transition, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( control->pending_block_producer(), N(alice1111111) );
 
    auto alice_prod_info2 = get_producer_info( N(alice1111111) );
-   wdump((alice_prod_info2));
    BOOST_REQUIRE_EQUAL( alice_prod_info2["is_active"], true );
 
    produce_block( fc::minutes(2) );
@@ -956,14 +955,12 @@ BOOST_FIXTURE_TEST_CASE( producer_wtmsig_transition, eosio_system_tester ) try {
    BOOST_CHECK_EQUAL( alice_initial_ram_usage, alice_ram_usage );
 
    auto alice_prod_info3 = get_producer_info( N(alice1111111) );
-   wdump((alice_prod_info3));
    if( alice_prod_info3.get_object().contains("producer_authority") ) {
       BOOST_CHECK_EQUAL( alice_prod_info3["producer_authority"][1]["threshold"], 0 );
    }
 
    produce_block( fc::minutes(2) );
    const auto schedule_update3 = get_global_state()["last_producer_schedule_update"];
-   wdump((schedule_update1)(schedule_update2)(schedule_update3));
 
    // The bug in v1.9.0 would cause alice to have an invalid producer authority (the default block_signing_authority).
    // The v1.9.0 system contract would have attempted to set a proposed producer schedule including this invalid
@@ -993,10 +990,8 @@ BOOST_FIXTURE_TEST_CASE( producer_wtmsig_transition, eosio_system_tester ) try {
    produce_block( fc::minutes(2) );
 
    auto alice_prod_info4 = get_producer_info( N(alice1111111) );
-   wdump((alice_prod_info4));
    BOOST_REQUIRE_EQUAL( alice_prod_info4["is_active"], true );
    const auto schedule_update4 = get_global_state()["last_producer_schedule_update"];
-   wdump((schedule_update1)(schedule_update2)(schedule_update3)(schedule_update4));
    BOOST_REQUIRE( schedule_update2 < schedule_update4 );
 
 } FC_LOG_AND_RETHROW()
