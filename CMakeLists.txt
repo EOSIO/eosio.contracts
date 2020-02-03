@@ -4,7 +4,7 @@ project(eosio_contracts)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 9)
-set(VERSION_PATCH 0)
+set(VERSION_PATCH 1)
 #set(VERSION_SUFFIX rc4)
 
 if (VERSION_SUFFIX)
