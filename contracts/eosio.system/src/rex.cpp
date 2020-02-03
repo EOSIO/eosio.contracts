@@ -115,10 +115,9 @@ namespace eosiosystem {
          if ( from == "b1"_n ) {
             check( false, "b1 sellrex orders should not be queued" );
          }
-         /**
-          * REX order couldn't be filled and is added to queue.
-          * If account already has an open order, requested rex is added to existing order.
-          */
+
+         // REX order couldn't be filled and is added to queue.
+         // If account already has an open order, requested rex is added to existing order.
          auto oitr = _rexorders.find( from.value );
          if ( oitr == _rexorders.end() ) {
             oitr = _rexorders.emplace( from, [&]( auto& order ) {
@@ -325,7 +324,7 @@ namespace eosiosystem {
 
       update_rex_account( owner, asset( 0, core_symbol() ), asset( 0, core_symbol() ) );
 
-      /// check for any outstanding loans or rex fund
+      // check for any outstanding loans or rex fund
       {
          rex_cpu_loan_table cpu_loans( get_self(), get_self().value );
          auto cpu_idx = cpu_loans.get_index<"byowner"_n>();
@@ -343,7 +342,7 @@ namespace eosiosystem {
          }
       }
 
-      /// check for remaining rex balance
+      // check for remaining rex balance
       {
          auto rex_itr = _rexbalance.find( owner.value );
          if ( rex_itr != _rexbalance.end() ) {
@@ -354,12 +353,12 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Updates account NET and CPU resource limits
+    * \details Updates account NET and CPU resource limits
     *
-    * @param from - account charged for RAM if there is a need
-    * @param receiver - account whose resource limits are updated
-    * @param delta_net - change in NET bandwidth limit
-    * @param delta_cpu - change in CPU bandwidth limit
+    * \param from - account charged for RAM if there is a need
+    * \param receiver - account whose resource limits are updated
+    * \param delta_net - change in NET bandwidth limit
+    * \param delta_cpu - change in CPU bandwidth limit
     */
    void system_contract::update_resource_limits( const name& from, const name& receiver, int64_t delta_net, int64_t delta_cpu )
    {
@@ -412,10 +411,10 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Checks if account satisfies voting requirement (voting for a proxy or 21 producers)
+    * \details Checks if account satisfies voting requirement (voting for a proxy or 21 producers)
     * for buying REX
     *
-    * @param owner - account buying or already holding REX tokens
+    * \param owner - account buying or already holding REX tokens
     * @err_msg - error message
     */
    void system_contract::check_voting_requirement( const name& owner, const char* error_msg )const
@@ -425,7 +424,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Checks if CPU and Network loans are available
+    * \details Checks if CPU and Network loans are available
     *
     * Loans are available if 1) REX pool lendable balance is nonempty, and 2) there are no
     * unfilled sellrex orders.
@@ -445,11 +444,11 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Updates rex_pool balances upon creating a new loan or renewing an existing one
+    * \details Updates rex_pool balances upon creating a new loan or renewing an existing one
     *
-    * @param payment - loan fee paid
-    * @param rented_tokens - amount of tokens to be staked to loan receiver
-    * @param new_loan - flag indicating whether the loan is new or being renewed
+    * \param payment - loan fee paid
+    * \param rented_tokens - amount of tokens to be staked to loan receiver
+    * \param new_loan - flag indicating whether the loan is new or being renewed
     */
    void system_contract::add_loan_to_rex_pool( const asset& payment, int64_t rented_tokens, bool new_loan )
    {
@@ -468,9 +467,9 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Updates rex_pool balances upon closing an expired loan
+    * \details Updates rex_pool balances upon closing an expired loan
     *
-    * @param loan - loan to be closed
+    * \param loan - loan to be closed
     */
    void system_contract::remove_loan_from_rex_pool( const rex_loan& loan )
    {
@@ -489,7 +488,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Updates the fields of an existing loan that is being renewed
+    * \details Updates the fields of an existing loan that is being renewed
     */
    template <typename Index, typename Iterator>
    int64_t system_contract::update_renewed_loan( Index& idx, const Iterator& itr, int64_t rented_tokens )
@@ -504,9 +503,9 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Performs maintenance operations on expired NET and CPU loans and sellrex orders
+    * \details Performs maintenance operations on expired NET and CPU loans and sellrex orders
     *
-    * @param max - maximum number of each of the three categories to be processed
+    * \param max - maximum number of each of the three categories to be processed
     */
    void system_contract::runrex( uint16_t max )
    {
@@ -517,27 +516,27 @@ namespace eosiosystem {
       const auto& pool = _rexpool.begin();
 
       auto process_expired_loan = [&]( auto& idx, const auto& itr ) -> std::pair<bool, int64_t> {
-         /// update rex_pool in order to delete existing loan
+         // update rex_pool in order to delete existing loan
          remove_loan_from_rex_pool( *itr );
          bool    delete_loan   = false;
          int64_t delta_stake   = 0;
-         /// calculate rented tokens at current price
+         // calculate rented tokens at current price
          int64_t rented_tokens = exchange_state::get_bancor_output( pool->total_rent.amount,
                                                                     pool->total_unlent.amount,
                                                                     itr->payment.amount );
-         /// conditions for loan renewal
-         bool renew_loan = itr->payment <= itr->balance        /// loan has sufficient balance
-                        && itr->payment.amount < rented_tokens /// loan has favorable return
-                        && rex_loans_available();              /// no pending sell orders
+         // conditions for loan renewal
+         bool renew_loan = itr->payment <= itr->balance        // loan has sufficient balance
+                        && itr->payment.amount < rented_tokens // loan has favorable return
+                        && rex_loans_available();              // no pending sell orders
          if ( renew_loan ) {
-            /// update rex_pool in order to account for renewed loan
+            // update rex_pool in order to account for renewed loan
             add_loan_to_rex_pool( itr->payment, rented_tokens, false );
-            /// update renewed loan fields
+            // update renewed loan fields
             delta_stake = update_renewed_loan( idx, itr, rented_tokens );
          } else {
             delete_loan = true;
             delta_stake = -( itr->total_staked.amount );
-            /// refund "from" account if the closed loan balance is positive
+            // refund "from" account if the closed loan balance is positive
             if ( itr->balance.amount > 0 ) {
                transfer_to_fund( itr->from, itr->balance );
             }
@@ -546,7 +545,7 @@ namespace eosiosystem {
          return { delete_loan, delta_stake };
       };
 
-      /// transfer from eosio.names to eosio.rex
+      // transfer from eosio.names to eosio.rex
       if ( pool->namebid_proceeds.amount > 0 ) {
          channel_to_rex( names_account, pool->namebid_proceeds );
          _rexpool.modify( pool, same_payer, [&]( auto& rt ) {
@@ -554,7 +553,7 @@ namespace eosiosystem {
          });
       }
 
-      /// process cpu loans
+      // process cpu loans
       {
          rex_cpu_loan_table cpu_loans( get_self(), get_self().value );
          auto cpu_idx = cpu_loans.get_index<"byexpr"_n>();
@@ -571,7 +570,7 @@ namespace eosiosystem {
          }
       }
 
-      /// process net loans
+      // process net loans
       {
          rex_net_loan_table net_loans( get_self(), get_self().value );
          auto net_idx = net_loans.get_index<"byexpr"_n>();
@@ -588,7 +587,7 @@ namespace eosiosystem {
          }
       }
 
-      /// process sellrex orders
+      // process sellrex orders
       if ( _rexorders.begin() != _rexorders.end() ) {
          auto idx  = _rexorders.get_index<"bytime"_n>();
          auto oitr = idx.begin();
@@ -606,7 +605,7 @@ namespace eosiosystem {
                      order.stake_change.amount = result.stake_change.amount;
                      order.close();
                   });
-                  /// send dummy action to show owner and proceeds of filled sellrex order
+                  // send dummy action to show owner and proceeds of filled sellrex order
                   rex_results::orderresult_action order_act( rex_account, std::vector<eosio::permission_level>{ } );
                   order_act.send( order_owner, result.proceeds );
                }
@@ -618,7 +617,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Adds returns from the REX return pool to the REX pool
+    * \details Adds returns from the REX return pool to the REX pool
     */
    void system_contract::update_rex_pool()
    {
@@ -730,7 +729,7 @@ namespace eosiosystem {
 
       transfer_from_fund( from, payment + fund );
 
-      const auto& pool = _rexpool.begin(); /// already checked that _rexpool.begin() != _rexpool.end() in rex_loans_available()
+      const auto& pool = _rexpool.begin(); // already checked that _rexpool.begin() != _rexpool.end() in rex_loans_available()
 
       int64_t rented_tokens = exchange_state::get_bancor_output( pool->total_rent.amount,
                                                                  pool->total_unlent.amount,
@@ -754,7 +753,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Processes a sellrex order and returns object containing the results
+    * \details Processes a sellrex order and returns object containing the results
     *
     * Processes an incoming or already scheduled sellrex order. If REX pool has enough core
     * tokens not frozen in loans, order is filled. In this case, REX pool totals, user rex_balance
@@ -763,8 +762,8 @@ namespace eosiosystem {
     * different function to complete order processing, i.e. transfer proceeds to user REX fund and
     * update user vote weight.
     *
-    * @param bitr - iterator pointing to rex_balance database record
-    * @param rex - amount of rex to be sold
+    * \param bitr - iterator pointing to rex_balance database record
+    * \param rex - amount of rex to be sold
     *
     * @return rex_order_outcome - a struct containing success flag, order proceeds, and resultant
     * vote stake change
@@ -833,12 +832,12 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Transfers tokens from owner REX fund
+    * \details Transfers tokens from owner REX fund
     *
     * @pre - owner REX fund has sufficient balance
     *
-    * @param owner - owner account name
-    * @param amount - tokens to be transfered out of REX fund
+    * \param owner - owner account name
+    * \param amount - tokens to be transfered out of REX fund
     */
    void system_contract::transfer_from_fund( const name& owner, const asset& amount )
    {
@@ -851,10 +850,10 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Transfers tokens to owner REX fund
+    * \details Transfers tokens to owner REX fund
     *
-    * @param owner - owner account name
-    * @param amount - tokens to be transfered to REX fund
+    * \param owner - owner account name
+    * \param amount - tokens to be transfered to REX fund
     */
    void system_contract::transfer_to_fund( const name& owner, const asset& amount )
    {
@@ -873,17 +872,17 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Processes owner filled sellrex order and updates vote weight
+    * \details Processes owner filled sellrex order and updates vote weight
     *
     * Checks if user has a scheduled sellrex order that has been filled, completes its processing,
     * and deletes it. Processing entails transfering proceeds to user REX fund and updating user
     * vote weight. Additional proceeds and stake change can be passed as arguments. This function
     * is called only by actions pushed by owner.
     *
-    * @param owner - owner account name
-    * @param proceeds - additional proceeds to be transfered to owner REX fund
-    * @param delta_stake - additional stake to be added to owner vote weight
-    * @param force_vote_update - if true, vote weight is updated even if vote stake didn't change
+    * \param owner - owner account name
+    * \param proceeds - additional proceeds to be transfered to owner REX fund
+    * \param delta_stake - additional stake to be added to owner vote weight
+    * \param force_vote_update - if true, vote weight is updated even if vote stake didn't change
     *
     * @return asset - REX amount of owner unfilled sell order if one exists
     */
@@ -912,10 +911,10 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Channels system fees to REX pool
+    * \details Channels system fees to REX pool
     *
-    * @param from - account from which asset is transfered to REX pool
-    * @param amount - amount of tokens to be transfered
+    * \param from - account from which asset is transfered to REX pool
+    * \param amount - amount of tokens to be transfered
     */
    void system_contract::channel_to_rex( const name& from, const asset& amount )
    {
@@ -931,9 +930,9 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Updates namebid proceeds to be transfered to REX pool
+    * \details Updates namebid proceeds to be transfered to REX pool
     *
-    * @param highest_bid - highest bidding amount of closed namebid
+    * \param highest_bid - highest bidding amount of closed namebid
     */
    void system_contract::channel_namebid_to_rex( const int64_t highest_bid )
    {
@@ -947,7 +946,7 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Calculates maturity time of purchased REX tokens which is 4 days from end
+    * \details Calculates maturity time of purchased REX tokens which is 4 days from end
     * of the day UTC
     *
     * @return time_point_sec
@@ -962,9 +961,9 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Updates REX owner maturity buckets
+    * \details Updates REX owner maturity buckets
     *
-    * @param bitr - iterator pointing to rex_balance object
+    * \param bitr - iterator pointing to rex_balance object
     */
    void system_contract::process_rex_maturities( const rex_balance_table::const_iterator& bitr )
    {
@@ -978,10 +977,10 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Consolidates REX maturity buckets into one
+    * \details Consolidates REX maturity buckets into one
     *
-    * @param bitr - iterator pointing to rex_balance object
-    * @param rex_in_sell_order - REX tokens in owner unfilled sell order, if one exists
+    * \param bitr - iterator pointing to rex_balance object
+    * \param rex_in_sell_order - REX tokens in owner unfilled sell order, if one exists
     */
    void system_contract::consolidate_rex_balance( const rex_balance_table::const_iterator& bitr,
                                                   const asset& rex_in_sell_order )
@@ -1002,28 +1001,27 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Updates REX pool balances upon REX purchase
+    * \details Updates REX pool balances upon REX purchase
     *
-    * @param payment - amount of core tokens paid
+    * \param payment - amount of core tokens paid
     *
     * @return asset - calculated amount of REX tokens purchased
     */
    asset system_contract::add_to_rex_pool( const asset& payment )
    {
-      /**
-       * If CORE_SYMBOL is (EOS,4), maximum supply is 10^10 tokens (10 billion tokens), i.e., maximum amount
-       * of indivisible units is 10^14. rex_ratio = 10^4 sets the upper bound on (REX,4) indivisible units to
-       * 10^18 and that is within the maximum allowable amount field of asset type which is set to 2^62
-       * (approximately 4.6 * 10^18). For a different CORE_SYMBOL, and in order for maximum (REX,4) amount not
-       * to exceed that limit, maximum amount of indivisible units cannot be set to a value larger than 4 * 10^14.
-       * If precision of CORE_SYMBOL is 4, that corresponds to a maximum supply of 40 billion tokens.
-       */
+
+      // If CORE_SYMBOL is (EOS,4), maximum supply is 10^10 tokens (10 billion tokens), i.e., maximum amount
+      // of indivisible units is 10^14. rex_ratio = 10^4 sets the upper bound on (REX,4) indivisible units to
+      // 10^18 and that is within the maximum allowable amount field of asset type which is set to 2^62
+      // (approximately 4.6 * 10^18). For a different CORE_SYMBOL, and in order for maximum (REX,4) amount not
+      // to exceed that limit, maximum amount of indivisible units cannot be set to a value larger than 4 * 10^14.
+      // If precision of CORE_SYMBOL is 4, that corresponds to a maximum supply of 40 billion tokens.
       const int64_t rex_ratio = 10000;
-      const asset   init_total_rent( 20'000'0000, core_symbol() ); /// base balance prevents renting profitably until at least a minimum number of core_symbol() is made available
+      const asset   init_total_rent( 20'000'0000, core_symbol() ); // base balance prevents renting profitably until at least a minimum number of core_symbol() is made available
       asset rex_received( 0, rex_symbol );
       auto itr = _rexpool.begin();
       if ( !rex_system_initialized() ) {
-         /// initialize REX pool
+         // initialize REX pool
          _rexpool.emplace( get_self(), [&]( auto& rp ) {
             rex_received.amount = payment.amount * rex_ratio;
             rp.total_lendable   = payment;
@@ -1033,7 +1031,7 @@ namespace eosiosystem {
             rp.total_rex        = rex_received;
             rp.namebid_proceeds = asset( 0, core_symbol() );
          });
-      } else if ( !rex_available() ) { /// should be a rare corner case, REX pool is initialized but empty
+      } else if ( !rex_available() ) { // should be a rare corner case, REX pool is initialized but empty
          _rexpool.modify( itr, same_payer, [&]( auto& rp ) {
             rex_received.amount      = payment.amount * rex_ratio;
             rp.total_lendable.amount = payment.amount;
@@ -1043,7 +1041,7 @@ namespace eosiosystem {
             rp.total_rex.amount      = rex_received.amount;
          });
       } else {
-         /// total_lendable > 0 if total_rex > 0 except in a rare case and due to rounding errors
+         // total_lendable > 0 if total_rex > 0 except in a rare case and due to rounding errors
          check( itr->total_lendable.amount > 0, "lendable REX pool is empty" );
          const int64_t S0 = itr->total_lendable.amount;
          const int64_t S1 = S0 + payment.amount;
@@ -1062,9 +1060,9 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Adds an amount of core tokens to the REX return pool
+    * \details Adds an amount of core tokens to the REX return pool
     *
-    * @param fee - amount to be added
+    * \param fee - amount to be added
     */
    void system_contract::add_to_rex_return_pool( const asset& fee )
    {
@@ -1098,11 +1096,11 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Updates owner REX balance upon buying REX tokens
+    * \details Updates owner REX balance upon buying REX tokens
     *
-    * @param owner - account name of REX owner
-    * @param payment - amount core tokens paid to buy REX
-    * @param rex_received - amount of purchased REX tokens
+    * \param owner - account name of REX owner
+    * \param payment - amount core tokens paid to buy REX
+    * \param rex_received - amount of purchased REX tokens
     *
     * @return asset - change in owner REX vote stake
     */
@@ -1143,13 +1141,13 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Reads amount of REX in savings bucket and removes the bucket from maturities
+    * \details Reads amount of REX in savings bucket and removes the bucket from maturities
     *
     * Reads and (temporarily) removes REX savings bucket from REX maturities in order to
     * allow uniform processing of remaining buckets as savings is a special case. This
     * function is used in conjunction with put_rex_savings.
     *
-    * @param bitr - iterator pointing to rex_balance object
+    * \param bitr - iterator pointing to rex_balance object
     *
     * @return int64_t - amount of REX in savings bucket
     */
@@ -1167,10 +1165,10 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Adds a specified REX amount to savings bucket
+    * \details Adds a specified REX amount to savings bucket
     *
-    * @param bitr - iterator pointing to rex_balance object
-    * @param rex - amount of REX to be added
+    * \param bitr - iterator pointing to rex_balance object
+    * \param rex - amount of REX to be added
     */
    void system_contract::put_rex_savings( const rex_balance_table::const_iterator& bitr, int64_t rex )
    {
@@ -1186,9 +1184,9 @@ namespace eosiosystem {
    }
 
    /**
-    * @brief Updates voter REX vote stake to the current value of REX tokens held
+    * \details Updates voter REX vote stake to the current value of REX tokens held
     *
-    * @param voter - account name of voter
+    * \param voter - account name of voter
     */
    void system_contract::update_rex_stake( const name& voter )
    {
@@ -1215,4 +1213,4 @@ namespace eosiosystem {
       }
    }
 
-}; /// namespace eosiosystem
+}; // namespace eosiosystem

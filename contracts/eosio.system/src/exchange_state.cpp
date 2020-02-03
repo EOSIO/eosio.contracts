@@ -107,4 +107,4 @@ namespace eosiosystem {
       return inp;
    }
 
-} /// namespace eosiosystem
+} // namespace eosiosystem

@@ -143,7 +143,7 @@ namespace eosiosystem {
    }
 
    double stake2vote( int64_t staked ) {
-      /// TODO subtract 2080 brings the large numbers closer to this decade
+      // TODO subtract 2080 brings the large numbers closer to this decade
       double weight = int64_t( (current_time_point().sec_since_epoch() - (block_timestamp::block_timestamp_epoch / 1000)) / (seconds_per_day * 7) )  / double( 52 );
       return double(staked) * std::pow( 2, weight );
    }
@@ -222,14 +222,12 @@ namespace eosiosystem {
       }
 
       auto voter = _voters.find( voter_name.value );
-      check( voter != _voters.end(), "user must stake before they can vote" ); /// staking creates voter object
+      check( voter != _voters.end(), "user must stake before they can vote" ); // staking creates voter object
       check( !proxy || !voter->is_proxy, "account registered as a proxy is not allowed to use a proxy" );
 
-      /**
-       * The first time someone votes we calculate and set last_vote_weight. Since they cannot unstake until
-       * after the chain has been activated, we can use last_vote_weight to determine that this is
-       * their first vote and should consider their stake activated.
-       */
+      // The first time someone votes we calculate and set last_vote_weight. Since they cannot unstake until
+      // after the chain has been activated, we can use last_vote_weight to determine that this is
+      // their first vote and should consider their stake activated.
       if( _gstate.thresh_activated_stake_time == time_point() && voter->last_vote_weight <= 0.0 ) {
          _gstate.total_activated_stake += voter->staked;
          if( _gstate.total_activated_stake >= min_activated_stake ) {
@@ -360,7 +358,7 @@ namespace eosiosystem {
          new_weight += voter.proxied_vote_weight;
       }
 
-      /// don't propagate small changes (1 ~= epsilon)
+      // don't propagate small changes (1 ~= epsilon)
       if ( fabs( new_weight - voter.last_vote_weight ) > 1 )  {
          if ( voter.proxy ) {
             auto& proxy = _voters.get( voter.proxy.value, "proxy not found" ); //data corruption
@@ -412,4 +410,4 @@ namespace eosiosystem {
       );
    }
 
-} /// namespace eosiosystem
+} // namespace eosiosystem

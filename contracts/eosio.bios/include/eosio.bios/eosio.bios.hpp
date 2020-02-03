@@ -75,12 +75,10 @@ namespace eosiobios {
       public:
          using contract::contract;
          /**
-          * New account action
-          *
-          * @details Called after a new account is created. This code enforces resource-limits rules
+          * \details New account action, it is called after a new account is created. This code enforces resource-limits rules
           * for new accounts as well as new account naming conventions.
           *
-          * 1. accounts cannot contain '.' symbols which forces all acccounts to be 12
+          * 1. accounts cannot contain '.' symbols which forces all accounts to be 12
           * characters long without '.' until a future account auction process is implemented
           * which prevents name squatting.
           *
@@ -88,43 +86,34 @@ namespace eosiobios {
           * therefore, this method will execute an inline buyram from receiver for newacnt in
           * an amount equal to the current new account creation fee.
           */
-         [[eosio::action]]
-         void newaccount( name             creator,
-                          name             name,
-                          ignore<authority> owner,
-                          ignore<authority> active){}
+         [[eosio::action]] void newaccount(  name             creator,
+                                             name             name,
+                                             ignore<authority> owner,
+                                             ignore<authority> active){}
          /**
-          * Update authorization action.
+          * \details Updates permission for an account.
           *
-          * @details Updates pemission for an account.
-          *
-          * @param account - the account for which the permission is updated,
-          * @param pemission - the permission name which is updated,
-          * @param parem - the parent of the permission which is updated,
-          * @param aut - the json describing the permission authorization.
+          * \param account The account for which the permission is updated,
+          * \param permission The permission name which is updated,
+          * \param parent The parent of the permission which is updated,
+          * \param auth The json describing the permission authorization.
           */
-         [[eosio::action]]
-         void updateauth(  ignore<name>  account,
-                           ignore<name>  permission,
-                           ignore<name>  parent,
-                           ignore<authority> auth ) {}
+         [[eosio::action]] void updateauth(  ignore<name>  account,
+                                             ignore<name>  permission,
+                                             ignore<name>  parent,
+                                             ignore<authority> auth ) {}
 
          /**
-          * Delete authorization action.
+          * \details Deletes the authorization for an account's permission.
           *
-          * @details Deletes the authorization for an account's permision.
-          *
-          * @param account - the account for which the permission authorization is deleted,
-          * @param permission - the permission name been deleted.
+          * \param account The account for which the permission authorization is deleted,
+          * \param permission The permission name been deleted.
           */
-         [[eosio::action]]
-         void deleteauth( ignore<name>  account,
-                          ignore<name>  permission ) {}
+         [[eosio::action]] void deleteauth(  ignore<name>  account,
+                                             ignore<name>  permission ) {}
 
          /**
-          * Link authorization action.
-          *
-          * @details Assigns a specific action from a contract to a permission you have created. Five system
+          * \details Assigns a specific action from a contract to a permission you have created. Five system
           * actions can not be linked `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, and `canceldelay`.
           * This is useful because when doing authorization checks, the EOSIO based blockchain starts with the
           * action needed to be authorized (and the contract belonging to), and looks up which permission
@@ -133,159 +122,120 @@ namespace eosiobios {
           * `eosio.any` is an implicit permission which exists on every account; you can link actions to `eosio.any`
           * and that will make it so linked actions are accessible to any permissions defined for the account.
           *
-          * @param account - the permission's owner to be linked and the payer of the RAM needed to store this link,
-          * @param code - the owner of the action to be linked,
-          * @param type - the action to be linked,
-          * @param requirement - the permission to be linked.
+          * \param account The permission's owner to be linked and the payer of the RAM needed to store this link,
+          * \param code The owner of the action to be linked,
+          * \param type The action to be linked,
+          * \param requirement The permission to be linked.
           */
-         [[eosio::action]]
-         void linkauth(  ignore<name>    account,
-                         ignore<name>    code,
-                         ignore<name>    type,
-                         ignore<name>    requirement  ) {}
+         [[eosio::action]] void linkauth( ignore<name>    account,
+                                          ignore<name>    code,
+                                          ignore<name>    type,
+                                          ignore<name>    requirement  ) {}
 
          /**
-          * Unlink authorization action.
+          * \details It's doing the reverse of linkauth action, by unlinking the given action.
           *
-          * @details It's doing the reverse of linkauth action, by unlinking the given action.
-          *
-          * @param account - the owner of the permission to be unlinked and the receiver of the freed RAM,
-          * @param code - the owner of the action to be unlinked,
-          * @param type - the action to be unlinked.
+          * \param account The owner of the permission to be unlinked and the receiver of the freed RAM,
+          * \param code The owner of the action to be unlinked,
+          * \param type The action to be unlinked.
           */
-         [[eosio::action]]
-         void unlinkauth( ignore<name>  account,
-                          ignore<name>  code,
-                          ignore<name>  type ) {}
+         [[eosio::action]] void unlinkauth(  ignore<name>  account,
+                                             ignore<name>  code,
+                                             ignore<name>  type ) {}
 
          /**
-          * Cancel delay action.
+          * \details Cancels a deferred transaction.
           *
-          * @details Cancels a deferred transaction.
-          *
-          * @param canceling_auth - the permission that authorizes this action,
-          * @param trx_id - the deferred transaction id to be cancelled.
+          * \param canceling_auth The permission that authorizes this action,
+          * \param trx_id The deferred transaction id to be cancelled.
           */
-         [[eosio::action]]
-         void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
+         [[eosio::action]] void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
 
          /**
-          * Set code action.
+          * \details Sets the contract code for an account.
           *
-          * @details Sets the contract code for an account.
-          *
-          * @param account - the account for which to set the contract code.
-          * @param vmtype - reserved, set it to zero.
-          * @param vmversion - reserved, set it to zero.
-          * @param code - the code content to be set, in the form of a blob binary..
+          * \param account The account for which to set the contract code.
+          * \param vmtype Reserved, set it to zero.
+          * \param vmversion Reserved, set it to zero.
+          * \param code The code content to be set, in the form of a blob binary..
           */
-         [[eosio::action]]
-         void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
-
-         /** @}*/
+         [[eosio::action]] void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
 
          /**
-          * Set abi for contract.
-          *
-          * @details Set the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
+          * \details Set the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
           * index, with `account` name as key, if it is not already present and sets its value with the abi hash.
           * Otherwise it is updating the current abi hash value for the existing `account` key.
           *
-          * @param account - the name of the account to set the abi for
-          * @param abi     - the abi hash represented as a vector of characters
+          * \param account The name of the account to set the abi for
+          * \param abi     The abi hash represented as a vector of characters
           */
-         [[eosio::action]]
-         void setabi( name account, const std::vector<char>& abi );
+         [[eosio::action]] void setabi( name account, const std::vector<char>& abi );
 
          /**
-          * On error action.
-          *
-          * @details Notification of this action is delivered to the sender of a deferred transaction
+          * \details Notification of this action is delivered to the sender of a deferred transaction
           * when an objective error occurs while executing the deferred transaction.
           * This action is not meant to be called directly.
           *
-          * @param sender_id - the id for the deferred transaction chosen by the sender,
-          * @param sent_trx - the deferred transaction that failed.
+          * \param sender_id The id for the deferred transaction chosen by the sender,
+          * \param sent_trx The deferred transaction that failed.
           */
-         [[eosio::action]]
-         void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
+         [[eosio::action]] void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
 
          /**
-          * Set privilege status for an account.
-          *
-          * @details Allows to set privilege status for an account (turn it on/off).
-          * @param account - the account to set the privileged status for.
-          * @param is_priv - 0 for false, > 0 for true.
+          * \details Allows to set privilege status for an account (turn it on/off).
+          * \param account The account to set the privileged status for.
+          * \param is_priv 0 for false, > 0 for true.
           */
-         [[eosio::action]]
-         void setpriv( name account, uint8_t is_priv );
+         [[eosio::action]] void setpriv( name account, uint8_t is_priv );
 
          /**
-          * Set the resource limits of an account
+          * \details Set the resource limits of an account
           *
-          * @details Set the resource limits of an account
-          *
-          * @param account - name of the account whose resource limit to be set
-          * @param ram_bytes - ram limit in absolute bytes
-          * @param net_weight - fractionally proportionate net limit of available resources based on (weight / total_weight_of_all_accounts)
-          * @param cpu_weight - fractionally proportionate cpu limit of available resources based on (weight / total_weight_of_all_accounts)
+          * \param account The name of the account whose resource limit to be set
+          * \param ram_bytes The ram limit in absolute bytes
+          * \param net_weight The fractionally proportionate net limit of available resources based on (weight / total_weight_of_all_accounts)
+          * \param cpu_weight The fractionally proportionate cpu limit of available resources based on (weight / total_weight_of_all_accounts)
           */
-         [[eosio::action]]
-         void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
+         [[eosio::action]] void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
 
          /**
-          * Set a new list of active producers, that is, a new producers' schedule.
-          *
-          * @details Set a new list of active producers, by proposing a schedule change, once the block that
+          * \details Set a new list of active producers, by proposing a schedule change, once the block that
           * contains the proposal becomes irreversible, the schedule is promoted to "pending"
           * automatically. Once the block that promotes the schedule is irreversible, the schedule will
           * become "active".
           *
-          * @param schedule - New list of active producers to set
+          * \param schedule The new list of active producers to set
           */
-         [[eosio::action]]
-         void setprods( const std::vector<eosio::producer_authority>& schedule );
+         [[eosio::action]] void setprods( const std::vector<eosio::producer_authority>& schedule );
 
          /**
-          * Set the blockchain parameters
+          * \details Set the blockchain parameters. By tuning these parameters, various degrees of customization can be achieved.
           *
-          * @details Set the blockchain parameters. By tuning these parameters, various degrees of customization can be achieved.
-          *
-          * @param params - New blockchain parameters to set
+          * \param params The new blockchain parameters to set
           */
-         [[eosio::action]]
-         void setparams( const eosio::blockchain_parameters& params );
+         [[eosio::action]] void setparams( const eosio::blockchain_parameters& params );
 
          /**
-          * Check if an account has authorization to access current action.
-          *
-          * @details Checks if the account name `from` passed in as param has authorization to access
+          * \details Checks if the account name `from` passed in as param has authorization to access
           * current action, that is, if it is listed in the action’s allowed permissions vector.
           *
-          * @param from - the account name to authorize
+          * \param from The account name to authorize
           */
-         [[eosio::action]]
-         void reqauth( name from );
+         [[eosio::action]] void reqauth( name from );
 
          /**
-          * Activates a protocol feature.
+          * \details Activates a protocol feature
           *
-          * @details Activates a protocol feature
-          *
-          * @param feature_digest - hash of the protocol feature to activate.
+          * \param feature_digest The hash of the protocol feature to activate.
           */
-         [[eosio::action]]
-         void activate( const eosio::checksum256& feature_digest );
+         [[eosio::action]]void activate( const eosio::checksum256& feature_digest );
 
          /**
-          * Asserts that a protocol feature has been activated.
+          * \details Asserts that a protocol feature has been activated
           *
-          * @details Asserts that a protocol feature has been activated
-          *
-          * @param feature_digest - hash of the protocol feature to check for activation.
+          * \param feature_digest The hash of the protocol feature to check for activation.
           */
-         [[eosio::action]]
-         void reqactivated( const eosio::checksum256& feature_digest );
+         [[eosio::action]] void reqactivated( const eosio::checksum256& feature_digest );
 
          struct [[eosio::table]] abi_hash {
             name              owner;

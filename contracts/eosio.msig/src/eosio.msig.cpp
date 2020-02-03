@@ -204,4 +204,4 @@ void multisig::invalidate( name account ) {
    }
 }
 
-} /// namespace eosio
+}
