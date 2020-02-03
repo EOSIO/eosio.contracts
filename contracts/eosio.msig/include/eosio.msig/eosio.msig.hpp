@@ -129,93 +129,50 @@ namespace eosio {
          using cancel_action = eosio::action_wrapper<"cancel"_n, &multisig::cancel>;
          using exec_action = eosio::action_wrapper<"exec"_n, &multisig::exec>;
          using invalidate_action = eosio::action_wrapper<"invalidate"_n, &multisig::invalidate>;
-
-      private:
-         struct [[eosio::table]] proposal {
-            name                                                 proposal_name;
-            std::vector<char>                                    packed_transaction;
-            eosio::binary_extension< std::optional<time_point> > earliest_exec_time;
-
-            uint64_t primary_key()const { return proposal_name.value; }
-         };
-
-         typedef eosio::multi_index< "proposal"_n, proposal > proposals;
-
-         struct [[eosio::table]] old_approvals_info {
-            name                            proposal_name;
-            std::vector<permission_level>   requested_approvals;
-            std::vector<permission_level>   provided_approvals;
-
-            uint64_t primary_key()const { return proposal_name.value; }
-         };
-         typedef eosio::multi_index< "approvals"_n, old_approvals_info > old_approvals;
-
-         struct approval {
-            permission_level level;
-            time_point       time;
-         };
-
-         struct [[eosio::table]] approvals_info {
-            uint8_t                 version = 1;
-            name                    proposal_name;
-            //requested approval doesn't need to cointain time, but we want requested approval
-            //to be of exact the same size ad provided approval, in this case approve/unapprove
-            //doesn't change serialized data size. So, we use the same type.
-            std::vector<approval>   requested_approvals;
-            std::vector<approval>   provided_approvals;
-
-            uint64_t primary_key()const { return proposal_name.value; }
-         };
-         typedef eosio::multi_index< "approvals2"_n, approvals_info > approvals;
-
-         struct [[eosio::table]] invalidation {
-            name         account;
-            time_point   last_invalidation_time;
-
-            uint64_t primary_key() const { return account.value; }
-         };
-
-         typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
-
-      private:
-         template<typename Function>
-         bool approvals_satisfy_trx_authorization(name proposer, name proposal_name, const std::vector<char>& packed_trx, Function&& table_op) {
-            std::vector<permission_level> approvals = get_approvals_and_adjust_table(proposer, proposal_name, table_op);
-            if ( trx_is_authorized(approvals, packed_trx) ) {
-               return true;
-            } else {
-               return false;
-            }
-         }
-
-         template<typename Function>
-         std::vector<permission_level> get_approvals_and_adjust_table(name proposer, name proposal_name, Function&& table_op) {
-            approvals approval_table( get_self(), proposer.value );
-            auto approval_table_iter = approval_table.find( proposal_name.value );
-            std::vector<permission_level> approvals;
-            invalidations invalidations_table( get_self(), get_self().value );
-
-            if ( approval_table_iter != approval_table.end() ) {
-               approvals.reserve( approval_table_iter->provided_approvals.size() );
-               for ( auto& permission : approval_table_iter->provided_approvals ) {
-                  auto iter = invalidations_table.find( permission.level.actor.value );
-                  if ( iter == invalidations_table.end() || iter->last_invalidation_time < permission.time ) {
-                     approvals.push_back(permission.level);
-                  }
-               }
-               table_op( approval_table, approval_table_iter );
-            } else {
-               old_approvals old_approval_table( get_self(), proposer.value );
-               auto& old_approvals_iter = old_approval_table.get( proposal_name.value, "proposal not found" );
-               for ( auto& permission : old_approvals_iter.provided_approvals ) {
-                  auto iter = invalidations_table.find( permission.actor.value );
-                  if ( iter == invalidations_table.end() ) {
-                     approvals.push_back( permission );
-                  }
-               }
-               table_op( old_approval_table, old_approvals_iter );
-            }
-            return approvals;
-         }
    };
+
+   struct [[eosio::table]] proposal {
+      name                                                 proposal_name;
+      std::vector<char>                                    packed_transaction;
+      eosio::binary_extension< std::optional<time_point> > earliest_exec_time;
+
+      uint64_t primary_key()const { return proposal_name.value; }
+   };
+   typedef eosio::multi_index< "proposal"_n, proposal > proposals;
+
+   struct [[eosio::table]] old_approvals_info {
+      name                            proposal_name;
+      std::vector<permission_level>   requested_approvals;
+      std::vector<permission_level>   provided_approvals;
+
+      uint64_t primary_key()const { return proposal_name.value; }
+   };
+   typedef eosio::multi_index< "approvals"_n, old_approvals_info > old_approvals;
+
+   struct approval {
+      permission_level level;
+      time_point       time;
+   };
+
+   struct [[eosio::table]] approvals_info {
+      uint8_t                 version = 1;
+      name                    proposal_name;
+      //requested approval doesn't need to cointain time, but we want requested approval
+      //to be of exact the same size ad provided approval, in this case approve/unapprove
+      //doesn't change serialized data size. So, we use the same type.
+      std::vector<approval>   requested_approvals;
+      std::vector<approval>   provided_approvals;
+
+      uint64_t primary_key()const { return proposal_name.value; }
+   };
+   typedef eosio::multi_index< "approvals2"_n, approvals_info > approvals;
+
+   struct [[eosio::table]] invalidation {
+      name         account;
+      time_point   last_invalidation_time;
+
+      uint64_t primary_key() const { return account.value; }
+   };
+   typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
+
 } /// namespace eosio

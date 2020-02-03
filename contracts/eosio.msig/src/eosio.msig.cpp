@@ -6,6 +6,12 @@
 
 namespace eosio {
 
+template<typename Function>
+bool approvals_satisfy_trx_authorization(name self, name proposer, name proposal_name, const std::vector<char>& packed_trx, Function&& table_op);
+
+template<typename Function>
+std::vector<permission_level> get_approvals_and_adjust_table(name self, name proposer, name proposal_name, Function&& table_op);
+
 void multisig::propose( ignore<name> proposer,
                         ignore<name> proposal_name,
                         ignore<std::vector<permission_level>> requested,
@@ -91,12 +97,13 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
 
    transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
 
+   // Question for code review.
    if ( prop.earliest_exec_time.has_value() ) {
       if ( prop.earliest_exec_time.value().has_value() ) {
          return;
       } else {
          auto table_op = [](auto&&, auto&&){};
-         if ( approvals_satisfy_trx_authorization(proposer, proposal_name, prop.packed_transaction, table_op) ) {
+         if ( approvals_satisfy_trx_authorization(get_self(), proposer, proposal_name, prop.packed_transaction, table_op) ) {
             auto prop_it = proptable.find( proposal_name.value );
             proptable.modify( prop_it, proposer, [&]( auto& p ) {
                p.earliest_exec_time = std::optional<time_point>{ current_time_point() + eosio::seconds(trx_header.delay_sec.value)};
@@ -139,7 +146,7 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
    if ( prop.earliest_exec_time.has_value() ) {
       if ( prop.earliest_exec_time.value().has_value() ) {
          auto table_op = [](auto&&, auto&&){};
-         if ( approvals_satisfy_trx_authorization(proposer, proposal_name, prop.packed_transaction, table_op) ) {
+         if ( approvals_satisfy_trx_authorization(get_self(), proposer, proposal_name, prop.packed_transaction, table_op) ) {
             return;
          } else {
             auto prop_it = proptable.find( proposal_name.value );
@@ -189,7 +196,7 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
 
    auto table_op = [](auto&& table, auto&& table_iter) { table.erase(table_iter); };
-   bool ok = approvals_satisfy_trx_authorization(proposer, proposal_name, prop.packed_transaction, table_op);
+   bool ok = approvals_satisfy_trx_authorization(get_self(), proposer, proposal_name, prop.packed_transaction, table_op);
    check( ok, "transaction authorization failed" );
 
    if ( prop.earliest_exec_time.has_value() && prop.earliest_exec_time.value().has_value() ) {
@@ -233,6 +240,42 @@ void multisig::invalidate( name account ) {
    }
 }
 
+template<typename Function>
+bool approvals_satisfy_trx_authorization(name self, name proposer, name proposal_name, const std::vector<char>& packed_trx, Function&& table_op) {
+   std::vector<permission_level> approvals_vector = get_approvals_and_adjust_table(self, proposer, proposal_name, table_op);
+   return trx_is_authorized(approvals_vector, packed_trx);
+}
+
+template<typename Function>
+std::vector<permission_level> get_approvals_and_adjust_table(name self, name proposer, name proposal_name, Function&& table_op) {
+   approvals approval_table( self, proposer.value );
+   auto approval_table_iter = approval_table.find( proposal_name.value );
+   std::vector<permission_level> approvals_vector;
+   invalidations invalidations_table( self, self.value );
+
+   if ( approval_table_iter != approval_table.end() ) {
+      approvals_vector.reserve( approval_table_iter->provided_approvals.size() );
+      for ( auto& permission : approval_table_iter->provided_approvals ) {
+         auto iter = invalidations_table.find( permission.level.actor.value );
+         if ( iter == invalidations_table.end() || iter->last_invalidation_time < permission.time ) {
+            approvals_vector.push_back(permission.level);
+         }
+      }
+      table_op( approval_table, approval_table_iter );
+   } else {
+      old_approvals old_approval_table( self, proposer.value );
+      auto& old_approvals_iter = old_approval_table.get( proposal_name.value, "proposal not found" );
+      for ( const auto& permission : old_approvals_iter.provided_approvals ) {
+         auto iter = invalidations_table.find( permission.actor.value );
+         if ( iter == invalidations_table.end() ) {
+            approvals_vector.push_back( permission );
+         }
+      }
+      table_op( old_approval_table, old_approvals_iter );
+   }
+   return approvals_vector;
+}
+
 transaction_header get_trx_header(const char* ptr, size_t sz) {
    datastream<const char*> ds{ptr, sz};
    transaction_header trx_header;
@@ -241,11 +284,11 @@ transaction_header get_trx_header(const char* ptr, size_t sz) {
 }
 
 bool trx_is_authorized(const std::vector<permission_level>& approvals, const std::vector<char>& packed_trx) {
-   auto packed_requeted = pack(approvals);
+   auto packed_approvals = pack(approvals);
    return check_transaction_authorization(
       packed_trx.data(), packed_trx.size(),
       (const char*)0, 0,
-      packed_requeted.data(), packed_requeted.size()
+      packed_approvals.data(), packed_approvals.size()
    );
 }
 
