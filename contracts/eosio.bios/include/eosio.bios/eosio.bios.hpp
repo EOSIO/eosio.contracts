@@ -75,9 +75,7 @@ namespace eosiobios {
       public:
          using contract::contract;
          /**
-          * New account action
-          *
-          * @details Called after a new account is created. This code enforces resource-limits rules
+          * New account action, called after a new account is created. This code enforces resource-limits rules
           * for new accounts as well as new account naming conventions.
           *
           * 1. accounts cannot contain '.' symbols which forces all acccounts to be 12
@@ -94,9 +92,7 @@ namespace eosiobios {
                           ignore<authority> owner,
                           ignore<authority> active){}
          /**
-          * Update authorization action.
-          *
-          * @details Updates pemission for an account.
+          * Update authorization action updates pemission for an account.
           *
           * @param account - the account for which the permission is updated,
           * @param pemission - the permission name which is updated,
@@ -110,9 +106,7 @@ namespace eosiobios {
                            ignore<authority> auth ) {}
 
          /**
-          * Delete authorization action.
-          *
-          * @details Deletes the authorization for an account's permision.
+          * Delete authorization action deletes the authorization for an account's permission.
           *
           * @param account - the account for which the permission authorization is deleted,
           * @param permission - the permission name been deleted.
@@ -122,9 +116,7 @@ namespace eosiobios {
                           ignore<name>  permission ) {}
 
          /**
-          * Link authorization action.
-          *
-          * @details Assigns a specific action from a contract to a permission you have created. Five system
+          * Link authorization action assigns a specific action from a contract to a permission you have created. Five system
           * actions can not be linked `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, and `canceldelay`.
           * This is useful because when doing authorization checks, the EOSIO based blockchain starts with the
           * action needed to be authorized (and the contract belonging to), and looks up which permission
@@ -145,9 +137,7 @@ namespace eosiobios {
                          ignore<name>    requirement  ) {}
 
          /**
-          * Unlink authorization action.
-          *
-          * @details It's doing the reverse of linkauth action, by unlinking the given action.
+          * Unlink authorization action it's doing the reverse of linkauth action, by unlinking the given action.
           *
           * @param account - the owner of the permission to be unlinked and the receiver of the freed RAM,
           * @param code - the owner of the action to be unlinked,
@@ -159,9 +149,7 @@ namespace eosiobios {
                           ignore<name>  type ) {}
 
          /**
-          * Cancel delay action.
-          *
-          * @details Cancels a deferred transaction.
+          * Cancel delay action cancels a deferred transaction.
           *
           * @param canceling_auth - the permission that authorizes this action,
           * @param trx_id - the deferred transaction id to be cancelled.
@@ -170,9 +158,7 @@ namespace eosiobios {
          void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
 
          /**
-          * Set code action.
-          *
-          * @details Sets the contract code for an account.
+          * Set code action sets the contract code for an account.
           *
           * @param account - the account for which to set the contract code.
           * @param vmtype - reserved, set it to zero.
@@ -185,9 +171,7 @@ namespace eosiobios {
          /** @}*/
 
          /**
-          * Set abi for contract.
-          *
-          * @details Set the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
+          * Set abi action sets the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
           * index, with `account` name as key, if it is not already present and sets its value with the abi hash.
           * Otherwise it is updating the current abi hash value for the existing `account` key.
           *
@@ -198,9 +182,7 @@ namespace eosiobios {
          void setabi( name account, const std::vector<char>& abi );
 
          /**
-          * On error action.
-          *
-          * @details Notification of this action is delivered to the sender of a deferred transaction
+          * On error action, notification of this action is delivered to the sender of a deferred transaction
           * when an objective error occurs while executing the deferred transaction.
           * This action is not meant to be called directly.
           *
@@ -211,9 +193,7 @@ namespace eosiobios {
          void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
 
          /**
-          * Set privilege status for an account.
-          *
-          * @details Allows to set privilege status for an account (turn it on/off).
+          * Set privilege action allows to set privilege status for an account (turn it on/off).
           * @param account - the account to set the privileged status for.
           * @param is_priv - 0 for false, > 0 for true.
           */
@@ -221,9 +201,7 @@ namespace eosiobios {
          void setpriv( name account, uint8_t is_priv );
 
          /**
-          * Set the resource limits of an account
-          *
-          * @details Set the resource limits of an account
+          * Sets the resource limits of an account
           *
           * @param account - name of the account whose resource limit to be set
           * @param ram_bytes - ram limit in absolute bytes
@@ -234,9 +212,7 @@ namespace eosiobios {
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
 
          /**
-          * Set a new list of active producers, that is, a new producers' schedule.
-          *
-          * @details Set a new list of active producers, by proposing a schedule change, once the block that
+          * Set producers action, sets a new list of active producers, by proposing a schedule change, once the block that
           * contains the proposal becomes irreversible, the schedule is promoted to "pending"
           * automatically. Once the block that promotes the schedule is irreversible, the schedule will
           * become "active".
@@ -247,9 +223,7 @@ namespace eosiobios {
          void setprods( const std::vector<eosio::producer_authority>& schedule );
 
          /**
-          * Set the blockchain parameters
-          *
-          * @details Set the blockchain parameters. By tuning these parameters, various degrees of customization can be achieved.
+          * Set params action, sets the blockchain parameters. By tuning these parameters, various degrees of customization can be achieved.
           *
           * @param params - New blockchain parameters to set
           */
@@ -257,9 +231,7 @@ namespace eosiobios {
          void setparams( const eosio::blockchain_parameters& params );
 
          /**
-          * Check if an account has authorization to access current action.
-          *
-          * @details Checks if the account name `from` passed in as param has authorization to access
+          * Require authorization action, checks if the account name `from` passed in as param has authorization to access
           * current action, that is, if it is listed in the action’s allowed permissions vector.
           *
           * @param from - the account name to authorize
@@ -268,9 +240,7 @@ namespace eosiobios {
          void reqauth( name from );
 
          /**
-          * Activates a protocol feature.
-          *
-          * @details Activates a protocol feature
+          * Activate action, activates a protocol feature
           *
           * @param feature_digest - hash of the protocol feature to activate.
           */
@@ -278,9 +248,7 @@ namespace eosiobios {
          void activate( const eosio::checksum256& feature_digest );
 
          /**
-          * Asserts that a protocol feature has been activated.
-          *
-          * @details Asserts that a protocol feature has been activated
+          * Require activated action, asserts that a protocol feature has been activated
           *
           * @param feature_digest - hash of the protocol feature to check for activation.
           */

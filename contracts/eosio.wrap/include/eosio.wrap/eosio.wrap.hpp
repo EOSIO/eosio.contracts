@@ -19,7 +19,7 @@ namespace eosio {
          /**
           * Execute action.
           *
-          * @details Execute a transaction while bypassing regular authorization checks.
+          * Execute a transaction while bypassing regular authorization checks.
           *
           * Preconditions:
           * - Requires authorization of eosio.wrap which needs to be a privileged account.
