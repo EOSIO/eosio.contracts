@@ -213,143 +213,6 @@ transaction eosio_msig_tester::reqauth( account_name from, const vector<permissi
 
 BOOST_AUTO_TEST_SUITE(eosio_msig_tests)
 
-BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove, eosio_msig_tester ) try {
-   static constexpr uint32_t delay_sec = 1000;
-   // static constexpr uint32_t maximum_sec_since_epoch = time_point{microseconds::maximum()}.sec_since_epoch();
-
-   //helper function
-   static auto calculate_test_exec_time = [&] (uint32_t delay_sec) -> uint32_t {
-      return time_point{control->pending_block_time() + fc::seconds(delay_sec)}.sec_since_epoch();
-   };
-
-   transaction trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
-   trx.delay_sec = delay_sec;
-
-   push_action( N(alice), N(propose), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("trx",           trx)
-                  ("requested",     vector<permission_level>{{ N(alice), config::active_name }})
-   );
-   // `propose` initially default-constructs `earliest_exec_time` to the default
-   // constructed state of a `std::optional`.
-   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
-
-   push_action( N(alice), N(approve), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
-   );
-   // `approve` then initializes `earliest_exec_time` to it's specified value
-   // (calculated by the current time point and what was specified in the
-   // `delay_sec` field of the `transaction_header` in the initial proposal), if
-   // the specified authorizations are met (in this case they are).
-   BOOST_REQUIRE_EQUAL( calculate_test_exec_time(delay_sec), get_earliest_exec_time(N(alice), N(first))->sec_since_epoch() );
-
-   transaction_trace_ptr trx_trace;
-   trx_trace = push_action( N(alice), N(unapprove), mvo()
-                             ("proposer",      "alice")
-                             ("proposal_name", "first")
-                             ("level",         permission_level{ N(alice), config::active_name })
-   );
-   // `unapprove` will revert `earliest_exec_time` back to the default
-   // constructed state of a `std::optional` if the specified authorizations are
-   // not met.
-   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
-
-   wdump((fc::json::to_pretty_string(trx_trace)));
-
-   BOOST_REQUIRE( bool(trx_trace) );
-   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
-   BOOST_REQUIRE_EQUAL( 1, trx_trace->action_traces.size() );
-
-   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[0].action_ordinal );
-   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].creator_action_ordinal );
-   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].closest_unnotified_ancestor_action_ordinal );
-   BOOST_REQUIRE_EQUAL( N(eosio.msig), action_name{trx_trace->action_traces[0].receiver} );
-   BOOST_REQUIRE_EQUAL( N(eosio.msig), name{trx_trace->action_traces[0].act.account} );
-   BOOST_REQUIRE_EQUAL( N(unapprove), name{trx_trace->action_traces[0].act.name} );
-   BOOST_REQUIRE_EQUAL( N(alice), name{trx_trace->action_traces[0].act.authorization[0].actor} );
-   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[0].act.authorization[0].permission} );
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove_multiple, eosio_msig_tester ) try {
-   static constexpr uint32_t delay_sec = 1000;
-
-   //helper function
-   static auto calculate_test_exec_time = [&] (uint32_t delay_sec) -> uint32_t {
-      return time_point{control->pending_block_time() + fc::seconds(delay_sec)}.sec_since_epoch();
-   };
-
-   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name},
-                                  permission_level{N(bob), config::active_name},
-                                  permission_level{N(carol), config::active_name}}, abi_serializer_max_time );
-   trx.delay_sec = delay_sec;
-
-   push_action( N(alice), N(propose), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("trx",           trx)
-                  ("requested",     vector<permission_level>{{ N(alice), config::active_name },
-                                                             { N(bob), config::active_name },
-                                                             { N(carol), config::active_name }})
-   );
-   // `propose` initially default-constructs `earliest_exec_time` to the default
-   // constructed state of a `std::optional`.
-   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
-
-   push_action( N(alice), N(approve), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
-   );
-   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
-
-   push_action( N(bob), N(approve), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(bob), config::active_name })
-   );
-   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
-
-   push_action( N(carol), N(approve), mvo()
-                  ("proposer",      "alice")
-                  ("proposal_name", "first")
-                  ("level",         permission_level{ N(carol), config::active_name })
-   );
-   // `approve` then initializes `earliest_exec_time` to it's specified value
-   // (calculated by the current time point and what was specified in the
-   // `delay_sec` field of the `transaction_header` in the initial proposal), if
-   // the specified authorizations are met (in this case they are).
-   BOOST_REQUIRE_EQUAL( calculate_test_exec_time(delay_sec), get_earliest_exec_time(N(alice), N(first))->sec_since_epoch() );
-
-   transaction_trace_ptr trx_trace;
-   trx_trace = push_action( N(alice), N(unapprove), mvo()
-                             ("proposer",      "alice")
-                             ("proposal_name", "first")
-                             ("level",         permission_level{ N(alice), config::active_name })
-   );
-   // `unapprove` will revert `earliest_exec_time` back to the default
-   // constructed state of a `std::optional` if the specified authorizations are
-   // not met.
-   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
-
-   wdump((fc::json::to_pretty_string(trx_trace)));
-
-   BOOST_REQUIRE( bool(trx_trace) );
-   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
-   BOOST_REQUIRE_EQUAL( 1, trx_trace->action_traces.size() );
-
-   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[0].action_ordinal );
-   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].creator_action_ordinal );
-   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].closest_unnotified_ancestor_action_ordinal );
-   BOOST_REQUIRE_EQUAL( N(eosio.msig), action_name{trx_trace->action_traces[0].receiver} );
-   BOOST_REQUIRE_EQUAL( N(eosio.msig), name{trx_trace->action_traces[0].act.account} );
-   BOOST_REQUIRE_EQUAL( N(unapprove), name{trx_trace->action_traces[0].act.name} );
-   BOOST_REQUIRE_EQUAL( N(alice), name{trx_trace->action_traces[0].act.authorization[0].actor} );
-   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[0].act.authorization[0].permission} );
-} FC_LOG_AND_RETHROW()
-
 BOOST_FIXTURE_TEST_CASE( propose_approve_unapprove, eosio_msig_tester ) try {
    auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
 
@@ -1246,6 +1109,159 @@ BOOST_FIXTURE_TEST_CASE( switch_proposal_and_fail_approve_with_hash, eosio_msig_
                             ),
                             eosio::chain::crypto_api_exception,
                             fc_exception_message_is("hash mismatch")
+   );
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove, eosio_msig_tester ) try {
+   static constexpr uint32_t delay_sec = 1000;
+   // static constexpr uint32_t maximum_sec_since_epoch = time_point{microseconds::maximum()}.sec_since_epoch();
+
+   //helper function
+   static auto calculate_test_exec_time = [&] (uint32_t delay_sec) -> uint32_t {
+      return time_point{control->pending_block_time() + fc::seconds(delay_sec)}.sec_since_epoch();
+   };
+
+   transaction trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   trx.delay_sec = delay_sec;
+
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx)
+                  ("requested",     vector<permission_level>{{ N(alice), config::active_name }})
+   );
+   // `propose` initially default-constructs `earliest_exec_time` to the default
+   // constructed state of a `std::optional`.
+   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
+
+   push_action( N(alice), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+   // `approve` then initializes `earliest_exec_time` to it's specified value
+   // (calculated by the current time point and what was specified in the
+   // `delay_sec` field of the `transaction_header` in the initial proposal), if
+   // the specified authorizations are met (in this case they are).
+   BOOST_REQUIRE_EQUAL( calculate_test_exec_time(delay_sec), get_earliest_exec_time(N(alice), N(first))->sec_since_epoch() );
+
+   transaction_trace_ptr trx_trace;
+   trx_trace = push_action( N(alice), N(unapprove), mvo()
+                             ("proposer",      "alice")
+                             ("proposal_name", "first")
+                             ("level",         permission_level{ N(alice), config::active_name })
+   );
+   // `unapprove` will revert `earliest_exec_time` back to the default
+   // constructed state of a `std::optional` if the specified authorizations are
+   // not met.
+   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
+
+   wdump((fc::json::to_pretty_string(trx_trace)));
+
+   BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
+   BOOST_REQUIRE_EQUAL( 1, trx_trace->action_traces.size() );
+
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[0].action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].creator_action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].closest_unnotified_ancestor_action_ordinal );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), action_name{trx_trace->action_traces[0].receiver} );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), name{trx_trace->action_traces[0].act.account} );
+   BOOST_REQUIRE_EQUAL( N(unapprove), name{trx_trace->action_traces[0].act.name} );
+   BOOST_REQUIRE_EQUAL( N(alice), name{trx_trace->action_traces[0].act.authorization[0].actor} );
+   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[0].act.authorization[0].permission} );
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove_multiple, eosio_msig_tester ) try {
+   static constexpr uint32_t delay_sec = 1000;
+
+   //helper function
+   static auto calculate_test_exec_time = [&] (uint32_t delay_sec) -> uint32_t {
+      return time_point{control->pending_block_time() + fc::seconds(delay_sec)}.sec_since_epoch();
+   };
+
+   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name},
+                                  permission_level{N(bob), config::active_name},
+                                  permission_level{N(carol), config::active_name}}, abi_serializer_max_time );
+   trx.delay_sec = delay_sec;
+
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx)
+                  ("requested",     vector<permission_level>{{ N(alice), config::active_name },
+                                                             { N(bob), config::active_name },
+                                                             { N(carol), config::active_name }})
+   );
+   // `propose` initially default-constructs `earliest_exec_time` to the default
+   // constructed state of a `std::optional`.
+   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
+
+   push_action( N(alice), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
+
+   push_action( N(bob), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(bob), config::active_name })
+   );
+   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
+
+   push_action( N(carol), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(carol), config::active_name })
+   );
+   // `approve` then initializes `earliest_exec_time` to it's specified value
+   // (calculated by the current time point and what was specified in the
+   // `delay_sec` field of the `transaction_header` in the initial proposal), if
+   // the specified authorizations are met (in this case they are).
+   BOOST_REQUIRE_EQUAL( calculate_test_exec_time(delay_sec), get_earliest_exec_time(N(alice), N(first))->sec_since_epoch() );
+
+   transaction_trace_ptr trx_trace;
+   trx_trace = push_action( N(alice), N(unapprove), mvo()
+                             ("proposer",      "alice")
+                             ("proposal_name", "first")
+                             ("level",         permission_level{ N(alice), config::active_name })
+   );
+   // `unapprove` will revert `earliest_exec_time` back to the default
+   // constructed state of a `std::optional` if the specified authorizations are
+   // not met.
+   BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
+
+   wdump((fc::json::to_pretty_string(trx_trace)));
+
+   BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
+   BOOST_REQUIRE_EQUAL( 1, trx_trace->action_traces.size() );
+
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[0].action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].creator_action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].closest_unnotified_ancestor_action_ordinal );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), action_name{trx_trace->action_traces[0].receiver} );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), name{trx_trace->action_traces[0].act.account} );
+   BOOST_REQUIRE_EQUAL( N(unapprove), name{trx_trace->action_traces[0].act.name} );
+   BOOST_REQUIRE_EQUAL( N(alice), name{trx_trace->action_traces[0].act.authorization[0].actor} );
+   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[0].act.authorization[0].permission} );
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( assert_if_context_free_actions_in_propose, eosio_msig_tester ) try {
+   transaction trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   trx.context_free_actions.push_back( {} );
+
+   //since the `context_free_actions` vector is not empty, the transaction shall fail.
+   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(propose), mvo()
+                                          ("proposer",      "alice")
+                                          ("proposal_name", "first")
+                                          ("trx",           trx)
+                                          ("requested",     vector<permission_level>{{ N(alice), config::active_name }})
+                            ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is("not allowed to `propose` a transaction with context-free actions")
    );
 } FC_LOG_AND_RETHROW()
 

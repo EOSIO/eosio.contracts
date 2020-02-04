@@ -390,4 +390,20 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig_producers_change, eosio_wrap_tester ) tr
    BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[2].act.authorization[0].permission} );
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( assert_if_context_free_actions_in_wrap, eosio_wrap_tester ) try {
+   transaction trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
+   trx.context_free_actions.push_back( {} );
+   signed_transaction wrap_trx( wrap_exec( N(alice), trx ), {}, {} );
+   
+   wrap_trx.sign( get_private_key( N(alice), "active" ), control->get_chain_id() );
+   for( const auto& actor : {N(prod1), N(prod2), N(prod3), N(prod4)} ) {
+      wrap_trx.sign( get_private_key( actor, "active" ), control->get_chain_id() );
+   }
+
+   BOOST_REQUIRE_EXCEPTION( push_transaction( wrap_trx ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is("not allowed to `exec` a transaction with context-free actions")
+   );
+} FC_LOG_AND_RETHROW()
+
 BOOST_AUTO_TEST_SUITE_END()

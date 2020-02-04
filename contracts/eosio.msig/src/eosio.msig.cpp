@@ -7,10 +7,11 @@
 namespace eosio {
 
 template<typename Function>
-bool approvals_satisfy_trx_authorization(name self, name proposer, name proposal_name, const std::vector<char>& packed_trx, Function&& table_op);
-
-template<typename Function>
 std::vector<permission_level> get_approvals_and_adjust_table(name self, name proposer, name proposal_name, Function&& table_op);
+
+transaction_header get_trx_header(const char* ptr, size_t sz);
+
+bool trx_is_authorized(const std::vector<permission_level>& approvals, const std::vector<char>& packed_trx);
 
 void multisig::propose( ignore<name> proposer,
                         ignore<name> proposal_name,
@@ -22,12 +23,17 @@ void multisig::propose( ignore<name> proposer,
    std::vector<permission_level> _requested;
 
    _ds >> _proposer >> _proposal_name >> _requested;
+   require_auth( _proposer );
 
    const char* trx_pos = _ds.pos();
    size_t size = _ds.remaining();
-   transaction_header _trx_header = get_trx_header(trx_pos, size);
-   require_auth( _proposer );
-   check( _trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
+
+   transaction_header trx_header;
+   std::vector<action> context_free_actions;
+   _ds >> trx_header;
+   check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
+   _ds >> context_free_actions;
+   check( context_free_actions.empty(), "not allowed to `propose` a transaction with context-free actions" );
 
    proposals proptable( get_self(), _proposer.value );
    check( proptable.find( _proposal_name.value ) == proptable.end(), "proposal with the same name exists" );
@@ -44,20 +50,21 @@ void multisig::propose( ignore<name> proposer,
    std::vector<char> pkd_trans;
    pkd_trans.resize(size);
    memcpy((char*)pkd_trans.data(), trx_pos, size);
+
    proptable.emplace( _proposer, [&]( auto& prop ) {
-      prop.proposal_name      = _proposal_name;
-      prop.packed_transaction = pkd_trans;
-      prop.earliest_exec_time = std::optional<time_point>{};
-   });
+         prop.proposal_name      = _proposal_name;
+         prop.packed_transaction = pkd_trans;
+         prop.earliest_exec_time = std::optional<time_point>{};
+      });
 
    approvals apptable( get_self(), _proposer.value );
    apptable.emplace( _proposer, [&]( auto& a ) {
-      a.proposal_name = _proposal_name;
-      a.requested_approvals.reserve( _requested.size() );
-      for ( auto& level : _requested ) {
-         a.requested_approvals.push_back( approval{ level, time_point{ microseconds{0} } } );
-      }
-   });
+         a.proposal_name = _proposal_name;
+         a.requested_approvals.reserve( _requested.size() );
+         for ( auto& level : _requested ) {
+            a.requested_approvals.push_back( approval{ level, time_point{ microseconds{0} } } );
+         }
+      });
 }
 
 void multisig::approve( name proposer, name proposal_name, permission_level level,
@@ -97,20 +104,12 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
 
    transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
 
-   // Question for code review.
-   if ( prop.earliest_exec_time.has_value() ) {
-      if ( prop.earliest_exec_time.value().has_value() ) {
-         return;
-      } else {
-         auto table_op = [](auto&&, auto&&){};
-         if ( approvals_satisfy_trx_authorization(get_self(), proposer, proposal_name, prop.packed_transaction, table_op) ) {
-            auto prop_it = proptable.find( proposal_name.value );
-            proptable.modify( prop_it, proposer, [&]( auto& p ) {
+   if ( !prop.earliest_exec_time->has_value() ) {
+      auto table_op = [](auto&&, auto&&){};
+      if ( trx_is_authorized(get_approvals_and_adjust_table(get_self(), proposer, proposal_name, table_op), prop.packed_transaction) ) {
+         proptable.modify( prop, proposer, [&]( auto& p ) {
                p.earliest_exec_time = std::optional<time_point>{ current_time_point() + eosio::seconds(trx_header.delay_sec.value)};
             });
-         } else {
-            return;
-         }
       }
    } else {
       check( trx_header.delay_sec.value == 0, "old proposals are not allowed to have non-zero `delay_sec`; cancel and retry" );
@@ -143,19 +142,12 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
    proposals proptable( get_self(), proposer.value );
    auto& prop = proptable.get( proposal_name.value, "proposal not found" );
 
-   if ( prop.earliest_exec_time.has_value() ) {
-      if ( prop.earliest_exec_time.value().has_value() ) {
-         auto table_op = [](auto&&, auto&&){};
-         if ( approvals_satisfy_trx_authorization(get_self(), proposer, proposal_name, prop.packed_transaction, table_op) ) {
-            return;
-         } else {
-            auto prop_it = proptable.find( proposal_name.value );
-            proptable.modify( prop_it, proposer, [&]( auto& p ) {
+   if ( prop.earliest_exec_time->has_value() ) {
+      auto table_op = [](auto&&, auto&&){};
+      if ( !trx_is_authorized(get_approvals_and_adjust_table(get_self(), proposer, proposal_name, table_op), prop.packed_transaction) ) {
+         proptable.modify( prop, proposer, [&]( auto& p ) {
                p.earliest_exec_time = std::optional<time_point>{};
             });
-         }
-      } else {
-         return;
       }
    } else {
       transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
@@ -192,29 +184,25 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
 
    proposals proptable( get_self(), proposer.value );
    auto& prop = proptable.get( proposal_name.value, "proposal not found" );
-   transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
-   check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
-
-   auto table_op = [](auto&& table, auto&& table_iter) { table.erase(table_iter); };
-   bool ok = approvals_satisfy_trx_authorization(get_self(), proposer, proposal_name, prop.packed_transaction, table_op);
-   check( ok, "transaction authorization failed" );
-
-   if ( prop.earliest_exec_time.has_value() && prop.earliest_exec_time.value().has_value() ) {
-      check( prop.earliest_exec_time.value().value() <= current_time_point(), "too early to execute" );
-   } else {
-      check( trx_header.delay_sec.value == 0, "old proposals are not allowed to have non-zero `delay_sec`; cancel and retry" );
-   }
 
    datastream<const char*> ds = {prop.packed_transaction.data(), prop.packed_transaction.size()};
-   transaction_header _;
+   transaction_header trx_header;
    std::vector<action> context_free_actions;
    std::vector<action> actions;
-   ds >> _;
+   ds >> trx_header;
+   check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
    ds >> context_free_actions;
+   check( context_free_actions.empty(), "not allowed to `exec` a transaction with context-free actions" );
    ds >> actions;
 
-   for (const auto& act : context_free_actions) {
-      act.send();
+   auto table_op = [](auto&& table, auto&& table_iter) { table.erase(table_iter); };
+   bool ok = trx_is_authorized(get_approvals_and_adjust_table(get_self(), proposer, proposal_name, table_op), prop.packed_transaction);
+   check( ok, "transaction authorization failed" );
+
+   if ( prop.earliest_exec_time.has_value() && prop.earliest_exec_time->has_value() ) {
+      check( **prop.earliest_exec_time <= current_time_point(), "too early to execute" );
+   } else {
+      check( trx_header.delay_sec.value == 0, "old proposals are not allowed to have non-zero `delay_sec`; cancel and retry" );
    }
 
    for (const auto& act : actions) {
@@ -238,12 +226,6 @@ void multisig::invalidate( name account ) {
             i.last_invalidation_time = current_time_point();
          });
    }
-}
-
-template<typename Function>
-bool approvals_satisfy_trx_authorization(name self, name proposer, name proposal_name, const std::vector<char>& packed_trx, Function&& table_op) {
-   std::vector<permission_level> approvals_vector = get_approvals_and_adjust_table(self, proposer, proposal_name, table_op);
-   return trx_is_authorized(approvals_vector, packed_trx);
 }
 
 template<typename Function>
@@ -277,7 +259,7 @@ std::vector<permission_level> get_approvals_and_adjust_table(name self, name pro
 }
 
 transaction_header get_trx_header(const char* ptr, size_t sz) {
-   datastream<const char*> ds{ptr, sz};
+   datastream<const char*> ds = {ptr, sz};
    transaction_header trx_header;
    ds >> trx_header;
    return trx_header;
@@ -286,10 +268,10 @@ transaction_header get_trx_header(const char* ptr, size_t sz) {
 bool trx_is_authorized(const std::vector<permission_level>& approvals, const std::vector<char>& packed_trx) {
    auto packed_approvals = pack(approvals);
    return check_transaction_authorization(
-      packed_trx.data(), packed_trx.size(),
-      (const char*)0, 0,
-      packed_approvals.data(), packed_approvals.size()
-   );
+             packed_trx.data(), packed_trx.size(),
+             (const char*)0, 0,
+             packed_approvals.data(), packed_approvals.size()
+          );
 }
 
 } /// namespace eosio
