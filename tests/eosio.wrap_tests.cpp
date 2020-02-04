@@ -394,7 +394,7 @@ BOOST_FIXTURE_TEST_CASE( assert_if_context_free_actions_in_wrap, eosio_wrap_test
    transaction trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
    trx.context_free_actions.push_back( {} );
    signed_transaction wrap_trx( wrap_exec( N(alice), trx ), {}, {} );
-   
+
    wrap_trx.sign( get_private_key( N(alice), "active" ), control->get_chain_id() );
    for( const auto& actor : {N(prod1), N(prod2), N(prod3), N(prod4)} ) {
       wrap_trx.sign( get_private_key( actor, "active" ), control->get_chain_id() );

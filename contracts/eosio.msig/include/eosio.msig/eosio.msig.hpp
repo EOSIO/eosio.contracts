@@ -6,10 +6,6 @@
 #include <eosio/transaction.hpp>
 
 namespace eosio {
-
-   // transaction_header get_trx_header(const char* ptr, size_t sz);
-   // bool trx_is_authorized(const std::vector<permission_level>& approvals, const std::vector<char>& packed_trx);
-
    /**
     * The `eosio.msig` system contract allows for creation of proposed transactions which require authorization from a list of accounts, approval of the proposed transactions by those accounts required to approve it, and finally, it also allows the execution of the approved transactions on the blockchain.
     *
