@@ -246,14 +246,14 @@ std::vector<permission_level> get_approvals_and_adjust_table(name self, name pro
       table_op( approval_table, approval_table_iter );
    } else {
       old_approvals old_approval_table( self, proposer.value );
-      auto& old_approvals_iter = old_approval_table.get( proposal_name.value, "proposal not found" );
-      for ( const auto& permission : old_approvals_iter.provided_approvals ) {
+      const auto& old_approvals_obj = old_approval_table.get( proposal_name.value, "proposal not found" );
+      for ( const auto& permission : old_approvals_obj.provided_approvals ) {
          auto iter = invalidations_table.find( permission.actor.value );
          if ( iter == invalidations_table.end() ) {
             approvals_vector.push_back( permission );
          }
       }
-      table_op( old_approval_table, old_approvals_iter );
+      table_op( old_approval_table, old_approvals_obj );
    }
    return approvals_vector;
 }
