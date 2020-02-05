@@ -143,7 +143,7 @@ namespace eosiosystem {
    struct [[eosio::table("global"), eosio::contract("eosio.system")]] eosio_global_state : eosio::blockchain_parameters {
       uint64_t free_ram()const { return max_ram_size - total_ram_bytes_reserved; }
 
-      uint64_t             max_ram_size = 64ll*1024 * 1024 * 1024;
+      uint64_t             max_ram_size = 16ll*1024 * 1024 * 1024;
       uint64_t             total_ram_bytes_reserved = 0;
       int64_t              total_ram_stake = 0;
 
@@ -759,7 +759,7 @@ namespace eosiosystem {
           * @param amount - amount of tokens taken out of 'from' REX fund.
           *
           * @pre A voting requirement must be satisfied before action can be executed.
-          * @pre User must vote for at least 21 producers or delegate vote to proxy before buying REX.
+          * @pre User must vote for at least 15 producers or delegate vote to proxy before buying REX.
           *
           * @post User votes are updated following this action.
           * @post Tokens used in purchase are added to user's voting power.
@@ -780,7 +780,7 @@ namespace eosiosystem {
           * @param from_cpu - amount of tokens to be unstaked from CPU bandwidth and used for REX purchase.
           *
           * @pre A voting requirement must be satisfied before action can be executed.
-          * @pre User must vote for at least 21 producers or delegate vote to proxy before buying REX.
+          * @pre User must vote for at least 15 producers or delegate vote to proxy before buying REX.
           *
           * @post User votes are updated following this action.
           * @post Tokens used in purchase are added to user's voting power.
@@ -1348,7 +1348,7 @@ namespace eosiosystem {
          void runrex( uint16_t max );
          void update_resource_limits( const name& from, const name& receiver, int64_t delta_net, int64_t delta_cpu );
          void check_voting_requirement( const name& owner,
-                                        const char* error_msg = "must vote for at least 21 producers or for a proxy before buying REX" )const;
+                                        const char* error_msg = "must vote for at least 15 producers or for a proxy before buying REX" )const;
          rex_order_outcome fill_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
          asset update_rex_account( const name& owner, const asset& proceeds, const asset& unstake_quant, bool force_vote_update = false );
          void channel_to_rex( const name& from, const asset& amount );
