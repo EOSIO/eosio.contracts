@@ -79,7 +79,7 @@ summary: '{{nowrap from}} buys REX tokens in exchange for {{nowrap amount}} and 
 icon: @ICON_BASE_URL@/@REX_ICON_URI@
 ---
 
-{{amount}} is taken out of {{from}}’s REX fund and used to purchase REX tokens at the current market exchange rate. In order for the action to succeed, {{from}} must have voted for a proxy or at least 21 block producers. {{amount}} is added to {{from}}’s vote stake.
+{{amount}} is taken out of {{from}}’s REX fund and used to purchase REX tokens at the current market exchange rate. In order for the action to succeed, {{from}} must have voted for a proxy or at least 15 block producers. {{amount}} is added to {{from}}’s vote stake.
 
 A sell order of the purchased amount can only be initiated after waiting for the maturity period of 4 to 5 days to pass. Even then, depending on the market conditions, the initiated sell order may not be executed immediately.
 
@@ -546,6 +546,21 @@ icon: @ICON_BASE_URL@/@ADMIN_ICON_URI@
 
 {{$action.account}} adjusts REX loan rate by setting REX pool virtual balance to {{balance}}. No token transfer or issue is executed in this action.
 
+<h1 class="contract">setinflation</h1>
+
+---
+spec_version: "0.2.0"
+title: Set Inflation Parameters
+summary: 'Set inflation parameters'
+icon: @ICON_BASE_URL@/@ADMIN_ICON_URI@
+---
+
+{{$action.account}} sets the inflation parameters as follows:
+
+* Annual inflation rate (in units of a hundredth of a percent): {{annual_rate}}
+* Fraction of inflation used to reward block producers: 1/{{inflation_pay_factor}}
+* Fraction of block producer rewards to be distributed proportional to blocks produced: 1/{{votepay_factor}}
+
 <h1 class="contract">undelegatebw</h1>
 
 ---
@@ -592,7 +607,7 @@ summary: '{{nowrap owner}} buys REX tokens in exchange for tokens currently stak
 icon: @ICON_BASE_URL@/@REX_ICON_URI@
 ---
 
-{{from_net}} and {{from_cpu}} are withdrawn from {{receiver}}’s NET and CPU bandwidths respectively. These funds are used to purchase REX tokens at the current market exchange rate. In order for the action to succeed, {{owner}} must have voted for a proxy or at least 21 block producers.
+{{from_net}} and {{from_cpu}} are withdrawn from {{receiver}}’s NET and CPU bandwidths respectively. These funds are used to purchase REX tokens at the current market exchange rate. In order for the action to succeed, {{owner}} must have voted for a proxy or at least 15 block producers.
 
 A sell order of the purchased amount can only be initiated after waiting for the maturity period of 4 to 5 days to pass. Even then, depending on the market conditions, the initiated sell order may not be executed immediately.
 

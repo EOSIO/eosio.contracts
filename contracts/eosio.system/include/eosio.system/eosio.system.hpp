@@ -67,6 +67,11 @@ namespace eosiosystem {
    static constexpr int64_t  min_activated_stake   = 150'000'000'0000;
    static constexpr int64_t  ram_gift_bytes        = 1400;
    static constexpr int64_t  min_pervote_daily_pay = 100'0000;
+
+   static constexpr int64_t  inflation_precision           = 100;     // 2 decimals
+   static constexpr int64_t  default_annual_rate           = 500;     // 5% annual rate
+   static constexpr int64_t  default_inflation_pay_factor  = 5;       // 20% of the inflation
+   static constexpr int64_t  default_votepay_factor        = 4;       // 25% of the producer pay
    static constexpr double   continuous_rate       = 0.04879;          // 5% annual rate
    static constexpr int64_t  inflation_pay_factor  = 5;                // 20% of the inflation
    static constexpr int64_t  votepay_factor        = 4;                // 25% of the producer pay
@@ -143,7 +148,7 @@ namespace eosiosystem {
    struct [[eosio::table("global"), eosio::contract("eosio.system")]] eosio_global_state : eosio::blockchain_parameters {
       uint64_t free_ram()const { return max_ram_size - total_ram_bytes_reserved; }
 
-      uint64_t             max_ram_size = 64ll*1024 * 1024 * 1024;
+      uint64_t             max_ram_size = 16ll*1024 * 1024 * 1024;
       uint64_t             total_ram_bytes_reserved = 0;
       int64_t              total_ram_stake = 0;
 
@@ -191,6 +196,18 @@ namespace eosiosystem {
       double            total_vpay_share_change_rate = 0;
 
       EOSLIB_SERIALIZE( eosio_global_state3, (last_vpay_state_update)(total_vpay_share_change_rate) )
+   };
+
+   /**
+    * Defines new global state parameters to store inflation rate and distribution
+    */
+   struct [[eosio::table("global4"), eosio::contract("eosio.system")]] eosio_global_state4 {
+      eosio_global_state4() { }
+      double   continuous_rate;
+      int64_t  inflation_pay_factor;
+      int64_t  votepay_factor;
+
+      EOSLIB_SERIALIZE( eosio_global_state4, (continuous_rate)(inflation_pay_factor)(votepay_factor) )
    };
 
    /**
@@ -307,6 +324,10 @@ namespace eosiosystem {
     * Global state singleton added in version 1.3
     */
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
+   /**
+    * Global state singleton added in version 1.6.x
+    */
+   typedef eosio::singleton< "global4"_n, eosio_global_state4 > global_state4_singleton;
 
    struct [[eosio::table, eosio::contract("eosio.system")]] user_resources {
       name          owner;
@@ -535,9 +556,11 @@ namespace eosiosystem {
          global_state_singleton  _global;
          global_state2_singleton _global2;
          global_state3_singleton _global3;
+         global_state4_singleton _global4;
          eosio_global_state      _gstate;
          eosio_global_state2     _gstate2;
          eosio_global_state3     _gstate3;
+         eosio_global_state4     _gstate4;
          rammarket               _rammarket;
          rex_pool_table          _rexpool;
          rex_fund_table          _rexfunds;
@@ -741,7 +764,7 @@ namespace eosiosystem {
           * @param amount - amount of tokens taken out of 'from' REX fund.
           *
           * @pre A voting requirement must be satisfied before action can be executed.
-          * @pre User must vote for at least 21 producers or delegate vote to proxy before buying REX.
+          * @pre User must vote for at least 15 producers or delegate vote to proxy before buying REX.
           *
           * @post User votes are updated following this action.
           * @post Tokens used in purchase are added to user's voting power.
@@ -762,7 +785,7 @@ namespace eosiosystem {
           * @param from_cpu - amount of tokens to be unstaked from CPU bandwidth and used for REX purchase.
           *
           * @pre A voting requirement must be satisfied before action can be executed.
-          * @pre User must vote for at least 21 producers or delegate vote to proxy before buying REX.
+          * @pre User must vote for at least 15 producers or delegate vote to proxy before buying REX.
           *
           * @post User votes are updated following this action.
           * @post Tokens used in purchase are added to user's voting power.
@@ -1230,6 +1253,42 @@ namespace eosiosystem {
          [[eosio::action]]
          void bidrefund( const name& bidder, const name& newname );
 
+         /**
+          * Set inflation action.
+          *
+          * @details Change the annual inflation rate of the core token supply and specify how
+          *          the new issued tokens will be distributed based on the following structure.
+          *
+          *    +----+                          +----------------+
+          *    +rate|               +--------->|per vote reward |
+          *    +--+-+               |          +----------------+
+          *       |            +-----+------+
+          *       |     +----->| bp rewards |
+          *       v     |      +-----+------+
+          *    +-+--+---+-+         |          +----------------+
+          *    |new tokens|         +--------->|per block reward|
+          *    +----+-----+                    +----------------+
+          *             |      +------------+
+          *             +----->|  savings   |
+          *                    +------------+
+          *
+          * @param annual_rate - Annual inflation rate of the core token supply.
+          *     (eg. For 5% Annual inflation => annual_rate=500
+          *          For 1.5% Annual inflation => annual_rate=150
+          *
+          * @param inflation_pay_factor - Inverse of the fraction of the inflation used to reward block producers.
+          *     The remaining inflation will be sent to the `eosio.saving` account.
+          *     (eg. For 20% of inflation going to block producer rewards  => inflation_pay_factor=5
+          *          For 100% of inflation going to block producer rewards  => inflation_pay_factor=1).
+          *
+          * @param votepay_factor - Inverse of the fraction of the block producer rewards to be distributed proportional to blocks produced.
+          *     The remaining rewards will be distributed proportional to votes received.
+          *     (eg. For 25% of block producer rewards going towards block pay => votepay_factor=4
+          *          For 50% of block producer rewards going towards block pay => votepay_factor=2).
+          */
+         [[eosio::action]]
+         void setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
+
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
          using setacctnet_action = eosio::action_wrapper<"setacctnet"_n, &system_contract::setacctnet>;
@@ -1286,6 +1345,7 @@ namespace eosiosystem {
 
          //defined in eosio.system.cpp
          static eosio_global_state get_default_parameters();
+         static eosio_global_state4 get_default_inflation_parameters();
          symbol core_symbol()const;
          void update_ram_supply();
 
@@ -1293,7 +1353,7 @@ namespace eosiosystem {
          void runrex( uint16_t max );
          void update_resource_limits( const name& from, const name& receiver, int64_t delta_net, int64_t delta_cpu );
          void check_voting_requirement( const name& owner,
-                                        const char* error_msg = "must vote for at least 21 producers or for a proxy before buying REX" )const;
+                                        const char* error_msg = "must vote for at least 15 producers or for a proxy before buying REX" )const;
          rex_order_outcome fill_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
          asset update_rex_account( const name& owner, const asset& proceeds, const asset& unstake_quant, bool force_vote_update = false );
          void channel_to_rex( const name& from, const asset& amount );

@@ -1,3 +1,7 @@
+#include <eosio/action.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/permission.hpp>
+
 #include <eosio.msig/eosio.msig.hpp>
 
 #include <eosio/action.hpp>
