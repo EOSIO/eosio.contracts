@@ -14,6 +14,7 @@
 #include <string>
 #include <type_traits>
 
+
 #ifdef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
 #undef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
 #endif
@@ -66,12 +67,16 @@ namespace eosiosystem {
    static constexpr int64_t  min_activated_stake   = 150'000'000'0000;
    static constexpr int64_t  ram_gift_bytes        = 1400;
    static constexpr int64_t  min_pervote_daily_pay = 100'0000;
-   static constexpr uint32_t refund_delay_sec      = 3 * seconds_per_day;
 
    static constexpr int64_t  inflation_precision           = 100;     // 2 decimals
    static constexpr int64_t  default_annual_rate           = 500;     // 5% annual rate
    static constexpr int64_t  default_inflation_pay_factor  = 5;       // 20% of the inflation
    static constexpr int64_t  default_votepay_factor        = 4;       // 25% of the producer pay
+   static constexpr double   continuous_rate       = 0.04879;          // 5% annual rate
+   static constexpr int64_t  inflation_pay_factor  = 5;                // 20% of the inflation
+   static constexpr int64_t  votepay_factor        = 4;                // 25% of the producer pay
+   static constexpr uint32_t refund_delay_sec      = 3 * seconds_per_day;
+
 
    /**
     *
