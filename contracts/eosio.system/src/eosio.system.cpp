@@ -333,6 +333,7 @@ namespace eosiosystem {
          if( has_dot ) { // or is less than 12 characters
             auto suffix = newact.suffix();
             if( suffix == newact ) {
+               check( false, "disable name auction");
                name_bid_table bids(get_self(), get_self().value);
                auto current = bids.find( newact.value );
                check( current != bids.end(), "no active bid for name" );
