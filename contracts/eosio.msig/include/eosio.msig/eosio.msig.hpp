@@ -38,8 +38,8 @@ namespace eosio {
           * @param trx - Proposed transaction
           */
          [[eosio::action]]
-         void propose(ignore<name> proposer, ignore<name> proposal_name,
-               ignore<std::vector<permission_level>> requested, ignore<transaction> trx);
+         void propose(name proposer, name proposal_name,
+                      std::vector<permission_level> requested, ignore<transaction> trx);
          /**
           * Approve proposal
           *
