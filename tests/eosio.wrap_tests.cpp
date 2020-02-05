@@ -204,7 +204,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_exec_direct, eosio_wrap_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
    transaction trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
-   transaction wrap_trx = wrap_exec( N(alice), trx, {} );
+   transaction wrap_trx = wrap_exec( N(alice), trx );
 
    propose( N(carol), N(first),
             { {N(alice), N(active)},
@@ -264,8 +264,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( wrap_with_msig_unapprove, eosio_wrap_tester ) try {
    transaction trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
-   // transaction wrap_trx = wrap_exec( N(alice), trx, 36000 );
-   transaction wrap_trx = wrap_exec( N(alice), trx, {} );
+   transaction wrap_trx = wrap_exec( N(alice), trx );
 
    propose( N(carol), N(first),
             { {N(alice), N(active)},
