@@ -176,8 +176,8 @@ BOOST_FIXTURE_TEST_CASE( wrap_exec_direct, eosio_wrap_tester ) try {
 
    produce_block();
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 
@@ -227,8 +227,8 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
                               ("executer",      "alice")
    );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 3, trx_trace->action_traces.size() );
 
@@ -264,7 +264,8 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( wrap_with_msig_unapprove, eosio_wrap_tester ) try {
    transaction trx = reqauth( N(bob), {permission_level{N(bob), config::active_name}} );
-   transaction wrap_trx = wrap_exec( N(alice), trx, 36000 );
+   // transaction wrap_trx = wrap_exec( N(alice), trx, 36000 );
+   transaction wrap_trx = wrap_exec( N(alice), trx, {} );
 
    propose( N(carol), N(first),
             { {N(alice), N(active)},
@@ -353,8 +354,8 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig_producers_change, eosio_wrap_tester ) tr
                               ("executer",      "alice")
    );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 3, trx_trace->action_traces.size() );
 

@@ -287,8 +287,8 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_by_two, eosio_msig_tester ) try {
                              ("executer",      "alice")
    );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 
@@ -400,8 +400,8 @@ BOOST_FIXTURE_TEST_CASE( big_transaction, eosio_msig_tester ) try {
                              ("executer",      "alice")
    );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 
@@ -543,8 +543,8 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
                              ("executer",      "alice")
    );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 
@@ -693,8 +693,8 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
                          ("executer",      "apple")
    );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 
@@ -806,8 +806,8 @@ BOOST_FIXTURE_TEST_CASE( propose_invalidate_approve, eosio_msig_tester ) try {
                              ("executer",      "bob")
    );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 
@@ -862,8 +862,8 @@ BOOST_FIXTURE_TEST_CASE( approve_execute_old, eosio_msig_tester ) try {
                              ("executer",      "alice")
    );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 
@@ -976,8 +976,8 @@ BOOST_FIXTURE_TEST_CASE( approve_by_two_old, eosio_msig_tester ) try {
                              ("executer",      "alice")
    );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 
@@ -1038,8 +1038,8 @@ BOOST_FIXTURE_TEST_CASE( approve_with_hash, eosio_msig_tester ) try {
                              ("executer",      "alice")
    );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 
@@ -1147,8 +1147,8 @@ BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove, eos
    // not met.
    BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 1, trx_trace->action_traces.size() );
 
@@ -1214,8 +1214,8 @@ BOOST_FIXTURE_TEST_CASE( check_earliest_exec_time_for_approve_and_unapprove_mult
    );
    BOOST_REQUIRE_EQUAL( fc::optional<time_point>{}.valid(), get_earliest_exec_time(N(alice), N(first)).valid() );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 1, trx_trace->action_traces.size() );
 
@@ -1319,8 +1319,8 @@ BOOST_FIXTURE_TEST_CASE( unnecessary_approve_logic, eosio_msig_tester ) try {
                              ("executer",      "alice")
    );
 
-   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 

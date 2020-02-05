@@ -2774,8 +2774,6 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
                                           ("proposal_name", "upgrade1")
                                           ("executer",      "alice1111111") );
 
-   wdump((fc::json::to_pretty_string(trx_trace)));
-
    BOOST_REQUIRE( bool(trx_trace) );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
    BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
@@ -3556,8 +3554,6 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
                                           ("proposer",      "alice1111111")
                                           ("proposal_name", "setparams1")
                                           ("executer",      "alice1111111") );
-
-   wdump((fc::json::to_pretty_string(trx_trace)));
 
    BOOST_REQUIRE( bool(trx_trace) );
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
