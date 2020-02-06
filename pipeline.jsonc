@@ -4,8 +4,8 @@
         "pipeline-branch": "master",
         "dependencies": // dependencies to pull for a build of contracts, by branch, tag, or commit hash
         {
-            "eosio": "v2.0.1", // eventually update to release/2.0.x
-            "eosio.cdt": "v1.7.0" // eventually update to release/1.7.x
+            "eosio": "61bfe8f585301c155d06b8802f13cf553dbe38ad", // eventually update to release/2.0.x
+            "eosio.cdt": "aad0c4729b848c9cbe409aa1fdd917797a4d91e7" // eventually update to release/1.7.x
         }
     }
 }
