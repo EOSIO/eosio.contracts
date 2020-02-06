@@ -1,8 +1,8 @@
-## Goal
+# Goal
 
 Stake resource for your account
 
-## Before you begin
+# Before you begin
 
 * Install the currently supported version of cleos
 
@@ -13,7 +13,7 @@ Stake resource for your account
   * What is network bandwidth
   * What is CPU bandwidth
 
-## Steps
+# Steps
 
 Stake 0.01 SYS network bandwidth for `alice`
 
