@@ -23,8 +23,8 @@ COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
 INDEX='1'
 echo "$ curl -sSf $CDT_URL --output eosio.cdt.deb"
 while ! $(curl -sSf $CDT_URL --output eosio.cdt.deb); do
-    echo "ERROR: Expected CDT binary for commit ${CDT_COMMIT:0:7} from $CDT_VERSION. It does not exist at $CDT_URL!"
-    printf "There must be a successful build against ${CDT_COMMIT:0:7} \033]1339;url=https://buildkite.com/EOSIO/eosio-dot-cdt/builds?commit=$CDT_COMMIT;content=here\a for this package to exist.\n"
+    echo "ERROR: Expected CDT binary for commit ${CDT_COMMIT} from $CDT_VERSION. It does not exist at $CDT_URL!"
+    printf "There must be a successful build against ${CDT_COMMIT} \033]1339;url=https://buildkite.com/EOSIO/eosio-dot-cdt/builds?commit=$CDT_COMMIT;content=here\a for this package to exist.\n"
     echo "Attempt $INDEX, retry in 60 seconds..."
     echo ''
     INDEX=$(( $INDEX + 1 ))
@@ -34,8 +34,8 @@ done
 INDEX='1'
 echo "$ docker pull $DOCKER_IMAGE"
 while [[ "$(docker pull $DOCKER_IMAGE 2>&1 | grep -ice "manifest for $DOCKER_IMAGE not found")" != '0' ]]; do
-    echo "ERROR: Docker image \"$DOCKER_IMAGE\" not found for eosio commit ${EOSIO_COMMIT:0:7} from \"$EOSIO_VERSION\""'!'
-    printf "There must be a successful build against ${EOSIO_COMMIT:0:7} \033]1339;url=https://buildkite.com/EOSIO/eosio/builds?commit=$EOSIO_COMMIT;content=here\a for this container to exist.\n"
+    echo "ERROR: Docker image \"$DOCKER_IMAGE\" not found for eosio commit ${EOSIO_COMMIT} from \"$EOSIO_VERSION\""'!'
+    printf "There must be a successful build against ${EOSIO_COMMIT} \033]1339;url=https://buildkite.com/EOSIO/eosio/builds?commit=$EOSIO_COMMIT;content=here\a for this container to exist.\n"
     echo "Attempt $INDEX, retry in 60 seconds..."
     echo ''
     INDEX=$(( $INDEX + 1 ))

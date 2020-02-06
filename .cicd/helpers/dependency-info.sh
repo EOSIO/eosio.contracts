@@ -29,6 +29,6 @@ else
     EOSIO_COMMIT=$(git rev-parse --verify HEAD)
     cd ..
 fi
-echo "Using eosio ${EOSIO_COMMIT:0:7} from \"$EOSIO_VERSION\"..."
-echo "Using cdt ${CDT_COMMIT:0:7} from \"$CDT_VERSION\"..."
+echo "Using eosio ${EOSIO_COMMIT} from \"$EOSIO_VERSION\"..."
+echo "Using cdt ${CDT_COMMIT} from \"$CDT_VERSION\"..."
 export CDT_URL="https://eos-public-oss-binaries.s3-us-west-2.amazonaws.com/${CDT_COMMIT:0:7}-eosio.cdt-ubuntu-18.04_amd64.deb"
