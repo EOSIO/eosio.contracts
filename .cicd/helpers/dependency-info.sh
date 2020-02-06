@@ -9,6 +9,7 @@ if [[ -f "$RAW_PIPELINE_CONFIG" ]]; then
     cat "$RAW_PIPELINE_CONFIG" | grep -Po '^[^"/]*("((?<=\\).|[^"])*"[^"/]*)*' | jq -c .\"eosio-dot-contracts\" > "$PIPELINE_CONFIG"
     CDT_VERSION=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies."eosio.cdt"')
     EOSIO_VERSION=$(cat "$PIPELINE_CONFIG" | jq -r '.dependencies.eosio')
+    SANITIZED_EOSIO_VERSION=$(echo $EOSIO_VERSION | sed 's/\//\_/')
 else
     echo 'ERROR: No pipeline configuration file or dependencies file found!'
     exit 1
@@ -29,6 +30,6 @@ else
     EOSIO_COMMIT=$(git rev-parse --verify HEAD)
     cd ..
 fi
-echo "Using eosio ${EOSIO_COMMIT} from \"$EOSIO_VERSION\"..."
+echo "Using eosio \"$EOSIO_VERSION\"..."
 echo "Using cdt ${CDT_COMMIT} from \"$CDT_VERSION\"..."
 export CDT_URL="https://eos-public-oss-binaries.s3-us-west-2.amazonaws.com/${CDT_COMMIT:0:7}-eosio.cdt-ubuntu-18.04_amd64.deb"

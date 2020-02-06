@@ -4,7 +4,7 @@ set -eo pipefail
 . ./.cicd/helpers/general.sh
 . ./.cicd/helpers/dependency-info.sh
 mkdir -p $BUILD_DIR
-DOCKER_IMAGE=${DOCKER_IMAGE:-eosio/ci-contracts-builder:base-ubuntu-18.04-$EOSIO_COMMIT}
+DOCKER_IMAGE=${DOCKER_IMAGE:-eosio/ci-contracts-builder:base-ubuntu-18.04-$SANITIZED_EOSIO_VERSION}
 if [[ "$BUILDKITE" == 'true' ]]; then
     buildkite-agent meta-data set cdt-url "$CDT_URL"
     buildkite-agent meta-data set cdt-version "$CDT_VERSION"
