@@ -9,7 +9,7 @@ if [[ "$BUILDKITE" == 'true' ]]; then
     DOCKER_IMAGE="$(buildkite-agent meta-data get docker-image)"
 else # Actions
     . ./.cicd/helpers/dependency-info.sh
-    DOCKER_IMAGE=${DOCKER_IMAGE:-eosio/ci-contracts-builder:base-ubuntu-18.04-$EOSIO_COMMIT}
+    DOCKER_IMAGE=${DOCKER_IMAGE:-eosio/ci-contracts-builder:base-ubuntu-18.04-$SANITIZED_EOSIO_VERSION}
 fi
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
 CDT_COMMANDS="dpkg -i $MOUNTED_DIR/eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/$CDT_VERSION/bin:\\\$PATH"
@@ -18,6 +18,7 @@ TEST_COMMANDS="ctest -j $JOBS --output-on-failure -T Test"
 COMMANDS="$PRE_COMMANDS && $TEST_COMMANDS"
 curl -sSf $CDT_URL --output eosio.cdt.deb
 set +e
+echo "docker run $ARGS $(buildkite-intrinsics) $DOCKER_IMAGE bash -c \"$COMMANDS\""
 eval docker run $ARGS $(buildkite-intrinsics) $DOCKER_IMAGE bash -c \"$COMMANDS\"
 EXIT_STATUS=$?
 # buildkite
