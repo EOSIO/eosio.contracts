@@ -6,13 +6,13 @@ Block.one implements and maintains EOSIO open source platform which contains, as
 
 ## Concepts
 
-### System contracts, system accounts, priviledged accounts
+### System contracts, system accounts, privileged accounts
 
 At the genesis of an EOSIO based blockchain, there is only one account present: eosio, which is the main system account. There are other system accounts, which are created by eosio, and control specific actions of the system contracts mentioned earlier. Note that we are introducing the notion of system contract/s and system account/s. Also note that privileged accounts are accounts which can execute a transaction while skipping the standard authorization check. To ensure that this is not a security hole, the permission authority over these accounts is granted to eosio.prods.
 
 As you just learned the relation between an account and a contract, we are adding here that not all system accounts contain a system contract, but each system account has important roles in the blockchain functionality, as follows:
 
-|Account|Priviledged|Has contract|Description|
+|Account|Privileged|Has contract|Description|
 |---|---|---|---|
 |eosio|Yes|It contains the `eosio.system` contract|The main system account on an EOSIO based blockchain.|
 |eosio.msig|Yes|It contains the `eosio.msig` contract|Allows the signing of a multi-sig transaction proposal for later execution if all required parties sign the proposal before the expiration time.|
@@ -167,6 +167,7 @@ The workflow to propose, review, approve and then executed a transaction is desc
 - after each of the appointed accounts required to approve the proposed transactions reviews and approves it, you can execute the proposed transaction.  The `eosio.msig` contract will execute it automatically, but not before validating that the transaction has not expired, it is not cancelled, and it has been signed by all the permissions in the initial proposal's required permission list.
 
 These are the actions implemented and publicly exposed by the `eosio.msig` contract:
+
 |Action name|Action description|
 |---|---|
 |propose|Creates a proposal containing one transaction.|
@@ -181,6 +182,7 @@ These are the actions implemented and publicly exposed by the `eosio.msig` contr
 The `eosio.token` contract defines the structures and actions that allow users to create, issue, and manage tokens for EOSIO based blockchains.
 
 These are the public actions the `eosio.token` contract is implementing:
+
 |Action name|Action description|
 |---|---|
 |create|Allows an account to create a token in a given supply amount.|
