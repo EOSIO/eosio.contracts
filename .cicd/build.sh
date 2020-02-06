@@ -16,7 +16,7 @@ else
 fi
 ARGS=${ARGS:-"--rm -v $(pwd):$MOUNTED_DIR"}
 CDT_COMMANDS="dpkg -i $MOUNTED_DIR/eosio.cdt.deb && export PATH=/usr/opt/eosio.cdt/\\\$(ls /usr/opt/eosio.cdt/)/bin:\\\$PATH"
-PRE_COMMANDS="$CDT_COMMANDS && cd $MOUNTED_DIR/build"
+PRE_COMMANDS="$CDT_COMMANDS && cd /root/eosio/ && echo "Using EOSIO commit $(git rev-parse --verify HEAD)." && cd $MOUNTED_DIR/build"
 BUILD_COMMANDS="cmake -DBUILD_TESTS=true .. && make -j $JOBS"
 COMMANDS="$PRE_COMMANDS && $BUILD_COMMANDS"
 # Test CDT binary download to prevent failures due to eosio.cdt pipeline.
