@@ -2,15 +2,16 @@
 
 namespace eosio {
 
-void wrap::exec( ignore<name>, ignore<transaction> ) {
+void wrap::exec( name executer, transaction trx) {
    require_auth( get_self() );
-
-   name executer;
-   _ds >> executer;
-
    require_auth( executer );
 
-   send_deferred( (uint128_t(executer.value) << 64) | (uint64_t)current_time_point().time_since_epoch().count(), executer, _ds.pos(), _ds.remaining() );
+   check( trx.context_free_actions.empty(), "not allowed to `exec` a transaction with context-free actions" );
+
+   // Inline execution of the wrapped transaction.
+   for (const auto& act: trx.actions) {
+      act.send();
+   }
 }
 
 } /// namespace eosio

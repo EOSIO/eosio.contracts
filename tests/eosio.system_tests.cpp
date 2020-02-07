@@ -198,12 +198,21 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
 
    produce_block( fc::hours(3*24-1) );
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                                                    ("owner", N(alice1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( init_eosio_stake_balance + core_sym::from_string("300.0000"), get_balance( N(eosio.stake) ) );
    //after 3 days funds should be released
    produce_block( fc::hours(1) );
+   base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                           ("owner", N(alice1111111))
+   );
    produce_blocks(1);
+
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000.0000"), get_balance( "alice1111111" ) );
    BOOST_REQUIRE_EQUAL( init_eosio_stake_balance, get_balance( N(eosio.stake) ) );
 
@@ -228,12 +237,19 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( core_sym::from_string("10.0000"), total["net_weight"].as<asset>());
    BOOST_REQUIRE_EQUAL( core_sym::from_string("10.0000"), total["cpu_weight"].as<asset>());
    produce_block( fc::hours(3*24-1) );
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                                                    ("owner", N(alice1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    //after 3 days funds should be released
    produce_block( fc::hours(1) );
+   base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                           ("owner", N(alice1111111))
+   );
    produce_blocks(1);
-
    REQUIRE_MATCHING_OBJECT( voter( "alice1111111", core_sym::from_string("0.0000") ), get_voter_info( "alice1111111" ) );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000.0000"), get_balance( "alice1111111" ) );
@@ -272,11 +288,19 @@ BOOST_FIXTURE_TEST_CASE( stake_unstake_with_transfer, eosio_system_tester ) try 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
 
    produce_block( fc::hours(3*24-1) );
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                                                    ("owner", N(alice1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    //after 3 days funds should be released
 
    produce_block( fc::hours(1) );
+   base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                           ("owner", N(alice1111111))
+   );
    produce_blocks(1);
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1300.0000"), get_balance( "alice1111111" ) );
@@ -336,11 +360,19 @@ BOOST_FIXTURE_TEST_CASE( stake_while_pending_refund, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
 
    produce_block( fc::hours(3*24-1) );
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                                                    ("owner", N(alice1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("700.0000"), get_balance( "alice1111111" ) );
    //after 3 days funds should be released
 
    produce_block( fc::hours(1) );
+   base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                           ("owner", N(alice1111111))
+   );
    produce_blocks(1);
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1300.0000"), get_balance( "alice1111111" ) );
@@ -603,7 +635,15 @@ BOOST_FIXTURE_TEST_CASE( adding_stake_partial_unstake, eosio_system_tester ) try
    produce_block( fc::days(2) );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("550.0000"), get_balance( "alice1111111" ) );
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                                                    ("owner", N(alice1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_block( fc::days(1) );
+   base_tester::push_action( config::system_account_name, N(refund), N(alice1111111), mutable_variant_object()
+                                                           ("owner", N(alice1111111))
+   );
    produce_blocks(1);
    BOOST_REQUIRE_EQUAL( core_sym::from_string("850.0000"), get_balance( "alice1111111" ) );
 
@@ -1073,7 +1113,15 @@ BOOST_FIXTURE_TEST_CASE( vote_for_producer, eosio_system_tester, * boost::unit_t
    BOOST_TEST_REQUIRE( 0.0 == prod["total_votes"].as_double() );
 
    //carol1111111 should receive funds in 3 days
+   BOOST_REQUIRE_EXCEPTION( base_tester::push_action( config::system_account_name, N(refund), N(carol1111111), mutable_variant_object()
+                                                                                    ("owner", N(carol1111111)) ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is( "refund is not available yet" )
+   );
    produce_block( fc::days(3) );
+   base_tester::push_action( config::system_account_name, N(refund), N(carol1111111), mutable_variant_object()
+                                                           ("owner", N(carol1111111))
+   );
    produce_block();
    BOOST_REQUIRE_EQUAL( core_sym::from_string("3000.0000"), get_balance( "carol1111111" ) );
 
@@ -2721,6 +2769,14 @@ BOOST_AUTO_TEST_CASE(votepay_transition2, * boost::unit_test::tolerance(1e-10)) 
 
 
 BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) try {
+   //change `default_max_inline_action_size` to 512 KB
+   eosio::chain::chain_config params = control->get_global_properties().configuration;
+   params.max_inline_action_size = 512 * 1024;
+   base_tester::push_action( config::system_account_name, N(setparams), config::system_account_name, mutable_variant_object()
+                              ("params", params) );
+
+   produce_blocks();
+
    //install multisig contract
    abi_serializer msig_abi_ser = initialize_multisig();
    auto producer_names = active_and_vote_producers();
@@ -2809,26 +2865,36 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
                           )
    );
 
-   transaction_trace_ptr trace;
-   control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
-      const auto& t = std::get<0>(p);
-      if( t->scheduled ) { trace = t; }
-   } );
+   transaction_trace_ptr trx_trace;
+   trx_trace = base_tester::push_action( N(eosio.msig), N(exec), vector<account_name>{ N(alice1111111) }, mvo()
+                                          ("proposer",      "alice1111111")
+                                          ("proposal_name", "upgrade1")
+                                          ("executer",      "alice1111111") );
 
-   BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(exec), mvo()
-                                                    ("proposer",      "alice1111111")
-                                                    ("proposal_name", "upgrade1")
-                                                    ("executer",      "alice1111111")
-                       )
-   );
+   BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
+   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
+   BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 
-   BOOST_REQUIRE( bool(trace) );
-   BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
-   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[0].action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].creator_action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].closest_unnotified_ancestor_action_ordinal );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), action_name{trx_trace->action_traces[0].receiver} );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), name{trx_trace->action_traces[0].act.account} );
+   BOOST_REQUIRE_EQUAL( N(exec), name{trx_trace->action_traces[0].act.name} );
+   BOOST_REQUIRE_EQUAL( N(alice1111111), name{trx_trace->action_traces[0].act.authorization[0].actor} );
+   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[0].act.authorization[0].permission} );
+
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{2}, trx_trace->action_traces[1].action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[1].creator_action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[1].closest_unnotified_ancestor_action_ordinal );
+   BOOST_REQUIRE_EQUAL( N(eosio), action_name{trx_trace->action_traces[1].receiver} );
+   BOOST_REQUIRE_EQUAL( N(eosio), name{trx_trace->action_traces[1].act.account} );
+   BOOST_REQUIRE_EQUAL( N(setcode), name{trx_trace->action_traces[1].act.name} );
+   BOOST_REQUIRE_EQUAL( N(eosio), name{trx_trace->action_traces[1].act.authorization[0].actor} );
+   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[1].act.authorization[0].permission} );
 
    produce_blocks( 250 );
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(producer_onblock_check, eosio_system_tester) try {
@@ -3315,6 +3381,11 @@ BOOST_FIXTURE_TEST_CASE( multiple_namebids, eosio_system_tester ) try {
       const asset initial_names_balance = get_balance(N(eosio.names));
       BOOST_REQUIRE_EQUAL( success(),
                            bidname( "alice", "prefb", core_sym::from_string("1.1001") ) );
+
+      base_tester::push_action( config::system_account_name, N(bidrefund), vector<account_name>{ N(bob) }, mvo()
+                                                              ("bidder", "bob")
+                                                              ("newname", "prefb") );
+
       BOOST_REQUIRE_EQUAL( core_sym::from_string( "9997.9997" ), get_balance("bob") );
       BOOST_REQUIRE_EQUAL( core_sym::from_string( "9998.8999" ), get_balance("alice") );
       BOOST_REQUIRE_EQUAL( initial_names_balance + core_sym::from_string("0.1001"), get_balance(N(eosio.names)) );
@@ -3326,6 +3397,11 @@ BOOST_FIXTURE_TEST_CASE( multiple_namebids, eosio_system_tester ) try {
       BOOST_REQUIRE_EQUAL( core_sym::from_string( "10000.0000" ), get_balance("david") );
       BOOST_REQUIRE_EQUAL( success(),
                            bidname( "david", "prefd", core_sym::from_string("1.9900") ) );
+
+      base_tester::push_action( config::system_account_name, N(bidrefund), vector<account_name>{ N(carl) }, mvo()
+                                                              ("bidder", "carl")
+                                                              ("newname", "prefd") );
+
       BOOST_REQUIRE_EQUAL( core_sym::from_string( "9999.0000" ), get_balance("carl") );
       BOOST_REQUIRE_EQUAL( core_sym::from_string( "9998.0100" ), get_balance("david") );
    }
@@ -3571,23 +3647,34 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
       );
    }
 
-   transaction_trace_ptr trace;
-   control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
-      const auto& t = std::get<0>(p);
-      if( t->scheduled ) { trace = t; }
-   } );
+   transaction_trace_ptr trx_trace;
+   trx_trace = base_tester::push_action( N(eosio.msig), N(exec), vector<account_name>{ N(alice1111111) }, mvo()
+                                          ("proposer",      "alice1111111")
+                                          ("proposal_name", "setparams1")
+                                          ("executer",      "alice1111111") );
 
-   BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(exec), mvo()
-                                                    ("proposer",      "alice1111111")
-                                                    ("proposal_name", "setparams1")
-                                                    ("executer",      "alice1111111")
-                       )
-   );
+   BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
+   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
+   BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
 
-   BOOST_REQUIRE( bool(trace) );
-   BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
-   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[0].action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].creator_action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces[0].closest_unnotified_ancestor_action_ordinal );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), action_name{trx_trace->action_traces[0].receiver} );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), name{trx_trace->action_traces[0].act.account} );
+   BOOST_REQUIRE_EQUAL( N(exec), name{trx_trace->action_traces[0].act.name} );
+   BOOST_REQUIRE_EQUAL( N(alice1111111), name{trx_trace->action_traces[0].act.authorization[0].actor} );
+   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[0].act.authorization[0].permission} );
+
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{2}, trx_trace->action_traces[1].action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[1].creator_action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces[1].closest_unnotified_ancestor_action_ordinal );
+   BOOST_REQUIRE_EQUAL( N(eosio), action_name{trx_trace->action_traces[1].receiver} );
+   BOOST_REQUIRE_EQUAL( N(eosio), name{trx_trace->action_traces[1].act.account} );
+   BOOST_REQUIRE_EQUAL( N(setparams), name{trx_trace->action_traces[1].act.name} );
+   BOOST_REQUIRE_EQUAL( N(eosio), name{trx_trace->action_traces[1].act.authorization[0].actor} );
+   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces[1].act.authorization[0].permission} );
 
    produce_blocks( 250 );
 
@@ -4541,8 +4628,14 @@ BOOST_FIXTURE_TEST_CASE( ramfee_namebid_to_rex, eosio_system_tester ) try {
    BOOST_REQUIRE_EQUAL( success(),                        bidname( carol, N(rndmbid), core_sym::from_string("23.7000") ) );
    BOOST_REQUIRE_EQUAL( core_sym::from_string("23.7000"), get_balance( N(eosio.names) ) );
    BOOST_REQUIRE_EQUAL( success(),                        bidname( alice, N(rndmbid), core_sym::from_string("29.3500") ) );
+
+   base_tester::push_action( config::system_account_name, N(bidrefund), vector<account_name>{ N(carolaccount) }, mvo()
+                                                           ("bidder", "carolaccount")
+                                                           ("newname", "rndmbid") );
+
    BOOST_REQUIRE_EQUAL( core_sym::from_string("29.3500"), get_balance( N(eosio.names) ));
 
+   produce_block();
    produce_block( fc::hours(24) );
    produce_blocks( 2 );
 

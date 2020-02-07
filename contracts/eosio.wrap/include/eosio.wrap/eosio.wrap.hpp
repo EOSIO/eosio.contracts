@@ -33,7 +33,7 @@ namespace eosio {
           * @pre
           */
          [[eosio::action]]
-         void exec( ignore<name> executer, ignore<transaction> trx );
+         void exec( name executer, transaction trx );
 
          using exec_action = eosio::action_wrapper<"exec"_n, &wrap::exec>;
    };
