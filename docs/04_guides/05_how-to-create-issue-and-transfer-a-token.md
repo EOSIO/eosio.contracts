@@ -1,3 +1,8 @@
+---
+content_title: How to create, issue and transfer a token
+link_text: How to create, issue and transfer a token
+---
+
 ## Step 1: Obtain Contract Source
 
 Navigate to your contracts directory.
