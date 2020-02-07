@@ -36,10 +36,6 @@ namespace eosiosystem {
    using eosio::public_key;
 
    /**
-    * @addtogroup eosiosystem
-    * @{
-    */
-   /**
     * A weighted permission.
     *
     * Defines a weighted permission, that is a permission which has a weight associated.
@@ -302,5 +298,4 @@ namespace eosiosystem {
          using setcode_action = eosio::action_wrapper<"setcode"_n, &native::setcode>;
          using setabi_action = eosio::action_wrapper<"setabi"_n, &native::setabi>;
    };
-   /** @}*/ // @addtogroup eosiosystem
 }
