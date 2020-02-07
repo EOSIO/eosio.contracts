@@ -613,7 +613,7 @@ namespace eosiosystem {
          /**
           * Setrex action.
           *
-          * @details Sets total_rent balance of REX pool to the passed value.
+          * Sets total_rent balance of REX pool to the passed value.
           * @param balance - amount to set the REX pool balance.
           */
          [[eosio::action]]
@@ -636,7 +636,7 @@ namespace eosiosystem {
          /**
           * Withdraw from REX fund action.
           *
-          * @details Withdraws core tokens from user REX fund.
+          * Withdraws core tokens from user REX fund.
           * An inline token transfer to user balance is executed.
           *
           * @param owner - REX fund owner account,
@@ -946,7 +946,7 @@ namespace eosiosystem {
          /**
           * Unregister producer action. Deactivate the block producer with account name `producer`.
           *
-          * @details Deactivate the block producer with account name `producer`.
+          * Deactivate the block producer with account name `producer`.
           * @param producer - the block producer account to unregister.
           */
          [[eosio::action]]
