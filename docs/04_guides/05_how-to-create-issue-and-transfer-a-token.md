@@ -106,7 +106,7 @@ executed transaction: 60d334850151cb95c35fe31ce2e8b536b51441c5fd4c3f2fea98edcc6d
 #           bob <= eosio.token::transfer        {"from":"eosio","to":"bob","quantity":"25.0000 SYS","memo":"m"}
 warning: transaction executed locally, but may not be confirmed by the network yet         ]
 ```
-Now check if "bob" got the tokens using [cleos get currency balance](https://developers.eos.io/eosio-cleos/reference#currency-balance)
+Now check if "bob" got the tokens using [cleos get currency balance](https://developers.eos.io/manuals/eos/latest/cleos/command-reference/get/currency-balance)
 
 ```shell
 cleos get currency balance eosio.token bob SYS
