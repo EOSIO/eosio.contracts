@@ -182,10 +182,6 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
                   (const char*)0, 0,
                   packed_provided_approvals.data(), packed_provided_approvals.size()
                );
-<<<<<<< HEAD
-=======
-
->>>>>>> upstream/master
    check( res > 0, "transaction authorization failed" );
 
    send_deferred( (uint128_t(proposer.value) << 64) | proposal_name.value, executer,
