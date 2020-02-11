@@ -4,10 +4,6 @@
 
 #include <eosio.msig/eosio.msig.hpp>
 
-#include <eosio/action.hpp>
-#include <eosio/permission.hpp>
-#include <eosio/crypto.hpp>
-
 namespace eosio {
 
 void multisig::propose( ignore<name> proposer,
@@ -34,12 +30,15 @@ void multisig::propose( ignore<name> proposer,
    check( proptable.find( _proposal_name.value ) == proptable.end(), "proposal with the same name exists" );
 
    auto packed_requested = pack(_requested);
-   // TODO: Remove internal_use_do_not_use namespace after minimum eosio.cdt dependency becomes 1.7.x
-   auto res =  internal_use_do_not_use::check_transaction_authorization(
+   auto res =  check_transaction_authorization(
                   trx_pos, size,
                   (const char*)0, 0,
                   packed_requested.data(), packed_requested.size()
                );
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
    check( res > 0, "transaction authorization failed" );
 
    std::vector<char> pkd_trans;
@@ -178,12 +177,15 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
       old_apptable.erase(apps);
    }
    auto packed_provided_approvals = pack(approvals);
-   // TODO: Remove internal_use_do_not_use namespace after minimum eosio.cdt dependency becomes 1.7.x
-   auto res =  internal_use_do_not_use::check_transaction_authorization(
+   auto res =  check_transaction_authorization(
                   prop.packed_transaction.data(), prop.packed_transaction.size(),
                   (const char*)0, 0,
                   packed_provided_approvals.data(), packed_provided_approvals.size()
                );
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
    check( res > 0, "transaction authorization failed" );
 
    send_deferred( (uint128_t(proposer.value) << 64) | proposal_name.value, executer,
