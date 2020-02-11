@@ -35,10 +35,6 @@ void multisig::propose( ignore<name> proposer,
                   (const char*)0, 0,
                   packed_requested.data(), packed_requested.size()
                );
-<<<<<<< HEAD
-=======
-
->>>>>>> upstream/master
    check( res > 0, "transaction authorization failed" );
 
    std::vector<char> pkd_trans;
