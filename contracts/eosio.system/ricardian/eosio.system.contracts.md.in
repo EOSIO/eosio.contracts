@@ -75,7 +75,7 @@ icon: @ICON_BASE_URL@/@RESOURCE_ICON_URI@
 ---
 spec_version: "0.2.0"
 title: Buy REX Tokens
-summary: '{{nowrap from}} buys REX tokens in exchange for {{nowrap amount}} and his vote stake increases by {{nowrap amount}}'
+summary: '{{nowrap from}} buys REX tokens in exchange for {{nowrap amount}} and their vote stake increases by {{nowrap amount}}'
 icon: @ICON_BASE_URL@/@REX_ICON_URI@
 ---
 
@@ -309,6 +309,30 @@ icon: @ICON_BASE_URL@/@VOTING_ICON_URI@
 
 Register {{producer}} account as a block producer candidate.
 
+URL: {{url}}
+Location code: {{location}}
+Block signing key: {{producer_key}}
+
+## Block Producer Agreement
+{{$clauses.BlockProducerAgreement}}
+
+<h1 class="contract">regproducer2</h1>
+
+---
+spec_version: "0.2.0"
+title: Register as a Block Producer Candidate
+summary: 'Register {{nowrap producer}} account as a block producer candidate'
+icon: @ICON_BASE_URL@/@VOTING_ICON_URI@
+---
+
+Register {{producer}} account as a block producer candidate.
+
+URL: {{url}}
+Location code: {{location}}
+Block signing authority:
+{{to_json producer_authority}}
+
+## Block Producer Agreement
 {{$clauses.BlockProducerAgreement}}
 
 <h1 class="contract">regproxy</h1>
@@ -558,8 +582,8 @@ icon: @ICON_BASE_URL@/@ADMIN_ICON_URI@
 {{$action.account}} sets the inflation parameters as follows:
 
 * Annual inflation rate (in units of a hundredth of a percent): {{annual_rate}}
-* Fraction of inflation used to reward block producers: 1/{{inflation_pay_factor}}
-* Fraction of block producer rewards to be distributed proportional to blocks produced: 1/{{votepay_factor}}
+* Fraction of inflation used to reward block producers: 10000/{{inflation_pay_factor}}
+* Fraction of block producer rewards to be distributed proportional to blocks produced: 10000/{{votepay_factor}}
 
 <h1 class="contract">undelegatebw</h1>
 
