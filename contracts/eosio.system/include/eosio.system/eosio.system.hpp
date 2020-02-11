@@ -15,10 +15,6 @@
 #include <optional>
 #include <string>
 #include <type_traits>
-<<<<<<< HEAD
-
-=======
->>>>>>> upstream/master
 
 #ifdef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
 #undef CHANNEL_RAM_AND_NAMEBID_FEES_TO_REX
