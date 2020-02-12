@@ -29,8 +29,6 @@ namespace eosio {
           *
           * @param executer - account executing the transaction,
           * @param trx - the transaction to be executed.
-          *
-          * @pre
           */
          [[eosio::action]]
          void exec( ignore<name> executer, ignore<transaction> trx );

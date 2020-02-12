@@ -4,7 +4,7 @@ link_text: How to build eosio.contracts
 ---
 
 ## Preconditions
-Ensure an appropriate version of `eosio.cdt` is installed. Installing `eosio.cdt` from binaries is sufficient, follow the [`eosio.cdt` installation instructions steps](https://github.com/EOSIO/eosio.cdt/tree/master/#binary-releases) to install it. To verify if you have `eosio.cdt` installed and its version run the following command
+Ensure an appropriate version of `eosio.cdt` is installed. Installing `eosio.cdt` from binaries is sufficient, follow the [`eosio.cdt` installation instructions steps](https://developers.eos.io/manuals/eosio.cdt/latest/installation) to install it. To verify if you have `eosio.cdt` installed and its version run the following command
 
 ```sh
 eosio-cpp -v
@@ -16,7 +16,7 @@ eosio-cpp -v
 Run the `build.sh` script in the top directory to build all the contracts.
 
 #### To build the contracts and unit tests
-1. Ensure an appropriate version of `eosio` has been built from source and installed. Installing `eosio` from binaries `is not` sufficient. You can find instructions on how to do it [here](https://github.com/EOSIO/eos/blob/master/README.md) in section `Building from Sources`.
+1. Ensure an appropriate version of `eosio` has been built from source and installed. Installing `eosio` from binaries `is not` sufficient. You can find instructions on how to do it [here](https://developers.eos.io/manuals/eos/latest/install/build-from-source) in section `Building from Sources`.
 2. Run the `build.sh` script in the top directory with the `-t` flag to build all the contracts and the unit tests for these contracts.
 
 ### Build contracts manually
