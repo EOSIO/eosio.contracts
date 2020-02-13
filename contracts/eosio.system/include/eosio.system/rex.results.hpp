@@ -9,9 +9,9 @@ using eosio::asset;
 using eosio::name;
 
 /**
- * The actions `buyresult`, `sellresult`, `rentresult`, and `orderresult` of `rex.results` are all no-ops. 
- * They are added as inline convenience actions to `rentnet`, `rentcpu`, `buyrex`, `unstaketorex`, and `sellrex`. 
- * An inline convenience action does not have any effect, however, 
+ * The actions `buyresult`, `sellresult`, `rentresult`, and `orderresult` of `rex.results` are all no-ops.
+ * They are added as inline convenience actions to `rentnet`, `rentcpu`, `buyrex`, `unstaketorex`, and `sellrex`.
+ * An inline convenience action does not have any effect, however,
  * its data includes the result of the parent action and appears in its trace.
  */
 class [[eosio::contract("rex.results")]] rex_results : eosio::contract {

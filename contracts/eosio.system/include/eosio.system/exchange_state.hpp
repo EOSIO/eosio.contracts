@@ -9,11 +9,6 @@ namespace eosiosystem {
    using eosio::symbol;
 
    /**
-    * @addtogroup eosiosystem
-    * @{
-    */
-
-   /**
     * Uses Bancor math to create a 50/50 relay between two asset types.
     *
     * The state of the bancor exchange is entirely contained within this struct.
@@ -50,5 +45,4 @@ namespace eosiosystem {
    };
 
    typedef eosio::multi_index< "rammarket"_n, exchange_state > rammarket;
-   /** @}*/ // enf of @addtogroup eosiosystem
 } /// namespace eosiosystem
