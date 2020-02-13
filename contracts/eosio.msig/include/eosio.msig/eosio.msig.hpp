@@ -8,10 +8,13 @@
 namespace eosio {
     
    /**
-    * @defgroup eosiomsig eosio.msig
-    * @ingroup eosiocontracts
-    * eosio.msig contract defines the structures and actions needed to manage the proposals and approvals on blockchain.
-    * @{
+    * The `eosio.msig` system contract allows for creation of proposed transactions which require authorization from a list of accounts, approval of the proposed transactions by those accounts required to approve it, and finally, it also allows the execution of the approved transactions on the blockchain.
+    *
+    * In short, the workflow to propose, review, approve and then executed a transaction it can be described by the following:
+    * - first you create a transaction json file,
+    * - then you submit this proposal to the `eosio.msig` contract, and you also insert the account permissions required to approve this proposal into the command that submits the proposal to the blockchain,
+    * - the proposal then gets stored on the blockchain by the `eosio.msig` contract, and is accessible for review and approval to those accounts required to approve it,
+    * - after each of the appointed accounts required to approve the proposed transactions reviews and approves it, you can execute the proposed transaction. The `eosio.msig` contract will execute it automatically, but not before validating that the transaction has not expired, it is not cancelled, and it has been signed by all the permissions in the initial proposal's required permission list.
     */
    class [[eosio::contract("eosio.msig")]] multisig : public contract {
       public:
@@ -20,7 +23,7 @@ namespace eosio {
          /**
           * Create proposal
           *
-          * @details Creates a proposal containing one transaction.
+          * Creates a proposal containing one transaction.
           * Allows an account `proposer` to make a proposal `proposal_name` which has `requested`
           * permission levels expected to approve the proposal, and if approved by all expected
           * permission levels then `trx` transaction can we executed by this proposal.
@@ -41,7 +44,7 @@ namespace eosio {
          /**
           * Approve proposal
           *
-          * @details Approves an existing proposal
+          * Approves an existing proposal
           * Allows an account, the owner of `level` permission, to approve a proposal `proposal_name`
           * proposed by `proposer`. If the proposal's requested approval list contains the `level`
           * permission then the `level` permission is moved from internal `requested_approvals` list to
@@ -59,7 +62,7 @@ namespace eosio {
          /**
           * Revoke proposal
           *
-          * @details Revokes an existing proposal
+          * Revokes an existing proposal
           * This action is the reverse of the `approve` action: if all validations pass
           * the `level` permission is erased from internal `provided_approvals` and added to the internal
           * `requested_approvals` list, and thus un-approve or revoke the proposal.
@@ -73,7 +76,7 @@ namespace eosio {
          /**
           * Cancel proposal
           *
-          * @details Cancels an existing proposal
+          * Cancels an existing proposal
           *
           * @param proposer - The account proposing a transaction
           * @param proposal_name - The name of the proposal (should be an existing proposal)
@@ -88,7 +91,7 @@ namespace eosio {
          /**
           * Execute proposal
           *
-          * @details Allows an `executer` account to execute a proposal.
+          * Allows an `executer` account to execute a proposal.
           *
           * Preconditions:
           * - `executer` has authorization,
@@ -109,7 +112,7 @@ namespace eosio {
          /**
           * Invalidate proposal
           *
-          * @details Allows an `account` to invalidate itself, that is, its name is added to
+          * Allows an `account` to invalidate itself, that is, its name is added to
           * the invalidations table and this table will be cross referenced when exec is performed.
           *
           * @param account - The account invalidating the transaction
@@ -170,5 +173,4 @@ namespace eosio {
 
          typedef eosio::multi_index< "invals"_n, invalidation > invalidations;
    };
-   /** @}*/ // end of @defgroup eosiomsig eosio.msig
 } /// namespace eosio

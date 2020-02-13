@@ -1,8 +1,13 @@
-## Goal
+---
+content_title: How to buy RAM
+link_text: How to buy RAM
+---
+
+# Goal
 
 Setup an account that require multiple signatures for signing a transaction
 
-## Before you begin
+# Before you begin
 
 * You have an account
 
@@ -14,7 +19,7 @@ Setup an account that require multiple signatures for signing a transaction
 
 * Unlock your wallet
 
-## Steps
+# Steps
 
 Buys RAM in value of 0.1 SYS tokens for account `alice`:
 
