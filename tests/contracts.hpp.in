@@ -18,6 +18,8 @@ struct contracts {
    struct util {
       static std::vector<uint8_t> reject_all_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/reject_all.wasm"); }
       static std::vector<uint8_t> exchange_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/exchange.wasm"); }
+      static std::vector<uint8_t> sendinline_wasm() {return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/sendinline.wasm"); }
+      static std::vector<char>    sendinline_abi() {return read_abi("${CMAKE_SOURCE_DIR}/test_contracts/sendinline.abi"); }
       static std::vector<uint8_t> system_wasm_v1_8() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/old_versions/v1.8.3/eosio.system/eosio.system.wasm"); }
       static std::vector<char>    system_abi_v1_8() { return read_abi("${CMAKE_SOURCE_DIR}/test_contracts/old_versions/v1.8.3/eosio.system/eosio.system.abi"); }
       static std::vector<uint8_t> system_wasm_old() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/old_versions/v1.2.1/eosio.system/eosio.system.wasm"); }
