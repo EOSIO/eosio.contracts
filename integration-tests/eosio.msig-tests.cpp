@@ -40,21 +40,21 @@ struct msig_tester {
       chain.set_code("eosio.msig"_n, "contracts/eosio.msig/eosio.msig.wasm");
    }
 
-   chain_types::transaction_trace propose(name proposer, name proposal_name, std::vector<permission_level> requested,
-                                          transaction trx, const char* expected_except = nullptr) {
+   transaction_trace propose(name proposer, name proposal_name, std::vector<permission_level> requested,
+                             transaction trx, const char* expected_except = nullptr) {
       return chain.transact({ multisig::propose_action{ "eosio.msig"_n, { proposer, "active"_n } }.to_action(
                                   proposer, proposal_name, std::move(requested), std::move(trx)) },
                             expected_except);
    }
 
-   chain_types::transaction_trace approve(name proposer, name proposal_name, permission_level level,
-                                          const char* expected_except = nullptr) {
+   transaction_trace approve(name proposer, name proposal_name, permission_level level,
+                             const char* expected_except = nullptr) {
       return chain.transact({ { level, "eosio.msig"_n, "approve"_n, approve_args{ proposer, proposal_name, level } } },
                             expected_except);
    }
 
-   chain_types::transaction_trace exec(name proposer, name proposal_name, name executer,
-                                       const char* expected_except = nullptr) {
+   transaction_trace exec(name proposer, name proposal_name, name executer,
+                          const char* expected_except = nullptr) {
       return chain.transact({ multisig::exec_action{ "eosio.msig"_n, { executer, "active"_n } }.to_action(
                                   proposer, proposal_name, executer) },
                             expected_except);
@@ -79,5 +79,5 @@ BOOST_FIXTURE_TEST_CASE(propose_approve_execute, msig_tester) {
    BOOST_TEST(!chain.exec_deferred());
    BOOST_TEST(receipt.has_value());
    expect(*receipt);
-   BOOST_TEST(std::get<0>(*receipt).action_traces.size() == 1);
+   BOOST_TEST(receipt->action_traces.size() == 1);
 } // propose_approve_execute

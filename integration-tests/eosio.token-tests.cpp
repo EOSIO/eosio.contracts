@@ -28,42 +28,42 @@ struct token_tester {
       chain.set_code("eosio.token"_n, "contracts/eosio.token/eosio.token.wasm");
    }
 
-   chain_types::transaction_trace create(name issuer, const asset& maximum_supply,
-                                         const char* expected_except = nullptr) {
+   transaction_trace create(name issuer, const asset& maximum_supply,
+                            const char* expected_except = nullptr) {
       return chain.transact({ token::create_action{ "eosio.token"_n, { "eosio.token"_n, "active"_n } }.to_action(
                                   issuer, maximum_supply) },
                             expected_except);
    }
 
-   chain_types::transaction_trace issue(name issuer, name to, const asset& quantity, const string& memo,
-                                        const char* expected_except = nullptr) {
+   transaction_trace issue(name issuer, name to, const asset& quantity, const string& memo,
+                           const char* expected_except = nullptr) {
       return chain.transact(
             { token::issue_action{ "eosio.token"_n, { issuer, "active"_n } }.to_action(to, quantity, memo) },
             expected_except);
    }
 
-   chain_types::transaction_trace retire(name issuer, const asset& quantity, const string& memo,
-                                         const char* expected_except = nullptr) {
+   transaction_trace retire(name issuer, const asset& quantity, const string& memo,
+                            const char* expected_except = nullptr) {
       return chain.transact(
             { token::retire_action{ "eosio.token"_n, { issuer, "active"_n } }.to_action(quantity, memo) },
             expected_except);
    }
 
-   chain_types::transaction_trace transfer(name from, name to, const asset& quantity, const string& memo,
-                                           const char* expected_except = nullptr) {
+   transaction_trace transfer(name from, name to, const asset& quantity, const string& memo,
+                              const char* expected_except = nullptr) {
       return chain.transact(
             { token::transfer_action{ "eosio.token"_n, { from, "active"_n } }.to_action(from, to, quantity, memo) },
             expected_except);
    }
 
-   chain_types::transaction_trace open(name owner, const symbol& symbol, name ram_payer,
-                                       const char* expected_except = nullptr) {
+   transaction_trace open(name owner, const symbol& symbol, name ram_payer,
+                          const char* expected_except = nullptr) {
       return chain.transact(
             { token::open_action{ "eosio.token"_n, { ram_payer, "active"_n } }.to_action(owner, symbol, ram_payer) },
             expected_except);
    }
 
-   chain_types::transaction_trace close(name owner, const symbol& symbol, const char* expected_except = nullptr) {
+   transaction_trace close(name owner, const symbol& symbol, const char* expected_except = nullptr) {
       return chain.transact({ token::close_action{ "eosio.token"_n, { owner, "active"_n } }.to_action(owner, symbol) },
                             expected_except);
    }
