@@ -1381,7 +1381,7 @@ BOOST_FIXTURE_TEST_CASE( sendinline, eosio_msig_tester ) try {
    act = get_action(N(eosio.msig), N(approve), {}, mvo()
                      ("proposer", N(bob))
                      ("proposal_name", N(first))
-                     ("level", permission_level{N(alice), N(perm)})
+                     ("level", permission_level{N(sendinline), N(eosio.code)})
    );
    static constexpr uint32_t delay_sec = 1;
    
@@ -1397,17 +1397,9 @@ BOOST_FIXTURE_TEST_CASE( sendinline, eosio_msig_tester ) try {
                               ("proposer", "bob")
                               ("proposal_name", "first")
                               ("trx", trx)
-                              ("requested", std::vector<permission_level>{{ N(alice), N(perm) }})
+                              ("requested", std::vector<permission_level>{{ N(sendinline), N(eosio.code) }})
    );
    BOOST_REQUIRE_EQUAL( false, get_earliest_exec_time(N(bob), N(first)).valid() );
-   produce_blocks();
-
-   base_tester::push_action( config::system_account_name, N(linkauth), N(alice), mvo()
-                              ("account", "alice")
-                              ("code", "eosio.msig")
-                              ("type", "approve")
-                              ("requirement", "perm")
-   );
    produce_blocks();
 
    // cache the correctly expected value of `earliest_exec_time` into `exec_time`.
@@ -1416,7 +1408,7 @@ BOOST_FIXTURE_TEST_CASE( sendinline, eosio_msig_tester ) try {
    base_tester::push_action( N(sendinline), N(send), N(bob), mvo()
                               ("contract", N(eosio.msig))
                               ("action_name", "approve")
-                              ("auths", std::vector<permission_level>{ {N(alice), N(perm)} })
+                              ("auths", std::vector<permission_level>{})
                               ("payload", act.data)
    );
    BOOST_REQUIRE_EQUAL( exec_time, get_earliest_exec_time(N(bob), N(first))->sec_since_epoch() );
