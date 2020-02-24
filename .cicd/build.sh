@@ -3,6 +3,7 @@ set -eo pipefail
 . ./.cicd/helpers/buildkite.sh
 . ./.cicd/helpers/general.sh
 . ./.cicd/helpers/dependency-info.sh
+echo "Testing forked PR."
 mkdir -p $BUILD_DIR
 DOCKER_IMAGE=${DOCKER_IMAGE:-eosio/ci-contracts-builder:base-ubuntu-18.04-$SANITIZED_EOSIO_VERSION}
 if [[ "$BUILDKITE" == 'true' ]]; then
