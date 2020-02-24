@@ -214,7 +214,61 @@ transaction eosio_msig_tester::reqauth( account_name from, const vector<permissi
 BOOST_AUTO_TEST_SUITE(eosio_msig_tests)
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {
-   
+   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx)
+                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+   );
+
+   //fail to execute before approval
+   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+                                          ("proposer",      "alice")
+                                          ("proposal_name", "first")
+                                          ("executer",      "alice")
+                            ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is("transaction authorization failed")
+   );
+
+   //approve and execute
+   push_action( N(alice), N(approve), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("level",         permission_level{ N(alice), config::active_name })
+   );
+
+   transaction_trace_ptr trx_trace;
+   trx_trace = push_action( N(alice), N(exec), mvo()
+                             ("proposer",      "alice")
+                             ("proposal_name", "first")
+                             ("executer",      "alice")
+   );
+
+   BOOST_REQUIRE( bool(trx_trace) );
+   BOOST_REQUIRE( trx_trace->receipt.valid() );
+   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trx_trace->receipt->status );
+   BOOST_REQUIRE_EQUAL( 2, trx_trace->action_traces.size() );
+
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces.at(0).action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces.at(0).creator_action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{0}, trx_trace->action_traces.at(0).closest_unnotified_ancestor_action_ordinal );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), action_name{trx_trace->action_traces.at(0).receiver} );
+   BOOST_REQUIRE_EQUAL( N(eosio.msig), name{trx_trace->action_traces.at(0).act.account} );
+   BOOST_REQUIRE_EQUAL( N(exec), name{trx_trace->action_traces.at(0).act.name} );
+   BOOST_REQUIRE_EQUAL( N(alice), name{trx_trace->action_traces.at(0).act.authorization[0].actor} );
+   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces.at(0).act.authorization[0].permission} );
+
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{2}, trx_trace->action_traces.at(1).action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces.at(1).creator_action_ordinal );
+   BOOST_REQUIRE_EQUAL( fc::unsigned_int{1}, trx_trace->action_traces.at(1).closest_unnotified_ancestor_action_ordinal );
+   BOOST_REQUIRE_EQUAL( N(eosio), action_name{trx_trace->action_traces.at(1).receiver} );
+   BOOST_REQUIRE_EQUAL( N(eosio), name{trx_trace->action_traces.at(1).act.account} );
+   BOOST_REQUIRE_EQUAL( N(reqauth), name{trx_trace->action_traces.at(1).act.name} );
+   BOOST_REQUIRE_EQUAL( N(alice), name{trx_trace->action_traces.at(1).act.authorization[0].actor} );
+   BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces.at(1).act.authorization[0].permission} );
 } FC_LOG_AND_RETHROW()
 
 
@@ -1314,8 +1368,8 @@ BOOST_FIXTURE_TEST_CASE( unnecessary_approve_logic, eosio_msig_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( sendinline, eosio_msig_tester ) try {
    create_accounts( {N(sendinline)} );
-   set_code( N(sendinline), contracts::util::sendinline_wasm() );
-   set_abi( N(sendinline), contracts::util::sendinline_abi().data() );
+   set_code( N(sendinline), contracts::contracts::sendinline_wasm() );
+   set_abi( N(sendinline), contracts::contracts::sendinline_abi().data() );
    produce_blocks();
 
    static action act = get_action(config::system_account_name, N(reqauth), {}, mvo()("from", N(alice)));
