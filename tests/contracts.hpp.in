@@ -2,7 +2,7 @@
 #include <eosio/testing/tester.hpp>
 
 namespace eosio { namespace testing {
-// /Users/john.debord/2contracts/deprecate-deferred/build/contracts/test_contracts/sendinline
+
 struct contracts {
    static std::vector<uint8_t> system_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/eosio.system/eosio.system.wasm"); }
    static std::vector<char>    system_abi() { return read_abi("${CMAKE_BINARY_DIR}/../contracts/eosio.system/eosio.system.abi"); }
