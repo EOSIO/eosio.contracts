@@ -93,7 +93,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
                         const eosio::binary_extension<eosio::checksum256>& proposal_hash )
 {
    if ( level.permission == "eosio.code"_n ) {
-       check( get_sender() == level.actor, "wrong contract sent approve action for eosio.code permmission" );
+       check( get_sender() == level.actor, "wrong contract sent `approve` action for eosio.code permmission" );
    } else {
       require_auth( level );
    }
@@ -146,7 +146,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
 
 void multisig::unapprove( name proposer, name proposal_name, permission_level level ) {
    if ( level.permission == "eosio.code"_n ) {
-       check( get_sender() == level.actor, "wrong contract sent unapprove action for eosio.code permmission" );
+       check( get_sender() == level.actor, "wrong contract sent `unapprove` action for eosio.code permmission" );
    } else {
       require_auth( level );
    }

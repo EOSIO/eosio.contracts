@@ -4,12 +4,8 @@
 #include <eosio/permission.hpp>
 #include <vector>
 
-/// `eosio.code` is a virtual permission (there is no private or public
-/// key associated with it). Therefore, this test tests how `eosio.msig`
-/// contract reacts to a smart contract submitting a proposal and
-/// approving/unnapproving itself.
 class [[eosio::contract]]
-sendinline : public eosio::contract {
+wrongcon : public eosio::contract {
 public:
    using contract::contract;
 
