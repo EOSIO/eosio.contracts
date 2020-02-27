@@ -1,6 +1,9 @@
 name: Pull Request
 on: [pull_request]
 
+env:
+  PR_NUMBER: ${{ toJson(github.event.number) }}
+
 jobs:
   ubuntu-1804-build:
     if: github.event.pull_request.base.repo.id != github.event.pull_request.head.repo.id
