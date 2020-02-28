@@ -332,17 +332,19 @@ namespace eosiosystem {
            has_dot |= !(tmp & 0x1f);
            tmp >>= 5;
          }
-         if( has_dot ) { // or is less than 12 characters
+
+         bool has_below_6_chars = (newact.value & 0x3FFFFFFF0ull) == 0;
+
+         if( has_dot  && has_below_6_chars) { // or is less than 12 characters
             auto suffix = newact.suffix();
             if( suffix == newact ) {
-               check( false, "disable name auction");
                name_bid_table bids(get_self(), get_self().value);
                auto current = bids.find( newact.value );
                check( current != bids.end(), "no active bid for name" );
                check( current->high_bidder == creator, "only highest bidder can claim" );
                check( current->high_bid < 0, "auction for name is not closed yet" );
                bids.erase( current );
-            } else {
+            } else if (suffix != newact){
                check( creator == suffix, "only suffix may create this account" );
             }
          }
