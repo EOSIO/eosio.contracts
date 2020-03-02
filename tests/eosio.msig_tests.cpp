@@ -1368,15 +1368,15 @@ BOOST_FIXTURE_TEST_CASE( unnecessary_approve_logic, eosio_msig_tester ) try {
 
 BOOST_FIXTURE_TEST_CASE( sendinline, eosio_msig_tester ) try {
    create_accounts( {N(sendinline)} );
-   set_code( N(sendinline), contracts::contracts::sendinline_wasm() );
-   set_abi( N(sendinline), contracts::contracts::sendinline_abi().data() );
+   set_code( N(sendinline), contracts::util::sendinline_wasm() );
+   set_abi( N(sendinline), contracts::util::sendinline_abi().data() );
 
    create_accounts( {N(wrongcon)} );
-   set_code( N(wrongcon), contracts::contracts::wrongcon_wasm() );
-   set_abi( N(wrongcon), contracts::contracts::wrongcon_abi().data() );
+   set_code( N(wrongcon), contracts::util::sendinline_wasm() );
+   set_abi( N(wrongcon), contracts::util::sendinline_abi().data() );
    produce_blocks();
 
-   static action act = get_action(config::system_account_name, N(reqauth), {}, mvo()("from", N(alice)));
+   action act = get_action(config::system_account_name, N(reqauth), {}, mvo()("from", N(alice)));
 
    BOOST_REQUIRE_EXCEPTION( base_tester::push_action( N(sendinline), N(send), N(bob), mvo()
                                                        ("contract", config::system_account_name)
@@ -1436,13 +1436,19 @@ BOOST_FIXTURE_TEST_CASE( sendinline, eosio_msig_tester ) try {
    BOOST_REQUIRE_EQUAL( N(alice), name{trx_trace->action_traces.at(1).act.authorization[0].actor} );
    BOOST_REQUIRE_EQUAL( N(perm), name{trx_trace->action_traces.at(1).act.authorization[0].permission} );
 
-   act = get_action(N(eosio.msig), N(approve), {}, mvo()
-                     ("proposer", N(bob))
-                     ("proposal_name", N(first))
-                     ("level", permission_level{N(sendinline), N(eosio.code)})
+   action approve_act = get_action(N(eosio.msig), N(approve), {}, mvo()
+                                    ("proposer", N(bob))
+                                    ("proposal_name", N(first))
+                                    ("level", permission_level{N(sendinline), N(eosio.code)})
+   );
+
+   action unapprove_act = get_action(N(eosio.msig), N(unapprove), {}, mvo()
+                                    ("proposer", N(bob))
+                                    ("proposal_name", N(first))
+                                    ("level", permission_level{N(sendinline), N(eosio.code)})
    );
    
-   static transaction trx = reqauth( N(alice), {permission_level{N(alice), N(perm)}}, abi_serializer_max_time );
+   transaction trx = reqauth( N(alice), {permission_level{N(alice), N(perm)}}, abi_serializer_max_time );
    
    base_tester::push_action( N(eosio.msig), N(propose), N(bob), mvo()
                               ("proposer", "bob")
@@ -1450,7 +1456,6 @@ BOOST_FIXTURE_TEST_CASE( sendinline, eosio_msig_tester ) try {
                               ("trx", trx)
                               ("requested", std::vector<permission_level>{{ N(sendinline), N(eosio.code) }})
    );
-   BOOST_REQUIRE_EQUAL( false, get_earliest_exec_time(N(bob), N(first)).valid() );
    produce_blocks();
    
    // `approve` shall fail when being sent from the wrong contract
@@ -1458,18 +1463,18 @@ BOOST_FIXTURE_TEST_CASE( sendinline, eosio_msig_tester ) try {
                               ("contract", N(eosio.msig))
                               ("action_name", "approve")
                               ("auths", std::vector<permission_level>{})
-                              ("payload", act.data)
+                              ("payload", approve_act.data)
                             ),
                             eosio_assert_message_exception,
                             eosio_assert_message_is("wrong contract sent `approve` action for eosio.code permmission")
    );
    
-   // `approve` shall succeed when being sent from the wrong contract
+   // `approve` shall succeed when being sent from the correct contract
    base_tester::push_action( N(sendinline), N(send), N(bob), mvo()
                               ("contract", N(eosio.msig))
                               ("action_name", "approve")
                               ("auths", std::vector<permission_level>{})
-                              ("payload", act.data)
+                              ("payload", approve_act.data)
    );
    produce_blocks();
 
@@ -1478,18 +1483,18 @@ BOOST_FIXTURE_TEST_CASE( sendinline, eosio_msig_tester ) try {
                               ("contract", N(eosio.msig))
                               ("action_name", "unapprove")
                               ("auths", std::vector<permission_level>{})
-                              ("payload", act.data)
+                              ("payload", unapprove_act.data)
                             ),
                             eosio_assert_message_exception,
                             eosio_assert_message_is("wrong contract sent `unapprove` action for eosio.code permmission")
    );
    
-   // `unapprove` shall fail when being sent from the wrong contract
+   // `unapprove` shall succeed when being sent from the correct contract
    base_tester::push_action( N(sendinline), N(send), N(bob), mvo()
                               ("contract", N(eosio.msig))
                               ("action_name", "unapprove")
                               ("auths", std::vector<permission_level>{})
-                              ("payload", act.data)
+                              ("payload", unapprove_act.data)
    );
    produce_blocks();
    
@@ -1498,14 +1503,14 @@ BOOST_FIXTURE_TEST_CASE( sendinline, eosio_msig_tester ) try {
                               ("contract", N(eosio.msig))
                               ("action_name", "approve")
                               ("auths", std::vector<permission_level>{})
-                              ("payload", act.data)
+                              ("payload", approve_act.data)
    );
    produce_blocks();
    
-   trx_trace = base_tester::push_action( N(eosio.msig), N(exec), N(alice), mvo()
+   trx_trace = base_tester::push_action( N(eosio.msig), N(exec), N(bob), mvo()
                                           ("proposer", "bob")
                                           ("proposal_name", "first")
-                                          ("executer", "alice")
+                                          ("executer", "bob")
    );
    
    BOOST_REQUIRE( bool(trx_trace) );
@@ -1519,7 +1524,7 @@ BOOST_FIXTURE_TEST_CASE( sendinline, eosio_msig_tester ) try {
    BOOST_REQUIRE_EQUAL( N(eosio.msig), action_name{trx_trace->action_traces.at(0).receiver} );
    BOOST_REQUIRE_EQUAL( N(eosio.msig), name{trx_trace->action_traces.at(0).act.account} );
    BOOST_REQUIRE_EQUAL( N(exec), name{trx_trace->action_traces.at(0).act.name} );
-   BOOST_REQUIRE_EQUAL( N(alice), name{trx_trace->action_traces.at(0).act.authorization[0].actor} );
+   BOOST_REQUIRE_EQUAL( N(bob), name{trx_trace->action_traces.at(0).act.authorization[0].actor} );
    BOOST_REQUIRE_EQUAL( N(active), name{trx_trace->action_traces.at(0).act.authorization[0].permission} );
    
    BOOST_REQUIRE_EQUAL( fc::unsigned_int{2}, trx_trace->action_traces.at(1).action_ordinal );
