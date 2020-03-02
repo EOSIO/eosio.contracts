@@ -92,7 +92,11 @@ void multisig::propose( name proposer,
 void multisig::approve( name proposer, name proposal_name, permission_level level,
                         const eosio::binary_extension<eosio::checksum256>& proposal_hash )
 {
-   require_auth( level );
+   if ( level.permission == "eosio.code"_n ) {
+       check( get_sender() == level.actor, "wrong contract sent `approve` action for eosio.code permmission" );
+   } else {
+      require_auth( level );
+   }
 
    proposals proptable( get_self(), proposer.value );
    auto& prop = proptable.get( proposal_name.value, "proposal not found" );
@@ -141,7 +145,11 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
 }
 
 void multisig::unapprove( name proposer, name proposal_name, permission_level level ) {
-   require_auth( level );
+   if ( level.permission == "eosio.code"_n ) {
+       check( get_sender() == level.actor, "wrong contract sent `unapprove` action for eosio.code permmission" );
+   } else {
+      require_auth( level );
+   }
 
    approvals apptable( get_self(), proposer.value );
    auto apps_it = apptable.find( proposal_name.value );
