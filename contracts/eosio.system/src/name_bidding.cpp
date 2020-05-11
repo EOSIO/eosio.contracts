@@ -10,12 +10,13 @@ namespace eosiosystem {
 
    void system_contract::bidname( const name& bidder, const name& newname, const asset& bid ) {
       require_auth( bidder );
+      check( false, "disable at this time" );
+      
       check( newname.suffix() == newname, "you can only bid on top-level suffix" );
 
       check( (bool)newname, "the empty name is not a valid account name to bid on" );
       check( (newname.value & 0xFull) == 0, "13 character names are not valid account names to bid on" );
-      check( (newname.value & 0x1F0ull) == 0, "accounts with 12 character names and no dots can be created without bidding required" );
-      check( !is_account( newname ), "account already exists" );
+      check( (newname.value & 0x7FFFFFFFF0ull) == 0, "accounts with 6 character names and no dots can be created without bidding required" );      check( !is_account( newname ), "account already exists" );
       check( bid.symbol == core_symbol(), "asset must be system token" );
       check( bid.amount > 0, "insufficient bid" );
       token::transfer_action transfer_act{ token_account, { {bidder, active_permission} } };
