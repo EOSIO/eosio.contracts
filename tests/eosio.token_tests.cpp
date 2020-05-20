@@ -33,7 +33,7 @@ public:
       const auto& accnt = control->db().get<account_object,by_name>( N(eosio.token) );
       abi_def abi;
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
-      abi_ser.set_abi(abi, abi_serializer_max_time);
+      abi_ser.set_abi(abi, abi_serializer::create_yield_function(abi_serializer_max_time));
    }
 
    action_result push_action( const account_name& signer, const action_name &name, const variant_object &data ) {
@@ -42,7 +42,7 @@ public:
       action act;
       act.account = N(eosio.token);
       act.name    = name;
-      act.data    = abi_ser.variant_to_binary( action_type_name, data,abi_serializer_max_time );
+      act.data    = abi_ser.variant_to_binary( action_type_name, data, abi_serializer::create_yield_function(abi_serializer_max_time) );
 
       return base_tester::push_action( std::move(act), signer.to_uint64_t() );
    }
@@ -52,7 +52,7 @@ public:
       auto symb = eosio::chain::symbol::from_string(symbolname);
       auto symbol_code = symb.to_symbol_code().value;
       vector<char> data = get_row_by_account( N(eosio.token), name(symbol_code), N(stat), account_name(symbol_code) );
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "currency_stats", data, abi_serializer_max_time );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "currency_stats", data, abi_serializer::create_yield_function(abi_serializer_max_time) );
    }
 
    fc::variant get_account( account_name acc, const string& symbolname)
@@ -60,7 +60,7 @@ public:
       auto symb = eosio::chain::symbol::from_string(symbolname);
       auto symbol_code = symb.to_symbol_code().value;
       vector<char> data = get_row_by_account( N(eosio.token), acc, N(accounts), account_name(symbol_code) );
-      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "account", data, abi_serializer_max_time );
+      return data.empty() ? fc::variant() : abi_ser.binary_to_variant( "account", data, abi_serializer::create_yield_function(abi_serializer_max_time) );
    }
 
    action_result create( account_name issuer,
