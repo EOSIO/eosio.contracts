@@ -133,7 +133,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name,
                                               N(rammarket), account_name(symbol{SY(4,RAMCORE)}.value()) );
       BOOST_REQUIRE( !data.empty() );
-      return abi_ser.binary_to_variant("exchange_state", data, abi_serializer_max_time);
+      return abi_ser.binary_to_variant("exchange_state", data, abi_serializer::create_yield_function(abi_serializer_max_time));
    };
 
    {
@@ -1738,7 +1738,7 @@ BOOST_AUTO_TEST_CASE(extreme_inflation) try {
    asset current_supply;
    {
       vector<char> data = t.get_row_by_account( N(eosio.token), name(core_symbol.to_symbol_code().value), N(stat), account_name(core_symbol.to_symbol_code().value) );
-      current_supply = t.token_abi_ser.binary_to_variant("currency_stats", data, eosio_system_tester::abi_serializer_max_time)["supply"].template as<asset>();
+      current_supply = t.token_abi_ser.binary_to_variant("currency_stats", data, abi_serializer::create_yield_function(eosio_system_tester::abi_serializer_max_time))["supply"].template as<asset>();
    }
    t.issue( asset((1ll << 62) - 1, core_symbol) - current_supply );
    BOOST_REQUIRE_EQUAL(t.success(), t.setinflation(std::numeric_limits<int64_t>::max(), 50000, 40000));
@@ -2658,7 +2658,7 @@ BOOST_AUTO_TEST_CASE(votepay_transition2, * boost::unit_test::tolerance(1e-10)) 
       const auto& accnt = t.control->db().get<account_object,by_name>( config::system_account_name );
       abi_def abi;
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
-      t.abi_ser.set_abi(abi, eosio_system_tester::abi_serializer_max_time);
+      t.abi_ser.set_abi(abi, abi_serializer::create_yield_function(eosio_system_tester::abi_serializer_max_time));
    }
    const asset net = old_core_from_string("80.0000");
    const asset cpu = old_core_from_string("80.0000");
@@ -2732,7 +2732,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
          action act;
          act.account = N(eosio.msig);
          act.name = name;
-         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer::create_yield_function(abi_serializer_max_time) );
 
          return base_tester::push_action( std::move(act), (auth ? signer : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111)).to_uint64_t() );
    };
@@ -2771,7 +2771,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
                   )
                   })
          );
-      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time));
    }
 
    BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
@@ -3514,7 +3514,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
          action act;
          act.account = N(eosio.msig);
          act.name = name;
-         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer::create_yield_function(abi_serializer_max_time) );
 
          return base_tester::push_action( std::move(act), (auth ? signer : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111)).to_uint64_t() );
    };
@@ -3550,7 +3550,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
                   )
                   })
          );
-      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time));
    }
 
    BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
@@ -5514,7 +5514,7 @@ BOOST_AUTO_TEST_CASE( setabi_bios ) try {
    validating_tester t( tempdir, true );
    t.execute_setup_policy( setup_policy::full );
 
-   abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::bios_abi().data()).template as<abi_def>(), base_tester::abi_serializer_max_time);
+   abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::bios_abi().data()).template as<abi_def>(), abi_serializer::create_yield_function(base_tester::abi_serializer_max_time));
    t.set_code( config::system_account_name, contracts::bios_wasm() );
    t.set_abi( config::system_account_name, contracts::bios_abi().data() );
    t.create_account(N(eosio.token));
@@ -5522,8 +5522,8 @@ BOOST_AUTO_TEST_CASE( setabi_bios ) try {
    {
       auto res = t.get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
       _abi_hash abi_hash;
-      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, base_tester::abi_serializer_max_time );
-      abi_serializer::from_variant( abi_hash_var, abi_hash, t.get_resolver(), base_tester::abi_serializer_max_time);
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer::create_yield_function(base_tester::abi_serializer_max_time) );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, t.get_resolver(), abi_serializer::create_yield_function(base_tester::abi_serializer_max_time));
       auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::token_abi().data()).template as<abi_def>());
       auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
 
@@ -5534,8 +5534,8 @@ BOOST_AUTO_TEST_CASE( setabi_bios ) try {
    {
       auto res = t.get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
       _abi_hash abi_hash;
-      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, base_tester::abi_serializer_max_time );
-      abi_serializer::from_variant( abi_hash_var, abi_hash, t.get_resolver(), base_tester::abi_serializer_max_time);
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer::create_yield_function(base_tester::abi_serializer_max_time) );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, t.get_resolver(), abi_serializer::create_yield_function(base_tester::abi_serializer_max_time));
       auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>());
       auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
 
@@ -5548,8 +5548,8 @@ BOOST_FIXTURE_TEST_CASE( setabi, eosio_system_tester ) try {
    {
       auto res = get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
       _abi_hash abi_hash;
-      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer_max_time );
-      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer_max_time);
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer::create_yield_function(abi_serializer_max_time) );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time));
       auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::token_abi().data()).template as<abi_def>());
       auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
 
@@ -5560,8 +5560,8 @@ BOOST_FIXTURE_TEST_CASE( setabi, eosio_system_tester ) try {
    {
       auto res = get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
       _abi_hash abi_hash;
-      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer_max_time );
-      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer_max_time);
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer::create_yield_function(abi_serializer_max_time) );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time));
       auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>());
       auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
 
