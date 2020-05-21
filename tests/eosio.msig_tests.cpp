@@ -248,7 +248,7 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_execute2, eosio_msig_tester ) try {
          ("account", "alice")
          ("code", "eosio.msig")
          ("type", "approve")
-         ("requirement", "perm")
+         ("requirement", "eosio.any")
       );
    }
 
