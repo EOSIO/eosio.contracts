@@ -224,6 +224,82 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {
    BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( propose_approve_execute2, eosio_msig_tester ) try {
+   base_tester::push_action(config::system_account_name, N(updateauth), N(alice), fc::mutable_variant_object()
+           ("account", "alice")
+           ("permission", "perm")
+           ("parent", "active")
+           ("auth",  authority(get_public_key(N(alice), "perm")))
+   );
+
+   base_tester::push_action(config::system_account_name, N(linkauth), N(alice), fc::mutable_variant_object()
+      ("account", "alice")
+      ("code", "eosio")
+      ("type", "reqauth")
+      ("requirement", "perm")
+   );
+
+   bool linkauth_approve_action = true;
+   // If the above boolean is changed to false the approval will fail with the following error message:
+   // action declares irrelevant authority '{"actor":"alice","permission":"perm"}'; minimum authority is {"actor":"alice","permission":"active"}
+
+   if (linkauth_approve_action) {
+      base_tester::push_action(config::system_account_name, N(linkauth), N(alice), fc::mutable_variant_object()
+         ("account", "alice")
+         ("code", "eosio.msig")
+         ("type", "approve")
+         ("requirement", "perm")
+      );
+   }
+
+   auto trx = reqauth( N(alice), {permission_level{N(alice), N(perm)}}, abi_serializer_max_time );
+
+   ilog("propose the transaction");
+   push_action( N(alice), N(propose), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("trx",           trx)
+                  ("requested", vector<permission_level>{{ N(alice), N(perm) }})
+   );
+
+   //fail to execute before approval
+   ilog("attempt to execute before approval");
+   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+                                          ("proposer",      "alice")
+                                          ("proposal_name", "first")
+                                          ("executer",      "alice")
+                            ),
+                            eosio_assert_message_exception,
+                            eosio_assert_message_is("transaction authorization failed")
+   );
+
+   //approve and execute
+   ilog("approve proposal");
+   base_tester::push_action(N(eosio.msig), N(approve), vector<permission_level>{{N(alice), N(perm)}}, fc::mutable_variant_object()
+      ("proposer",      "alice")
+      ("proposal_name", "first")
+      ("level",         permission_level{ N(alice), N(perm) })
+   );
+
+   transaction_trace_ptr trace;
+   control->applied_transaction.connect(
+   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+      const auto& t = std::get<0>(p);
+      if( t->scheduled ) { trace = t; }
+   } );
+
+   ilog("execute proposal");
+   push_action( N(alice), N(exec), mvo()
+                  ("proposer",      "alice")
+                  ("proposal_name", "first")
+                  ("executer",      "alice")
+   );
+
+   BOOST_REQUIRE( bool(trace) );
+   BOOST_REQUIRE_EQUAL( 1, trace->action_traces.size() );
+   BOOST_REQUIRE_EQUAL( transaction_receipt::executed, trace->receipt->status );
+} FC_LOG_AND_RETHROW()
+
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_unapprove, eosio_msig_tester ) try {
    auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
