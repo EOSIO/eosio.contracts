@@ -4,7 +4,7 @@ link_text: How to build eosio.contracts
 ---
 
 ## Preconditions
-Ensure an appropriate version of `eosio.cdt` is installed. Installing `eosio.cdt` from binaries is sufficient, follow the [`eosio.cdt` installation instructions steps](https://github.com/EOSIO/eosio.cdt/tree/master/#binary-releases) to install it. To verify if you have `eosio.cdt` installed and its version run the following command
+Ensure an appropriate version of `eosio.cdt` is installed. Installing `eosio.cdt` from binaries is sufficient, follow the [`eosio.cdt` installation instructions steps](https://developers.eos.io/manuals/eosio.cdt/latest/installation) to install it. To verify if you have `eosio.cdt` installed and its version run the following command
 
 ```sh
 eosio-cpp -v

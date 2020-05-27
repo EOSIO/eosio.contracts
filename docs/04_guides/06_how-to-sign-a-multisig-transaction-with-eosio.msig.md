@@ -1,4 +1,9 @@
-## Cleos usage example for issuing tokens.
+---
+content_title: How to sign a multisig transaction with eosio.msig
+link_text: How to sign a multisig transaction with eosio.msig
+---
+
+## eosio.msig
 
 ### Prerequisites:
    - eosio.token contract installed to eosio.token account, eosio.msig contract installed on eosio.msig account which is a priviliged account.
