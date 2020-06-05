@@ -167,7 +167,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_exec_direct, eosio_wrap_tester ) try {
 
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
@@ -219,7 +219,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
 
    vector<transaction_trace_ptr> traces;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) {
          traces.push_back( t );
@@ -335,7 +335,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig_producers_change, eosio_wrap_tester ) tr
 
    vector<transaction_trace_ptr> traces;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) {
          traces.push_back( t );
