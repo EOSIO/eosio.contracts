@@ -18,13 +18,9 @@ namespace eosiosystem {
    using eosio::public_key;
 
    /**
-    * @addtogroup eosiosystem
-    * @{
-    */
-   /**
     * A weighted permission.
     *
-    * @details Defines a weighted permission, that is a permission which has a weight associated.
+    * Defines a weighted permission, that is a permission which has a weight associated.
     * A permission is defined by an account name plus a permission name.
     */
    struct permission_level_weight {
@@ -38,7 +34,7 @@ namespace eosiosystem {
    /**
     * Weighted key.
     *
-    * @details A weighted key is defined by a public key and an associated weight.
+    * A weighted key is defined by a public key and an associated weight.
     */
    struct key_weight {
       eosio::public_key  key;
@@ -51,7 +47,7 @@ namespace eosiosystem {
    /**
     * Wait weight.
     *
-    * @details A wait weight is defined by a number of seconds to wait for and a weight.
+    * A wait weight is defined by a number of seconds to wait for and a weight.
     */
    struct wait_weight {
       uint32_t           wait_sec;
@@ -64,7 +60,7 @@ namespace eosiosystem {
    /**
     * Blockchain authority.
     *
-    * @details An authority is defined by:
+    * An authority is defined by:
     * - a vector of key_weights (a key_weight is a public key plus a wieght),
     * - a vector of permission_level_weights, (a permission_level is an account name plus a permission name)
     * - a vector of wait_weights (a wait_weight is defined by a number of seconds to wait and a weight)
@@ -83,7 +79,7 @@ namespace eosiosystem {
    /**
     * Blockchain block header.
     *
-    * @details A block header is defined by:
+    * A block header is defined by:
     * - a timestamp,
     * - the producer that created it,
     * - a confirmed flag default as zero,
@@ -109,9 +105,7 @@ namespace eosiosystem {
    };
 
    /**
-    * abi_hash
-    *
-    * @details abi_hash is the structure underlying the abihash table and consists of:
+    * abi_hash is the structure underlying the abihash table and consists of:
     * - `owner`: the account owner of the contract's abi
     * - `hash`: is the sha256 hash of the abi/binary
     */
@@ -125,9 +119,7 @@ namespace eosiosystem {
 
    // Method parameters commented out to prevent generation of code that parses input data.
    /**
-    * The EOSIO core native contract that governs authorization and contracts' abi.
-    *
-    * @details
+    * The EOSIO core `native` contract that governs authorization and contracts' abi.
     */
    class [[eosio::contract("eosio.system")]] native : public eosio::contract {
       public:
@@ -135,109 +127,15 @@ namespace eosiosystem {
          using eosio::contract::contract;
 
          /**
-          * @{
-          * These actions map one-on-one with the ones defined in
-          * [Native Action Handlers](@ref native_action_handlers) section.
-          * They are present here so they can show up in the abi file and thus user can send them
+          * These actions map one-on-one with the ones defined in core layer of EOSIO, that's where their implementation
+          * actually is done.
+          * They are present here only so they can show up in the abi file and thus user can send them
           * to this contract, but they have no specific implementation at this contract level,
-          * they will execute the implementation at the core level and nothing else.
+          * they will execute the implementation at the core layer and nothing else.
           */
          /**
-          * Update authorization action.
-          *
-          * @details Updates pemission for an account
-          *
-          * @param account - the account for which the permission is updated
-          * @param pemission - the permission name which is updated
-          * @param parem - the parent of the permission which is updated
-          * @param aut - the json describing the permission authorization
-          */
-         [[eosio::action]]
-         void updateauth( ignore<name>      account,
-                          ignore<name>      permission,
-                          ignore<name>      parent,
-                          ignore<authority> auth ) {}
-
-         /**
-          * Delete authorization action.
-          *
-          * @details Deletes the authorization for an account's permision.
-          *
-          * @param account - the account for which the permission authorization is deleted,
-          * @param permission - the permission name been deleted.
-          */
-         [[eosio::action]]
-         void deleteauth( ignore<name> account,
-                          ignore<name> permission ) {}
-
-         /**
-          * Link authorization action.
-          *
-          * @details Assigns a specific action from a contract to a permission you have created. Five system
-          * actions can not be linked `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, and `canceldelay`.
-          * This is useful because when doing authorization checks, the EOSIO based blockchain starts with the
-          * action needed to be authorized (and the contract belonging to), and looks up which permission
-          * is needed to pass authorization validation. If a link is set, that permission is used for authoraization
-          * validation otherwise then active is the default, with the exception of `eosio.any`.
-          * `eosio.any` is an implicit permission which exists on every account; you can link actions to `eosio.any`
-          * and that will make it so linked actions are accessible to any permissions defined for the account.
-          *
-          * @param account - the permission's owner to be linked and the payer of the RAM needed to store this link,
-          * @param code - the owner of the action to be linked,
-          * @param type - the action to be linked,
-          * @param requirement - the permission to be linked.
-          */
-         [[eosio::action]]
-         void linkauth( ignore<name> account,
-                        ignore<name> code,
-                        ignore<name> type,
-                        ignore<name> requirement  ) {}
-
-         /**
-          * Unlink authorization action.
-          *
-          * @details It's doing the reverse of linkauth action, by unlinking the given action.
-          *
-          * @param account - the owner of the permission to be unlinked and the receiver of the freed RAM,
-          * @param code - the owner of the action to be unlinked,
-          * @param type - the action to be unlinked.
-          */
-         [[eosio::action]]
-         void unlinkauth( ignore<name> account,
-                          ignore<name> code,
-                          ignore<name> type ) {}
-
-         /**
-          * Cancel delay action.
-          *
-          * @details Cancels a deferred transaction.
-          *
-          * @param canceling_auth - the permission that authorizes this action,
-          * @param trx_id - the deferred transaction id to be cancelled.
-          */
-         [[eosio::action]]
-         void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
-
-         /**
-          * Set code action.
-          *
-          * @details Sets the contract code for an account.
-          *
-          * @param account - the account for which to set the contract code.
-          * @param vmtype - reserved, set it to zero.
-          * @param vmversion - reserved, set it to zero.
-          * @param code - the code content to be set, in the form of a blob binary..
-          */
-         [[eosio::action]]
-         void setcode( const name& account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
-
-         /** @}*/
-
-         /**
-          * New account action
-          *
-          * @details Creates a new account. The behavior of this action is further modified in this contract to
-          * enforce resource-limits rules for new accounts as well as new account naming conventions.
+          * New account action is called after a new account is created. This code enforces resource-limits rules
+          * for new accounts as well as new account naming conventions.
           *
           * 1. accounts cannot contain '.' symbols which forces all acccounts to be 12
           * characters long without '.' until a future account auction process is implemented
@@ -259,22 +157,73 @@ namespace eosiosystem {
                           ignore<authority> active);
 
          /**
-          * Set abi for contract.
+          * Update authorization action updates pemission for an account.
           *
-          * @details Set the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
-          * index, with `account` name as key, if it is not already present and sets its value with the abi hash.
-          * Otherwise it is updating the current abi hash value for the existing `account` key.
-          *
-          * @param account - the name of the account to set the abi for
-          * @param abi     - the abi hash represented as a vector of characters
+          * @param account - the account for which the permission is updated
+          * @param pemission - the permission name which is updated
+          * @param parem - the parent of the permission which is updated
+          * @param aut - the json describing the permission authorization
           */
          [[eosio::action]]
-         void setabi( const name& account, const std::vector<char>& abi );
+         void updateauth( ignore<name>      account,
+                          ignore<name>      permission,
+                          ignore<name>      parent,
+                          ignore<authority> auth ) {}
 
          /**
-          * On error action.
+          * Delete authorization action deletes the authorization for an account's permission.
           *
-          * @details Notification of this action is delivered to the sender of a deferred transaction
+          * @param account - the account for which the permission authorization is deleted,
+          * @param permission - the permission name been deleted.
+          */
+         [[eosio::action]]
+         void deleteauth( ignore<name> account,
+                          ignore<name> permission ) {}
+
+         /**
+          * Link authorization action assigns a specific action from a contract to a permission you have created. Five system
+          * actions can not be linked `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, and `canceldelay`.
+          * This is useful because when doing authorization checks, the EOSIO based blockchain starts with the
+          * action needed to be authorized (and the contract belonging to), and looks up which permission
+          * is needed to pass authorization validation. If a link is set, that permission is used for authoraization
+          * validation otherwise then active is the default, with the exception of `eosio.any`.
+          * `eosio.any` is an implicit permission which exists on every account; you can link actions to `eosio.any`
+          * and that will make it so linked actions are accessible to any permissions defined for the account.
+          *
+          * @param account - the permission's owner to be linked and the payer of the RAM needed to store this link,
+          * @param code - the owner of the action to be linked,
+          * @param type - the action to be linked,
+          * @param requirement - the permission to be linked.
+          */
+         [[eosio::action]]
+         void linkauth( ignore<name> account,
+                        ignore<name> code,
+                        ignore<name> type,
+                        ignore<name> requirement  ) {}
+
+         /**
+          * Unlink authorization action it's doing the reverse of linkauth action, by unlinking the given action.
+          *
+          * @param account - the owner of the permission to be unlinked and the receiver of the freed RAM,
+          * @param code - the owner of the action to be unlinked,
+          * @param type - the action to be unlinked.
+          */
+         [[eosio::action]]
+         void unlinkauth( ignore<name> account,
+                          ignore<name> code,
+                          ignore<name> type ) {}
+
+         /**
+          * Cancel delay action cancels a deferred transaction.
+          *
+          * @param canceling_auth - the permission that authorizes this action,
+          * @param trx_id - the deferred transaction id to be cancelled.
+          */
+         [[eosio::action]]
+         void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
+
+         /**
+          * On error action, notification of this action is delivered to the sender of a deferred transaction
           * when an objective error occurs while executing the deferred transaction.
           * This action is not meant to be called directly.
           *
@@ -283,6 +232,26 @@ namespace eosiosystem {
           */
          [[eosio::action]]
          void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
+
+         /**
+          * Set abi action sets the contract abi for an account.
+          *
+          * @param account - the account for which to set the contract abi.
+          * @param abi - the abi content to be set, in the form of a blob binary.
+          */
+         [[eosio::action]]
+         void setabi( const name& account, const std::vector<char>& abi );
+
+         /**
+          * Set code action sets the contract code for an account.
+          *
+          * @param account - the account for which to set the contract code.
+          * @param vmtype - reserved, set it to zero.
+          * @param vmversion - reserved, set it to zero.
+          * @param code - the code content to be set, in the form of a blob binary..
+          */
+         [[eosio::action]]
+         void setcode( const name& account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
 
          using newaccount_action = eosio::action_wrapper<"newaccount"_n, &native::newaccount>;
          using updateauth_action = eosio::action_wrapper<"updateauth"_n, &native::updateauth>;
@@ -293,5 +262,4 @@ namespace eosiosystem {
          using setcode_action = eosio::action_wrapper<"setcode"_n, &native::setcode>;
          using setabi_action = eosio::action_wrapper<"setabi"_n, &native::setabi>;
    };
-   /** @}*/ // @addtogroup eosiosystem
 }
