@@ -1,0 +1,4 @@
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/CMakeFiles/rebuild_cache.dir
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/CMakeFiles/edit_cache.dir
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/CMakeFiles/contracts_unit_tests.dir
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/CMakeFiles/contracts_project.dir

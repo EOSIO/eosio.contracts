@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/CMakeFiles/contracts_unit_tests"
+		},
+		{
+			"file" : "/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/CMakeFiles/contracts_unit_tests.rule"
+		},
+		{
+			"file" : "/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/CMakeFiles/contracts_unit_tests-complete.rule"
+		},
+		{
+			"file" : "/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_unit_tests-prefix/src/contracts_unit_tests-stamp/contracts_unit_tests-install.rule"
+		},
+		{
+			"file" : "/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_unit_tests-prefix/src/contracts_unit_tests-stamp/contracts_unit_tests-mkdir.rule"
+		},
+		{
+			"file" : "/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_unit_tests-prefix/src/contracts_unit_tests-stamp/contracts_unit_tests-download.rule"
+		},
+		{
+			"file" : "/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_unit_tests-prefix/src/contracts_unit_tests-stamp/contracts_unit_tests-update.rule"
+		},
+		{
+			"file" : "/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_unit_tests-prefix/src/contracts_unit_tests-stamp/contracts_unit_tests-patch.rule"
+		},
+		{
+			"file" : "/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_unit_tests-prefix/src/contracts_unit_tests-stamp/contracts_unit_tests-configure.rule"
+		},
+		{
+			"file" : "/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_unit_tests-prefix/src/contracts_unit_tests-stamp/contracts_unit_tests-build.rule"
+		},
+		{
+			"file" : "/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_unit_tests-prefix/src/contracts_unit_tests-stamp/contracts_unit_tests-test.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"contracts_unit_tests"
+		],
+		"name" : "contracts_unit_tests"
+	}
+}

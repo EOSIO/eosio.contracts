@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/contracts/eosio.boot/include/eosio.boot/eosio.boot.hpp
+eosio/crypto.hpp
+-
+eosio/eosio.hpp
+-
+
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/contracts/eosio.boot/src/eosio.boot.cpp
+eosio.boot/eosio.boot.hpp
+-
+eosio/privileged.hpp
+-
+

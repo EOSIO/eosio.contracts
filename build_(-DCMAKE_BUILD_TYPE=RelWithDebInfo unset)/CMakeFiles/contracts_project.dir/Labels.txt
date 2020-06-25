@@ -1,0 +1,14 @@
+# Target labels
+ contracts_project
+# Source files and their labels
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/CMakeFiles/contracts_project
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/CMakeFiles/contracts_project.rule
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/CMakeFiles/contracts_project-complete.rule
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_project-prefix/src/contracts_project-stamp/contracts_project-install.rule
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_project-prefix/src/contracts_project-stamp/contracts_project-mkdir.rule
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_project-prefix/src/contracts_project-stamp/contracts_project-download.rule
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_project-prefix/src/contracts_project-stamp/contracts_project-update.rule
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_project-prefix/src/contracts_project-stamp/contracts_project-patch.rule
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_project-prefix/src/contracts_project-stamp/contracts_project-configure.rule
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_project-prefix/src/contracts_project-stamp/contracts_project-build.rule
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/build/contracts_project-prefix/src/contracts_project-stamp/contracts_project-test.rule

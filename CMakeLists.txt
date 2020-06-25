@@ -76,6 +76,7 @@ string(REPLACE ";" "|" TEST_FRAMEWORK_PATH "${CMAKE_FRAMEWORK_PATH}")
 string(REPLACE ";" "|" TEST_MODULE_PATH "${CMAKE_MODULE_PATH}")
 
 set(BUILD_TESTS FALSE CACHE BOOL "Build unit tests")
+#set(BUILD_TESTS TRUE CACHE BOOL "Build unit tests")
 
 if(BUILD_TESTS)
    message(STATUS "Building unit tests.")

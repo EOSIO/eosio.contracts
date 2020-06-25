@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/contracts/eosio.bios/include/eosio.bios/eosio.bios.hpp
+eosio/action.hpp
+-
+eosio/crypto.hpp
+-
+eosio/eosio.hpp
+-
+eosio/fixed_bytes.hpp
+-
+eosio/privileged.hpp
+-
+eosio/producer_schedule.hpp
+-
+
+/Users/jinjung.zhao/Work/new-contracts/eosio.contracts/contracts/eosio.bios/src/eosio.bios.cpp
+eosio.bios/eosio.bios.hpp
+-
+

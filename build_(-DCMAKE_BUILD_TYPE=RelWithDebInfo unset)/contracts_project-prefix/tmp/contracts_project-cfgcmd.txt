@@ -1,0 +1,1 @@
+cmd='/usr/local/Cellar/cmake/3.17.2/bin/cmake;-DCMAKE_TOOLCHAIN_FILE=/Users/jinjung.zhao/work/eosio.cdt/build/lib/cmake/eosio.cdt/EosioWasmToolchain.cmake;-GUnix Makefiles;<SOURCE_DIR><SOURCE_SUBDIR>'

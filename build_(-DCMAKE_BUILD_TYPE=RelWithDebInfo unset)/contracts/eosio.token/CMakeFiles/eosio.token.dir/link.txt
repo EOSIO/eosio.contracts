@@ -1,0 +1,1 @@
+/Users/jinjung.zhao/work/eosio.cdt/build/bin/eosio-ld  CMakeFiles/eosio.token.dir/src/eosio.token.cpp.obj -o eosio.token.wasm 

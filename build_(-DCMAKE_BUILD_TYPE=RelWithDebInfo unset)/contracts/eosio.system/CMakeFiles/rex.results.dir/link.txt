@@ -1,0 +1,1 @@
+/Users/jinjung.zhao/work/eosio.cdt/build/bin/eosio-ld  CMakeFiles/rex.results.dir/src/rex.results.cpp.obj -o .rex/rex.results.wasm 

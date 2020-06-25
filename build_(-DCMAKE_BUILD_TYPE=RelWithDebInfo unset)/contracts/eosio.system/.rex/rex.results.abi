@@ -1,0 +1,76 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ",
+    "version": "eosio::abi/1.1",
+    "types": [],
+    "structs": [
+        {
+            "name": "buyresult",
+            "base": "",
+            "fields": [
+                {
+                    "name": "rex_received",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "orderresult",
+            "base": "",
+            "fields": [
+                {
+                    "name": "owner",
+                    "type": "name"
+                },
+                {
+                    "name": "proceeds",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "rentresult",
+            "base": "",
+            "fields": [
+                {
+                    "name": "rented_tokens",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "sellresult",
+            "base": "",
+            "fields": [
+                {
+                    "name": "proceeds",
+                    "type": "asset"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "buyresult",
+            "type": "buyresult",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "orderresult",
+            "type": "orderresult",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "rentresult",
+            "type": "rentresult",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "sellresult",
+            "type": "sellresult",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [],
+    "ricardian_clauses": [],
+    "variants": []
+}
