@@ -77,7 +77,7 @@ public:
       const auto& accnt = control->db().get<account_object,by_name>( N(eosio.wrap) );
       abi_def abi;
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
-      abi_ser.set_abi(abi, abi_serializer_max_time);
+      abi_ser.set_abi(abi, abi_serializer::create_yield_function(abi_serializer_max_time));
 
       while( control->pending_block_producer().to_string() == "eosio" ) {
          produce_block();
@@ -134,7 +134,7 @@ transaction eosio_wrap_tester::wrap_exec( account_name executer, const transacti
    transaction trx2;
    set_transaction_headers(trx2, expiration);
    action act;
-   abi_serializer::from_variant( act_obj, act, get_resolver(), abi_serializer_max_time );
+   abi_serializer::from_variant( act_obj, act, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time) );
    trx2.actions.push_back( std::move(act) );
    return trx2;
 }
@@ -155,7 +155,7 @@ transaction eosio_wrap_tester::reqauth( account_name from, const vector<permissi
    transaction trx;
    set_transaction_headers(trx, expiration);
    action act;
-   abi_serializer::from_variant( act_obj, act, get_resolver(), abi_serializer_max_time );
+   abi_serializer::from_variant( act_obj, act, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time) );
    trx.actions.push_back( std::move(act) );
    return trx;
 }
@@ -167,7 +167,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_exec_direct, eosio_wrap_tester ) try {
 
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
@@ -219,7 +219,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig, eosio_wrap_tester ) try {
 
    vector<transaction_trace_ptr> traces;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) {
          traces.push_back( t );
@@ -335,7 +335,7 @@ BOOST_FIXTURE_TEST_CASE( wrap_with_msig_producers_change, eosio_wrap_tester ) tr
 
    vector<transaction_trace_ptr> traces;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) {
          traces.push_back( t );

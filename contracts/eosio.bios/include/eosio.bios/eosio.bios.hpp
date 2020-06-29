@@ -5,25 +5,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/fixed_bytes.hpp>
 #include <eosio/privileged.hpp>
-
-/**
- * EOSIO Contracts
- *
- * @details The design of the EOSIO blockchain calls for a number of smart contracts that are run at a
- * privileged permission level in order to support functions such as block producer registration and
- * voting, token staking for CPU and network bandwidth, RAM purchasing, multi-sig, etc. These smart
- * contracts are referred to as the system, token, msig and wrap (formerly known as sudo) contracts.
- *
- * This repository contains examples of these privileged contracts that are useful when deploying,
- * managing, and/or using an EOSIO blockchain. They are provided for reference purposes:
- * - eosio.bios
- * - eosio.system
- * - eosio.msig
- * - eosio.wrap
- *
- * The following unprivileged contract(s) are also part of the system.
- * - eosio.token
- */
+#include <eosio/producer_schedule.hpp>
 
 namespace eosiobios {
 
@@ -35,14 +17,6 @@ namespace eosiobios {
    using eosio::permission_level;
    using eosio::public_key;
 
-   /**
-    * A weighted permission.
-    *
-    * @details Defines a weighted permission, that is a permission which has a weight associated.
-    * A permission is defined by an account name plus a permission name. The weight is going to be
-    * used against a threshold, if the weight is equal or greater than the threshold set then authorization
-    * will pass.
-    */
    struct permission_level_weight {
       permission_level  permission;
       uint16_t          weight;
@@ -51,11 +25,6 @@ namespace eosiobios {
       EOSLIB_SERIALIZE( permission_level_weight, (permission)(weight) )
    };
 
-   /**
-    * Weighted key.
-    *
-    * @details A weighted key is defined by a public key and an associated weight.
-    */
    struct key_weight {
       eosio::public_key  key;
       uint16_t           weight;
@@ -64,11 +33,6 @@ namespace eosiobios {
       EOSLIB_SERIALIZE( key_weight, (key)(weight) )
    };
 
-   /**
-    * Wait weight.
-    *
-    * @details A wait weight is defined by a number of seconds to wait for and a weight.
-    */
    struct wait_weight {
       uint32_t           wait_sec;
       uint16_t           weight;
@@ -77,15 +41,6 @@ namespace eosiobios {
       EOSLIB_SERIALIZE( wait_weight, (wait_sec)(weight) )
    };
 
-   /**
-    * Blockchain authority.
-    *
-    * @details An authority is defined by:
-    * - a vector of key_weights (a key_weight is a public key plus a weight),
-    * - a vector of permission_level_weights, (a permission_level is an account name plus a permission name)
-    * - a vector of wait_weights (a wait_weight is defined by a number of seconds to wait and a weight)
-    * - a threshold value
-    */
    struct authority {
       uint32_t                              threshold = 0;
       std::vector<key_weight>               keys;
@@ -96,46 +51,48 @@ namespace eosiobios {
       EOSLIB_SERIALIZE( authority, (threshold)(keys)(accounts)(waits) )
    };
 
+   struct block_header {
+      uint32_t                                  timestamp;
+      name                                      producer;
+      uint16_t                                  confirmed = 0;
+      checksum256                               previous;
+      checksum256                               transaction_mroot;
+      checksum256                               action_mroot;
+      uint32_t                                  schedule_version = 0;
+      std::optional<eosio::producer_schedule>   new_producers;
+
+      // explicit serialization macro is not necessary, used here only to improve compilation time
+      EOSLIB_SERIALIZE(block_header, (timestamp)(producer)(confirmed)(previous)(transaction_mroot)(action_mroot)
+                                     (schedule_version)(new_producers))
+   };
+
    /**
-    * @defgroup eosiobios eosio.bios
-    * @ingroup eosiocontracts
-    *
-    * eosio.bios is a minimalistic system contract meant to allow quick setup for testing on local chains or
-    * to use to bootstrap a chain with a more sophisticated system contract such as eosio.system.
-    *
-    * @{
+    * The `eosio.bios` is the first sample of system contract provided by `block.one` through the EOSIO platform. It is a minimalist system contract because it only supplies the actions that are absolutely critical to bootstrap a chain and nothing more. This allows for a chain agnostic approach to bootstrapping a chain.
+    * 
+    * Just like in the `eosio.system` sample contract implementation, there are a few actions which are not implemented at the contract level (`newaccount`, `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, `canceldelay`, `onerror`, `setabi`, `setcode`), they are just declared in the contract so they will show in the contract's ABI and users will be able to push those actions to the chain via the account holding the `eosio.system` contract, but the implementation is at the EOSIO core level. They are referred to as EOSIO native actions.
     */
    class [[eosio::contract("eosio.bios")]] bios : public eosio::contract {
       public:
          using contract::contract;
          /**
-          * @{
-          * These actions map one-on-one with the ones defined in
-          * [Native Action Handlers](@ref native_action_handlers) section.
-          * They are present here so they can show up in the abi file and thus user can send them
-          * to this contract, but they have no specific implementation at this contract level,
-          * they will execute the implementation at the core level and nothing else.
-          */
-         /**
-          * New account action
+          * New account action, called after a new account is created. This code enforces resource-limits rules
+          * for new accounts as well as new account naming conventions.
           *
-          * @details Creates a new account.
+          * 1. accounts cannot contain '.' symbols which forces all acccounts to be 12
+          * characters long without '.' until a future account auction process is implemented
+          * which prevents name squatting.
           *
-          * @param creator - the creator of the account
-          * @param name - the name of the new account
-          * @param owner - the authority for the owner permission of the new account
-          * @param active - the authority for the active permission of the new account
+          * 2. new accounts must stake a minimal number of tokens (as set in system parameters)
+          * therefore, this method will execute an inline buyram from receiver for newacnt in
+          * an amount equal to the current new account creation fee.
           */
          [[eosio::action]]
          void newaccount( name             creator,
                           name             name,
                           ignore<authority> owner,
-                          ignore<authority> active) {}
-
+                          ignore<authority> active){}
          /**
-          * Update authorization action.
-          *
-          * @details Updates pemission for an account.
+          * Update authorization action updates pemission for an account.
           *
           * @param account - the account for which the permission is updated,
           * @param pemission - the permission name which is updated,
@@ -149,9 +106,7 @@ namespace eosiobios {
                            ignore<authority> auth ) {}
 
          /**
-          * Delete authorization action.
-          *
-          * @details Deletes the authorization for an account's permision.
+          * Delete authorization action deletes the authorization for an account's permission.
           *
           * @param account - the account for which the permission authorization is deleted,
           * @param permission - the permission name been deleted.
@@ -161,9 +116,7 @@ namespace eosiobios {
                           ignore<name>  permission ) {}
 
          /**
-          * Link authorization action.
-          *
-          * @details Assigns a specific action from a contract to a permission you have created. Five system
+          * Link authorization action assigns a specific action from a contract to a permission you have created. Five system
           * actions can not be linked `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, and `canceldelay`.
           * This is useful because when doing authorization checks, the EOSIO based blockchain starts with the
           * action needed to be authorized (and the contract belonging to), and looks up which permission
@@ -184,9 +137,7 @@ namespace eosiobios {
                          ignore<name>    requirement  ) {}
 
          /**
-          * Unlink authorization action.
-          *
-          * @details It's doing the reverse of linkauth action, by unlinking the given action.
+          * Unlink authorization action it's doing the reverse of linkauth action, by unlinking the given action.
           *
           * @param account - the owner of the permission to be unlinked and the receiver of the freed RAM,
           * @param code - the owner of the action to be unlinked,
@@ -198,9 +149,7 @@ namespace eosiobios {
                           ignore<name>  type ) {}
 
          /**
-          * Cancel delay action.
-          *
-          * @details Cancels a deferred transaction.
+          * Cancel delay action cancels a deferred transaction.
           *
           * @param canceling_auth - the permission that authorizes this action,
           * @param trx_id - the deferred transaction id to be cancelled.
@@ -209,9 +158,7 @@ namespace eosiobios {
          void canceldelay( ignore<permission_level> canceling_auth, ignore<checksum256> trx_id ) {}
 
          /**
-          * Set code action.
-          *
-          * @details Sets the contract code for an account.
+          * Set code action sets the contract code for an account.
           *
           * @param account - the account for which to set the contract code.
           * @param vmtype - reserved, set it to zero.
@@ -221,12 +168,8 @@ namespace eosiobios {
          [[eosio::action]]
          void setcode( name account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
 
-         /** @}*/
-
          /**
-          * Set abi for contract.
-          *
-          * @details Set the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
+          * Set abi action sets the abi for contract identified by `account` name. Creates an entry in the abi_hash_table
           * index, with `account` name as key, if it is not already present and sets its value with the abi hash.
           * Otherwise it is updating the current abi hash value for the existing `account` key.
           *
@@ -237,9 +180,7 @@ namespace eosiobios {
          void setabi( name account, const std::vector<char>& abi );
 
          /**
-          * On error action.
-          *
-          * @details Notification of this action is delivered to the sender of a deferred transaction
+          * On error action, notification of this action is delivered to the sender of a deferred transaction
           * when an objective error occurs while executing the deferred transaction.
           * This action is not meant to be called directly.
           *
@@ -250,9 +191,7 @@ namespace eosiobios {
          void onerror( ignore<uint128_t> sender_id, ignore<std::vector<char>> sent_trx );
 
          /**
-          * Set privilege status for an account.
-          *
-          * @details Allows to set privilege status for an account (turn it on/off).
+          * Set privilege action allows to set privilege status for an account (turn it on/off).
           * @param account - the account to set the privileged status for.
           * @param is_priv - 0 for false, > 0 for true.
           */
@@ -260,9 +199,7 @@ namespace eosiobios {
          void setpriv( name account, uint8_t is_priv );
 
          /**
-          * Set the resource limits of an account
-          *
-          * @details Set the resource limits of an account
+          * Sets the resource limits of an account
           *
           * @param account - name of the account whose resource limit to be set
           * @param ram_bytes - ram limit in absolute bytes
@@ -273,9 +210,7 @@ namespace eosiobios {
          void setalimits( name account, int64_t ram_bytes, int64_t net_weight, int64_t cpu_weight );
 
          /**
-          * Set a new list of active producers, that is, a new producers' schedule.
-          *
-          * @details Set a new list of active producers, by proposing a schedule change, once the block that
+          * Set producers action, sets a new list of active producers, by proposing a schedule change, once the block that
           * contains the proposal becomes irreversible, the schedule is promoted to "pending"
           * automatically. Once the block that promotes the schedule is irreversible, the schedule will
           * become "active".
@@ -286,9 +221,7 @@ namespace eosiobios {
          void setprods( const std::vector<eosio::producer_authority>& schedule );
 
          /**
-          * Set the blockchain parameters
-          *
-          * @details Set the blockchain parameters. By tuning these parameters, various degrees of customization can be achieved.
+          * Set params action, sets the blockchain parameters. By tuning these parameters, various degrees of customization can be achieved.
           *
           * @param params - New blockchain parameters to set
           */
@@ -296,9 +229,7 @@ namespace eosiobios {
          void setparams( const eosio::blockchain_parameters& params );
 
          /**
-          * Check if an account has authorization to access current action.
-          *
-          * @details Checks if the account name `from` passed in as param has authorization to access
+          * Require authorization action, checks if the account name `from` passed in as param has authorization to access
           * current action, that is, if it is listed in the action’s allowed permissions vector.
           *
           * @param from - the account name to authorize
@@ -307,9 +238,7 @@ namespace eosiobios {
          void reqauth( name from );
 
          /**
-          * Activates a protocol feature.
-          *
-          * @details Activates a protocol feature
+          * Activate action, activates a protocol feature
           *
           * @param feature_digest - hash of the protocol feature to activate.
           */
@@ -317,20 +246,13 @@ namespace eosiobios {
          void activate( const eosio::checksum256& feature_digest );
 
          /**
-          * Asserts that a protocol feature has been activated.
-          *
-          * @details Asserts that a protocol feature has been activated
+          * Require activated action, asserts that a protocol feature has been activated
           *
           * @param feature_digest - hash of the protocol feature to check for activation.
           */
          [[eosio::action]]
          void reqactivated( const eosio::checksum256& feature_digest );
 
-         /**
-          * Abi hash structure
-          *
-          * @details Abi hash structure is defined by contract owner and the contract hash.
-          */
          struct [[eosio::table]] abi_hash {
             name              owner;
             checksum256       hash;
@@ -339,9 +261,6 @@ namespace eosiobios {
             EOSLIB_SERIALIZE( abi_hash, (owner)(hash) )
          };
 
-         /**
-          * Multi index table that stores the contracts' abi index by their owners/accounts.
-          */
          typedef eosio::multi_index< "abihash"_n, abi_hash > abi_hash_table;
 
          using newaccount_action = action_wrapper<"newaccount"_n, &bios::newaccount>;
@@ -360,5 +279,4 @@ namespace eosiobios {
          using activate_action = action_wrapper<"activate"_n, &bios::activate>;
          using reqactivated_action = action_wrapper<"reqactivated"_n, &bios::reqactivated>;
    };
-   /** @}*/ // end of @defgroup eosiobios eosio.bios
-} /// namespace eosiobios
+}

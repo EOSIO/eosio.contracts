@@ -14,23 +14,21 @@ namespace eosio {
    using std::string;
 
    /**
-    * @defgroup eosiotoken eosio.token
-    * @ingroup eosiocontracts
-    *
-    * eosio.token contract
-    *
-    * @details eosio.token contract defines the structures and actions that allow users to create, issue, and manage
-    * tokens on eosio based blockchains.
-    * @{
+    * The `eosio.token` sample system contract defines the structures and actions that allow users to create, issue, and manage tokens for EOSIO based blockchains. It demonstrates one way to implement a smart contract which allows for creation and management of tokens. It is possible for one to create a similar contract which suits different needs. However, it is recommended that if one only needs a token with the below listed actions, that one uses the `eosio.token` contract instead of developing their own.
+    * 
+    * The `eosio.token` contract class also implements two useful public static methods: `get_supply` and `get_balance`. The first allows one to check the total supply of a specified token, created by an account and the second allows one to check the balance of a token for a specified account (the token creator account has to be specified as well).
+    * 
+    * The `eosio.token` contract manages the set of tokens, accounts and their corresponding balances, by using two internal multi-index structures: the `accounts` and `stats`. The `accounts` multi-index table holds, for each row, instances of `account` object and the `account` object holds information about the balance of one token. The `accounts` table is scoped to an EOSIO account, and it keeps the rows indexed based on the token's symbol.  This means that when one queries the `accounts` multi-index table for an account name the result is all the tokens that account holds at the moment.
+    * 
+    * Similarly, the `stats` multi-index table, holds instances of `currency_stats` objects for each row, which contains information about current supply, maximum supply, and the creator account for a symbol token. The `stats` table is scoped to the token symbol.  Therefore, when one queries the `stats` table for a token symbol the result is one single entry/row corresponding to the queried symbol token if it was previously created, or nothing, otherwise.
     */
    class [[eosio::contract("eosio.token")]] token : public contract {
       public:
          using contract::contract;
 
          /**
-          * Create action.
+          * Allows `issuer` account to create a token in supply of `maximum_supply`. If validation is successful a new entry in statstable for token symbol scope gets created.
           *
-          * @details Allows `issuer` account to create a token in supply of `maximum_supply`.
           * @param issuer - the account that creates the token,
           * @param maximum_supply - the maximum supply set for the token created.
           *
@@ -38,16 +36,12 @@ namespace eosio {
           * @pre Token symbol must not be already created,
           * @pre maximum_supply has to be smaller than the maximum supply allowed by the system: 1^62 - 1.
           * @pre Maximum supply must be positive;
-          *
-          * If validation is successful a new entry in statstable for token symbol scope gets created.
           */
          [[eosio::action]]
          void create( const name&   issuer,
                       const asset&  maximum_supply);
          /**
-          * Issue action.
-          *
-          * @details This action issues to `to` account a `quantity` of tokens.
+          *  This action issues to `to` account a `quantity` of tokens.
           *
           * @param to - the account to issue tokens to, it must be the same as the issuer,
           * @param quntity - the amount of tokens to be issued,
@@ -57,9 +51,7 @@ namespace eosio {
          void issue( const name& to, const asset& quantity, const string& memo );
 
          /**
-          * Retire action.
-          *
-          * @details The opposite for create action, if all validations succeed,
+          * The opposite for create action, if all validations succeed,
           * it debits the statstable.supply amount.
           *
           * @param quantity - the quantity of tokens to retire,
@@ -69,9 +61,7 @@ namespace eosio {
          void retire( const asset& quantity, const string& memo );
 
          /**
-          * Transfer action.
-          *
-          * @details Allows `from` account to transfer to `to` account the `quantity` tokens.
+          * Allows `from` account to transfer to `to` account the `quantity` tokens.
           * One account is debited and the other is credited with quantity tokens.
           *
           * @param from - the account to transfer from,
@@ -85,9 +75,7 @@ namespace eosio {
                         const asset&   quantity,
                         const string&  memo );
          /**
-          * Open action.
-          *
-          * @details Allows `ram_payer` to create an account `owner` with zero balance for
+          * Allows `ram_payer` to create an account `owner` with zero balance for
           * token `symbol` at the expense of `ram_payer`.
           *
           * @param owner - the account to be created,
@@ -101,9 +89,7 @@ namespace eosio {
          void open( const name& owner, const symbol& symbol, const name& ram_payer );
 
          /**
-          * Close action.
-          *
-          * @details This action is the opposite for open, it closes the account `owner`
+          * This action is the opposite for open, it closes the account `owner`
           * for token `symbol`.
           *
           * @param owner - the owner account to execute the close action for,
@@ -115,14 +101,6 @@ namespace eosio {
          [[eosio::action]]
          void close( const name& owner, const symbol& symbol );
 
-         /**
-          * Get supply method.
-          *
-          * @details Gets the supply for token `sym_code`, created by `token_contract_account` account.
-          *
-          * @param token_contract_account - the account to get the supply for,
-          * @param sym_code - the symbol to get the supply for.
-          */
          static asset get_supply( const name& token_contract_account, const symbol_code& sym_code )
          {
             stats statstable( token_contract_account, sym_code.raw() );
@@ -130,16 +108,6 @@ namespace eosio {
             return st.supply;
          }
 
-         /**
-          * Get balance method.
-          *
-          * @details Get the balance for a token `sym_code` created by `token_contract_account` account,
-          * for account `owner`.
-          *
-          * @param token_contract_account - the token creator account,
-          * @param owner - the account for which the token balance is returned,
-          * @param sym_code - the token for which the balance is returned.
-          */
          static asset get_balance( const name& token_contract_account, const name& owner, const symbol_code& sym_code )
          {
             accounts accountstable( token_contract_account, owner.value );
@@ -174,5 +142,5 @@ namespace eosio {
          void sub_balance( const name& owner, const asset& value );
          void add_balance( const name& owner, const asset& value, const name& ram_payer );
    };
-   /** @}*/ // end of @defgroup eosiotoken eosio.token
-} /// namespace eosio
+
+}
