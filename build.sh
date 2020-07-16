@@ -60,17 +60,17 @@ fi
 # Prompt user for location of eosio.cdt.
 cdt-directory-prompt
 
-# Include CDT_INSTALL_DIR in CMAKE_FRAMEWORK_PATH
+# Include CDT_INSTALL_DIR in CMAKE_MODULE_PATH
 echo "Using EOSIO.CDT installation at: $CDT_INSTALL_DIR"
-export CMAKE_FRAMEWORK_PATH="${CDT_INSTALL_DIR}:${CMAKE_FRAMEWORK_PATH}"
+CMAKE_MODULE_PATH="${CDT_INSTALL_DIR}:${CMAKE_MODULE_PATH}"
 
 if [[ ${BUILD_TESTS} == true ]]; then
    # Ensure eosio version is appropriate.
    nodeos-version-check
 
-   # Include EOSIO_INSTALL_DIR in CMAKE_FRAMEWORK_PATH
+   # Include EOSIO_INSTALL_DIR in CMAKE_MODULE_PATH
    echo "Using EOSIO installation at: $EOSIO_INSTALL_DIR"
-   export CMAKE_FRAMEWORK_PATH="${EOSIO_INSTALL_DIR}:${CMAKE_FRAMEWORK_PATH}"
+   CMAKE_MODULE_PATH="${EOSIO_INSTALL_DIR}:${CMAKE_MODULE_PATH}"
 fi
 
 printf "\t=========== Building eosio.contracts ===========\n\n"
@@ -79,6 +79,6 @@ NC='\033[0m'
 CPU_CORES=$(getconf _NPROCESSORS_ONLN)
 mkdir -p build
 pushd build &> /dev/null
-cmake -DBUILD_TESTS=${BUILD_TESTS} ../
+cmake -DBUILD_TESTS=${BUILD_TESTS} -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH} ../
 make -j $CPU_CORES
 popd &> /dev/null
