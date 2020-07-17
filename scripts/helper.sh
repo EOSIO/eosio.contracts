@@ -22,6 +22,37 @@ function check-version-numbers() {
   exit 0
 }
 
+# Ensures passed in boost version values are supported.
+function check-boost-version-numbers() {
+  CHECK_VERSION_MAJOR=$1
+  CHECK_VERSION_MINOR=$2
+
+  if [[ ${BOOST_MIN_VERSION_MAJOR} && ${BOOST_MIN_VERSION_MAJOR} != "" ]]; then
+    if [[ $CHECK_VERSION_MAJOR -lt $BOOST_MIN_VERSION_MAJOR ]]; then
+      exit 1
+    fi
+  fi
+  if [[ ${BOOST_MAX_VERSION_MAJOR} && ${BOOST_MAX_VERSION_MAJOR} != "" ]]; then
+    if [[ $CHECK_VERSION_MAJOR -gt $BOOST_MAX_VERSION_MAJOR ]]; then
+      exit 1
+    fi
+  fi
+  if [[ $CHECK_VERSION_MAJOR -eq $BOOST_MIN_VERSION_MAJOR ]]; then
+    if [[ ${BOOST_MIN_VERSION_MINOR} && ${BOOST_MIN_VERSION_MINOR} != "" ]]; then
+      if [[ $CHECK_VERSION_MINOR -lt $BOOST_MIN_VERSION_MINOR ]]; then
+        exit 1
+      fi
+    fi
+  fi
+  if [[ $CHECK_VERSION_MAJOR -eq $BOOST_MAX_VERSION_MAJOR ]]; then
+    if [[ ${BOOST_MAX_VERSION_MINOR} && ${BOOST_MAX_VERSION_MINOR} != "" ]]; then
+      if [[ $CHECK_VERSION_MINOR -gt $BOOST_MAX_VERSION_MINOR ]]; then
+        exit 1
+      fi
+    fi
+  fi
+  exit 0
+}
 
 # Handles choosing which EOSIO directory to select when the default location is used.
 function default-eosio-directories() {
@@ -45,7 +76,6 @@ function default-eosio-directories() {
     fi
   done
 }
-
 
 # Prompts or sets default behavior for choosing EOSIO directory.
 function eosio-directory-prompt() {
@@ -83,6 +113,29 @@ function eosio-directory-prompt() {
   export EOSIO_INSTALL_DIR="${EOSIO_DIR_PROMPT:-${HOME}/eosio/${EOSIO_VERSION}}"
 }
 
+# Handles choosing which Boost directory to select.
+function default-boost-directories() {
+  REGEX='boost_[0-9]+([_][0-9]+)?+([_][0-9]+)?$'
+  ALL_BOOST_SUBDIRS=()
+  if [[ -d ${HOME}/eosio ]]; then
+    ALL_BOOST_SUBDIRS=($(ls ${EOSIO_INSTALL_DIR}/src | sort -V))
+  fi
+  for ITEM in "${ALL_BOOST_SUBDIRS[@]}"; do
+    if [[ "$ITEM" =~ $REGEX ]]; then
+      DIR_MAJOR=$(echo $ITEM | cut -f2 -d '_')
+      DIR_MINOR=$(echo $ITEM | cut -f3 -d '_')
+      if $(check-boost-version-numbers $DIR_MAJOR $DIR_MINOR); then
+        PROMPT_BOOST_DIRS+=($ITEM)
+      fi
+    fi
+  done
+  for ITEM in "${PROMPT_BOOST_DIRS[@]}"; do
+    if [[ "$ITEM" =~ $REGEX ]]; then
+      BOOST_VERSION=$ITEM
+    fi
+  done
+  export BOOST_INSTALL_DIR=${EOSIO_INSTALL_DIR}/src/${BOOST_VERSION}
+}
 
 # Prompts or default behavior for choosing EOSIO.CDT directory.
 function cdt-directory-prompt() {

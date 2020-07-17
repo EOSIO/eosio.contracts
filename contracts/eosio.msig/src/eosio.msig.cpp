@@ -146,9 +146,14 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
    proposals proptable( get_self(), proposer.value );
    auto& prop = proptable.get( proposal_name.value, "proposal not found" );
    transaction_header trx_header;
+   std::vector<action> context_free_actions;
+   std::vector<action> actions;
    datastream<const char*> ds( prop.packed_transaction.data(), prop.packed_transaction.size() );
    ds >> trx_header;
    check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
+   ds >> context_free_actions;
+   check( context_free_actions.empty(), "not allowed to `exec` a transaction with context-free actions" );
+   ds >> actions;
 
    approvals apptable( get_self(), proposer.value );
    auto apps_it = apptable.find( proposal_name.value );
@@ -184,8 +189,9 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
 
    check( res > 0, "transaction authorization failed" );
 
-   send_deferred( (uint128_t(proposer.value) << 64) | proposal_name.value, executer,
-                  prop.packed_transaction.data(), prop.packed_transaction.size() );
+   for (const auto& act : actions) {
+      act.send();
+   }
 
    proptable.erase(prop);
 }
