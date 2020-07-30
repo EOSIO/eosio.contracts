@@ -12,6 +12,8 @@ function usage() {
    exit 1
 }
 
+EOSIO_MAX_VERSION_MAJOR=1
+EOSIO_MAX_VERSION_MINOR=8
 BUILD_TESTS=false
 
 if [ $# -ne 0 ]; then
@@ -55,6 +57,9 @@ fi
 if [[ ${BUILD_TESTS} == true ]]; then
    # Prompt user for location of eosio.
    eosio-directory-prompt
+
+   default-boost-directories;
+   echo "Using Boost installation at: ${BOOST_INSTALL_DIR}"
 fi
 
 # Prompt user for location of eosio.cdt.
@@ -71,6 +76,7 @@ if [[ ${BUILD_TESTS} == true ]]; then
    # Include EOSIO_INSTALL_DIR in CMAKE_FRAMEWORK_PATH
    echo "Using EOSIO installation at: $EOSIO_INSTALL_DIR"
    export CMAKE_FRAMEWORK_PATH="${EOSIO_INSTALL_DIR}:${CMAKE_FRAMEWORK_PATH}"
+   export CMAKE_PREFIX_PATH="${BOOST_INSTALL_DIR}"
 fi
 
 printf "\t=========== Building eosio.contracts ===========\n\n"
