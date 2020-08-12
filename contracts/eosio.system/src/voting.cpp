@@ -24,10 +24,6 @@ namespace eosiosystem {
    using eosio::microseconds;
    using eosio::singleton;
 
-   eosio::block_signing_authority convert_to_block_signing_authority( const eosio::public_key& producer_key ) {
-      return eosio::block_signing_authority_v0{ .threshold = 1, .keys = {{producer_key, 1}} };
-   }
-
    void system_contract::register_producer( const name& producer, const eosio::block_signing_authority& producer_authority, const std::string& url, uint16_t location ) {
       auto prod = _producers.find( producer.value );
       const auto ct = current_time_point();
@@ -120,8 +116,7 @@ namespace eosiosystem {
          top_producers.emplace_back(
             eosio::producer_authority{
                .producer_name = it->owner,
-               .authority     = it->producer_authority.has_value() ? *it->producer_authority
-                                                                   : convert_to_block_signing_authority( it->producer_key )
+               .authority     = it->get_producer_authority()
             },
             it->location
          );

@@ -133,7 +133,7 @@ BOOST_FIXTURE_TEST_CASE( buysell, eosio_system_tester ) try {
       vector<char> data = get_row_by_account( config::system_account_name, config::system_account_name,
                                               N(rammarket), account_name(symbol{SY(4,RAMCORE)}.value()) );
       BOOST_REQUIRE( !data.empty() );
-      return abi_ser.binary_to_variant("exchange_state", data, abi_serializer_max_time);
+      return abi_ser.binary_to_variant("exchange_state", data, abi_serializer::create_yield_function(abi_serializer_max_time));
    };
 
    {
@@ -899,6 +899,103 @@ BOOST_FIXTURE_TEST_CASE( producer_wtmsig, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( producer_wtmsig_transition, eosio_system_tester ) try {
+   cross_15_percent_threshold();
+
+   BOOST_REQUIRE_EQUAL( control->active_producers().version, 0u );
+
+   set_code( config::system_account_name, contracts::util::system_wasm_v1_8() );
+   set_abi(  config::system_account_name, contracts::util::system_abi_v1_8().data() );
+
+   issue_and_transfer( N(alice1111111), core_sym::from_string("200000000.0000"),  config::system_account_name );
+   BOOST_REQUIRE_EQUAL( success(), push_action( N(alice1111111), N(regproducer), mvo()
+                                               ("producer",  "alice1111111")
+                                               ("producer_key", get_public_key( N(alice1111111), "active") )
+                                               ("url","")
+                                               ("location", 0)
+                        )
+   );
+   BOOST_REQUIRE_EQUAL( success(), stake( N(alice1111111), core_sym::from_string("100000000.0000"), core_sym::from_string("100000000.0000") ) );
+   BOOST_REQUIRE_EQUAL( success(), vote( N(alice1111111), { N(alice1111111) } ) );
+
+   //auto alice_prod_info1 = get_producer_info( N(alice1111111) );
+   //wdump((alice_prod_info1));
+
+   produce_block();
+   produce_block( fc::minutes(2) );
+   produce_blocks(2);
+   BOOST_REQUIRE_EQUAL( control->active_producers().version, 1u );
+
+   const auto schedule_update1 = get_global_state()["last_producer_schedule_update"];
+
+   const auto& rlm = control->get_resource_limits_manager();
+
+   auto alice_initial_ram_usage = rlm.get_account_ram_usage(N(alice1111111));
+
+   set_code( config::system_account_name, contracts::system_wasm() );
+   set_abi(  config::system_account_name, contracts::system_abi().data() );
+   produce_block();
+   BOOST_REQUIRE_EQUAL( control->pending_block_producer(), N(alice1111111) );
+
+   auto alice_prod_info2 = get_producer_info( N(alice1111111) );
+   BOOST_REQUIRE_EQUAL( alice_prod_info2["is_active"], true );
+
+   produce_block( fc::minutes(2) );
+   const auto schedule_update2 = get_global_state()["last_producer_schedule_update"];
+   BOOST_REQUIRE( schedule_update1 < schedule_update2 ); // Ensure last_producer_schedule_update is increasing.
+
+   // Producing the above block would trigger the bug in v1.9.0 that sets the default block_signing_authority
+   // in the producer object of the currently active producer alice1111111.
+   // However, starting in v1.9.1, the producer object does not have a default block_signing_authority added to the
+   // serialization of the producer object if it was not already present in the binary extension field
+   // producer_authority to begin with. This is verified below by ensuring the RAM usage of alice (who pays for the
+   // producer object) does not increase.
+
+   auto alice_ram_usage = rlm.get_account_ram_usage(N(alice1111111));
+   BOOST_CHECK_EQUAL( alice_initial_ram_usage, alice_ram_usage );
+
+   auto alice_prod_info3 = get_producer_info( N(alice1111111) );
+   if( alice_prod_info3.get_object().contains("producer_authority") ) {
+      BOOST_CHECK_EQUAL( alice_prod_info3["producer_authority"][1]["threshold"], 0 );
+   }
+
+   produce_block( fc::minutes(2) );
+   const auto schedule_update3 = get_global_state()["last_producer_schedule_update"];
+
+   // The bug in v1.9.0 would cause alice to have an invalid producer authority (the default block_signing_authority).
+   // The v1.9.0 system contract would have attempted to set a proposed producer schedule including this invalid
+   // authority which would be rejected by the EOSIO native system and cause the onblock transaction to continue to fail.
+   // This could be observed by noticing that last_producer_schedule_update was not being updated even though it should.
+   // However, starting in v1.9.1, update_elected_producers is smarter about the producer schedule it constructs to
+   // propose to the system. It will recognize the default constructed authority (which shouldn't be created by the
+   // v1.9.1 system contract but may still exist in the tables if it was constructed by the buggy v1.9.0 system contract)
+   // and instead resort to constructing the block signing authority from the single producer key in the table.
+   // So newer system contracts should see onblock continue to function, which is verified by the check below.
+
+   BOOST_CHECK( schedule_update2 < schedule_update3 ); // Ensure last_producer_schedule_update is increasing.
+
+   // But even if the buggy v1.9.0 system contract was running, it should always still be possible to recover
+   // by having the producer with the invalid authority simply call regproducer or regproducer2 to correct their
+   // block signing authority.
+
+   BOOST_REQUIRE_EQUAL( success(), push_action( N(alice1111111), N(regproducer), mvo()
+                                               ("producer",  "alice1111111")
+                                               ("producer_key", get_public_key( N(alice1111111), "active") )
+                                               ("url","")
+                                               ("location", 0)
+                        )
+   );
+
+   produce_block();
+   produce_block( fc::minutes(2) );
+
+   auto alice_prod_info4 = get_producer_info( N(alice1111111) );
+   BOOST_REQUIRE_EQUAL( alice_prod_info4["is_active"], true );
+   const auto schedule_update4 = get_global_state()["last_producer_schedule_update"];
+   BOOST_REQUIRE( schedule_update2 < schedule_update4 );
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE( vote_for_producer, eosio_system_tester, * boost::unit_test::tolerance(1e+5) ) try {
    cross_15_percent_threshold();
 
@@ -1641,7 +1738,7 @@ BOOST_AUTO_TEST_CASE(extreme_inflation) try {
    asset current_supply;
    {
       vector<char> data = t.get_row_by_account( N(eosio.token), name(core_symbol.to_symbol_code().value), N(stat), account_name(core_symbol.to_symbol_code().value) );
-      current_supply = t.token_abi_ser.binary_to_variant("currency_stats", data, eosio_system_tester::abi_serializer_max_time)["supply"].template as<asset>();
+      current_supply = t.token_abi_ser.binary_to_variant("currency_stats", data, abi_serializer::create_yield_function(eosio_system_tester::abi_serializer_max_time))["supply"].template as<asset>();
    }
    t.issue( asset((1ll << 62) - 1, core_symbol) - current_supply );
    BOOST_REQUIRE_EQUAL(t.success(), t.setinflation(std::numeric_limits<int64_t>::max(), 50000, 40000));
@@ -2561,7 +2658,7 @@ BOOST_AUTO_TEST_CASE(votepay_transition2, * boost::unit_test::tolerance(1e-10)) 
       const auto& accnt = t.control->db().get<account_object,by_name>( config::system_account_name );
       abi_def abi;
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
-      t.abi_ser.set_abi(abi, eosio_system_tester::abi_serializer_max_time);
+      t.abi_ser.set_abi(abi, abi_serializer::create_yield_function(eosio_system_tester::abi_serializer_max_time));
    }
    const asset net = old_core_from_string("80.0000");
    const asset cpu = old_core_from_string("80.0000");
@@ -2635,7 +2732,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
          action act;
          act.account = N(eosio.msig);
          act.name = name;
-         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer::create_yield_function(abi_serializer_max_time) );
 
          return base_tester::push_action( std::move(act), (auth ? signer : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111)).to_uint64_t() );
    };
@@ -2674,7 +2771,7 @@ BOOST_FIXTURE_TEST_CASE(producers_upgrade_system_contract, eosio_system_tester) 
                   )
                   })
          );
-      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time));
    }
 
    BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
@@ -3417,7 +3514,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
          action act;
          act.account = N(eosio.msig);
          act.name = name;
-         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+         act.data = msig_abi_ser.variant_to_binary( action_type_name, data, abi_serializer::create_yield_function(abi_serializer_max_time) );
 
          return base_tester::push_action( std::move(act), (auth ? signer : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111)).to_uint64_t() );
    };
@@ -3453,7 +3550,7 @@ BOOST_FIXTURE_TEST_CASE( setparams, eosio_system_tester ) try {
                   )
                   })
          );
-      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer_max_time);
+      abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time));
    }
 
    BOOST_REQUIRE_EQUAL(success(), push_action_msig( N(alice1111111), N(propose), mvo()
@@ -5408,7 +5505,7 @@ BOOST_FIXTURE_TEST_CASE( rex_return, eosio_system_tester ) try {
       BOOST_REQUIRE_EQUAL( success(),        rexexec( bob, 1 ) );
       BOOST_REQUIRE_EQUAL( 0,                get_rex_return_buckets()["return_buckets"].get_array().size() );
    }
-   
+
 } FC_LOG_AND_RETHROW()
 
 
@@ -5417,7 +5514,7 @@ BOOST_AUTO_TEST_CASE( setabi_bios ) try {
    validating_tester t( tempdir, true );
    t.execute_setup_policy( setup_policy::full );
 
-   abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::bios_abi().data()).template as<abi_def>(), base_tester::abi_serializer_max_time);
+   abi_serializer abi_ser(fc::json::from_string( (const char*)contracts::bios_abi().data()).template as<abi_def>(), abi_serializer::create_yield_function(base_tester::abi_serializer_max_time));
    t.set_code( config::system_account_name, contracts::bios_wasm() );
    t.set_abi( config::system_account_name, contracts::bios_abi().data() );
    t.create_account(N(eosio.token));
@@ -5425,8 +5522,8 @@ BOOST_AUTO_TEST_CASE( setabi_bios ) try {
    {
       auto res = t.get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
       _abi_hash abi_hash;
-      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, base_tester::abi_serializer_max_time );
-      abi_serializer::from_variant( abi_hash_var, abi_hash, t.get_resolver(), base_tester::abi_serializer_max_time);
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer::create_yield_function(base_tester::abi_serializer_max_time) );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, t.get_resolver(), abi_serializer::create_yield_function(base_tester::abi_serializer_max_time));
       auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::token_abi().data()).template as<abi_def>());
       auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
 
@@ -5437,8 +5534,8 @@ BOOST_AUTO_TEST_CASE( setabi_bios ) try {
    {
       auto res = t.get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
       _abi_hash abi_hash;
-      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, base_tester::abi_serializer_max_time );
-      abi_serializer::from_variant( abi_hash_var, abi_hash, t.get_resolver(), base_tester::abi_serializer_max_time);
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer::create_yield_function(base_tester::abi_serializer_max_time) );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, t.get_resolver(), abi_serializer::create_yield_function(base_tester::abi_serializer_max_time));
       auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>());
       auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
 
@@ -5451,8 +5548,8 @@ BOOST_FIXTURE_TEST_CASE( setabi, eosio_system_tester ) try {
    {
       auto res = get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
       _abi_hash abi_hash;
-      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer_max_time );
-      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer_max_time);
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer::create_yield_function(abi_serializer_max_time) );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time));
       auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::token_abi().data()).template as<abi_def>());
       auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
 
@@ -5463,8 +5560,8 @@ BOOST_FIXTURE_TEST_CASE( setabi, eosio_system_tester ) try {
    {
       auto res = get_row_by_account( config::system_account_name, config::system_account_name, N(abihash), N(eosio.token) );
       _abi_hash abi_hash;
-      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer_max_time );
-      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer_max_time);
+      auto abi_hash_var = abi_ser.binary_to_variant( "abi_hash", res, abi_serializer::create_yield_function(abi_serializer_max_time) );
+      abi_serializer::from_variant( abi_hash_var, abi_hash, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time));
       auto abi = fc::raw::pack(fc::json::from_string( (const char*)contracts::system_abi().data()).template as<abi_def>());
       auto result = fc::sha256::hash( (const char*)abi.data(), abi.size() );
 
