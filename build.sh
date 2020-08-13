@@ -6,7 +6,7 @@ function usage() {
   -e DIR      Directory where EOSIO is installed. (Default: $HOME/eosio/X.Y)
   -c DIR      Directory where EOSIO.CDT is installed. (Default: /usr/local/eosio.cdt)
   -t          Build unit tests.
-  -P          Build unit tests with pinned eos for CentOS 7 or 8 only, currently only work with eos build folder. eg: ./build.sh -P -e $HOME/work/eos/build 
+  -P          Build unit tests with pinned eos, currently only work with eos build folder. eg: ./build.sh -P -e $HOME/work/eos/build 
   -y          Noninteractive mode (Uses defaults for each prompt.)
   -h          Print this help menu.
    \\n" "$0" 1>&2
