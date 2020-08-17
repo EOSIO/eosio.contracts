@@ -1,7 +1,7 @@
 cmake_minimum_required( VERSION 3.5 )
 
 project(contract_tests)
-if(BUILD_TESTS_PINNED) 
+if(${BUILD_TESTS_PINNED}) 
 	include(${EOSIO_DIR_PROMPT}/pinned_toolchain.cmake)
 endif()
 
