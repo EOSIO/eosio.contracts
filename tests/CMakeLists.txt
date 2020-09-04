@@ -1,10 +1,14 @@
 cmake_minimum_required( VERSION 3.5 )
 
 project(contract_tests)
+if(${BUILD_TESTS_PINNED}) 
+	include(${EOSIO_DIR_PROMPT}/pinned_toolchain.cmake)
+endif()
 
 set(EOSIO_VERSION_MIN "2.0")
 set(EOSIO_VERSION_SOFT_MAX "2.0")
 #set(EOSIO_VERSION_HARD_MAX "")
+
 
 find_package(eosio)
 
@@ -33,6 +37,7 @@ enable_testing()
 file(GLOB UNIT_TESTS "*.cpp" "*.hpp") # find all unit test suites
 add_eosio_test_executable(unit_test ${UNIT_TESTS}) # build unit tests as one executable
 # mark test suites for execution
+
 foreach(TEST_SUITE ${UNIT_TESTS}) # create an independent target for each test suite
   execute_process(COMMAND bash -c "grep -E 'BOOST_AUTO_TEST_SUITE\\s*[(]' ${TEST_SUITE} | grep -vE '//.*BOOST_AUTO_TEST_SUITE\\s*[(]' | cut -d ')' -f 1 | cut -d '(' -f 2" OUTPUT_VARIABLE SUITE_NAME OUTPUT_STRIP_TRAILING_WHITESPACE) # get the test suite name from the *.cpp file
   if (NOT "" STREQUAL "${SUITE_NAME}") # ignore empty lines
