@@ -1,5 +1,6 @@
 #include <eosio.system/eosio.system.hpp>
 #include <eosio/action.hpp>
+#include <eosio.system/rentbw.results.hpp>
 #include <algorithm>
 #include <cmath>
 
@@ -388,6 +389,10 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
    adjust_resources(get_self(), reserv_account, core_symbol, net_delta_available, cpu_delta_available, true);
    channel_to_rex(payer, fee, true);
    state_sing.set(state, get_self());
+
+   // inline noop action
+   rentbw_results::rentbwresult_action rentbwresult_act{ reserv_account, std::vector<eosio::permission_level>{ } };
+   rentbwresult_act.send( fee, asset{ net_amount, core_symbol }, asset{ cpu_amount, core_symbol } );
 }
 
 } // namespace eosiosystem
