@@ -1,4 +1,0 @@
-datetime,function,payer,receiver,days,net_frac,cpu_frac,max_payment,queue_max
-1/1/2020 0:00:00,rentbwexec,aaaaaaaaaaaa,aaaaaaaaaaaa,30,0,0,0.0000,2
-1/1/2020 0:00:01,rentbwexec,aaaaaaaaaaaa,aaaaaaaaaaaa,30,0,0,0.0000,2
-1/1/2020 0:00:02,rentbwexec,aaaaaaaaaaaa,aaaaaaaaaaaa,30,0,0,0.0000,2
