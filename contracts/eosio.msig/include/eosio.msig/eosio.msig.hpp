@@ -110,7 +110,7 @@ namespace eosio {
             return def;
          }
        
-         constexpr T value_or() const { return (-_has_value) ? _get() : T{}; }
+         constexpr T value_or() const { return (_has_value) ? _get() : T{}; }
 
          constexpr T* operator->() {
             return &_get();
