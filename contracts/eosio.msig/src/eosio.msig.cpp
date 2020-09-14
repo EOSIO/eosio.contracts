@@ -6,32 +6,62 @@
 
 namespace eosio {
 
-void multisig::propose( ignore<name> proposer,
-                        ignore<name> proposal_name,
-                        ignore<std::vector<permission_level>> requested,
+transaction_header get_trx_header(const char* ptr, size_t sz);
+bool trx_is_authorized(const std::vector<permission_level>& approvals, const std::vector<char>& packed_trx);
+
+template<typename Function>
+std::vector<permission_level> get_approvals_and_adjust_table(name self, name proposer, name proposal_name, Function&& table_op) {
+   approvals approval_table( self, proposer.value );
+   auto approval_table_iter = approval_table.find( proposal_name.value );
+   std::vector<permission_level> approvals_vector;
+   invalidations invalidations_table( self, self.value );
+
+   if ( approval_table_iter != approval_table.end() ) {
+      approvals_vector.reserve( approval_table_iter->provided_approvals.size() );
+      for ( const auto& permission : approval_table_iter->provided_approvals ) {
+         auto iter = invalidations_table.find( permission.level.actor.value );
+         if ( iter == invalidations_table.end() || iter->last_invalidation_time < permission.time ) {
+            approvals_vector.push_back(permission.level);
+         }
+      }
+      table_op( approval_table, approval_table_iter );
+   } else {
+      old_approvals old_approval_table( self, proposer.value );
+      const auto& old_approvals_obj = old_approval_table.get( proposal_name.value, "proposal not found" );
+      for ( const auto& permission : old_approvals_obj.provided_approvals ) {
+         auto iter = invalidations_table.find( permission.actor.value );
+         if ( iter == invalidations_table.end() ) {
+            approvals_vector.push_back( permission );
+         }
+      }
+      table_op( old_approval_table, old_approvals_obj );
+   }
+   return approvals_vector;
+}
+
+void multisig::propose( name proposer,
+                        name proposal_name,
+                        std::vector<permission_level> requested,
                         ignore<transaction> trx )
 {
-   name _proposer;
-   name _proposal_name;
-   std::vector<permission_level> _requested;
-   transaction_header _trx_header;
+   require_auth( proposer );
+   auto& ds = get_datastream();
 
-   _ds >> _proposer >> _proposal_name >> _requested;
+   const char* trx_pos = ds.pos();
+   size_t size = ds.remaining();
 
-   const char* trx_pos = _ds.pos();
-   size_t size    = _ds.remaining();
-   _ds >> _trx_header;
+   transaction_header trx_header;
+   std::vector<action> context_free_actions;
+   ds >> trx_header;
+   check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
+   ds >> context_free_actions;
+   check( context_free_actions.empty(), "not allowed to `propose` a transaction with context-free actions" );
 
-   require_auth( _proposer );
-   check( _trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
-   //check( trx_header.actions.size() > 0, "transaction must have at least one action" );
+   proposals proptable( get_self(), proposer.value );
+   check( proptable.find( proposal_name.value ) == proptable.end(), "proposal with the same name exists" );
 
-   proposals proptable( get_self(), _proposer.value );
-   check( proptable.find( _proposal_name.value ) == proptable.end(), "proposal with the same name exists" );
-
-   auto packed_requested = pack(_requested);
-   // TODO: Remove internal_use_do_not_use namespace after minimum eosio.cdt dependency becomes 1.7.x
-   auto res =  internal_use_do_not_use::check_transaction_authorization(
+   auto packed_requested = pack(requested);
+   auto res =  check_transaction_authorization(
                   trx_pos, size,
                   (const char*)0, 0,
                   packed_requested.data(), packed_requested.size()
@@ -42,19 +72,21 @@ void multisig::propose( ignore<name> proposer,
    std::vector<char> pkd_trans;
    pkd_trans.resize(size);
    memcpy((char*)pkd_trans.data(), trx_pos, size);
-   proptable.emplace( _proposer, [&]( auto& prop ) {
-      prop.proposal_name       = _proposal_name;
-      prop.packed_transaction  = pkd_trans;
-   });
 
-   approvals apptable( get_self(), _proposer.value );
-   apptable.emplace( _proposer, [&]( auto& a ) {
-      a.proposal_name       = _proposal_name;
-      a.requested_approvals.reserve( _requested.size() );
-      for ( auto& level : _requested ) {
-         a.requested_approvals.push_back( approval{ level, time_point{ microseconds{0} } } );
-      }
-   });
+   proptable.emplace( proposer, [&]( auto& prop ) {
+         prop.proposal_name      = proposal_name;
+         prop.packed_transaction = pkd_trans;
+         prop.earliest_exec_time = std::optional<time_point>{};
+      });
+
+   approvals apptable( get_self(), proposer.value );
+   apptable.emplace( proposer, [&]( auto& a ) {
+         a.proposal_name = proposal_name;
+         a.requested_approvals.reserve( requested.size() );
+         for ( auto& level : requested ) {
+            a.requested_approvals.push_back( approval{ level, time_point{ microseconds{0} } } );
+         }
+      });
 }
 
 void multisig::approve( name proposer, name proposal_name, permission_level level,
@@ -62,9 +94,10 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
 {
    require_auth( level );
 
+   proposals proptable( get_self(), proposer.value );
+   auto& prop = proptable.get( proposal_name.value, "proposal not found" );
+
    if( proposal_hash ) {
-      proposals proptable( get_self(), proposer.value );
-      auto& prop = proptable.get( proposal_name.value, "proposal not found" );
       assert_sha256( prop.packed_transaction.data(), prop.packed_transaction.size(), *proposal_hash );
    }
 
@@ -90,6 +123,21 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
             a.requested_approvals.erase( itr );
          });
    }
+
+   transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
+
+   if( prop.earliest_exec_time.has_value() ) { 
+      if( !prop.earliest_exec_time->has_value() ) {
+         auto table_op = [](auto&&, auto&&){};
+         if( trx_is_authorized(get_approvals_and_adjust_table(get_self(), proposer, proposal_name, table_op), prop.packed_transaction) ) {
+            proptable.modify( prop, proposer, [&]( auto& p ) {
+               p.earliest_exec_time = std::optional<time_point>{ current_time_point() + eosio::seconds(trx_header.delay_sec.value)};
+            });
+         }
+      }
+   } else {
+      check( trx_header.delay_sec.value == 0, "old proposals are not allowed to have non-zero `delay_sec`; cancel and retry" );
+   }
 }
 
 void multisig::unapprove( name proposer, name proposal_name, permission_level level ) {
@@ -113,6 +161,23 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
             a.requested_approvals.push_back( level );
             a.provided_approvals.erase( itr );
          });
+   }
+
+   proposals proptable( get_self(), proposer.value );
+   auto& prop = proptable.get( proposal_name.value, "proposal not found" );
+
+   if( prop.earliest_exec_time.has_value() ) { 
+      if( prop.earliest_exec_time->has_value() ) {
+         auto table_op = [](auto&&, auto&&){};
+         if( !trx_is_authorized(get_approvals_and_adjust_table(get_self(), proposer, proposal_name, table_op), prop.packed_transaction) ) {
+            proptable.modify( prop, proposer, [&]( auto& p ) {
+               p.earliest_exec_time = std::optional<time_point>{};
+            });
+         }
+      }
+   } else {
+      transaction_header trx_header = get_trx_header(prop.packed_transaction.data(), prop.packed_transaction.size());
+      check( trx_header.delay_sec.value == 0, "old proposals are not allowed to have non-zero `delay_sec`; cancel and retry" );
    }
 }
 
@@ -145,49 +210,26 @@ void multisig::exec( name proposer, name proposal_name, name executer ) {
 
    proposals proptable( get_self(), proposer.value );
    auto& prop = proptable.get( proposal_name.value, "proposal not found" );
+
+   datastream<const char*> ds = {prop.packed_transaction.data(), prop.packed_transaction.size()};
    transaction_header trx_header;
    std::vector<action> context_free_actions;
    std::vector<action> actions;
-   datastream<const char*> ds( prop.packed_transaction.data(), prop.packed_transaction.size() );
    ds >> trx_header;
    check( trx_header.expiration >= eosio::time_point_sec(current_time_point()), "transaction expired" );
    ds >> context_free_actions;
    check( context_free_actions.empty(), "not allowed to `exec` a transaction with context-free actions" );
    ds >> actions;
 
-   approvals apptable( get_self(), proposer.value );
-   auto apps_it = apptable.find( proposal_name.value );
-   std::vector<permission_level> approvals;
-   invalidations inv_table( get_self(), get_self().value );
-   if ( apps_it != apptable.end() ) {
-      approvals.reserve( apps_it->provided_approvals.size() );
-      for ( auto& p : apps_it->provided_approvals ) {
-         auto it = inv_table.find( p.level.actor.value );
-         if ( it == inv_table.end() || it->last_invalidation_time < p.time ) {
-            approvals.push_back(p.level);
-         }
-      }
-      apptable.erase(apps_it);
-   } else {
-      old_approvals old_apptable( get_self(), proposer.value );
-      auto& apps = old_apptable.get( proposal_name.value, "proposal not found" );
-      for ( auto& level : apps.provided_approvals ) {
-         auto it = inv_table.find( level.actor.value );
-         if ( it == inv_table.end() ) {
-            approvals.push_back( level );
-         }
-      }
-      old_apptable.erase(apps);
-   }
-   auto packed_provided_approvals = pack(approvals);
-   // TODO: Remove internal_use_do_not_use namespace after minimum eosio.cdt dependency becomes 1.7.x
-   auto res =  internal_use_do_not_use::check_transaction_authorization(
-                  prop.packed_transaction.data(), prop.packed_transaction.size(),
-                  (const char*)0, 0,
-                  packed_provided_approvals.data(), packed_provided_approvals.size()
-               );
+   auto table_op = [](auto&& table, auto&& table_iter) { table.erase(table_iter); };
+   bool ok = trx_is_authorized(get_approvals_and_adjust_table(get_self(), proposer, proposal_name, table_op), prop.packed_transaction);
+   check( ok, "transaction authorization failed" );
 
-   check( res > 0, "transaction authorization failed" );
+   if ( prop.earliest_exec_time.has_value() && prop.earliest_exec_time->has_value() ) {
+      check( **prop.earliest_exec_time <= current_time_point(), "too early to execute" );
+   } else {
+      check( trx_header.delay_sec.value == 0, "old proposals are not allowed to have non-zero `delay_sec`; cancel and retry" );
+   }
 
    for (const auto& act : actions) {
       act.send();
@@ -210,6 +252,22 @@ void multisig::invalidate( name account ) {
             i.last_invalidation_time = current_time_point();
          });
    }
+}
+
+transaction_header get_trx_header(const char* ptr, size_t sz) {
+   datastream<const char*> ds = {ptr, sz};
+   transaction_header trx_header;
+   ds >> trx_header;
+   return trx_header;
+}
+
+bool trx_is_authorized(const std::vector<permission_level>& approvals, const std::vector<char>& packed_trx) {
+   auto packed_approvals = pack(approvals);
+   return check_transaction_authorization(
+             packed_trx.data(), packed_trx.size(),
+             (const char*)0, 0,
+             packed_approvals.data(), packed_approvals.size()
+          );
 }
 
 } /// namespace eosio
