@@ -939,7 +939,7 @@ namespace eosiosystem {
           *
           * @param payer - the ram buyer,
           * @param receiver - the ram receiver,
-          * @param quant - the quntity of tokens to buy ram with.
+          * @param quant - the quantity of tokens to buy ram with.
           */
          [[eosio::action]]
          void buyram( const name& payer, const name& receiver, const asset& quant );
@@ -950,7 +950,7 @@ namespace eosiosystem {
           *
           * @param payer - the ram buyer,
           * @param receiver - the ram receiver,
-          * @param bytes - the quntity of ram to buy specified in bytes.
+          * @param bytes - the quantity of ram to buy specified in bytes.
           */
          [[eosio::action]]
          void buyrambytes( const name& payer, const name& receiver, uint32_t bytes );
