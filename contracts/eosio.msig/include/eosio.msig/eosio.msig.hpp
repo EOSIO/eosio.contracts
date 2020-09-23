@@ -6,203 +6,7 @@
 #include <eosio/transaction.hpp>
 
 namespace eosio {
-   /**
-    *  Clone of `eosio::binary_extension` that includes `operator=` to avoid
-    *  bumping the `eosio.cdt` dependency version of the v1.8.x patch release of
-    *  `eosio.contracts`.
-    */
-   template <typename T>
-   class eosio_msig_binary_extension {
-      public:
-         using value_type = T;
-
-         constexpr eosio_msig_binary_extension() {}
-         constexpr eosio_msig_binary_extension( const T& ext )
-         :_has_value(true)
-         {
-            ::new (&_data) T(ext);
-         }
-         constexpr eosio_msig_binary_extension( T&& ext )
-         :_has_value(true)
-         {
-            ::new (&_data) T(std::move(ext));
-         }
-          /** construct contained type in place */
-         template <typename... Args>
-         constexpr eosio_msig_binary_extension( std::in_place_t, Args&&... args )
-         :_has_value(true)
-         {
-            ::new (&_data) T(std::forward<Args>(args)...);
-         }
-
-         constexpr eosio_msig_binary_extension( const eosio_msig_binary_extension& other )
-         :_has_value(other._has_value)
-         {
-            if( other._has_value ) ::new (&_data) T( *other );
-         }
-
-         constexpr eosio_msig_binary_extension( eosio_msig_binary_extension&& other )
-         :_has_value(other._has_value)
-         {
-            if( other._has_value ) {
-               ::new (&_data) T( *std::move(other) );
-               other._has_value = false;
-            }
-         }
-
-         /// @cond INTERNAL
-         ~eosio_msig_binary_extension() { reset(); }
-
-         /// @cond INTERNAL
-         constexpr eosio_msig_binary_extension& operator= (const eosio_msig_binary_extension& other) {
-            if (has_value())
-               reset();
-
-            if (other.has_value()) {
-               ::new (&_data) T(*other);
-               _has_value = true;
-            }
-            return *this;
-         }
-
-         /// @cond INTERNAL
-         constexpr eosio_msig_binary_extension& operator= (eosio_msig_binary_extension&& other) {
-            if (has_value())
-               reset();
-
-            if (other.has_value()) {
-               ::new (&_data) T(*other);
-               _has_value = true;
-               other._has_value = false;
-            }
-            return *this;
-         }
-         /** test if container is holding a value */
-         constexpr explicit operator bool()const { return _has_value; }
-         /** test if container is holding a value */
-         constexpr bool has_value()const { return _has_value; }
-
-          /** get the contained value */
-         constexpr T& value()& {
-            if (!_has_value) {
-               check(false, "cannot get value of empty eosio_msig_binary_extension");
-            }
-            return _get();
-         }
-
-         /// @cond INTERNAL
-
-          /** get the contained value */
-         constexpr const T& value()const & {
-            if (!_has_value) {
-               check(false, "cannot get value of empty eosio_msig_binary_extension");
-            }
-            return _get();
-         }
-
-          /** get the contained value or a user specified default
-          * @pre def should be convertible to type T
-          * */
-         template <typename U>
-         constexpr auto value_or( U&& def ) -> std::enable_if_t<std::is_convertible<U, T>::value, T&>& {
-            if (_has_value)
-               return _get();
-            return def;
-         }
-       
-         constexpr T value_or() const { return (_has_value) ? _get() : T{}; }
-
-         constexpr T* operator->() {
-            return &_get();
-         }
-         constexpr const T* operator->()const {
-            return &_get();
-         }
-
-         constexpr T& operator*()& {
-            return _get();
-         }
-         constexpr const T& operator*()const& {
-            return _get();
-         }
-         constexpr const T&& operator*()const&& {
-            return std::move(_get());
-         }
-         constexpr T&& operator*()&& {
-            return std::move(_get());
-         }
-
-         template<typename ...Args>
-         T& emplace(Args&& ... args)& {
-            if (_has_value) {
-               reset();
-            }
-
-            ::new (&_data) T( std::forward<Args>(args)... );
-            _has_value = true;
-
-            return _get();
-         }
-
-         void reset() {
-            if( _has_value ) {
-               _get().~value_type();
-               _has_value = false;
-            }
-         }
-
-         /// @endcond
-
-       private:
-         bool _has_value = false;
-         typename std::aligned_storage<sizeof(T), alignof(T)>::type _data;
-
-         constexpr T& _get() {
-            return *reinterpret_cast<T*>(&_data);
-         }
-
-         constexpr const T& _get()const {
-            return *reinterpret_cast<const T*>(&_data);
-         }
-   };
-
    /// @cond IMPLEMENTATIONS
-
-   /**
-    *  Serialize a eosio_msig_binary_extension into a stream
-    *
-    *  @ingroup eosio_msig_binary_extension
-    *  @brief Serialize a eosio_msig_binary_extension
-    *  @param ds - The stream to write
-    *  @param opt - The value to serialize
-    *  @tparam DataStream - Type of datastream buffer
-    *  @return DataStream& - Reference to the datastream
-    */
-   template<typename DataStream, typename T>
-   inline DataStream& operator<<(DataStream& ds, const eosio::eosio_msig_binary_extension<T>& be) {
-     ds << be.value_or();
-     return ds;
-   }
-
-   /**
-    *  Deserialize a eosio_msig_binary_extension from a stream
-    *
-    *  @ingroup eosio_msig_binary_extension
-    *  @brief Deserialize a eosio_msig_binary_extension
-    *  @param ds - The stream to read
-    *  @param opt - The destination for deserialized value
-    *  @tparam DataStream - Type of datastream buffer
-    *  @return DataStream& - Reference to the datastream
-    */
-   template<typename DataStream, typename T>
-   inline DataStream& operator>>(DataStream& ds, eosio::eosio_msig_binary_extension<T>& be) {
-     if( ds.remaining() ) {
-        T val;
-        ds >> val;
-        be.emplace(val);
-     }
-     return ds;
-   }
 
    /**
     * The `eosio.msig` system contract allows for creation of proposed transactions which require authorization from a list of accounts, approval of the proposed transactions by those accounts required to approve it, and finally, it also allows the execution of the approved transactions on the blockchain.
@@ -311,16 +115,16 @@ namespace eosio {
          using invalidate_action = eosio::action_wrapper<"invalidate"_n, &multisig::invalidate>;
    };
 
-   struct [[eosio::table]] proposal {
+   struct [[eosio::table, eosio::contract("eosio.msig")]] proposal {
       name                                                            proposal_name;
       std::vector<char>                                               packed_transaction;
-      eosio::eosio_msig_binary_extension< std::optional<time_point> > earliest_exec_time;
+      eosio::binary_extension< std::optional<time_point> >            earliest_exec_time;
 
       uint64_t primary_key()const { return proposal_name.value; }
    };
    typedef eosio::multi_index< "proposal"_n, proposal > proposals;
 
-   struct [[eosio::table]] old_approvals_info {
+   struct [[eosio::table, eosio::contract("eosio.msig")]] old_approvals_info {
       name                            proposal_name;
       std::vector<permission_level>   requested_approvals;
       std::vector<permission_level>   provided_approvals;
@@ -334,7 +138,7 @@ namespace eosio {
       time_point       time;
    };
 
-   struct [[eosio::table]] approvals_info {
+   struct [[eosio::table, eosio::contract("eosio.msig")]] approvals_info {
       uint8_t                 version = 1;
       name                    proposal_name;
       //requested approval doesn't need to contain time, but we want requested approval
@@ -347,7 +151,7 @@ namespace eosio {
    };
    typedef eosio::multi_index< "approvals2"_n, approvals_info > approvals;
 
-   struct [[eosio::table]] invalidation {
+   struct [[eosio::table, eosio::contract("eosio.msig")]] invalidation {
       name         account;
       time_point   last_invalidation_time;
 
