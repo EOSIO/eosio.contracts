@@ -33,3 +33,5 @@
 
 build/*
 .DS_Store
+.vscode
+model_tests.csv

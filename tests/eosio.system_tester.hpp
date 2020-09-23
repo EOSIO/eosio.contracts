@@ -275,7 +275,29 @@ public:
          act.name = name;
          act.data = abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
 
-         return base_tester::push_action( std::move(act), (auth ? signer : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111)).to_uint64_t() );
+         return push_action_ex( std::move(act), (auth ? signer : signer == N(bob111111111) ? N(alice1111111) : N(bob111111111)).to_uint64_t() );
+   }
+
+    action_result push_action_ex(action&& act, uint64_t authorizer) {
+         signed_transaction trx;
+         if (authorizer) {
+            act.authorization = vector<permission_level>{{account_name(authorizer), config::active_name}};
+         }
+         trx.actions.emplace_back(std::move(act));
+         set_transaction_headers(trx);
+         if (authorizer) {
+            trx.sign(get_private_key(account_name(authorizer), "active"), control->get_chain_id());
+         }
+         try {
+            push_transaction( trx, fc::time_point::maximum(), 1000 );
+         } catch (const fc::exception& ex) {
+            edump((ex.to_detail_string()));
+            return error(ex.top_message()); // top_message() is assumed by many tests; otherwise they fail
+            //return error(ex.to_detail_string());
+         }
+         produce_block();
+         BOOST_REQUIRE_EQUAL(true, chain_has_transaction(trx.id()));
+         return success();
    }
 
    action_result stake( const account_name& from, const account_name& to, const asset& net, const asset& cpu ) {

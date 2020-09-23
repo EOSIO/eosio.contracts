@@ -1,0 +1,24 @@
+{
+    "net": {
+        "assumed_stake_weight": 944076307,
+        "current_weight_ratio": 1000000000000000,
+        "decay_secs": 86400,
+        "exponent": 4,
+        "max_price": "10000000.0000 TST",
+        "min_price": "0.0000 TST",
+        "target_timestamp": 365,
+        "target_weight_ratio": 10000000000000
+    },
+    "cpu": {
+        "assumed_stake_weight": 3776305228,
+        "current_weight_ratio": 1000000000000000,
+        "decay_secs": 86400,
+        "exponent": 4,
+        "max_price": "10000000.0000 TST",
+        "min_price": "0.0000 TST",
+        "target_timestamp": 365,
+        "target_weight_ratio": 10000000000000
+    },
+    "min_rent_fee": "0.0001 TST",
+    "rent_days": 30
+}

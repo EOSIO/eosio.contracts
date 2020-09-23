@@ -543,6 +543,9 @@ namespace eosiosystem {
       int64_t        adjusted_utilization    = 0;                  // Adjusted resource utilization. This is >= utilization and
                                                                    //    <= weight. It grows instantly but decays exponentially.
       time_point_sec utilization_timestamp   = {};                 // When adjusted_utilization was last updated
+
+      // for modeling - not to merged in code
+      int64_t        fee             = 0;  
    };
 
    struct [[eosio::table("rent.state"),eosio::contract("eosio.system")]] rentbw_state {
