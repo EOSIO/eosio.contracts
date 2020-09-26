@@ -21,8 +21,10 @@ Each of the top 21 block producers should do the following:
 
 1. Get current system contract for later comparison (actual hash and ABI on the main-net blockchain will be different):
 
+```sh
+cleos get code -c original_system_contract.wast -a original_system_contract.abi eosio
 ```
-$ cleos get code -c original_system_contract.wast -a original_system_contract.abi eosio
+```console
 code hash: cc0ffc30150a07c487d8247a484ce1caf9c95779521d8c230040c2cb0e2a3a60
 saving wast to original_system_contract.wast
 saving abi to original_system_contract.abi
@@ -30,13 +32,13 @@ saving abi to original_system_contract.abi
 
 2. Generate the unsigned transaction which upgrades the system contract:
 
-```
-$ cleos set contract -s -j -d eosio contracts/eosio.system | tail -n +4 > upgrade_system_contract_trx.json
+```sh
+cleos set contract -s -j -d eosio contracts/eosio.system | tail -n +4 > upgrade_system_contract_trx.json
 ```
 
 The first few lines of the generated file should be something similar to (except with very different numbers for `expiration`, `ref_block_num`, and `ref_block_prefix`):
 
-```
+```json
 {
    "expiration": "2018-06-15T22:17:10",
    "ref_block_num": 4552,
@@ -57,7 +59,7 @@ The first few lines of the generated file should be something similar to (except
 
 and the last few lines should be:
 
-```
+```json
       }
    ],
    "transaction_extensions": [],
@@ -76,8 +78,10 @@ Then each of the top 21 block producers should do the following:
 
 5. Compare their generated `upgrade_system_contract_official_trx.json` file with the `upgrade_system_contract_official_trx.json` provided by the lead producer. The only difference should be in `expiration`, `ref_block_num`, `ref_block_prefix`, for example:
 
+```sh
+diff upgrade_system_contract_official_trx.json upgrade_system_contract_trx.json
 ```
-$ diff upgrade_system_contract_official_trx.json upgrade_system_contract_trx.json
+```json
 2,4c2,4
 <   "expiration": "2018-06-15T22:17:10",
 <   "ref_block_num": 4552,
@@ -94,8 +98,10 @@ First, the block producer should collect all the necessary information. Let us a
 
 Then on a secure computer the producer can sign the transaction (the producer will need to paste in their private key when prompted):
 
+```sh
+cleos sign --chain-id d0242fb30b71b82df9966d10ff6d09e4f5eb6be7ba85fd78f796937f1959315e upgrade_system_contract_trx.json | tail -n 5
 ```
-$ cleos sign --chain-id d0242fb30b71b82df9966d10ff6d09e4f5eb6be7ba85fd78f796937f1959315e upgrade_system_contract_trx.json | tail -n 5
+```json
 private key:   "signatures": [
     "SIG_K1_JzABB9gzDGwUHaRmox68UNcfxMVwMnEXqqS1MvtsyUX8KGTbsZ5aZQZjHD5vREQa5BkZ7ft8CceLBLAj8eZ5erZb9cHuy5"
   ],
@@ -111,8 +117,10 @@ When the lead producer collects 15 producer signatures, the lead producer should
 
 7. Make a copy of the `upgrade_system_contract_official_trx.json` and call it `upgrade_system_contract_official_trx_signed.json`, and then modify the `upgrade_system_contract_official_trx_signed.json` so that the `signatures` field includes all 15 collected signatures. So the tail end of `upgrade_system_contract_official_trx_signed.json` could look something like:
 
+```sh
+cat upgrade_system_contract_official_trx_signed.json | tail -n 20
 ```
-$ cat upgrade_system_contract_official_trx_signed.json | tail -n 20
+```json
   "transaction_extensions": [],
   "signatures": [
    "SIG_K1_JzABB9gzDGwUHaRmox68UNcfxMVwMnEXqqS1MvtsyUX8KGTbsZ5aZQZjHD5vREQa5BkZ7ft8CceLBLAj8eZ5erZb9cHuy5",
@@ -137,8 +145,10 @@ $ cat upgrade_system_contract_official_trx_signed.json | tail -n 20
 
 8. Push the signed transaction to the blockchain:
 
+```sh
+cleos push transaction --skip-sign upgrade_system_contract_official_trx_signed.json
 ```
-$ cleos push transaction --skip-sign upgrade_system_contract_official_trx_signed.json
+```json
 {
   "transaction_id": "202888b32e7a0f9de1b8483befac8118188c786380f6e62ced445f93fb2b1041",
   "processed": {
@@ -157,7 +167,7 @@ $ cleos push transaction --skip-sign upgrade_system_contract_official_trx_signed
 
 If you get an error message like the following:
 
-```
+```console
 Error 3090003: provided keys, permissions, and delays do not satisfy declared authorizations
 Ensure that you have the related private keys inside your wallet and your wallet is unlocked.
 ```
@@ -166,7 +176,7 @@ That means that at least one of the signatures provided were bad. This may be be
 
 If you get an error message like the following:
 
-```
+```console
 Error 3090002: irrelevant signature included
 Please remove the unnecessary signature from your transaction!
 ```
@@ -175,7 +185,7 @@ That means unnecessary signatures were included. If there are 21 active producer
 
 If you get an error message like the following:
 
-```
+```console
 Error 3040006: Transaction Expiration Too Far
 Please decrease the expiration time of your transaction!
 ```
@@ -184,7 +194,7 @@ That means that the expiration time is more than 1 hour in the future and you ne
 
 If you get an error message like the following:
 
-```
+```console
 Error 3040005: Expired Transaction
 Please increase the expiration time of your transaction!
 ```
@@ -193,12 +203,19 @@ That means the expiration time of the signed transaction has passed and this ent
 
 9. Assuming the transaction successfully executes, everyone can then verify that the new contract is in place:
 
+```sh
+cleos get code -c new_system_contract.wast -a new_system_contract.abi eosio
 ```
-$ cleos get code -c new_system_contract.wast -a new_system_contract.abi eosio
+```console
 code hash: 9fd195bc5a26d3cd82ae76b70bb71d8ce83dcfeb0e5e27e4e740998fdb7b98f8
 saving wast to new_system_contract.wast
 saving abi to new_system_contract.abi
-$ diff original_system_contract.abi new_system_contract.abi
+```
+
+```sh
+diff original_system_contract.abi new_system_contract.abi
+```
+```json
 584,592d583
 <         },{
 <           "name": "deferred_trx_id",

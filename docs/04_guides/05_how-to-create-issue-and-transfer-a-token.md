@@ -7,16 +7,16 @@ link_text: How to create, issue and transfer a token
 
 Navigate to your contracts directory.
 
-```text
+```sh
 cd CONTRACTS_DIR
 ```
 
 Pull the source
-```text
+```sh
 git clone https://github.com/EOSIO/eosio.contracts --branch master --single-branch
 ```
 
-```text
+```sh
 cd eosio.contracts/contracts/eosio.token
 ```
 
@@ -41,7 +41,7 @@ cleos set contract eosio.token CONTRACTS_DIR/eosio.contracts/contracts/eosio.tok
 ```
 
 Result should look similar to the one below:
-```shell
+```console
 Reading WASM from ...
 Publishing contract...
 executed transaction: 69c68b1bd5d61a0cc146b11e89e11f02527f24e4b240731c4003ad1dc0c87c2c  9696 bytes  6290 us
@@ -57,7 +57,7 @@ cleos push action eosio.token create '[ "eosio", "1000000000.0000 SYS"]' -p eosi
 ```
 
 Result should look similar to the one below:
-```shell
+```console
 executed transaction: 0e49a421f6e75f4c5e09dd738a02d3f51bd18a0cf31894f68d335cd70d9c0e12  120 bytes  1000 cycles
 #   eosio.token <= eosio.token::create          {"issuer":"eosio","maximum_supply":"1000000000.0000 SYS"}
 ```
@@ -69,7 +69,7 @@ cleos push action eosio.token create '{"issuer":"eosio", "maximum_supply":"10000
 ```
 
 Result should look similar to the one below:
-```shell
+```console
 executed transaction: 0e49a421f6e75f4c5e09dd738a02d3f51bd18a0cf31894f68d335cd70d9c0e12  120 bytes  1000 cycles
 #   eosio.token <= eosio.token::create          {"issuer":"eosio","maximum_supply":"1000000000.0000 SYS"}
 ```
@@ -79,12 +79,12 @@ This command created a new token `SYS` with a precision of 4 decimals and a maxi
 
 The issuer can issue new tokens to the issuer account in our case `eosio`.
 
-```text
+```sh
 cleos push action eosio.token issue '[ "eosio", "100.0000 SYS", "memo" ]' -p eosio@active
 ```
 
 Result should look similar to the one below:
-```shell
+```console
 executed transaction: a26b29d66044ad95edf0fc04bad3073e99718bc26d27f3c006589adedb717936  128 bytes  337 us
 #   eosio.token <= eosio.token::issue           {"to":"eosio","quantity":"100.0000 SYS","memo":"memo"}
 warning: transaction executed locally, but may not be confirmed by the network yet         ]
@@ -99,7 +99,7 @@ cleos push action eosio.token transfer '[ "eosio", "bob", "25.0000 SYS", "m" ]' 
 ```
 
 Result should look similar to the one below:
-```text
+```console
 executed transaction: 60d334850151cb95c35fe31ce2e8b536b51441c5fd4c3f2fea98edcc6d69f39d  128 bytes  497 us
 #   eosio.token <= eosio.token::transfer        {"from":"eosio","to":"bob","quantity":"25.0000 SYS","memo":"m"}
 #         eosio <= eosio.token::transfer        {"from":"eosio","to":"bob","quantity":"25.0000 SYS","memo":"m"}
@@ -113,7 +113,7 @@ cleos get currency balance eosio.token bob SYS
 ```
 
 Result:
-```text
+```console
 25.00 SYS
 ```
 
@@ -124,6 +124,6 @@ cleos get currency balance eosio.token eosio SYS
 ```
 
 Result:
-```text
+```console
 75.00 SYS
 ```
