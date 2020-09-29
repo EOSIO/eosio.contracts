@@ -76,7 +76,7 @@ void multisig::propose( name proposer,
    proptable.emplace( proposer, [&]( auto& prop ) {
          prop.proposal_name      = proposal_name;
          prop.packed_transaction = pkd_trans;
-         prop.earliest_exec_time = std::optional<time_point>{};
+         prop.earliest_exec_time.emplace();
       });
 
    approvals apptable( get_self(), proposer.value );
@@ -131,7 +131,7 @@ void multisig::approve( name proposer, name proposal_name, permission_level leve
          auto table_op = [](auto&&, auto&&){};
          if( trx_is_authorized(get_approvals_and_adjust_table(get_self(), proposer, proposal_name, table_op), prop.packed_transaction) ) {
             proptable.modify( prop, proposer, [&]( auto& p ) {
-               p.earliest_exec_time = std::optional<time_point>{ current_time_point() + eosio::seconds(trx_header.delay_sec.value)};
+               p.earliest_exec_time.emplace(time_point{ current_time_point() + eosio::seconds(trx_header.delay_sec.value)});
             });
          }
       }
@@ -171,7 +171,7 @@ void multisig::unapprove( name proposer, name proposal_name, permission_level le
          auto table_op = [](auto&&, auto&&){};
          if( !trx_is_authorized(get_approvals_and_adjust_table(get_self(), proposer, proposal_name, table_op), prop.packed_transaction) ) {
             proptable.modify( prop, proposer, [&]( auto& p ) {
-               p.earliest_exec_time = std::optional<time_point>{};
+               p.earliest_exec_time.emplace();
             });
          }
       }
