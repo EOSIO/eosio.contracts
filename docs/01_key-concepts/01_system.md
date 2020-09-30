@@ -1,6 +1,6 @@
 ---
 content_title: System contracts, system accounts, privileged accounts
-link_text: System contracts, system accounts, privileged accounts
+link_text: System contracts and accounts, privileged accounts
 ---
 
 At the genesis of an EOSIO based blockchain, there is only one account present, `eosio` account, which is the main `system account`. There are other `system account`s, created by `eosio` account, which control specific actions of the `system contract`s [mentioned in previous section](../#system-contracts-defined-in-eosio.contracts). __Note__ the terms `system contract` and `system account`. `Privileged accounts` are accounts which can execute a transaction while skipping the standard authorization check. To ensure that this is not a security hole, the permission authority over these accounts is granted to `eosio.prods` system account.
@@ -21,4 +21,4 @@ As you just learned the relation between a `system account` and a `system contra
 |eosio.saving|No|No|The account which holds the 4% of network inflation.|
 |eosio.stake|No|No|The account that keeps track of all SYS tokens which have been staked for NET or CPU bandwidth.|
 |eosio.vpay|No|No|The account that pays the block producers accordingly with the votes won. It assigns 0.75% of inflation based on the amount of votes a block producer won in the last 24 hours.|
-|eosio.rex|No|No|The account that keeps track of fees and balances resulted from REX related actions execution.|
+|eosio.rex|No|No|The account that keeps track of fees and balances resulted from REX related actions execution.| 

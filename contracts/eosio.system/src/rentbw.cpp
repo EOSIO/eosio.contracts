@@ -360,7 +360,7 @@ void system_contract::rentbw(const name& payer, const name& receiver, uint32_t d
       int64_t f = calc_rentbw_fee(state, amount);
       eosio::check(f > 0, "calculated fee is below minimum; try renting more");
       fee.amount += f;
-      state.utilization += amount;      
+      state.utilization += amount;
       state.fee = f;
    };
 

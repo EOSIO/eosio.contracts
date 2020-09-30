@@ -53,10 +53,14 @@ All repositories and other materials are provided subject to the terms of this [
 
 `make -j`
 
+## Usage
+
+![](https://user-images.githubusercontent.com/61709855/94286123-91e69480-ff22-11ea-94d4-59ae2daa2073.png)
+
 from the project folder execute:
 
 `cd modeling`
 
 `sh run_and_plot.sh model_config.json rentbw_input.csv csv_output.csv`
 
-if you have a gnuplot installed you, it will be automatically executed to plot utilization charts
+if you have a gnuplot installed, it will be automatically executed to plot utilization charts
