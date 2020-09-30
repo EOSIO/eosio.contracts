@@ -16,7 +16,7 @@ public:
 
     ~CSVWriter()
     {
-        flush(true);
+        flush(false);
     }
 
     CSVWriter &add(std::string &str)
