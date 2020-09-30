@@ -43,7 +43,7 @@ All repositories and other materials are provided subject to the terms of this [
 
 ## rentbw modeling tool
 
-![](./modeling/utilization.png)
+![](https://user-images.githubusercontent.com/61709855/94745158-33694e00-0348-11eb-9ab8-4056252db7a9.png)
 
 `mkdir build`
 
