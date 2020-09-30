@@ -1,3 +1,8 @@
+---
+content_title: How to buy RAM
+link_text: How to buy RAM
+---
+
 # Goal
 
 Setup an account that require multiple signatures for signing a transaction
