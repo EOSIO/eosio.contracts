@@ -9,50 +9,17 @@ using namespace std;
 class CSVWriter
 {
 public:
-    CSVWriter()
+    CSVWriter(const std::string &filename)
     {
-        this->firstRow = true;
-        this->seperator = ";";
-        this->columnNum = -1;
-        this->valueCount = 0;
+        this->filename = filename;
     }
 
-    CSVWriter(int numberOfColums)
+    ~CSVWriter()
     {
-        this->firstRow = true;
-        this->seperator = ";";
-        this->columnNum = numberOfColums;
-        this->valueCount = 0;
+        flush(true);
     }
 
-    CSVWriter(string seperator)
-    {
-        this->firstRow = true;
-        this->seperator = seperator;
-        this->columnNum = -1;
-        this->valueCount = 0;
-    }
-
-    CSVWriter(string seperator, int numberOfColums)
-    {
-        this->firstRow = true;
-        this->seperator = seperator;
-        this->columnNum = numberOfColums;
-        this->valueCount = 0;
-        cout << this->seperator << endl;
-    }
-
-    CSVWriter &add(const char *str)
-    {
-        return this->add(string(str));
-    }
-
-    CSVWriter &add(char *str)
-    {
-        return this->add(string(str));
-    }
-
-    CSVWriter &add(string str)
+    CSVWriter &add(std::string &str)
     {
         //if " character was found, escape it
         size_t position = str.find("\"", 0);
@@ -66,9 +33,9 @@ public:
         {
             str = "\"" + str + "\"";
         }
-        else if (str.find(this->seperator) != string::npos)
+        else if (str.find(this->separator) != string::npos)
         {
-            //if seperator was found and string was not escapted before, surround string with "
+            //if separator was found and string was not escapted before, surround string with "
             str = "\"" + str + "\"";
         }
         return this->add<string>(str);
@@ -77,16 +44,8 @@ public:
     template <typename T>
     CSVWriter &add(T str)
     {
-        if (this->columnNum > -1)
-        {
-            //if autoNewRow is enabled, check if we need a line break
-            if (this->valueCount == this->columnNum)
-            {
-                this->newRow();
-            }
-        }
         if (valueCount > 0)
-            this->ss << this->seperator;
+            this->ss << this->separator;
         this->ss << str;
         this->valueCount++;
 
@@ -117,61 +76,47 @@ public:
 
     CSVWriter &newRow()
     {
-        if (!this->firstRow || this->columnNum > -1)
-        {
-            ss << endl;
-        }
-        else
+        if (this->firstRow)
         {
             //if the row is the first row, do not insert a new line
             this->firstRow = false;
+        }
+        else
+        {
+            ss << endl;
         }
         valueCount = 0;
         return *this;
     }
 
-    bool writeToFile(string filename)
-    {
-        return writeToFile(filename, false);
-    }
-
-    bool writeToFile(string filename, bool append)
+    bool flush(bool append = false)
     {
         ofstream file;
         if (append)
             file.open(filename.c_str(), ios::out | ios::app);
         else
             file.open(filename.c_str(), ios::out | ios::trunc);
+
         if (!file.is_open())
             return false;
         if (append)
             file << endl;
-        file << this->toString();
+        file << ss.rdbuf();
         file.close();
-        return file.good();
-    }
-
-    void enableAutoNewRow(int numberOfColumns)
-    {
-        this->columnNum = numberOfColumns;
-    }
-
-    void disableAutoNewRow()
-    {
-        this->columnNum = -1;
-    }
-
-    bool isFirstRow()
-    {
-        return firstRow;
+        if (file.good())
+        {
+            ss.clear();
+            return true;
+        }
+        return false;
     }
 
 protected:
-    bool firstRow;
-    string seperator;
-    int columnNum;
-    int valueCount;
+    bool firstRow = false;
+    string separator = ";";
+    int valueCount = 0;
     stringstream ss;
+    std::string filename;
 };
 
 #endif // CSVWRITER_H

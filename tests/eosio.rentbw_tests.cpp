@@ -20,9 +20,6 @@
 
 #include "picojson.hpp"
 
-#define GENERATE_CSV true
-#define CSV_FILENAME "model_tests.csv"
-
 inline constexpr int64_t rentbw_frac = 1'000'000'000'000'000ll; // 1.0 = 10^15
 inline constexpr int64_t stake_weight = 100'000'000'0000ll;     // 10^12
 
@@ -90,58 +87,47 @@ using namespace eosio_system;
 
 struct rentbw_tester : eosio_system_tester
 {
-   CSVWriter csv;
+   std::optional<CSVWriter> csv = std::nullopt;
    int64_t timeOffset = 0;
 
    rentbw_tester()
    {
       create_accounts_with_resources({N(eosio.reserv)});
-
-      if (GENERATE_CSV)
-      {
-         CSVWriter header;
-         header.newRow() << "last_block_time"
-                         << "before_state.net.assumed_stake_weight"
-                         << "before_state.net.weight_ratio"
-                         << "before_state.net.weight"
-                         << "before_receiver.net"
-                         << "after_receiver.net"
-                         << "after_receiver.net-before_receiver.net"
-                         << "before_payer.liquid-after_payer.liquid"
-                         << "before_reserve.net"
-                         << "after_reserve.net"
-                         << "before_reserve.cpu"
-                         << "after_reserve.cpu"
-
-                         << "weight"
-                         << "weight_ratio"
-                         << "assumed_stake_weight"
-                         << "initial_weight_ratio"
-                         << "target_weight_ratio"
-                         << "initial_timestamp"
-                         << "target_timestamp"
-                         << "exponent"
-                         << "decay_secs"
-                         << "min_price"
-                         << "max_price"
-                         << "utilization"
-                         << "adjusted_utilization"
-                         << "utilization_timestamp"
-
-                         << "calc_rentbw_fee"
-
-                         << "function";
-
-         header.writeToFile(CSV_FILENAME);
-      }
    }
 
-   ~rentbw_tester()
+   void setOutputFile(const std::string &filename)
    {
-      if (GENERATE_CSV)
-      {
-         csv.writeToFile(CSV_FILENAME, true);
-      }
+      csv.emplace(filename);
+
+      csv->newRow()
+          << "last_block_time"
+          << "before_state.net.assumed_stake_weight"
+          << "before_state.net.weight_ratio"
+          << "before_state.net.weight"
+          << "before_receiver.net"
+          << "after_receiver.net"
+          << "after_receiver.net-before_receiver.net"
+          << "before_payer.liquid-after_payer.liquid"
+          << "before_reserve.net"
+          << "after_reserve.net"
+          << "before_reserve.cpu"
+          << "after_reserve.cpu"
+          << "weight"
+          << "weight_ratio"
+          << "assumed_stake_weight"
+          << "initial_weight_ratio"
+          << "target_weight_ratio"
+          << "initial_timestamp"
+          << "target_timestamp"
+          << "exponent"
+          << "decay_secs"
+          << "min_price"
+          << "max_price"
+          << "utilization"
+          << "adjusted_utilization"
+          << "utilization_timestamp"
+          << "calc_rentbw_fee"
+          << "function";
    }
 
    void start_rex()
@@ -345,7 +331,7 @@ struct rentbw_tester : eosio_system_tester
       auto after_reserve = get_account_info(N(eosio.reserv));
       auto after_state = get_state();
 
-      if (GENERATE_CSV)
+      if (csv)
       {
          ilog("before_state.net.assumed_stake_weight:    ${x}", ("x", before_state.net.assumed_stake_weight));
          ilog("before_state.net.weight_ratio:            ${x}",
@@ -365,36 +351,36 @@ struct rentbw_tester : eosio_system_tester
          ilog("before_reserve.cpu:                       ${x}", ("x", before_reserve.cpu));
          ilog("after_reserve.cpu:                        ${x}", ("x", after_reserve.cpu));
 
-         csv.newRow() << last_block_time() - timeOffset
-                      << before_state.net.assumed_stake_weight
-                      << before_state.net.weight_ratio / double(rentbw_frac)
-                      << before_state.net.weight
-                      << before_receiver.net
-                      << after_receiver.net
-                      << after_receiver.net - before_receiver.net
-                      << before_payer.liquid - after_payer.liquid
-                      << before_reserve.net
-                      << after_reserve.net
-                      << before_reserve.cpu
-                      << after_reserve.cpu
+         csv->newRow() << last_block_time() - timeOffset
+                       << before_state.net.assumed_stake_weight
+                       << before_state.net.weight_ratio / double(rentbw_frac)
+                       << before_state.net.weight
+                       << before_receiver.net
+                       << after_receiver.net
+                       << after_receiver.net - before_receiver.net
+                       << before_payer.liquid - after_payer.liquid
+                       << before_reserve.net
+                       << after_reserve.net
+                       << before_reserve.cpu
+                       << after_reserve.cpu
 
-                      << get_state().cpu.weight
-                      << get_state().cpu.weight_ratio
-                      << get_state().cpu.assumed_stake_weight
-                      << get_state().cpu.initial_weight_ratio
-                      << get_state().cpu.target_weight_ratio
-                      << get_state().cpu.initial_timestamp.sec_since_epoch()
-                      << get_state().cpu.target_timestamp.sec_since_epoch()
-                      << get_state().cpu.exponent
-                      << get_state().cpu.decay_secs
-                      << get_state().cpu.min_price.to_string()
-                      << get_state().cpu.max_price.to_string()
-                      << get_state().cpu.utilization
-                      << get_state().cpu.adjusted_utilization
-                      << get_state().cpu.utilization_timestamp.sec_since_epoch()
-                      << get_state().cpu.fee
+                       << get_state().cpu.weight
+                       << get_state().cpu.weight_ratio
+                       << get_state().cpu.assumed_stake_weight
+                       << get_state().cpu.initial_weight_ratio
+                       << get_state().cpu.target_weight_ratio
+                       << get_state().cpu.initial_timestamp.sec_since_epoch()
+                       << get_state().cpu.target_timestamp.sec_since_epoch()
+                       << get_state().cpu.exponent
+                       << get_state().cpu.decay_secs
+                       << get_state().cpu.min_price.to_string()
+                       << get_state().cpu.max_price.to_string()
+                       << get_state().cpu.utilization
+                       << get_state().cpu.adjusted_utilization
+                       << get_state().cpu.utilization_timestamp.sec_since_epoch()
+                       << get_state().cpu.fee
 
-                      << (max > 0 ? "rentbwexec" : "rentbw");
+                       << (max > 0 ? "rentbwexec" : "rentbw");
       }
 
       if (payer != receiver)
@@ -404,23 +390,14 @@ struct rentbw_tester : eosio_system_tester
          BOOST_REQUIRE_EQUAL(before_payer.cpu, after_payer.cpu);
          BOOST_REQUIRE_EQUAL(before_receiver.liquid, after_receiver.liquid);
       }
-      /*BOOST_REQUIRE_EQUAL(before_receiver.ram, after_receiver.ram);
-      BOOST_REQUIRE_EQUAL(after_receiver.net - before_receiver.net, expected_net);
-      BOOST_REQUIRE_EQUAL(after_receiver.cpu - before_receiver.cpu, expected_cpu);
-      BOOST_REQUIRE_EQUAL(before_payer.liquid - after_payer.liquid, expected_fee);
-
-      BOOST_REQUIRE_EQUAL(before_reserve.net - after_reserve.net, expected_net);
-      BOOST_REQUIRE_EQUAL(before_reserve.cpu - after_reserve.cpu, expected_cpu);
-      BOOST_REQUIRE_EQUAL(after_state.net.utilization - before_state.net.utilization, expected_net);
-      BOOST_REQUIRE_EQUAL(after_state.cpu.utilization - before_state.cpu.utilization, expected_cpu);*/
    }
 
-   void produce_blocks_date(const char *str, std::string function)
+   void produce_blocks_date(const char *datetime, std::string function)
    {
       static std::chrono::system_clock::time_point cursor = std::chrono::system_clock::from_time_t(last_block_time());
 
       std::tm tm = {};
-      ::strptime(str, "%m/%d/%Y %H:%M:%S", &tm);
+      ::strptime(datetime, "%m/%d/%Y %H:%M:%S", &tm);
       time_t ttp = std::mktime(&tm);
 
       auto utc_field = *std::gmtime(&ttp);
@@ -1087,10 +1064,6 @@ namespace ut = boost::unit_test;
 
 BOOST_AUTO_TEST_SUITE(eosio_system_rentbw_modeling_tests, *ut::disabled())
 
-bool init_unit_test()
-{
-}
-
 BOOST_FIXTURE_TEST_CASE(model_tests, rentbw_tester)
 try
 {
@@ -1103,8 +1076,6 @@ try
                 << std::endl;
       BOOST_FAIL("Files weren't provided");
    }
-
-   BOOST_TEST_MESSAGE("'argv[0]' contains " << argv[0]);
 
    produce_block();
 
@@ -1131,6 +1102,8 @@ try
    std::chrono::system_clock::time_point cursor;
    bool first_timepoint = true;
 
+   setOutputFile(argv[3]);
+
    while (in.read_row(datetime, function, payer, receiver, days, net_frac, cpu_frac, max_payment, queue_max))
    {
       if (function == "rentbwexec" || function == "rentbw")
@@ -1145,7 +1118,7 @@ try
       }
       else
       {
-         //
+         BOOST_ERROR(std::string("[") << in.get_truncated_file_name() << ":" << in.get_file_line() << "] Unsupported function: " << function);
       }
    }
 }

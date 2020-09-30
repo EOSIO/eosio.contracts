@@ -1,6 +1,6 @@
 # rentbw modeling tool
 
-![](./utilization.png)
+![](https://user-images.githubusercontent.com/61709855/94286123-91e69480-ff22-11ea-94d4-59ae2daa2073.png)
 
 mkdir build
 
