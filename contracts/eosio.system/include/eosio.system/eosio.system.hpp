@@ -205,9 +205,56 @@ namespace eosiosystem {
       bool     active()const      { return is_active;                               }
       void     deactivate()       { producer_key = public_key(); producer_authority.reset(); is_active = false; }
 
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( producer_info, (owner)(total_votes)(producer_key)(is_active)(url)
-                        (unpaid_blocks)(last_claim_time)(location)(producer_authority) )
+      eosio::block_signing_authority get_producer_authority()const {
+         if( producer_authority.has_value() ) {
+            bool zero_threshold = std::visit( [](auto&& auth ) -> bool {
+               return (auth.threshold == 0);
+            }, *producer_authority );
+            // zero_threshold could be true despite the validation done in regproducer2 because the v1.9.0 eosio.system
+            // contract has a bug which may have modified the producer table such that the producer_authority field
+            // contains a default constructed eosio::block_signing_authority (which has a 0 threshold and so is invalid).
+            if( !zero_threshold ) return *producer_authority;
+         }
+         return convert_to_block_signing_authority( producer_key );
+      }
+
+      // The unregprod and claimrewards actions modify unrelated fields of the producers table and under the default
+      // serialization behavior they would increase the size of the serialized table if the producer_authority field
+      // was not already present. This is acceptable (though not necessarily desired) because those two actions require
+      // the authority of the producer who pays for the table rows.
+      // However, the rmvproducer action and the onblock transaction would also modify the producer table in a similar
+      // way and increasing its serialized size is not acceptable in that context.
+      // So, a custom serialization is defined to handle the binary_extension producer_authority
+      // field in the desired way. (Note: v1.9.0 did not have this custom serialization behavior.)
+
+      template<typename DataStream>
+      friend DataStream& operator << ( DataStream& ds, const producer_info& t ) {
+         ds << t.owner
+            << t.total_votes
+            << t.producer_key
+            << t.is_active
+            << t.url
+            << t.unpaid_blocks
+            << t.last_claim_time
+            << t.location;
+
+         if( !t.producer_authority.has_value() ) return ds;
+
+         return ds << t.producer_authority;
+      }
+
+      template<typename DataStream>
+      friend DataStream& operator >> ( DataStream& ds, producer_info& t ) {
+         return ds >> t.owner
+                   >> t.total_votes
+                   >> t.producer_key
+                   >> t.is_active
+                   >> t.url
+                   >> t.unpaid_blocks
+                   >> t.last_claim_time
+                   >> t.location
+                   >> t.producer_authority;
+      }
    };
 
    // Defines new producer info structure to be stored in new producer info table, added after version 1.3.0
@@ -729,7 +776,7 @@ namespace eosiosystem {
 
 
          /**
-          * Activates a protocol feature
+          * The activate action, activates a protocol feature
           *
           * @param feature_digest - hash of the protocol feature to activate.
           */
@@ -756,9 +803,7 @@ namespace eosiosystem {
                           const asset& stake_net_quantity, const asset& stake_cpu_quantity, bool transfer );
 
          /**
-          * Setrex action.
-          *
-          * @details Sets total_rent balance of REX pool to the passed value.
+          * Setrex action, sets total_rent balance of REX pool to the passed value.
           * @param balance - amount to set the REX pool balance.
           */
          [[eosio::action]]
@@ -779,9 +824,7 @@ namespace eosiosystem {
          void deposit( const name& owner, const asset& amount );
 
          /**
-          * Withdraw from REX fund action.
-          *
-          * @details Withdraws core tokens from user REX fund.
+          * Withdraw from REX fund action, withdraws core tokens from user REX fund.
           * An inline token transfer to user balance is executed.
           *
           * @param owner - REX fund owner account,

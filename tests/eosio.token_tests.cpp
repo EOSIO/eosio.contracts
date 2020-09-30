@@ -247,6 +247,8 @@ try
    BOOST_REQUIRE_EQUAL(success(),
                        issue( N(alice), asset::from_string("1.000 TKN"), "hola" )
    );
+}
+FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(retire_tests, eosio_token_tester)
 try
