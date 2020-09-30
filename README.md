@@ -1,4 +1,4 @@
-# rentbw modeling tool
+# eosio.contracts
 
 ## Version : 1.9.1
 
@@ -22,22 +22,6 @@ Dependencies:
 
 To build the contracts follow the instructions in [Build and deploy](https://developers.eos.io/manuals/eosio.contracts/latest/build-and-deploy) section.
 
-mkdir build
-
-cd build
-
-cmake -DBUILD_TESTS=true ..
-
-make -j
-
-## Usage
-
-![](https://user-images.githubusercontent.com/61709855/94286123-91e69480-ff22-11ea-94d4-59ae2daa2073.png)
-
-from the project folder execute:
-
-./run_and_plot.sh model_config.json rentbw_input.csv
-
 ## Contributing
 
 [Contributing Guide](./CONTRIBUTING.md)
@@ -55,3 +39,28 @@ The included icons are provided under the same terms as the software and accompa
 See [LICENSE](./LICENSE) for copyright and license terms.
 
 All repositories and other materials are provided subject to the terms of this [IMPORTANT](./IMPORTANT.md) notice and you must familiarize yourself with its terms.  The notice contains important information, limitations and restrictions relating to our software, publications, trademarks, third-party resources, and forward-looking statements.  By accessing any of our repositories and other materials, you accept and agree to the terms of the notice.
+
+
+## rentbw modeling tool
+
+![](./modeling/utilization.png)
+
+`mkdir build`
+
+`cd build`
+
+`cmake -DBUILD_TESTS=true ..`
+
+`make -j`
+
+## Usage
+
+![](https://user-images.githubusercontent.com/61709855/94286123-91e69480-ff22-11ea-94d4-59ae2daa2073.png)
+
+from the project folder execute:
+
+`cd modeling`
+
+`sh run_and_plot.sh model_config.json rentbw_input.csv csv_output.csv`
+
+if you have a gnuplot installed, it will be automatically executed to plot utilization charts

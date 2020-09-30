@@ -6,7 +6,7 @@ if [ $# -ne 3 ]; then
     exit 1
 fi
 
-build/tests/unit_test -t eosio_system_rentbw_modeling_tests -- $1 $2 $3
+../build/tests/unit_test -t eosio_system_rentbw_modeling_tests -- $1 $2 $3
 
 if [ $? -eq 0 ]; then
     echo "
