@@ -17,6 +17,7 @@ The following unprivileged contract(s) are also part of the system.
 Dependencies:
 * [eosio.cdt v1.7.x](https://github.com/EOSIO/eosio.cdt/releases/tag/v1.7.0)
 * [eosio v2.0.x](https://github.com/EOSIO/eos/releases/tag/v2.0.1) (optional dependency only needed to build unit tests)
+* [Boost 1.67 - 1.72](https://www.boost.org/users/history/version_1_67_0.html) (optional dependency only needed to build unit tests)
 
 ## Build
 
@@ -45,7 +46,7 @@ All repositories and other materials are provided subject to the terms of this [
 
 The `simulate.sh` script was designed to let you run simulations of different resource renting models.
 
-![](https://user-images.githubusercontent.com/61709855/94972604-a7862c00-04d7-11eb-8721-3b3aefed07a2.png)
+![example plot](https://user-images.githubusercontent.com/61709855/94972604-a7862c00-04d7-11eb-8721-3b3aefed07a2.png)
 
 #### Compilation
 
