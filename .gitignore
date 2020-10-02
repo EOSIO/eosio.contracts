@@ -32,6 +32,7 @@
 *.app
 
 build/*
-.DS_Store
-.vscode
-**/*.csv
+**/.DS_Store
+**/.vscode
+*.csv
+!modeling/examples/*.cvs

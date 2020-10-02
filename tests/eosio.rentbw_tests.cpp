@@ -123,7 +123,7 @@ struct rentbw_tester : eosio_system_tester
           << "min_price"
           << "max_price"
           << "utilization"
-          << "adjusted_utilization"
+          << "adjusted utilization"
           << "utilization_timestamp"
           << "calc_rentbw_fee"
           << "function";

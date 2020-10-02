@@ -2,14 +2,14 @@
 
 if [ $# -ne 3 ]; then
     echo "Usage: $0 <json model config file> <csv rentbw input file> <model output file>"
-    echo "Example: $0 model_config.json rentbw_input.csv model_tests.csv"
+    echo "Example: $0 examples/model_config.json examples/rentbw_input.csv model_tests.csv"
     exit 1
 fi
 
 ../build/tests/unit_test -t eosio_system_rentbw_modeling_tests -- $1 $2 $3
 
 if [ $? -eq 0 ]; then
-	command -v gnuplot 1>/dev/null 2>&1
+	command -v gnuplot &>/dev/null
 	if [ $? -eq 0 ]; then
         echo "
           set datafile separator ';'
