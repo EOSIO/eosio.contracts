@@ -50,10 +50,7 @@ The `simulate.sh` script was designed to let you run simulations of different re
 
 #### Compilation
 
-```
-./build.sh -t
-```
-See `build.sh -h` for parameters.
+Run the `build.sh` script in the top directory with the `-t` flag to build all the contracts and the unit tests for these contracts. See `build.sh -h` for parameter information.
 
 #### Usage
 
