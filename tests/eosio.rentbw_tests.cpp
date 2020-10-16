@@ -27,6 +27,8 @@ inline constexpr int64_t endstate_weight_ratio = 1'000'000'000'000'0ll; // 0.1 =
 
 inline constexpr float asset_to_float_const = 10000.0;
 
+inline float to_human_readable(uint64_t asset) { return asset / asset_to_float_const; }
+
 struct rentbw_config_resource
 {
    fc::optional<int64_t> current_weight_ratio = {};
@@ -421,7 +423,7 @@ struct rentbw_tester : eosio_system_tester
 
          ilog("before_receiver.net:                      ${x}", ("x", before_receiver.net));
          ilog("after_receiver.net:                       ${x}", ("x", after_receiver.net));
-         ilog("net util:                                 ${x}", ("x", float(net_util / asset_to_float_const)));
+         ilog("net util:                                 ${x}", ("x", to_human_readable(net_util)));
          ilog("expected_net:                             ${x}", ("x", expected_net));
          ilog("fee:                                      ${x}", ("x", before_payer.liquid - after_payer.liquid));
          ilog("expected_fee:                             ${x}", ("x", expected_fee));
@@ -435,18 +437,18 @@ struct rentbw_tester : eosio_system_tester
                         << before_state.net.assumed_stake_weight
                         << before_state.net.weight_ratio / double(rentbw_frac)
                         << before_state.net.weight
-                        << float(before_reserve.net / asset_to_float_const)
-                        << float(after_reserve.net / asset_to_float_const)
-                        << float(before_reserve.cpu / asset_to_float_const)
-                        << float(after_reserve.cpu / asset_to_float_const)
+                        << to_human_readable(before_reserve.net)
+                        << to_human_readable(after_reserve.net)
+                        << to_human_readable(before_reserve.cpu)
+                        << to_human_readable(after_reserve.cpu)
                         << before_payer.liquid
                         << net_frac
-                        << float(net_util / asset_to_float_const)
-                        << float(net_fee / asset_to_float_const)
+                        << to_human_readable(net_util)
+                        << to_human_readable(net_fee)
                         << cpu_frac
-                        << float(cpu_util / asset_to_float_const)
-                        << float(cpu_fee / asset_to_float_const)
-                        << float((before_payer.liquid - after_payer.liquid).get_amount() / asset_to_float_const) 
+                        << to_human_readable(cpu_util)
+                        << to_human_readable(cpu_fee)
+                        << to_human_readable((before_payer.liquid - after_payer.liquid).get_amount()) 
                         << after_state.net.weight
                         << after_state.net.weight_ratio
                         << after_state.net.assumed_stake_weight
