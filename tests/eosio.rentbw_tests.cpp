@@ -25,6 +25,10 @@ inline constexpr int64_t stake_weight = 100'000'000'0000ll;     // 10^12
 
 inline constexpr int64_t endstate_weight_ratio = 1'000'000'000'000'0ll; // 0.1 = 10^13
 
+inline constexpr float asset_to_float_const = 10000.0;
+
+inline float to_human_readable(uint64_t asset) { return asset / asset_to_float_const; }
+
 struct rentbw_config_resource
 {
    fc::optional<int64_t> current_weight_ratio = {};
@@ -94,39 +98,111 @@ struct rentbw_tester : eosio_system_tester
       create_accounts_with_resources({N(eosio.reserv)});
    }
 
+   int64_t calc_rentbw_fee(const rentbw_state_resource& state, int64_t utilization_increase) {
+      if( utilization_increase <= 0 ) return 0;
+
+      // Let p(u) = price as a function of the utilization fraction u which is defined for u in [0.0, 1.0].
+      // Let f(u) = integral of the price function p(x) from x = 0.0 to x = u, again defined for u in [0.0, 1.0].
+
+      // In particular we choose f(u) = min_price * u + ((max_price - min_price) / exponent) * (u ^ exponent).
+      // And so p(u) = min_price + (max_price - min_price) * (u ^ (exponent - 1.0)).
+
+      // Returns f(double(end_utilization)/state.weight) - f(double(start_utilization)/state.weight) which is equivalent to
+      // the integral of p(x) from x = double(start_utilization)/state.weight to x = double(end_utilization)/state.weight.
+      // @pre 0 <= start_utilization <= end_utilization <= state.weight
+      auto price_integral_delta = [&state](int64_t start_utilization, int64_t end_utilization) -> double {
+         double coefficient = (state.max_price.get_amount() - state.min_price.get_amount()) / state.exponent;
+         double start_u     = double(start_utilization) / state.weight;
+         double end_u       = double(end_utilization) / state.weight;
+         return state.min_price.get_amount() * end_u - state.min_price.get_amount() * start_u +
+                  coefficient * std::pow(end_u, state.exponent) - coefficient * std::pow(start_u, state.exponent);
+      };
+
+      // Returns p(double(utilization)/state.weight).
+      // @pre 0 <= utilization <= state.weight
+      auto price_function = [&state](int64_t utilization) -> double {
+         double price = state.min_price.get_amount();
+         // state.exponent >= 1.0, therefore the exponent passed into std::pow is >= 0.0.
+         // Since the exponent passed into std::pow could be 0.0 and simultaneously so could double(utilization)/state.weight,
+         // the safest thing to do is handle that as a special case explicitly rather than relying on std::pow to return 1.0
+         // instead of triggering a domain error.
+         double new_exponent = state.exponent - 1.0;
+         if (new_exponent <= 0.0) {
+            return state.max_price.get_amount();
+         } else {
+            price += (state.max_price.get_amount() - state.min_price.get_amount()) * std::pow(double(utilization) / state.weight, new_exponent);
+         }
+
+         return price;
+      };
+
+      double  fee = 0.0;
+      int64_t start_utilization = state.utilization;
+      int64_t end_utilization   = start_utilization + utilization_increase;
+
+      if (start_utilization < state.adjusted_utilization) {
+         fee += price_function(state.adjusted_utilization) *
+                  std::min(utilization_increase, state.adjusted_utilization - start_utilization) / state.weight;
+         start_utilization = state.adjusted_utilization;
+      }
+
+      if (start_utilization < end_utilization) {
+         fee += price_integral_delta(start_utilization, end_utilization);
+      }
+
+      return std::ceil(fee);
+   }
+
    void setOutputFile(const std::string &filename)
    {
       csv.emplace(filename);
 
       csv->newRow()
-          << "last_block_time"
-          << "before_state.net.assumed_stake_weight"
-          << "before_state.net.weight_ratio"
-          << "before_state.net.weight"
-          << "before_receiver.net"
-          << "after_receiver.net"
-          << "after_receiver.net-before_receiver.net"
-          << "before_payer.liquid-after_payer.liquid"
-          << "before_reserve.net"
-          << "after_reserve.net"
-          << "before_reserve.cpu"
-          << "after_reserve.cpu"
-          << "weight"
-          << "weight_ratio"
-          << "assumed_stake_weight"
-          << "initial_weight_ratio"
-          << "target_weight_ratio"
-          << "initial_timestamp"
-          << "target_timestamp"
-          << "exponent"
-          << "decay_secs"
-          << "min_price"
-          << "max_price"
-          << "utilization"
-          << "adjusted utilization"
-          << "utilization_timestamp"
-          << "calc_rentbw_fee"
-          << "function";
+         << "last_block_time"
+         << "before_state.net.assumed_stake_weight"
+         << "before_state.net.weight_ratio"
+         << "before_state.net.weight"
+         << "before_reserve.net"
+         << "after_reserve.net"
+         << "before_reserve.cpu"
+         << "after_reserve.cpu"
+         << "liquid_balance"
+         << "net.frac"
+         << "net.delta"
+         << "net.fee"
+         << "cpu.frac"
+         << "cpu.delta"
+         << "cpu.fee"
+         << "fee"
+         << "net.weight"
+         << "net.weight_ratio"
+         << "net.assumed_stake_weight"
+         << "net.initial_weight_ratio"
+         << "net.target_weight_ratio"
+         << "net.initial_timestamp"
+         << "net.target_timestamp"
+         << "net.exponent"
+         << "net.decay_secs"
+         << "net.min_price"
+         << "net.max_price"
+         << "net.utilization"
+         << "net.adjusted_utilization"
+         << "net.utilization_timestamp"
+         << "cpu.weight"
+         << "cpu.weight_ratio"
+         << "cpu.assumed_stake_weight"
+         << "cpu.initial_weight_ratio"
+         << "cpu.target_weight_ratio"
+         << "cpu.initial_timestamp"
+         << "cpu.target_timestamp"
+         << "cpu.exponent"
+         << "cpu.decay_secs"
+         << "cpu.min_price"
+         << "cpu.max_price"
+         << "cpu.utilization"
+         << "cpu.adjusted_utilization"
+         << "cpu.utilization_timestamp"
+         << "function";
    }
 
    void start_rex()
@@ -310,6 +386,11 @@ struct rentbw_tester : eosio_system_tester
       auto before_receiver = get_account_info(receiver);
       auto before_reserve = get_account_info(N(eosio.reserv));
       auto before_state = get_state();
+      // fees
+      auto net_util = __int128_t(net_frac) * before_state.net.weight / rentbw_frac;
+      auto net_fee = calc_rentbw_fee(before_state.net, net_util);
+      auto cpu_util = __int128_t(cpu_frac) * before_state.cpu.weight / rentbw_frac;
+      auto cpu_fee = calc_rentbw_fee(before_state.cpu, cpu_util);
       try
       {
          if (max > 0)
@@ -318,11 +399,12 @@ struct rentbw_tester : eosio_system_tester
          }
          else
          {
-            rentbw(payer, receiver, days, net_frac, cpu_frac, expected_fee);
+            rentbw(payer, receiver, before_state.rent_days, net_frac, cpu_frac, expected_fee);
          }
       }
       catch (const fc::exception &ex)
       {
+         elog("${func} failed.", ("func",(max > 0 ? "rentbwexec" : "rentbw")));
          edump((ex.to_detail_string()));
          return;
       }
@@ -341,46 +423,61 @@ struct rentbw_tester : eosio_system_tester
 
          ilog("before_receiver.net:                      ${x}", ("x", before_receiver.net));
          ilog("after_receiver.net:                       ${x}", ("x", after_receiver.net));
-         ilog("after_receiver.net - before_receiver.net: ${x}", ("x", after_receiver.net - before_receiver.net));
+         ilog("net util:                                 ${x}", ("x", to_human_readable(net_util)));
          ilog("expected_net:                             ${x}", ("x", expected_net));
-         ilog("before_payer.liquid - after_payer.liquid: ${x}", ("x", before_payer.liquid - after_payer.liquid));
+         ilog("fee:                                      ${x}", ("x", before_payer.liquid - after_payer.liquid));
          ilog("expected_fee:                             ${x}", ("x", expected_fee));
 
          ilog("before_reserve.net:                       ${x}", ("x", before_reserve.net));
          ilog("after_reserve.net:                        ${x}", ("x", after_reserve.net));
          ilog("before_reserve.cpu:                       ${x}", ("x", before_reserve.cpu));
          ilog("after_reserve.cpu:                        ${x}", ("x", after_reserve.cpu));
-
-         csv->newRow() << last_block_time()
-                       << before_state.net.assumed_stake_weight
-                       << before_state.net.weight_ratio / double(rentbw_frac)
-                       << before_state.net.weight
-                       << before_receiver.net
-                       << after_receiver.net
-                       << after_receiver.net - before_receiver.net
-                       << before_payer.liquid - after_payer.liquid
-                       << before_reserve.net
-                       << after_reserve.net
-                       << before_reserve.cpu
-                       << after_reserve.cpu
-
-                       << get_state().cpu.weight
-                       << get_state().cpu.weight_ratio
-                       << get_state().cpu.assumed_stake_weight
-                       << get_state().cpu.initial_weight_ratio
-                       << get_state().cpu.target_weight_ratio
-                       << get_state().cpu.initial_timestamp.sec_since_epoch()
-                       << get_state().cpu.target_timestamp.sec_since_epoch()
-                       << get_state().cpu.exponent
-                       << get_state().cpu.decay_secs
-                       << get_state().cpu.min_price.to_string()
-                       << get_state().cpu.max_price.to_string()
-                       << get_state().cpu.utilization
-                       << get_state().cpu.adjusted_utilization
-                       << get_state().cpu.utilization_timestamp.sec_since_epoch()
-                       << get_state().cpu.fee
-
-                       << (max > 0 ? "rentbwexec" : "rentbw");
+   
+         csv->newRow()  << last_block_time()           
+                        << before_state.net.assumed_stake_weight
+                        << before_state.net.weight_ratio / double(rentbw_frac)
+                        << before_state.net.weight
+                        << to_human_readable(before_reserve.net)
+                        << to_human_readable(after_reserve.net)
+                        << to_human_readable(before_reserve.cpu)
+                        << to_human_readable(after_reserve.cpu)
+                        << before_payer.liquid
+                        << net_frac
+                        << to_human_readable(net_util)
+                        << to_human_readable(net_fee)
+                        << cpu_frac
+                        << to_human_readable(cpu_util)
+                        << to_human_readable(cpu_fee)
+                        << to_human_readable((before_payer.liquid - after_payer.liquid).get_amount()) 
+                        << after_state.net.weight
+                        << after_state.net.weight_ratio
+                        << after_state.net.assumed_stake_weight
+                        << after_state.net.initial_weight_ratio
+                        << after_state.net.target_weight_ratio
+                        << after_state.net.initial_timestamp.sec_since_epoch()
+                        << after_state.net.target_timestamp.sec_since_epoch()
+                        << after_state.net.exponent
+                        << after_state.net.decay_secs
+                        << after_state.net.min_price.to_string()
+                        << after_state.net.max_price.to_string()
+                        << after_state.net.utilization
+                        << after_state.net.adjusted_utilization
+                        << after_state.net.utilization_timestamp.sec_since_epoch()
+                        << after_state.cpu.weight
+                        << after_state.cpu.weight_ratio
+                        << after_state.cpu.assumed_stake_weight
+                        << after_state.cpu.initial_weight_ratio
+                        << after_state.cpu.target_weight_ratio
+                        << after_state.cpu.initial_timestamp.sec_since_epoch()
+                        << after_state.cpu.target_timestamp.sec_since_epoch()
+                        << after_state.cpu.exponent
+                        << after_state.cpu.decay_secs
+                        << after_state.cpu.min_price.to_string()
+                        << after_state.cpu.max_price.to_string()
+                        << after_state.cpu.utilization
+                        << after_state.cpu.adjusted_utilization
+                        << after_state.cpu.utilization_timestamp.sec_since_epoch()
+                        << (max > 0 ? "rentbwexec" : "rentbw");
       }
 
       if (payer != receiver)
@@ -1079,7 +1176,7 @@ try
 
          create_account_with_resources(N(aaaaaaaaaaaa), config::system_account_name, core_sym::from_string("1.0000"),
                                  false, core_sym::from_string("500.0000"), core_sym::from_string("500.0000"));
-         transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("5000000.0000"));         
+         transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("500000000.0000"));         
          
          configbw(make_config_from_file(argv[1], [&](auto &config) {}));
       }
