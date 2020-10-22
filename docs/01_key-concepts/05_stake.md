@@ -11,7 +11,7 @@ EOSIO based blockchains work with three fundamental resources:
 * [CPU](03_cpu.md) and
 * [NET](04_net.md).
 
-## How Tp Allocate Resources
+## How To Allocate Resources
 
 Smart contracts deployed on EOSIO based blockchains need sufficient fundamental resources, RAM, CPU and NET, for the blockchain to be able to execute their code.
 
