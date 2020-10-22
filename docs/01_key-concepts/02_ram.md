@@ -29,4 +29,8 @@ RAM is a very important resource because of the following reasons
 
 - RAM is used in executing many actions sent to the blockchain; creating a new account action, for example, it needs to store in the blockchain memory the new account's information; also when an account accepts a new type of token a new record has to be created, somewhere in the blockchain memory, that holds the balance of the new token accepted, and that memory, the storage space on the blockchain, has to be purchased either by the account that transfers the token or by the account that accepts the new token type.
 
+- When a smart contract used all its allocated RAM it will not be able to store any additional information on the blockchain database until it frees some of the occupied RAM or more is allocated to the smart contract account.
+
 RAM is a scarce resource priced according to the unique Bancor liquidity algorithm which is implemented in the system contract [here](https://github.com/EOSIO/eos/blob/905e7c85714aee4286fa180ce946f15ceb4ce73c/contracts/eosio.system/exchange_state.hpp).
+
+The RAM resource must be bought using the system token, refer to the [cleos manual](https://developers.eos.io/manuals/eos/v2.0/cleos/how-to-guides/how-to-buy-ram) on how to do it via the command line interface.
