@@ -3,4 +3,4 @@ content_title: NET as resource
 link_text: NET as resource
 ---
 
-As CPU and RAM, NET is also a very important resource in EOSIO-based blockchains. NET is the network bandwidth measured in bytes of transactions and it is referred to as `net bandwidth` on the cleos get account command. This resource like CPU must be staked so that a contract's transactions can be executed.
+NET, as CPU and RAM, is a very important resource in EOSIO-based blockchains. NET is measured by the byte size of the transactions saved in the blockchain database and it is referred to as `net bandwidth` on the cleos get account command result. When a transaction is executed by the blockchain it consumes CPU and NET, therfore sufficient NET must be staked in order for transactions to complete.
