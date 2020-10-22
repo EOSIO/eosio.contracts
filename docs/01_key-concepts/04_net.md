@@ -7,4 +7,4 @@ NET, as CPU and RAM, is a very important resource in EOSIO-based blockchains. NE
 
 For more details about EOSIO staking refer to the following:
 * [Staking Mechanism](https://developers.eos.io/welcome/latest/overview/technical_features#staking-mechanism).
-* [Staking on EOSIO based blockchains](https://developers.eos.io/manuals/eosio.contracts/latest/key-concepts/stake/)
+* [Staking on EOSIO based blockchains](05_stake.md)
