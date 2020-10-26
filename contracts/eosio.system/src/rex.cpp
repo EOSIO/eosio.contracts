@@ -1180,7 +1180,7 @@ namespace eosiosystem {
          if ( !rb.rex_maturities.empty() && rb.rex_maturities.back().first == end_of_days ) {
             rb.rex_maturities.back().second += rex;
          } else {
-            rb.rex_maturities.emplace_back( end_of_days, rex );
+            rb.rex_maturities.emplace_back( get_rex_maturity(), rex );
          }
       });
    }
