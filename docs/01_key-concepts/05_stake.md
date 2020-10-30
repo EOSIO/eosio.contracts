@@ -19,9 +19,11 @@ Smart contracts deployed on EOSIO-based blockchains need sufficient system resou
 
 The CPU and NET system resources are allocated by the smart contract developer via the staking mechanism on the account where the smart contract is deployed to, refer to the [cleos manual](https://developers.eos.io/manuals/eos/v2.0/cleos/how-to-guides/how-to-stake-resource) on how to do it via the command line interface.
 
-You will also find that staking/unstaking is at times referred to as delegating/undelegating. The economics of staking is also to provably commit to a promise that you'll hold the staked tokens, either for NET or CPU, for a pre-established period of time, in spite of inflation caused by minting new tokens in order to reward BPs for their services every 24 hours.
+You will also find that staking/unstaking is at times referred to as delegating/undelegating. The economics of staking is also to provably commit to a promise that you will hold the staked tokens, either for NET or CPU, for a pre-established period of time, in spite of inflation caused by minting new tokens in order to reward BPs for their services every 24 hours.
 
 When you stake tokens for CPU and NET, you gain access to system resources proportional to the total amount of tokens staked by all other users for the same system resource at the same time. This means you can perform transactions at no cost but in the limits of the staked tokens. The staked tokens guarantee the proportional amount of resources regardless of any variations in the free market. If a smart contract consumes all its allocated CPU and NET, it needs to wait 24 hours when the system will replenish them or allocate more resources.
+
+Smart contract actions are limited in using the allocated resources by predefine [maximum CPU](https://developers.eos.io/manuals/eosio.cdt/latest/structeosio_1_1blockchain__parameters#variable-max_transaction_cpu_usage), [minimum CPU](https://developers.eos.io/manuals/eosio.cdt/latest/structeosio_1_1blockchain__parameters#variable-min_transaction_cpu_usage), and [maximum NET](https://developers.eos.io/manuals/eosio.cdt/latest/structeosio_1_1blockchain__parameters#variable-max_transaction_net_usage) limits. Transactions executed by the blockchain contain one or more actions, and each transaction must consume an amount of CPU and NET which is in the limits defined by the aforementioned blockchain settings.
 
 ### Buy RAM
 
