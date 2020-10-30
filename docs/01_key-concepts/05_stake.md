@@ -17,7 +17,7 @@ Smart contracts deployed on EOSIO-based blockchains need sufficient system resou
 
 ### Stake NET and CPU
 
-The CPU and NET system resources are allocated by the smart contract developer via the staking mechanism on the account where the smart contract is deployed to, refer to the [cleos manual](https://developers.eos.io/manuals/eos/v2.0/cleos/how-to-guides/how-to-stake-resource) on how to do it via the command line interface.
+The CPU and NET system resources are allocated by the smart contract developer via the staking mechanism on the account where the smart contract is deployed to. Refer to the [cleos manual](https://developers.eos.io/manuals/eos/v2.0/cleos/how-to-guides/how-to-stake-resource) on how to do it via the command line interface.
 
 You will also find that staking/unstaking is at times referred to as delegating/undelegating. The economics of staking is also to provably commit to a promise that you will hold the staked tokens, either for NET or CPU, for a pre-established period of time, in spite of inflation caused by minting new tokens in order to reward BPs for their services every 24 hours.
 
@@ -27,4 +27,4 @@ When smart contract actions use the allocated resources, the amount that can be 
 
 ### Buy RAM
 
-The RAM resource must be bought using the system token, refer to the [cleos manual](https://developers.eos.io/manuals/eos/v2.0/cleos/how-to-guides/how-to-buy-ram) on how to do it via the command line interface. When a smart contract consumes all its allocated RAM it is not be able to store any additional information on the blockchain database until it frees some of the occupied RAM or more RAM is allocated to the smart contract account through the RAM buying process.
+The RAM resource must be bought using the system token. Refer to the [cleos manual](https://developers.eos.io/manuals/eos/v2.0/cleos/how-to-guides/how-to-buy-ram) to learn how to do it via the command line interface. When a smart contract consumes all its allocated RAM it is not be able to store any additional information on the blockchain database until it frees some of the occupied RAM or more RAM is allocated to the smart contract account through the RAM buying process.
