@@ -1085,6 +1085,13 @@ namespace eosiosystem {
          void setparams( const eosio::blockchain_parameters& params );
 
          /**
+          * Set KV parameters.
+          * @param params - New KV parameters to set.
+          */
+         [[eosio::action]]
+         void setkvparams( const eosio::kv_parameters& params );
+
+         /**
           * Claim rewards action, claims block producing and vote rewards.
           * @param owner - producer account claiming per-block and per-vote rewards.
           */
@@ -1208,6 +1215,7 @@ namespace eosiosystem {
          using setpriv_action = eosio::action_wrapper<"setpriv"_n, &system_contract::setpriv>;
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
+         using setkvparams_action = eosio::action_wrapper<"setkvparams"_n, &system_contract::setkvparams>;
          using setinflation_action = eosio::action_wrapper<"setinflation"_n, &system_contract::setinflation>;
 
       private:
