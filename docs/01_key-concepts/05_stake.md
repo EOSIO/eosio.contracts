@@ -36,11 +36,11 @@ EOSIO-based blockchains by default replenish automatically the consumed system r
 
 This formula has the following outcomes:
 
-* If the contract waited `number of blocks in the window` that means its reset to 0 usage.
+* If the contract waited `number of blocks in the window` that means its reset to zero usage.
 
 * If a transaction is issued every block it would always be `(number of blocks in the window - 1) / (number of blocks in the window)`. Mathematically it _never_ reaches zero but the EOSIO implementation truncates off the tiny numbers to zero.
 
-* The smart contracts which issues transactions more often than the ones using it less, don't regenerate their resources as fast as the later.
+* The smart contracts that execute transactions more often than the ones that execute less transactions, replenish their resources slower than the later. In other words, the more transactions a smart contract executes the slower the replenish of resources.
 
 ### Buy RAM
 
