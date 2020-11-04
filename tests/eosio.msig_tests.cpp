@@ -4,7 +4,7 @@
 #include <eosio/chain/wast_to_wasm.hpp>
 
 #include <Runtime/Runtime.h>
-
+#include <fc/log/logger.hpp>
 #include <fc/variant_object.hpp>
 #include "contracts.hpp"
 #include "test_symbol.hpp"
@@ -492,10 +492,10 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
    const auto proposal_first_result = abi_ser.binary_to_variant("proposal", 
                                                                 proposal_first_bin, 
                                                                 abi_serializer::create_yield_function( abi_serializer_max_time ) );
-   /*  
+     
    const auto proposal_first_json = fc::json::to_pretty_string(proposal_first_result);
-   std::cout << proposal_first_json << std::endl;
-   */
+   ilog("\nproposal first in json: \n" + proposal_first_json);
+   
 
    const auto& proposal_first_object = proposal_first_result.get_object(); 
 
@@ -531,10 +531,10 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
    const auto approval2_first_result = abi_ser.binary_to_variant("approvals_info", 
                                                                  approval2_first_bin, 
                                                                  abi_serializer::create_yield_function( abi_serializer_max_time ) );
-   /*   
+      
    const auto approval2_first_json = fc::json::to_pretty_string(approval2_first_result);
-   std::cout << approval2_first_json << std::endl;
-   */
+   ilog("\nproposal first approval in json: \n" + approval2_first_json);
+
    const auto& approval2_first_object = approval2_first_result.get_object(); 
    // make sure approval is not empty
    BOOST_REQUIRE(approval2_first_object["provided_approvals"].size() > 0);
