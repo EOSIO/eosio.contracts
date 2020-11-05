@@ -32,7 +32,7 @@ When an account uses the allocated resources, the amount that can be used in one
 
 #### System Resources Replenish Algorithm
 
-EOSIO-based blockchains replenish automatically the consumed system resources, CPU and NET. Before a transaction is executed, by the blockchain, it firsts calculates how much resources, the account executing the transaction, can consume. The calculation uses an exponential moving average with linear extrapolation when data is missing, and it multiplies the currently accumulated average by `(number of blocks in the window - number of blocks since last update) / (number of blocks in the window)`. The window is set as 24 hours window.
+EOSIO-based blockchains replenish automatically the consumed CPU and NET system resources. Before a transaction is executed, by the blockchain, it first calculates how many resources the account executing the transaction can consume. The calculation uses an exponential moving average with linear extrapolation when data is missing, and it multiplies the currently accumulated average by `(number of blocks in the window - number of blocks since last update) / (number of blocks in the window)`. The window is set as 24 hours window.
 
 This formula has the following outcomes:
 
