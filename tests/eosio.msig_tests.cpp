@@ -4,7 +4,7 @@
 #include <eosio/chain/wast_to_wasm.hpp>
 
 #include <Runtime/Runtime.h>
-
+#include <fc/log/logger.hpp>
 #include <fc/variant_object.hpp>
 #include "contracts.hpp"
 #include "test_symbol.hpp"
@@ -484,6 +484,26 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
                   ("requested", perm)
    );
 
+   produce_blocks();
+   produce_blocks();
+
+   // verify the proposal 
+   const vector<char> proposal_first_bin = get_row_by_account( "eosio.msig"_n,  "alice"_n, "proposal"_n, "first"_n );
+   const auto proposal_first_result = abi_ser.binary_to_variant("proposal", 
+                                                                proposal_first_bin, 
+                                                                abi_serializer::create_yield_function( abi_serializer_max_time ) );
+     
+   const auto proposal_first_json = fc::json::to_pretty_string(proposal_first_result);
+   ilog("\nproposal first in json: \n" + proposal_first_json);
+   
+
+   const auto& proposal_first_object = proposal_first_result.get_object(); 
+
+   // make sure proposal is not empty
+   BOOST_REQUIRE(proposal_first_object.size() > 0);
+   // make sure proposal is found
+   BOOST_REQUIRE_EQUAL(proposal_first_object["proposal_name"], "first");  
+
    //approve by alice
    push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
@@ -502,6 +522,31 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
                   ("proposal_name", "first")
                   ("level",         permission_level{ "carol"_n, config::active_name })
    );
+
+   produce_blocks();
+   produce_blocks();
+
+   // verify the approval from alice, bob, carol
+   const vector<char> approval2_first_bin = get_row_by_account( "eosio.msig"_n,  "alice"_n, "approvals2"_n, "first"_n );
+   const auto approval2_first_result = abi_ser.binary_to_variant("approvals_info", 
+                                                                 approval2_first_bin, 
+                                                                 abi_serializer::create_yield_function( abi_serializer_max_time ) );
+      
+   const auto approval2_first_json = fc::json::to_pretty_string(approval2_first_result);
+   ilog("\nproposal first approval in json: \n" + approval2_first_json);
+
+   const auto& approval2_first_object = approval2_first_result.get_object(); 
+   // make sure approval is not empty
+   BOOST_REQUIRE(approval2_first_object["provided_approvals"].size() > 0);
+   // make sure alice, bob, carol in approval list and is active
+   const auto& approval2_first_provided_approvals = approval2_first_object["provided_approvals"].get_array();
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[0]["level"]["actor"], "alice");  
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[0]["level"]["permission"], "active");  
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[1]["level"]["actor"], "bob");  
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[1]["level"]["permission"], "active");  
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[2]["level"]["actor"], "carol");  
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[2]["level"]["permission"], "active");  
+
    // execute by alice to replace the eosio system contract
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
