@@ -116,6 +116,11 @@ namespace eosiosystem {
       set_blockchain_parameters( params );
    }
 
+   void system_contract::setkvparams( const eosio::kv_parameters& params ) {
+      require_auth( get_self() );
+      set_kv_parameters( params );
+   }
+
    void system_contract::setpriv( const name& account, uint8_t ispriv ) {
       require_auth( get_self() );
       set_privileged( account, ispriv );

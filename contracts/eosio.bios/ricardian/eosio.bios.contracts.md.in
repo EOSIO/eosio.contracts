@@ -128,6 +128,18 @@ icon: @ICON_BASE_URL@/@ADMIN_ICON_URI@
 {{$action.account}} sets system parameters to:
 {{to_json params}}
 
+<h1 class="contract">setkvparams</h1>
+
+---
+spec_version: "0.3.0"
+title: Set KV Parameters
+summary: 'Set KV parameters'
+icon: @ICON_BASE_URL@/@ADMIN_ICON_URI@
+---
+
+{{$action.account}} sets KV parameters to:
+{{to_json params}}
+
 <h1 class="contract">setpriv</h1>
 
 ---
