@@ -6,12 +6,12 @@ if [ $# -lt 3 ]; then
     exit 1
 fi
 
-build_dir=$(dirname $0)/../build
+source_dir=$(dirname $0)/..
+build_dir=$source_dir/build
+
 mkdir -p $build_dir &&
-cd $build_dir &&
-cmake .. &&
-make -j6 &&
-cd - &&
+cmake -S $source_dir -B $build_dir &&
+make -j6 -C $build_dir -s &&
 $build_dir/tests/unit_test -t eosio_system_rentbw_modeling_tests -- $1 $2 $3 $4
 
 if [ $? -eq 0 ]; then
