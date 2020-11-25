@@ -393,19 +393,24 @@ struct rentbw_tester : eosio_system_tester
       auto cpu_fee = calc_rentbw_fee(before_state.cpu, cpu_util);
       try
       {
+         action_result res;
          if (max > 0)
          {
-            rentbwexec(config::system_account_name, max);
+            res = rentbwexec(config::system_account_name, max);
          }
          else
          {
-            rentbw(payer, receiver, before_state.rent_days, net_frac, cpu_frac, expected_fee);
+            res = rentbw(payer, receiver, before_state.rent_days, net_frac, cpu_frac, expected_fee);
+         }
+         if ( !res.empty() )
+         {
+            elog("${func} failed with error ${err}. Skipping this input", ("func", max > 0 ? "rentbwexec" : "rentbw")("err", res));
+            return;
          }
       }
       catch (const fc::exception &ex)
       {
-         elog("${func} failed.", ("func",(max > 0 ? "rentbwexec" : "rentbw")));
-         edump((ex.to_detail_string()));
+         elog("${func} failed with exception: ${err}. Skipping this input", ("func", max > 0 ? "rentbwexec" : "rentbw")("err", ex.to_detail_string()));
          return;
       }
       auto after_payer = get_account_info(payer);
@@ -1136,10 +1141,10 @@ try
 {
    auto argc = ut::framework::master_test_suite().argc;
    char **argv = ut::framework::master_test_suite().argv;
-   if (argc != 4)
+   if (argc < 4)
    {
       std::cout << "\nUsage: "s << argv[0] << " -t " << (ut::framework::get<ut::test_suite>(ut::framework::current_test_case().p_parent_id)).p_name
-                << " -- <json config model file> <csv data file> <output file>\n"
+                << " -- <json config model file> <csv data file> <output file> [--verbose]\n"
                 << std::endl;
       BOOST_FAIL("Files weren't provided");
    }
@@ -1178,10 +1183,17 @@ try
                                  false, core_sym::from_string("500.0000"), core_sym::from_string("500.0000"));
          transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("500000000.0000"));         
          
-         configbw(make_config_from_file(argv[1], [&](auto &config) {}));
+         action_result res = configbw(make_config_from_file(argv[1], [&](auto &config) {}));
+         if ( !res.empty() )
+         {
+            ilog("Unexpected issue with configbw: ${err}", ("err", res));
+         }
       }
       else {
-          ilog("Unexpected input function, skipping. Please check your input csv file");       
+         ilog("Unexpected input function '${func}', skipping. Please check your input csv file line ${line}",
+              ("func", function)
+              ("line", in.get_file_line())
+              );
       }
    }
 }
