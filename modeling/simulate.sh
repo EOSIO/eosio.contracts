@@ -1,12 +1,18 @@
 #!/bin/sh
 
-if [ $# -ne 3 ]; then
-    echo "Usage: $0 <json model config file> <csv rentbw input file> <model output file>"
+if [ $# -lt 3 ]; then
+    echo "Usage: $0 <json model config file> <csv rentbw input file> <model output file> [--verbose]"
     echo "Example: $0 examples/model_config.json examples/rentbw_input.csv model_tests.csv"
     exit 1
 fi
 
-../build/tests/unit_test -t eosio_system_rentbw_modeling_tests -- $1 $2 $3
+build_dir=$(dirname $0)/../build
+mkdir -p $build_dir &&
+cd $build_dir &&
+cmake .. &&
+make -j6 &&
+cd - &&
+$build_dir/tests/unit_test -t eosio_system_rentbw_modeling_tests -- $1 $2 $3 $4
 
 if [ $? -eq 0 ]; then
 	command -v gnuplot &>/dev/null
