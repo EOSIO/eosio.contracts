@@ -1181,7 +1181,8 @@ try
 
          create_account_with_resources(N(aaaaaaaaaaaa), config::system_account_name, core_sym::from_string("1.0000"),
                                  false, core_sym::from_string("500.0000"), core_sym::from_string("500.0000"));
-         transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("500000000.0000"));         
+         issue_and_transfer(N(aaaaaaaaaaaa), core_sym::from_string("8500000000.0000"));
+         // transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("500000000.0000"));         
          
          action_result res = configbw(make_config_from_file(argv[1], [&](auto &config) {}));
          if ( !res.empty() )
