@@ -279,6 +279,8 @@ int64_t calc_powerup_fee(const powerup_state_resource& state, int64_t utilizatio
                coefficient * std::pow(end_u, state.exponent) - coefficient * std::pow(start_u, state.exponent);
    };
 
+   // Returns p(double(utilization)/state.weight).
+   // @pre 0 <= utilization <= state.weight
    auto price_function = [&state](int64_t utilization) -> double {
       double price = state.min_price.amount;
       // state.exponent >= 1.0, therefore the exponent passed into std::pow is >= 0.0.
