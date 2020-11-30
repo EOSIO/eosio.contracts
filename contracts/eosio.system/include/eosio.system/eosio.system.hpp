@@ -40,7 +40,7 @@ namespace eosiosystem {
    using eosio::time_point_sec;
    using eosio::unsigned_int;
 
-   inline constexpr int64_t rentbw_frac = 1'000'000'000'000'000ll;  // 1.0 = 10^15
+   inline constexpr int64_t powerup_frac = 1'000'000'000'000'000ll;  // 1.0 = 10^15
 
    template<typename E, typename F>
    static inline auto has_field( F flags, E field )
@@ -525,7 +525,7 @@ namespace eosiosystem {
       asset stake_change;
    };
 
-   struct rentbw_config_resource {
+   struct powerup_config_resource {
       std::optional<int64_t>        current_weight_ratio;   // Immediately set weight_ratio to this amount. 1x = 10^15. 0.01x = 10^13.
                                                             //    Do not specify to preserve the existing setting or use the default;
                                                             //    this avoids sudden price jumps. For new chains which don't need
@@ -534,7 +534,7 @@ namespace eosiosystem {
       std::optional<int64_t>        target_weight_ratio;    // Linearly shrink weight_ratio to this amount. 1x = 10^15. 0.01x = 10^13.
                                                             //    Do not specify to preserve the existing setting or use the default.
       std::optional<int64_t>        assumed_stake_weight;   // Assumed stake weight for ratio calculations. Use the sum of total
-                                                            //    staked and total rented by REX at the time the rentbw market
+                                                            //    staked and total rented by REX at the time the power market
                                                             //    is first activated. Do not specify to preserve the existing
                                                             //    setting (no default exists); this avoids sudden price jumps.
                                                             //    For new chains which don't need to phase out staking and REX,
@@ -558,22 +558,22 @@ namespace eosiosystem {
                                                             //    token supply. Do not specify to preserve the existing
                                                             //    setting (no default exists).
 
-      EOSLIB_SERIALIZE( rentbw_config_resource, (current_weight_ratio)(target_weight_ratio)(assumed_stake_weight)
+      EOSLIB_SERIALIZE( powerup_config_resource, (current_weight_ratio)(target_weight_ratio)(assumed_stake_weight)
                                                 (target_timestamp)(exponent)(decay_secs)(min_price)(max_price)    )
    };
 
-   struct rentbw_config {
-      rentbw_config_resource  net;           // NET market configuration
-      rentbw_config_resource  cpu;           // CPU market configuration
-      std::optional<uint32_t> rent_days;     // `rentbw` `days` argument must match this. Do not specify to preserve the
+   struct powerup_config {
+      powerup_config_resource  net;           // NET market configuration
+      powerup_config_resource  cpu;           // CPU market configuration
+      std::optional<uint32_t> powerup_days;     // `power` `days` argument must match this. Do not specify to preserve the
                                              //    existing setting or use the default.
-      std::optional<asset>    min_rent_fee;  // Rental fees below this amount are rejected. Do not specify to preserve the
+      std::optional<asset>    min_powerup_fee;  // Rental fees below this amount are rejected. Do not specify to preserve the
                                              //    existing setting (no default exists).
 
-      EOSLIB_SERIALIZE( rentbw_config, (net)(cpu)(rent_days)(min_rent_fee) )
+      EOSLIB_SERIALIZE( powerup_config, (net)(cpu)(powerup_days)(min_powerup_fee) )
    };
 
-   struct rentbw_state_resource {
+   struct powerup_state_resource {
       static constexpr double   default_exponent   = 2.0;                  // Exponent of 2.0 means that the price to rent a
                                                                            //    tiny amount of resources increases linearly
                                                                            //    with utilization.
@@ -591,8 +591,8 @@ namespace eosiosystem {
                                                                    //    assumed_stake_weight / (assumed_stake_weight + weight).
                                                                    //    calculated; varies over time. 1x = 10^15. 0.01x = 10^13.
       int64_t        assumed_stake_weight    = 0;                  // Assumed stake weight for ratio calculations.
-      int64_t        initial_weight_ratio    = rentbw_frac;        // Initial weight_ratio used for linear shrinkage.
-      int64_t        target_weight_ratio     = rentbw_frac / 100;  // Linearly shrink the weight_ratio to this amount.
+      int64_t        initial_weight_ratio    = powerup_frac;        // Initial weight_ratio used for linear shrinkage.
+      int64_t        target_weight_ratio     = powerup_frac / 100;  // Linearly shrink the weight_ratio to this amount.
       time_point_sec initial_timestamp       = {};                 // When weight_ratio shrinkage started
       time_point_sec target_timestamp        = {};                 // Stop automatic weight_ratio shrinkage at this time. Once this
                                                                    //    time hits, weight_ratio will be target_weight_ratio.
@@ -610,21 +610,21 @@ namespace eosiosystem {
       time_point_sec utilization_timestamp   = {};                 // When adjusted_utilization was last updated
    };
 
-   struct [[eosio::table("rent.state"),eosio::contract("eosio.system")]] rentbw_state {
-      static constexpr uint32_t default_rent_days = 30; // 30 day resource rentals
+   struct [[eosio::table("powup.state"),eosio::contract("eosio.system")]] powerup_state {
+      static constexpr uint32_t default_powerup_days = 30; // 30 day resource powerups
 
-      uint8_t                 version      = 0;
-      rentbw_state_resource   net          = {};                 // NET market state
-      rentbw_state_resource   cpu          = {};                 // CPU market state
-      uint32_t                rent_days    = default_rent_days;  // `rentbw` `days` argument must match this.
-      asset                   min_rent_fee = {};                 // Rental fees below this amount are rejected
+      uint8_t                    version           = 0;
+      powerup_state_resource     net               = {};                     // NET market state
+      powerup_state_resource     cpu               = {};                     // CPU market state
+      uint32_t                   powerup_days      = default_powerup_days;   // `powerup` `days` argument must match this.
+      asset                      min_powerup_fee   = {};                     // fees below this amount are rejected
 
       uint64_t primary_key()const { return 0; }
    };
 
-   typedef eosio::singleton<"rent.state"_n, rentbw_state> rentbw_state_singleton;
+   typedef eosio::singleton<"powup.state"_n, powerup_state> powerup_state_singleton;
 
-   struct [[eosio::table("rentbw.order"),eosio::contract("eosio.system")]] rentbw_order {
+   struct [[eosio::table("powup.order"),eosio::contract("eosio.system")]] powerup_order {
       uint8_t              version = 0;
       uint64_t             id;
       name                 owner;
@@ -637,13 +637,16 @@ namespace eosiosystem {
       uint64_t by_expires()const  { return expires.utc_seconds; }
    };
 
-   typedef eosio::multi_index< "rentbw.order"_n, rentbw_order,
-                               indexed_by<"byowner"_n, const_mem_fun<rentbw_order, uint64_t, &rentbw_order::by_owner>>,
-                               indexed_by<"byexpires"_n, const_mem_fun<rentbw_order, uint64_t, &rentbw_order::by_expires>>
-                               > rentbw_order_table;
+   typedef eosio::multi_index< "powup.order"_n, powerup_order,
+                               indexed_by<"byowner"_n, const_mem_fun<powerup_order, uint64_t, &powerup_order::by_owner>>,
+                               indexed_by<"byexpires"_n, const_mem_fun<powerup_order, uint64_t, &powerup_order::by_expires>>
+                               > powerup_order_table;
 
    /**
-    * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
+    * The `eosio.system` smart contract is provided by `block.one` as a sample system contract, and it defines the structures and actions needed for blockchain's core functionality.
+    *
+    * Just like in the `eosio.bios` sample contract implementation, there are a few actions which are not implemented at the contract level (`newaccount`, `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, `canceldelay`, `onerror`, `setabi`, `setcode`), they are just declared in the contract so they will show in the contract's ABI and users will be able to push those actions to the chain via the account holding the `eosio.system` contract, but the implementation is at the EOSIO core level. They are referred to as EOSIO native actions.
+    *
     * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
     *    delegate their vote to a proxy.
     * - Producers register in order to be voted for, and can claim per-block and per-vote rewards.
@@ -651,7 +654,7 @@ namespace eosiosystem {
     * - Users can bid on premium names.
     * - A resource exchange system (REX) allows token holders to lend their tokens,
     *    and users to rent CPU and Network resources in return for a market-determined fee.
-    * - A resource market separate from REX: `rentbw`.
+    * - A resource market separate from REX: `power`.
     */
    class [[eosio::contract("eosio.system")]] system_contract : public native {
 
@@ -1296,23 +1299,23 @@ namespace eosiosystem {
          void setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
 
          /**
-          * Configure the `rentbw` market. The market becomes available the first time this
+          * Configure the `power` market. The market becomes available the first time this
           * action is invoked.
           */
          [[eosio::action]]
-         void configrentbw( rentbw_config& args );
+         void cfgpowerup( powerup_config& args );
 
          /**
-          * Process rentbw queue and update state. Action does not execute anything related to a specific user.
+          * Process power queue and update state. Action does not execute anything related to a specific user.
           *
           * @param user - any account can execute this action
           * @param max - number of queue items to process
           */
          [[eosio::action]]
-         void rentbwexec( const name& user, uint16_t max );
+         void powerupexec( const name& user, uint16_t max );
 
          /**
-          * Rent NET and CPU
+          * Rent NET and CPU by percentage
           *
           * @param payer - the resource buyer
           * @param receiver - the resource receiver
@@ -1323,7 +1326,7 @@ namespace eosiosystem {
           *    `payer`'s token balance.
           */
          [[eosio::action]]
-         void rentbw( const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac, const asset& max_payment );
+         void powerup( const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac, const asset& max_payment );
 
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
@@ -1371,9 +1374,9 @@ namespace eosiosystem {
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
          using setinflation_action = eosio::action_wrapper<"setinflation"_n, &system_contract::setinflation>;
-         using configrentbw_action = eosio::action_wrapper<"configrentbw"_n, &system_contract::configrentbw>;
-         using rentbwexec_action = eosio::action_wrapper<"rentbwexec"_n, &system_contract::rentbwexec>;
-         using rentbw_action = eosio::action_wrapper<"rentbw"_n, &system_contract::rentbw>;
+         using cfgpowerup_action = eosio::action_wrapper<"cfgpowerup"_n, &system_contract::cfgpowerup>;
+         using powerupexec_action = eosio::action_wrapper<"powerupexec"_n, &system_contract::powerupexec>;
+         using powerup_action = eosio::action_wrapper<"powerup"_n, &system_contract::powerup>;
 
       private:
          // Implementation details:
@@ -1475,11 +1478,11 @@ namespace eosiosystem {
 
          registration<&system_contract::update_rex_stake> vote_stake_updater{ this };
 
-         // defined in rentbw.cpp
+         // defined in power.cpp
          void adjust_resources(name payer, name account, symbol core_symbol, int64_t net_delta, int64_t cpu_delta, bool must_not_be_managed = false);
-         void process_rentbw_queue(
-            time_point_sec now, symbol core_symbol, rentbw_state& state,
-            rentbw_order_table& orders, uint32_t max_items, int64_t& net_delta_available,
+         void process_queue(
+            time_point_sec now, symbol core_symbol, powerup_state& state,
+            powerup_order_table& orders, uint32_t max_items, int64_t& net_delta_available,
             int64_t& cpu_delta_available);
    };
 
