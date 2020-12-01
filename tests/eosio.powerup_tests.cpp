@@ -644,7 +644,7 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       init(t, true);
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("3000000.0000"));
       BOOST_REQUIRE_EQUAL(
-            t.wasm_assert_msg("calculated fee is below minimum; try renting more"),
+            t.wasm_assert_msg("calculated fee is below minimum; try powering up with more resources"),
             t.powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, 10, 10, asset::from_string("3000000.0000 TST")));
       t.check_powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, powerup_frac, powerup_frac,
                      asset::from_string("3000000.0000 TST"), net_weight, cpu_weight);

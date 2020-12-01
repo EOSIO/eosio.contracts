@@ -67,7 +67,7 @@ void system_contract::adjust_resources(name payer, name account, symbol core_sym
    }
 } // system_contract::adjust_resources
 
-void system_contract::process_queue(time_point_sec now, symbol core_symbol, powerup_state& state,
+void system_contract::process_powerup_queue(time_point_sec now, symbol core_symbol, powerup_state& state,
                                            powerup_order_table& orders, uint32_t max_items, int64_t& net_delta_available,
                                            int64_t& cpu_delta_available) {
    update_utilization(now, state.net);
@@ -325,7 +325,7 @@ void system_contract::powerupexec(const name& user, uint16_t max) {
 
    int64_t net_delta_available = 0;
    int64_t cpu_delta_available = 0;
-   process_queue(now, core_symbol, state, orders, max, net_delta_available, cpu_delta_available);
+   process_powerup_queue(now, core_symbol, state, orders, max, net_delta_available, cpu_delta_available);
 
    adjust_resources(get_self(), reserv_account, core_symbol, net_delta_available, cpu_delta_available, true);
    state_sing.set(state, get_self());
@@ -349,7 +349,7 @@ void system_contract::powerup(const name& payer, const name& receiver, uint32_t 
 
    int64_t net_delta_available = 0;
    int64_t cpu_delta_available = 0;
-   process_queue(now, core_symbol, state, orders, 2, net_delta_available, cpu_delta_available);
+   process_powerup_queue(now, core_symbol, state, orders, 2, net_delta_available, cpu_delta_available);
 
    eosio::asset fee{ 0, core_symbol };
    auto         process = [&](int64_t frac, int64_t& amount, powerup_state_resource& state) {
@@ -359,7 +359,7 @@ void system_contract::powerup(const name& payer, const name& receiver, uint32_t 
       eosio::check(state.weight, "market doesn't have resources available");
       eosio::check(state.utilization + amount <= state.weight, "market doesn't have enough resources available");
       int64_t f = calc_powerup_fee(state, amount);
-      eosio::check(f > 0, "calculated fee is below minimum; try renting more");
+      eosio::check(f > 0, "calculated fee is below minimum; try powering up with more resources");
       fee.amount += f;
       state.utilization += amount;
    };
@@ -373,7 +373,7 @@ void system_contract::powerup(const name& payer, const name& receiver, uint32_t 
       error_msg += fee.to_string();
       eosio::check(false, error_msg);
    }
-   eosio::check(fee >= state.min_powerup_fee, "calculated fee is below minimum; try renting more");
+   eosio::check(fee >= state.min_powerup_fee, "calculated fee is below minimum; try powering up with more resources");
 
    orders.emplace(payer, [&](auto& order) {
       order.id         = orders.available_primary_key();

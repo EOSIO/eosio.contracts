@@ -10,7 +10,7 @@ using eosio::name;
 
 /**
  * The action `powerresult` of `power.results` is a no-op.
- * It is added as an inline convenience action to `power` rental.
+ * It is added as an inline convenience action to `powerup` reservation.
  * This inline convenience action does not have any effect, however,
  * its data includes the result of the parent action and appears in its trace.
  */
@@ -22,7 +22,7 @@ class [[eosio::contract("powup.results")]] powup_results : eosio::contract {
       /**
        * powupresult action.
        *
-       * @param fee        - rental fee amount
+       * @param fee       - powerup fee amount
        * @param powup_net - amount of powup NET tokens
        * @param powup_cpu - amount of powup CPU tokens
        */
