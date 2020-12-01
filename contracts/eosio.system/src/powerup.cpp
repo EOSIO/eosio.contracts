@@ -392,7 +392,7 @@ void system_contract::powerup(const name& payer, const name& receiver, uint32_t 
 
    // inline noop action
    powup_results::powupresult_action powupresult_act{ reserv_account, std::vector<eosio::permission_level>{ } };
-   powupresult_act.send( fee, asset{ net_amount, core_symbol }, asset{ cpu_amount, core_symbol } );
+   powupresult_act.send( fee, net_amount, cpu_amount );
 }
 
 } // namespace eosiosystem

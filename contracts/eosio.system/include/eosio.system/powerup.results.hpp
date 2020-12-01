@@ -27,7 +27,7 @@ class [[eosio::contract("powup.results")]] powup_results : eosio::contract {
        * @param powup_cpu - amount of powup CPU tokens
        */
       [[eosio::action]]
-      void powupresult( const asset& fee, const asset& powup_net, const asset& powup_cpu );
+      void powupresult( const asset& fee, const int64_t powup_net, const int64_t powup_cpu );
 
       using powupresult_action  = action_wrapper<"powupresult"_n,  &powup_results::powupresult>;
 };
