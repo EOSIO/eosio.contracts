@@ -1,7 +1,7 @@
 # Configure and Use the `PowerUp` Resource Model
 
 ## Overview
-This new system will create a new optional NET and CPU rental market which displaces (over time)
+This new system will create a new optional NET and CPU marketplace which displaces (over time)
 the existing staking system and REX market. Under the old model, system token holders
 own NET and CPU and may choose to use it themselves, delegate it to others, or make
 it available for others to rent using the REX market. Under this new model, the chain
@@ -228,7 +228,7 @@ You can see how much NET and CPU weight was received as well as the fee by looki
 *It is worth mentioning that the network being used for the example has not fully transitioned so the available resources are minimal therefore 1% of the resources are quite expensive. As the system continues the transition more resources are available to the `PowerUp` resource model and will become more affordable.*
 
 #### Processing Expired Orders
-The resources in loans that expire do not automatically get reclaimed by the system. The expired loans sit in a queue that must be processed. Anyone calling the `powerup` action will help with processing this queue (limited to processing at most two expired loans at a time) so that normally the expired loans will be automatically processed in a timely manner. However, in some cases it may be necessary to manual process expired loans in the queue to make resources available to the system again and thus make rental prices cheaper. In such a scenario, any account may process up to an arbitrary number of expired loans by calling the `powerupexec` action.
+The resources in loans that expire do not automatically get reclaimed by the system. The expired loans sit in a queue that must be processed. Anyone calling the `powerup` action will help with processing this queue (limited to processing at most two expired loans at a time) so that normally the expired loans will be automatically processed in a timely manner. However, in some cases it may be necessary to manual process expired loans in the queue to make resources available to the system again and thus make prices cheaper. In such a scenario, any account may process up to an arbitrary number of expired loans by calling the `powerupexec` action.
 
 The orders table `powup.order` can be viewed by calling:
 ```
