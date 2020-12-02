@@ -34,7 +34,7 @@ if [ $? -eq 0 ]; then
           set grid back ls 81
 
           set key autotitle columnhead
-          plot \"$3\" using 1:24 w lp ls 1, '' using 1:25 w lp ls 2
+          plot \"$3\" using 1:42 w lp ls 1, '' using 1:43 w lp ls 2
 	    " | gnuplot --persist
     else
         echo "INFO: You can install gnuplot to see the result graph"
