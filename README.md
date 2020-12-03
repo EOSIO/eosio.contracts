@@ -1,3 +1,5 @@
+[![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/EOSIO/eosio.contracts)
+
 # eosio.contracts
 
 ## Version : 1.9.1
