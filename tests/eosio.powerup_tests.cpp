@@ -12,10 +12,10 @@
 
 #include "eosio.system_tester.hpp"
 
-inline constexpr int64_t rentbw_frac  = 1'000'000'000'000'000ll; // 1.0 = 10^15
+inline constexpr int64_t powerup_frac  = 1'000'000'000'000'000ll; // 1.0 = 10^15
 inline constexpr int64_t stake_weight = 100'000'000'0000ll; // 10^12
 
-struct rentbw_config_resource {
+struct powerup_config_resource {
    fc::optional<int64_t>        current_weight_ratio = {};
    fc::optional<int64_t>        target_weight_ratio  = {};
    fc::optional<int64_t>        assumed_stake_weight = {};
@@ -25,19 +25,19 @@ struct rentbw_config_resource {
    fc::optional<asset>          min_price            = {};
    fc::optional<asset>          max_price            = {};
 };
-FC_REFLECT(rentbw_config_resource,                                                             //
+FC_REFLECT(powerup_config_resource,                                                             //
            (current_weight_ratio)(target_weight_ratio)(assumed_stake_weight)(target_timestamp) //
            (exponent)(decay_secs)(min_price)(max_price))
 
-struct rentbw_config {
-   rentbw_config_resource net          = {};
-   rentbw_config_resource cpu          = {};
-   fc::optional<uint32_t> rent_days    = {};
-   fc::optional<asset>    min_rent_fee = {};
+struct powerup_config {
+   powerup_config_resource net          = {};
+   powerup_config_resource cpu          = {};
+   fc::optional<uint32_t> powerup_days    = {};
+   fc::optional<asset>    min_powerup_fee = {};
 };
-FC_REFLECT(rentbw_config, (net)(cpu)(rent_days)(min_rent_fee))
+FC_REFLECT(powerup_config, (net)(cpu)(powerup_days)(min_powerup_fee))
 
-struct rentbw_state_resource {
+struct powerup_state_resource {
    uint8_t        version;
    int64_t        weight;
    int64_t        weight_ratio;
@@ -54,25 +54,25 @@ struct rentbw_state_resource {
    int64_t        adjusted_utilization;
    time_point_sec utilization_timestamp;
 };
-FC_REFLECT(rentbw_state_resource,                                                                           //
+FC_REFLECT(powerup_state_resource,                                                                           //
            (version)(weight)(weight_ratio)(assumed_stake_weight)(initial_weight_ratio)(target_weight_ratio) //
            (initial_timestamp)(target_timestamp)(exponent)(decay_secs)(min_price)(max_price)(utilization)   //
            (adjusted_utilization)(utilization_timestamp))
 
-struct rentbw_state {
+struct powerup_state {
    uint8_t               version;
-   rentbw_state_resource net;
-   rentbw_state_resource cpu;
-   uint32_t              rent_days;
-   asset                 min_rent_fee;
+   powerup_state_resource net;
+   powerup_state_resource cpu;
+   uint32_t              powerup_days;
+   asset                 min_powerup_fee;
 };
-FC_REFLECT(rentbw_state, (version)(net)(cpu)(rent_days)(min_rent_fee))
+FC_REFLECT(powerup_state, (version)(net)(cpu)(powerup_days)(min_powerup_fee))
 
 using namespace eosio_system;
 
-struct rentbw_tester : eosio_system_tester {
+struct powerup_tester : eosio_system_tester {
 
-   rentbw_tester() { create_accounts_with_resources({ N(eosio.reserv) }); }
+   powerup_tester() { create_accounts_with_resources({ N(eosio.reserv) }); }
 
    void start_rex() {
       create_account_with_resources(N(rexholder111), config::system_account_name, core_sym::from_string("1.0000"),
@@ -92,11 +92,11 @@ struct rentbw_tester : eosio_system_tester {
    }
 
    template <typename F>
-   rentbw_config make_config(F f) {
-      rentbw_config config;
+   powerup_config make_config(F f) {
+      powerup_config config;
 
-      config.net.current_weight_ratio = rentbw_frac;
-      config.net.target_weight_ratio  = rentbw_frac / 100;
+      config.net.current_weight_ratio = powerup_frac;
+      config.net.target_weight_ratio  = powerup_frac / 100;
       config.net.assumed_stake_weight = stake_weight;
       config.net.target_timestamp     = control->head_block_time() + fc::days(100);
       config.net.exponent             = 2;
@@ -104,8 +104,8 @@ struct rentbw_tester : eosio_system_tester {
       config.net.min_price            = asset::from_string("0.0000 TST");
       config.net.max_price            = asset::from_string("1000000.0000 TST");
 
-      config.cpu.current_weight_ratio = rentbw_frac;
-      config.cpu.target_weight_ratio  = rentbw_frac / 100;
+      config.cpu.current_weight_ratio = powerup_frac;
+      config.cpu.target_weight_ratio  = powerup_frac / 100;
       config.cpu.assumed_stake_weight = stake_weight;
       config.cpu.target_timestamp     = control->head_block_time() + fc::days(100);
       config.cpu.exponent             = 2;
@@ -113,25 +113,25 @@ struct rentbw_tester : eosio_system_tester {
       config.cpu.min_price            = asset::from_string("0.0000 TST");
       config.cpu.max_price            = asset::from_string("1000000.0000 TST");
 
-      config.rent_days    = 30;
-      config.min_rent_fee = asset::from_string("1.0000 TST");
+      config.powerup_days    = 30;
+      config.min_powerup_fee = asset::from_string("1.0000 TST");
 
       f(config);
       return config;
    }
 
-   rentbw_config make_config() {
+   powerup_config make_config() {
       return make_config([](auto&) {});
    }
 
    template <typename F>
-   rentbw_config make_default_config(F f) {
-      rentbw_config config;
+   powerup_config make_default_config(F f) {
+      powerup_config config;
       f(config);
       return config;
    }
 
-   action_result configbw(const rentbw_config& config) {
+   action_result configbw(const powerup_config& config) {
       // Verbose solution needed to work around bug in abi_serializer that fails if optional values aren't explicitly
       // specified with a null value.
 
@@ -139,7 +139,7 @@ struct rentbw_tester : eosio_system_tester {
          return (!v ? fc::variant() : fc::variant(*v));
       };
 
-      auto resource_conf_vo = [&optional_to_variant](const rentbw_config_resource& c ) {
+      auto resource_conf_vo = [&optional_to_variant](const powerup_config_resource& c ) {
          return   mvo("current_weight_ratio", optional_to_variant(c.current_weight_ratio))
                      ("target_weight_ratio",  optional_to_variant(c.target_weight_ratio))
                      ("assumed_stake_weight", optional_to_variant(c.assumed_stake_weight))
@@ -153,31 +153,31 @@ struct rentbw_tester : eosio_system_tester {
 
       auto conf = mvo("net",          resource_conf_vo(config.net))
                      ("cpu",          resource_conf_vo(config.cpu))
-                     ("rent_days",    optional_to_variant(config.rent_days))
-                     ("min_rent_fee", optional_to_variant(config.min_rent_fee))
+                     ("powerup_days",    optional_to_variant(config.powerup_days))
+                     ("min_powerup_fee", optional_to_variant(config.min_powerup_fee))
       ;
 
       //idump((fc::json::to_pretty_string(conf)));
-      return push_action(config::system_account_name, N(configrentbw), mvo()("args", std::move(conf)));
+      return push_action(config::system_account_name, N(cfgpowerup), mvo()("args", std::move(conf)));
 
       // If abi_serializer worked correctly, the following is all that would be needed:
-      //return push_action(config::system_account_name, N(configrentbw), mvo()("args", config));
+      //return push_action(config::system_account_name, N(cfgpowerup), mvo()("args", config));
    }
 
-   action_result rentbwexec(name user, uint16_t max) {
-      return push_action(user, N(rentbwexec), mvo()("user", user)("max", max));
+   action_result powerupexec(name user, uint16_t max) {
+      return push_action(user, N(powerupexec), mvo()("user", user)("max", max));
    }
 
-   action_result rentbw(const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac,
+   action_result powerup(const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac,
                         const asset& max_payment) {
-      return push_action(payer, N(rentbw),
+      return push_action(payer, N(powerup),
                          mvo()("payer", payer)("receiver", receiver)("days", days)("net_frac", net_frac)(
                                "cpu_frac", cpu_frac)("max_payment", max_payment));
    }
 
-   rentbw_state get_state() {
-      vector<char> data = get_row_by_account(config::system_account_name, {}, N(rent.state), N(rent.state));
-      return fc::raw::unpack<rentbw_state>(data);
+   powerup_state get_state() {
+      vector<char> data = get_row_by_account(config::system_account_name, {}, N(powup.state), N(powup.state));
+      return fc::raw::unpack<powerup_state>(data);
    }
 
    struct account_info {
@@ -194,13 +194,13 @@ struct rentbw_tester : eosio_system_tester {
       return info;
    };
 
-   void check_rentbw(const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac,
+   void check_powerup(const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac,
                      const asset& expected_fee, int64_t expected_net, int64_t expected_cpu) {
       auto before_payer    = get_account_info(payer);
       auto before_receiver = get_account_info(receiver);
       auto before_reserve  = get_account_info(N(eosio.reserv));
       auto before_state    = get_state();
-      BOOST_REQUIRE_EQUAL("", rentbw(payer, receiver, days, net_frac, cpu_frac, expected_fee));
+      BOOST_REQUIRE_EQUAL("", powerup(payer, receiver, days, net_frac, cpu_frac, expected_fee));
       auto after_payer    = get_account_info(payer);
       auto after_receiver = get_account_info(receiver);
       auto after_reserve  = get_account_info(N(eosio.reserv));
@@ -209,7 +209,7 @@ struct rentbw_tester : eosio_system_tester {
       if (false) {
          ilog("before_state.net.assumed_stake_weight:    ${x}", ("x", before_state.net.assumed_stake_weight));
          ilog("before_state.net.weight_ratio:            ${x}",
-              ("x", before_state.net.weight_ratio / double(rentbw_frac)));
+              ("x", before_state.net.weight_ratio / double(powerup_frac)));
          ilog("before_state.net.assumed_stake_weight:    ${x}", ("x", before_state.net.assumed_stake_weight));
          ilog("before_state.net.weight:                  ${x}", ("x", before_state.net.weight));
 
@@ -252,35 +252,35 @@ bool near(A a, B b, D delta) {
    return false;
 }
 
-BOOST_AUTO_TEST_SUITE(eosio_system_rentbw_tests)
+BOOST_AUTO_TEST_SUITE(eosio_system_powerup_tests)
 
-BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
+BOOST_FIXTURE_TEST_CASE(config_tests, powerup_tester) try {
    BOOST_REQUIRE_EQUAL("missing authority of eosio",
-                       push_action(N(alice1111111), N(configrentbw), mvo()("args", make_config())));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("rentbw hasn't been initialized"), rentbwexec(N(alice1111111), 10));
+                       push_action(N(alice1111111), N(cfgpowerup), mvo()("args", make_config())));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("powerup hasn't been initialized"), powerupexec(N(alice1111111), 10));
 
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("rent_days must be > 0"),
-                       configbw(make_config([&](auto& c) { c.rent_days = 0; })));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_fee doesn't match core symbol"), configbw(make_config([&](auto& c) {
-                          c.min_rent_fee = asset::from_string("1000000.000 TST");
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("powerup_days must be > 0"),
+                       configbw(make_config([&](auto& c) { c.powerup_days = 0; })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_powerup_fee doesn't match core symbol"), configbw(make_config([&](auto& c) {
+                          c.min_powerup_fee = asset::from_string("1000000.000 TST");
                        })));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_fee does not have a default value"),
-                       configbw(make_config([&](auto& c) { c.min_rent_fee = {}; })));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_fee must be positive"),
-                       configbw(make_config([&](auto& c) { c.min_rent_fee = asset::from_string("0.0000 TST"); })));
-   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_rent_fee must be positive"),
-                       configbw(make_config([&](auto& c) { c.min_rent_fee = asset::from_string("-1.0000 TST"); })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_powerup_fee does not have a default value"),
+                       configbw(make_config([&](auto& c) { c.min_powerup_fee = {}; })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_powerup_fee must be positive"),
+                       configbw(make_config([&](auto& c) { c.min_powerup_fee = asset::from_string("0.0000 TST"); })));
+   BOOST_REQUIRE_EQUAL(wasm_assert_msg("min_powerup_fee must be positive"),
+                       configbw(make_config([&](auto& c) { c.min_powerup_fee = asset::from_string("-1.0000 TST"); })));
 
    // net assertions
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("current_weight_ratio is too large"),
-                       configbw(make_config([](auto& c) { c.net.current_weight_ratio = rentbw_frac + 1; })));
+                       configbw(make_config([](auto& c) { c.net.current_weight_ratio = powerup_frac + 1; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight/target_weight_ratio is too large"),
                        configbw(make_config([](auto& c) {
                           c.net.assumed_stake_weight = 100000;
                           c.net.target_weight_ratio  = 10;
                        })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("weight can't grow over time"),
-                       configbw(make_config([](auto& c) { c.net.target_weight_ratio = rentbw_frac + 1; })));
+                       configbw(make_config([](auto& c) { c.net.target_weight_ratio = powerup_frac + 1; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight does not have a default value"),
                        configbw(make_config([](auto& c) { c.net.assumed_stake_weight = {}; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight must be at least 1; a much larger value is recommended"),
@@ -318,14 +318,14 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
 
    // cpu assertions
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("current_weight_ratio is too large"),
-                       configbw(make_config([](auto& c) { c.cpu.current_weight_ratio = rentbw_frac + 1; })));
+                       configbw(make_config([](auto& c) { c.cpu.current_weight_ratio = powerup_frac + 1; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight/target_weight_ratio is too large"),
                        configbw(make_config([](auto& c) {
                           c.cpu.assumed_stake_weight = 100000;
                           c.cpu.target_weight_ratio  = 10;
                        })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("weight can't grow over time"),
-                       configbw(make_config([](auto& c) { c.cpu.target_weight_ratio = rentbw_frac + 1; })));
+                       configbw(make_config([](auto& c) { c.cpu.target_weight_ratio = powerup_frac + 1; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight does not have a default value"),
                        configbw(make_config([](auto& c) { c.cpu.assumed_stake_weight = {}; })));
    BOOST_REQUIRE_EQUAL(wasm_assert_msg("assumed_stake_weight must be at least 1; a much larger value is recommended"),
@@ -363,15 +363,15 @@ BOOST_FIXTURE_TEST_CASE(config_tests, rentbw_tester) try {
 } // config_tests
 FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
+BOOST_FIXTURE_TEST_CASE(weight_tests, powerup_tester) try {
    produce_block();
 
-   auto net_start  = (rentbw_frac * 11) / 100;
-   auto net_target = (rentbw_frac * 1) / 100;
-   auto cpu_start  = (rentbw_frac * 11) / 1000;
-   auto cpu_target = (rentbw_frac * 1) / 1000;
+   auto net_start  = (powerup_frac * 11) / 100;
+   auto net_target = (powerup_frac * 1) / 100;
+   auto cpu_start  = (powerup_frac * 11) / 1000;
+   auto cpu_target = (powerup_frac * 1) / 1000;
 
-   BOOST_REQUIRE_EQUAL("", configbw(make_config([&](rentbw_config& config) {
+   BOOST_REQUIRE_EQUAL("", configbw(make_config([&](powerup_config& config) {
                           config.net.current_weight_ratio = net_start;
                           config.net.target_weight_ratio  = net_target;
                           config.net.assumed_stake_weight = stake_weight;
@@ -390,7 +390,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
       auto state = get_state();
       BOOST_REQUIRE(near(           //
             state.net.weight_ratio, //
-            int64_t(state.net.assumed_stake_weight * eosio::chain::int128_t(rentbw_frac) /
+            int64_t(state.net.assumed_stake_weight * eosio::chain::int128_t(powerup_frac) /
                     (state.net.weight + state.net.assumed_stake_weight)),
             10));
    };
@@ -402,7 +402,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
          BOOST_REQUIRE_EQUAL("", configbw({}));
       } else if (i) {
          produce_block(fc::days(1) - fc::milliseconds(500));
-         BOOST_REQUIRE_EQUAL("", rentbwexec(config::system_account_name, 10));
+         BOOST_REQUIRE_EQUAL("", powerupexec(config::system_account_name, 10));
       }
       net = net_start + i * (net_target - net_start) / 10;
       cpu = cpu_start + i * (cpu_target - cpu_start) / 20;
@@ -415,7 +415,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
    {
       int i = 7;
       produce_block(fc::days(1) - fc::milliseconds(500));
-      BOOST_REQUIRE_EQUAL("", configbw(make_default_config([&](rentbw_config& config) {
+      BOOST_REQUIRE_EQUAL("", configbw(make_default_config([&](powerup_config& config) {
                              config.net.target_timestamp = control->head_block_time() + fc::days(30);
                              config.cpu.target_timestamp = control->head_block_time() + fc::days(40);
                           })));
@@ -429,7 +429,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
    for (int i = 0; i <= 5; ++i) {
       if (i) {
          produce_block(fc::days(1) - fc::milliseconds(500));
-         BOOST_REQUIRE_EQUAL("", rentbwexec(config::system_account_name, 10));
+         BOOST_REQUIRE_EQUAL("", powerupexec(config::system_account_name, 10));
       }
       net = net_start + i * (net_target - net_start) / 30;
       cpu = cpu_start + i * (cpu_target - cpu_start) / 40;
@@ -444,7 +444,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
       produce_block(fc::days(1) - fc::milliseconds(500));
       auto new_net_target = net_target / 10;
       auto new_cpu_target = cpu_target / 20;
-      BOOST_REQUIRE_EQUAL("", configbw(make_default_config([&](rentbw_config& config) {
+      BOOST_REQUIRE_EQUAL("", configbw(make_default_config([&](powerup_config& config) {
                              config.net.target_weight_ratio = new_net_target;
                              config.cpu.target_weight_ratio = new_cpu_target;
                           })));
@@ -460,7 +460,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
    for (int i = 0; i <= 10; ++i) {
       if (i) {
          produce_block(fc::days(1) - fc::milliseconds(500));
-         BOOST_REQUIRE_EQUAL("", rentbwexec(config::system_account_name, 10));
+         BOOST_REQUIRE_EQUAL("", powerupexec(config::system_account_name, 10));
       }
       net = net_start + i * (net_target - net_start) / (30 - 6);
       cpu = cpu_start + i * (cpu_target - cpu_start) / (40 - 6);
@@ -472,7 +472,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
    // Move transition time to immediate future
    {
       produce_block(fc::days(1) - fc::milliseconds(500));
-      BOOST_REQUIRE_EQUAL("", configbw(make_default_config([&](rentbw_config& config) {
+      BOOST_REQUIRE_EQUAL("", configbw(make_default_config([&](powerup_config& config) {
                              config.net.target_timestamp = control->head_block_time() + fc::milliseconds(1000);
                              config.cpu.target_timestamp = control->head_block_time() + fc::milliseconds(1000);
                           })));
@@ -481,7 +481,7 @@ BOOST_FIXTURE_TEST_CASE(weight_tests, rentbw_tester) try {
 
    // Verify targets hold as time advances
    for (int i = 0; i <= 10; ++i) {
-      BOOST_REQUIRE_EQUAL("", rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", powerupexec(config::system_account_name, 10));
       BOOST_REQUIRE(near(get_state().net.weight_ratio, net_target, 1));
       BOOST_REQUIRE(near(get_state().cpu.weight_ratio, cpu_target, 1));
       check_weight();
@@ -492,50 +492,50 @@ FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_CASE(rent_tests) try {
    {
-      rentbw_tester t;
+      powerup_tester t;
       t.produce_block();
 
-      BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("rentbw hasn't been initialized"), //
-                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 4, rentbw_frac / 8,
+      BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("powerup hasn't been initialized"), //
+                          t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac / 4, powerup_frac / 8,
                                    asset::from_string("1.000 TST")));
 
       BOOST_REQUIRE_EQUAL("", t.configbw(t.make_config([&](auto& config) {
-         config.net.current_weight_ratio = rentbw_frac;
-         config.net.target_weight_ratio  = rentbw_frac;
+         config.net.current_weight_ratio = powerup_frac;
+         config.net.target_weight_ratio  = powerup_frac;
          config.net.assumed_stake_weight = stake_weight;
          config.net.exponent             = 1;
          config.net.min_price            = asset::from_string("1000000.0000 TST");
          config.net.max_price            = asset::from_string("1000000.0000 TST");
 
-         config.cpu.current_weight_ratio = rentbw_frac;
-         config.cpu.target_weight_ratio  = rentbw_frac;
+         config.cpu.current_weight_ratio = powerup_frac;
+         config.cpu.target_weight_ratio  = powerup_frac;
          config.cpu.assumed_stake_weight = stake_weight;
          config.cpu.exponent             = 1;
          config.cpu.min_price            = asset::from_string("1000000.0000 TST");
          config.cpu.max_price            = asset::from_string("1000000.0000 TST");
 
-         config.rent_days    = 30;
-         config.min_rent_fee = asset::from_string("1.0000 TST");
+         config.powerup_days    = 30;
+         config.min_powerup_fee = asset::from_string("1.0000 TST");
       })));
 
       BOOST_REQUIRE_EQUAL(
             t.wasm_assert_msg("max_payment doesn't match core symbol"), //
-            t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac, asset::from_string("1.000 TST")));
+            t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac, powerup_frac, asset::from_string("1.000 TST")));
       BOOST_REQUIRE_EQUAL(
             t.wasm_assert_msg("market doesn't have resources available"), //
-            t.rentbw(N(bob111111111), N(alice1111111), 30, 0, rentbw_frac, asset::from_string("1.0000 TST")));
+            t.powerup(N(bob111111111), N(alice1111111), 30, 0, powerup_frac, asset::from_string("1.0000 TST")));
       BOOST_REQUIRE_EQUAL(
             t.wasm_assert_msg("market doesn't have resources available"), //
-            t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, 0, asset::from_string("1.0000 TST")));
+            t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac, 0, asset::from_string("1.0000 TST")));
 
       BOOST_REQUIRE_EQUAL("", t.configbw(t.make_default_config([&](auto& config) {
          // weight = stake_weight
-         config.net.current_weight_ratio = rentbw_frac/2;
-         config.net.target_weight_ratio  = rentbw_frac/2;
+         config.net.current_weight_ratio = powerup_frac/2;
+         config.net.target_weight_ratio  = powerup_frac/2;
 
          // weight = stake_weight
-         config.cpu.current_weight_ratio = rentbw_frac/2;
-         config.cpu.target_weight_ratio  = rentbw_frac/2;
+         config.cpu.current_weight_ratio = powerup_frac/2;
+         config.cpu.target_weight_ratio  = powerup_frac/2;
       })));
 
       auto net_weight = stake_weight;
@@ -550,18 +550,18 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       // (.2) * 1000000.0000 = 200000.0000
       //               total = 300000.0000
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("300000.0000"));
-      t.check_rentbw(N(aaaaaaaaaaaa), N(aaaaaaaaaaaa), 30, rentbw_frac * .1, rentbw_frac * .2,
+      t.check_powerup(N(aaaaaaaaaaaa), N(aaaaaaaaaaaa), 30, powerup_frac * .1, powerup_frac * .2,
                      asset::from_string("300000.0000 TST"), net_weight * .1, cpu_weight * .2);
 
       // Start decay
       t.produce_block(fc::days(30) - fc::milliseconds(500));
-      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", t.powerupexec(config::system_account_name, 10));
       BOOST_REQUIRE(near(t.get_state().net.adjusted_utilization, .1 * net_weight, 0));
       BOOST_REQUIRE(near(t.get_state().cpu.adjusted_utilization, .2 * cpu_weight, 0));
 
       // 2 days of decay from (10%, 20%) to (1.35%, 2.71%)
       t.produce_block(fc::days(2) - fc::milliseconds(500));
-      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", t.powerupexec(config::system_account_name, 10));
       BOOST_REQUIRE(near(t.get_state().net.adjusted_utilization, int64_t(.1 * net_weight * exp(-2)),
                          int64_t(.1 * net_weight * exp(-2)) / 1000));
       BOOST_REQUIRE(near(t.get_state().cpu.adjusted_utilization, int64_t(.2 * cpu_weight * exp(-2)),
@@ -572,7 +572,7 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       // (.02) * 1000000.0000                    = 20000.0000
       //                                   total = 40000.0000
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("40000.0001"));
-      t.check_rentbw(N(aaaaaaaaaaaa), N(aaaaaaaaaaaa), 30, rentbw_frac * .02, rentbw_frac * .02,
+      t.check_powerup(N(aaaaaaaaaaaa), N(aaaaaaaaaaaa), 30, powerup_frac * .02, powerup_frac * .02,
                      asset::from_string("40000.0001 TST"), net_weight * .02, cpu_weight * .02);
    }
 
@@ -580,21 +580,21 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       t.produce_block();
       BOOST_REQUIRE_EQUAL("", t.configbw(t.make_config([&](auto& config) {
          // weight = stake_weight * 3
-         config.net.current_weight_ratio = rentbw_frac / 4;
-         config.net.target_weight_ratio  = rentbw_frac / 4;
+         config.net.current_weight_ratio = powerup_frac / 4;
+         config.net.target_weight_ratio  = powerup_frac / 4;
          config.net.assumed_stake_weight = stake_weight;
          config.net.exponent             = 2;
          config.net.max_price            = asset::from_string("2000000.0000 TST");
 
          // weight = stake_weight * 4 / 2
-         config.cpu.current_weight_ratio = rentbw_frac / 5;
-         config.cpu.target_weight_ratio  = rentbw_frac / 5;
+         config.cpu.current_weight_ratio = powerup_frac / 5;
+         config.cpu.target_weight_ratio  = powerup_frac / 5;
          config.cpu.assumed_stake_weight = stake_weight / 2;
          config.cpu.exponent             = 3;
          config.cpu.max_price            = asset::from_string("6000000.0000 TST");
 
-         config.rent_days    = 30;
-         config.min_rent_fee = asset::from_string("1.0000 TST");
+         config.powerup_days    = 30;
+         config.min_powerup_fee = asset::from_string("1.0000 TST");
       })));
 
       if (rex)
@@ -609,94 +609,94 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
    auto cpu_weight = stake_weight * 4 / 2;
 
    {
-      rentbw_tester t;
+      powerup_tester t;
       init(t, false);
       BOOST_REQUIRE_EQUAL(
             t.wasm_assert_msg("days doesn't match configuration"), //
-            t.rentbw(N(bob111111111), N(alice1111111), 20, rentbw_frac, rentbw_frac, asset::from_string("1.0000 TST")));
+            t.powerup(N(bob111111111), N(alice1111111), 20, powerup_frac, powerup_frac, asset::from_string("1.0000 TST")));
       BOOST_REQUIRE_EQUAL(                                   //
             t.wasm_assert_msg("net_frac can't be negative"), //
-            t.rentbw(N(bob111111111), N(alice1111111), 30, -rentbw_frac, rentbw_frac,
+            t.powerup(N(bob111111111), N(alice1111111), 30, -powerup_frac, powerup_frac,
                      asset::from_string("1.0000 TST")));
       BOOST_REQUIRE_EQUAL(                                   //
             t.wasm_assert_msg("cpu_frac can't be negative"), //
-            t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, -rentbw_frac,
+            t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac, -powerup_frac,
                      asset::from_string("1.0000 TST")));
       BOOST_REQUIRE_EQUAL(                                    //
             t.wasm_assert_msg("net can't be more than 100%"), //
-            t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac + 1, rentbw_frac,
+            t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac + 1, powerup_frac,
                      asset::from_string("1.0000 TST")));
       BOOST_REQUIRE_EQUAL(                                    //
             t.wasm_assert_msg("cpu can't be more than 100%"), //
-            t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac + 1,
+            t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac, powerup_frac + 1,
                      asset::from_string("1.0000 TST")));
       BOOST_REQUIRE_EQUAL(
             t.wasm_assert_msg("max_payment is less than calculated fee: 3000000.0000 TST"), //
-            t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac, asset::from_string("1.0000 TST")));
+            t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac, powerup_frac, asset::from_string("1.0000 TST")));
       BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("can't channel fees to rex"), //
-                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac, rentbw_frac,
+                          t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac, powerup_frac,
                                    asset::from_string("3000000.0000 TST")));
    }
 
    // net:100%, cpu:100%
    {
-      rentbw_tester t;
+      powerup_tester t;
       init(t, true);
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("3000000.0000"));
       BOOST_REQUIRE_EQUAL(
-            t.wasm_assert_msg("calculated fee is below minimum; try renting more"),
-            t.rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, 10, 10, asset::from_string("3000000.0000 TST")));
-      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
+            t.wasm_assert_msg("calculated fee is below minimum; try powering up with more resources"),
+            t.powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, 10, 10, asset::from_string("3000000.0000 TST")));
+      t.check_powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, powerup_frac, powerup_frac,
                      asset::from_string("3000000.0000 TST"), net_weight, cpu_weight);
 
       BOOST_REQUIRE_EQUAL( //
             t.wasm_assert_msg("weight can't shrink below utilization"),
             t.configbw(t.make_default_config([&](auto& config) {
-               config.net.current_weight_ratio = rentbw_frac / 4 + 1;
-               config.net.target_weight_ratio  = rentbw_frac / 4 + 1;
-               config.cpu.current_weight_ratio = rentbw_frac / 5;
-               config.cpu.target_weight_ratio  = rentbw_frac / 5;
+               config.net.current_weight_ratio = powerup_frac / 4 + 1;
+               config.net.target_weight_ratio  = powerup_frac / 4 + 1;
+               config.cpu.current_weight_ratio = powerup_frac / 5;
+               config.cpu.target_weight_ratio  = powerup_frac / 5;
             })));
       BOOST_REQUIRE_EQUAL( //
             t.wasm_assert_msg("weight can't shrink below utilization"),
             t.configbw(t.make_default_config([&](auto& config) {
-               config.net.current_weight_ratio = rentbw_frac / 4;
-               config.net.target_weight_ratio  = rentbw_frac / 4;
-               config.cpu.current_weight_ratio = rentbw_frac / 5 + 1;
-               config.cpu.target_weight_ratio  = rentbw_frac / 5 + 1;
+               config.net.current_weight_ratio = powerup_frac / 4;
+               config.net.target_weight_ratio  = powerup_frac / 4;
+               config.cpu.current_weight_ratio = powerup_frac / 5 + 1;
+               config.cpu.target_weight_ratio  = powerup_frac / 5 + 1;
             })));
       BOOST_REQUIRE_EQUAL( //
             "",            //
             t.configbw(t.make_default_config([&](auto& config) {
-               config.net.current_weight_ratio = rentbw_frac / 4;
-               config.net.target_weight_ratio  = rentbw_frac / 4;
-               config.cpu.current_weight_ratio = rentbw_frac / 5;
-               config.cpu.target_weight_ratio  = rentbw_frac / 5;
+               config.net.current_weight_ratio = powerup_frac / 4;
+               config.net.target_weight_ratio  = powerup_frac / 4;
+               config.cpu.current_weight_ratio = powerup_frac / 5;
+               config.cpu.target_weight_ratio  = powerup_frac / 5;
             })));
    }
 
    // net:30%, cpu:40%, then net:5%, cpu:10%
    {
-      rentbw_tester t;
+      powerup_tester t;
       init(t, true);
       // (.3 ^ 2) * 2000000.0000 / 2 =  90000.0000
       // (.4 ^ 3) * 6000000.0000 / 3 = 128000.0000
       //                       total = 218000.0000
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("218000.0001"));
-      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac * .3, rentbw_frac * .4,
+      t.check_powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, powerup_frac * .3, powerup_frac * .4,
                      asset::from_string("218000.0001 TST"), net_weight * .3, cpu_weight * .4);
 
       // (.35 ^ 2) * 2000000.0000 / 2 -  90000.0000 =  32500.0000
       // (.5  ^ 3) * 6000000.0000 / 3 - 128000.0000 = 122000.0000
       //                                      total = 154500.0000
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("154500.0000"));
-      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac * .05, rentbw_frac * .10,
+      t.check_powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, powerup_frac * .05, powerup_frac * .10,
                      asset::from_string("154500.0000 TST"), net_weight * .05, cpu_weight * .10);
    }
 
    // net:50%, cpu:50% (but with non-zero min_price and also an exponent of 2 to simplify the math)
    {
-      rentbw_tester t;
+      powerup_tester t;
       init(t, true);
       BOOST_REQUIRE_EQUAL("", t.configbw(t.make_default_config([&](auto& config) {
          config.cpu.exponent             = 2;
@@ -726,29 +726,29 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       // 4000000.0000 * .5 + (2000000.0000 / 2) * (.5 ^ 2) = 2250000.0000
       //                                             total = 2950000.0000
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("2950000.0000"));
-      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac * .5, rentbw_frac * .5,
+      t.check_powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, powerup_frac * .5, powerup_frac * .5,
                      asset::from_string("2950000.0000 TST"), net_weight * .5, cpu_weight * .5);
    }
 
    {
       // net:100%, cpu:100%
-      rentbw_tester t;
+      powerup_tester t;
       init(t, true);
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("3000000.0000"));
-      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
+      t.check_powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, powerup_frac, powerup_frac,
                      asset::from_string("3000000.0000 TST"), net_weight, cpu_weight);
 
       // No more available for 30 days
       BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
-                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                          t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac / 1000, powerup_frac / 1000,
                                    asset::from_string("1.0000 TST")));
       t.produce_block(fc::days(29));
       BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
-                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                          t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac / 1000, powerup_frac / 1000,
                                    asset::from_string("1.0000 TST")));
       t.produce_block(fc::days(1) - fc::milliseconds(1500));
       BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
-                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                          t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac / 1000, powerup_frac / 1000,
                                    asset::from_string("1.0000 TST")));
       t.produce_block(fc::milliseconds(500));
 
@@ -758,32 +758,32 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       // (1.0 ^ 2) * 6000000.0000 = 6000000.0000
       //                    total = 8000000.0000
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("8000000.0000"));
-      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
+      t.check_powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, powerup_frac, powerup_frac,
                      asset::from_string("8000000.0000 TST"), 0, 0);
 
       // No more available for 30 days
       BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
-                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                          t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac / 1000, powerup_frac / 1000,
                                    asset::from_string("1.0000 TST")));
       t.produce_block(fc::days(29));
       BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
-                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                          t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac / 1000, powerup_frac / 1000,
                                    asset::from_string("1.0000 TST")));
       t.produce_block(fc::days(1) - fc::milliseconds(1000));
       BOOST_REQUIRE_EQUAL(t.wasm_assert_msg("market doesn't have enough resources available"), //
-                          t.rentbw(N(bob111111111), N(alice1111111), 30, rentbw_frac / 1000, rentbw_frac / 1000,
+                          t.powerup(N(bob111111111), N(alice1111111), 30, powerup_frac / 1000, powerup_frac / 1000,
                                    asset::from_string("1.0000 TST")));
 
       // Start decay
       t.produce_block(fc::milliseconds(1000));
-      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
-      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", t.powerupexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", t.powerupexec(config::system_account_name, 10));
       BOOST_REQUIRE(near(t.get_state().net.adjusted_utilization, net_weight, net_weight / 1000));
       BOOST_REQUIRE(near(t.get_state().cpu.adjusted_utilization, cpu_weight, cpu_weight / 1000));
 
       // 1 day of decay
       t.produce_block(fc::days(1) - fc::milliseconds(500));
-      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", t.powerupexec(config::system_account_name, 10));
       BOOST_REQUIRE(near(t.get_state().net.adjusted_utilization, int64_t(net_weight * exp(-1)),
                          int64_t(net_weight * exp(-1)) / 1000));
       BOOST_REQUIRE(near(t.get_state().cpu.adjusted_utilization, int64_t(cpu_weight * exp(-1)),
@@ -791,7 +791,7 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
 
       // 1 day of decay
       t.produce_block(fc::days(1) - fc::milliseconds(500));
-      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", t.powerupexec(config::system_account_name, 10));
       BOOST_REQUIRE(near(t.get_state().net.adjusted_utilization, int64_t(net_weight * exp(-2)),
                          int64_t(net_weight * exp(-2)) / 1000));
       BOOST_REQUIRE(near(t.get_state().cpu.adjusted_utilization, int64_t(cpu_weight * exp(-2)),
@@ -803,12 +803,12 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       // [ ((e^-2) ^ 2)*(e^-2 - 0.0) + ((1.0) ^ 3)/3 - ((e^-2) ^ 3)/3 ] * 6000000.0000 = 2009915.0087
       //                                                                         total = 3028230.6476
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("3028229.8795"));
-      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac, rentbw_frac,
+      t.check_powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, powerup_frac, powerup_frac,
                      asset::from_string("3028229.8795 TST"), net_weight, cpu_weight);
    }
 
    {
-      rentbw_tester t;
+      powerup_tester t;
       init(t, true);
 
       // 10%, 20%
@@ -816,7 +816,7 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       // (.2 ^ 3) * 6000000.0000 / 3 = 16000.0000
       //                       total = 26000.0000
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("26000.0002"));
-      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac * .1, rentbw_frac * .2,
+      t.check_powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, powerup_frac * .1, powerup_frac * .2,
                      asset::from_string("26000.0002 TST"), net_weight * .1, cpu_weight * .2);
 
       t.produce_block(fc::days(15) - fc::milliseconds(500));
@@ -826,18 +826,18 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
       // (.4 ^ 3) * 6000000.0000 / 3 - 16000.0000 = 112000.0000
       //                                    total = 192000.0000
       t.transfer(config::system_account_name, N(aaaaaaaaaaaa), core_sym::from_string("192000.0001"));
-      t.check_rentbw(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, rentbw_frac * .2, rentbw_frac * .2,
+      t.check_powerup(N(aaaaaaaaaaaa), N(bbbbbbbbbbbb), 30, powerup_frac * .2, powerup_frac * .2,
                      asset::from_string("192000.0001 TST"), net_weight * .2, cpu_weight * .2);
 
       // Start decay
       t.produce_block(fc::days(15) - fc::milliseconds(1000));
-      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", t.powerupexec(config::system_account_name, 10));
       BOOST_REQUIRE(near(t.get_state().net.adjusted_utilization, .3 * net_weight, 0));
       BOOST_REQUIRE(near(t.get_state().cpu.adjusted_utilization, .4 * cpu_weight, 0));
 
       // 1 day of decay from (30%, 40%) to (20%, 20%)
       t.produce_block(fc::days(1) - fc::milliseconds(500));
-      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", t.powerupexec(config::system_account_name, 10));
       BOOST_REQUIRE(
             near(t.get_state().net.adjusted_utilization, int64_t(.1 * net_weight * exp(-1) + .2 * net_weight), 0));
       BOOST_REQUIRE(
@@ -845,7 +845,7 @@ BOOST_AUTO_TEST_CASE(rent_tests) try {
 
       // 2 days of decay from (30%, 40%) to (20%, 20%)
       t.produce_block(fc::days(1) - fc::milliseconds(500));
-      BOOST_REQUIRE_EQUAL("", t.rentbwexec(config::system_account_name, 10));
+      BOOST_REQUIRE_EQUAL("", t.powerupexec(config::system_account_name, 10));
       BOOST_REQUIRE(
             near(t.get_state().net.adjusted_utilization, int64_t(.1 * net_weight * exp(-2) + .2 * net_weight), 0));
       BOOST_REQUIRE(
