@@ -4,7 +4,7 @@
 #include <eosio/chain/wast_to_wasm.hpp>
 
 #include <Runtime/Runtime.h>
-
+#include <fc/log/logger.hpp>
 #include <fc/variant_object.hpp>
 #include "contracts.hpp"
 #include "test_symbol.hpp"
@@ -20,20 +20,20 @@ using mvo = fc::mutable_variant_object;
 class eosio_msig_tester : public tester {
 public:
    eosio_msig_tester() {
-      create_accounts( { N(eosio.msig), N(eosio.stake), N(eosio.ram), N(eosio.ramfee), N(alice), N(bob), N(carol) } );
+      create_accounts( { "eosio.msig"_n, "eosio.stake"_n, "eosio.ram"_n, "eosio.ramfee"_n, "alice"_n, "bob"_n, "carol"_n } );
       produce_block();
 
-      auto trace = base_tester::push_action(config::system_account_name, N(setpriv),
+      auto trace = base_tester::push_action(config::system_account_name, "setpriv"_n,
                                             config::system_account_name,  mutable_variant_object()
                                             ("account", "eosio.msig")
                                             ("is_priv", 1)
       );
 
-      set_code( N(eosio.msig), contracts::msig_wasm() );
-      set_abi( N(eosio.msig), contracts::msig_abi().data() );
+      set_code( "eosio.msig"_n, contracts::msig_wasm() );
+      set_abi( "eosio.msig"_n, contracts::msig_abi().data() );
 
       produce_blocks();
-      const auto& accnt = control->db().get<account_object,by_name>( N(eosio.msig) );
+      const auto& accnt = control->db().get<account_object,by_name>( "eosio.msig"_n );
       abi_def abi;
       BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
       abi_ser.set_abi(abi, abi_serializer::create_yield_function(abi_serializer_max_time));
@@ -60,14 +60,14 @@ public:
                                    .active   = authority( get_public_key( a, "active" ) )
                                 });
 
-      trx.actions.emplace_back( get_action( N(eosio), N(buyram), vector<permission_level>{{creator,config::active_name}},
+      trx.actions.emplace_back( get_action( "eosio"_n, "buyram"_n, vector<permission_level>{{creator,config::active_name}},
                                             mvo()
                                             ("payer", creator)
                                             ("receiver", a)
                                             ("quant", ramfunds) )
                               );
 
-      trx.actions.emplace_back( get_action( N(eosio), N(delegatebw), vector<permission_level>{{creator,config::active_name}},
+      trx.actions.emplace_back( get_action( "eosio"_n, "delegatebw"_n, vector<permission_level>{{creator,config::active_name}},
                                             mvo()
                                             ("from", creator)
                                             ("receiver", a)
@@ -86,17 +86,17 @@ public:
          ("issuer",       manager )
          ("maximum_supply", maxsupply );
 
-      base_tester::push_action(contract, N(create), contract, act );
+      base_tester::push_action(contract, "create"_n, contract, act );
    }
    void issue( name to, const asset& amount, name manager = config::system_account_name ) {
-      base_tester::push_action( N(eosio.token), N(issue), manager, mutable_variant_object()
+      base_tester::push_action( "eosio.token"_n, "issue"_n, manager, mutable_variant_object()
                                 ("to",      to )
                                 ("quantity", amount )
                                 ("memo", "")
                                 );
    }
    void transfer( name from, name to, const string& amount, name manager = config::system_account_name ) {
-      base_tester::push_action( N(eosio.token), N(transfer), manager, mutable_variant_object()
+      base_tester::push_action( "eosio.token"_n, "transfer"_n, manager, mutable_variant_object()
                                 ("from",    from)
                                 ("to",      to )
                                 ("quantity", asset::from_string(amount) )
@@ -105,10 +105,10 @@ public:
    }
    asset get_balance( const account_name& act ) {
       //return get_currency_balance( config::system_account_name, symbol(CORE_SYMBOL), act );
-      //temporary code. current get_currency_balancy uses table name N(accounts) from currency.h
-      //generic_currency table name is N(account).
+      //temporary code. current get_currency_balancy uses table name "accounts"_n from currency.h
+      //generic_currency table name is "account"_n.
       const auto& db  = control->db();
-      const auto* tbl = db.find<table_id_object, by_code_scope_table>(boost::make_tuple(N(eosio.token), act, N(accounts)));
+      const auto* tbl = db.find<table_id_object, by_code_scope_table>(boost::make_tuple("eosio.token"_n, act, "accounts"_n));
       share_type result = 0;
 
       // the balance is implied to be 0 if either the table or row does not exist
@@ -127,7 +127,7 @@ public:
       vector<account_name> accounts;
       if( auth )
          accounts.push_back( signer );
-      auto trace = base_tester::push_action( N(eosio.msig), name, accounts, data );
+      auto trace = base_tester::push_action( "eosio.msig"_n, name, accounts, data );
       produce_block();
       BOOST_REQUIRE_EQUAL( true, chain_has_transaction(trace->id) );
       return trace;
@@ -136,7 +136,7 @@ public:
          string action_type_name = abi_ser.get_action_type(name);
 
          action act;
-         act.account = N(eosio.msig);
+         act.account = "eosio.msig"_n;
          act.name = name;
          act.data = abi_ser.variant_to_binary( action_type_name, data, abi_serializer::create_yield_function(abi_serializer_max_time) );
          //std::cout << "test:\n" << fc::to_hex(act.data.data(), act.data.size()) << " size = " << act.data.size() << std::endl;
@@ -158,7 +158,7 @@ transaction eosio_msig_tester::reqauth( account_name from, const vector<permissi
                   ("permission", level.permission)
       );
    }
-   variant pretty_trx = fc::mutable_variant_object()
+   auto pretty_trx = fc::mutable_variant_object()
       ("expiration", "2020-01-01T00:30")
       ("ref_block_num", 2)
       ("ref_block_prefix", 3)
@@ -181,17 +181,17 @@ transaction eosio_msig_tester::reqauth( account_name from, const vector<permissi
 BOOST_AUTO_TEST_SUITE(eosio_msig_tests)
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {
-   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   auto trx = reqauth( "alice"_n, {permission_level{"alice"_n, config::active_name}}, abi_serializer_max_time );
 
-   push_action( N(alice), N(propose), mvo()
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
-                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+                  ("requested", vector<permission_level>{{ "alice"_n, config::active_name }})
    );
 
    //fail to execute before approval
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+   BOOST_REQUIRE_EXCEPTION( push_action( "alice"_n, "exec"_n, mvo()
                                           ("proposer",      "alice")
                                           ("proposal_name", "first")
                                           ("executer",      "alice")
@@ -201,19 +201,19 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {
    );
 
    //approve and execute
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
 
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
-   push_action( N(alice), N(exec), mvo()
+   push_action( "alice"_n, "exec"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("executer",      "alice")
@@ -226,28 +226,28 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_execute, eosio_msig_tester ) try {
 
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_unapprove, eosio_msig_tester ) try {
-   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   auto trx = reqauth( "alice"_n, {permission_level{"alice"_n, config::active_name}}, abi_serializer_max_time );
 
-   push_action( N(alice), N(propose), mvo()
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
-                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+                  ("requested", vector<permission_level>{{ "alice"_n, config::active_name }})
    );
 
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
 
-   push_action( N(alice), N(unapprove), mvo()
+   push_action( "alice"_n, "unapprove"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
 
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+   BOOST_REQUIRE_EXCEPTION( push_action( "alice"_n, "exec"_n, mvo()
                                           ("proposer",      "alice")
                                           ("proposal_name", "first")
                                           ("executer",      "alice")
@@ -260,24 +260,24 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_unapprove, eosio_msig_tester ) try {
 
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_by_two, eosio_msig_tester ) try {
-   auto trx = reqauth( N(alice), vector<permission_level>{ { N(alice), config::active_name }, { N(bob), config::active_name } }, abi_serializer_max_time );
-   push_action( N(alice), N(propose), mvo()
+   auto trx = reqauth( "alice"_n, vector<permission_level>{ { "alice"_n, config::active_name }, { "bob"_n, config::active_name } }, abi_serializer_max_time );
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
-                  ("requested", vector<permission_level>{ { N(alice), config::active_name }, { N(bob), config::active_name } })
+                  ("requested", vector<permission_level>{ { "alice"_n, config::active_name }, { "bob"_n, config::active_name } })
    );
 
    //approve by alice
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
 
    //fail because approval by bob is missing
 
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+   BOOST_REQUIRE_EXCEPTION( push_action( "alice"_n, "exec"_n, mvo()
                                           ("proposer",      "alice")
                                           ("proposal_name", "first")
                                           ("executer",      "alice")
@@ -287,20 +287,20 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_by_two, eosio_msig_tester ) try {
    );
 
    //approve by bob and execute
-   push_action( N(bob), N(approve), mvo()
+   push_action( "bob"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(bob), config::active_name })
+                  ("level",         permission_level{ "bob"_n, config::active_name })
    );
 
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
 
-   push_action( N(alice), N(exec), mvo()
+   push_action( "alice"_n, "exec"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("executer",      "alice")
@@ -313,13 +313,13 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_by_two, eosio_msig_tester ) try {
 
 
 BOOST_FIXTURE_TEST_CASE( propose_with_wrong_requested_auth, eosio_msig_tester ) try {
-   auto trx = reqauth( N(alice), vector<permission_level>{ { N(alice), config::active_name },  { N(bob), config::active_name } }, abi_serializer_max_time );
+   auto trx = reqauth( "alice"_n, vector<permission_level>{ { "alice"_n, config::active_name },  { "bob"_n, config::active_name } }, abi_serializer_max_time );
    //try with not enough requested auth
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(propose), mvo()
+   BOOST_REQUIRE_EXCEPTION( push_action( "alice"_n, "propose"_n, mvo()
                                              ("proposer",      "alice")
                                              ("proposal_name", "third")
                                              ("trx",           trx)
-                                             ("requested", vector<permission_level>{ { N(alice), config::active_name } } )
+                                             ("requested", vector<permission_level>{ { "alice"_n, config::active_name } } )
                             ),
                             eosio_assert_message_exception,
                             eosio_assert_message_is("transaction authorization failed")
@@ -329,10 +329,10 @@ BOOST_FIXTURE_TEST_CASE( propose_with_wrong_requested_auth, eosio_msig_tester ) 
 
 
 BOOST_FIXTURE_TEST_CASE( big_transaction, eosio_msig_tester ) try {
-   vector<permission_level> perm = { { N(alice), config::active_name }, { N(bob), config::active_name } };
+   vector<permission_level> perm = { { "alice"_n, config::active_name }, { "bob"_n, config::active_name } };
    auto wasm = contracts::util::exchange_wasm();
 
-   variant pretty_trx = fc::mutable_variant_object()
+   auto pretty_trx = fc::mutable_variant_object()
       ("expiration", "2020-01-01T00:30")
       ("ref_block_num", 2)
       ("ref_block_prefix", 3)
@@ -356,7 +356,7 @@ BOOST_FIXTURE_TEST_CASE( big_transaction, eosio_msig_tester ) try {
    transaction trx;
    abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time));
 
-   push_action( N(alice), N(propose), mvo()
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
@@ -364,26 +364,26 @@ BOOST_FIXTURE_TEST_CASE( big_transaction, eosio_msig_tester ) try {
    );
 
    //approve by alice
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
    //approve by bob and execute
-   push_action( N(bob), N(approve), mvo()
+   push_action( "bob"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(bob), config::active_name })
+                  ("level",         permission_level{ "bob"_n, config::active_name })
    );
 
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
 
-   push_action( N(alice), N(exec), mvo()
+   push_action( "alice"_n, "exec"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("executer",      "alice")
@@ -411,48 +411,48 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
       config::active_name,
       authority( 1,
                  vector<key_weight>{{get_private_key(config::system_account_name, "active").get_public_key(), 1}},
-                 vector<permission_level_weight>{{{N(eosio.prods), config::active_name}, 1}}
+                 vector<permission_level_weight>{{{"eosio.prods"_n, config::active_name}, 1}}
       ),
       config::owner_name,
       {{config::system_account_name, config::active_name}},
       {get_private_key(config::system_account_name, "active")}
    );
 
-   set_producers( {N(alice),N(bob),N(carol)} );
+   set_producers( {"alice"_n,"bob"_n,"carol"_n} );
    produce_blocks(50);
 
-   create_accounts( { N(eosio.token), N(eosio.rex) } );
-   set_code( N(eosio.token), contracts::token_wasm() );
-   set_abi( N(eosio.token), contracts::token_abi().data() );
+   create_accounts( { "eosio.token"_n, "eosio.rex"_n } );
+   set_code( "eosio.token"_n, contracts::token_wasm() );
+   set_abi( "eosio.token"_n, contracts::token_abi().data() );
 
-   create_currency( N(eosio.token), config::system_account_name, core_sym::from_string("10000000000.0000") );
+   create_currency( "eosio.token"_n, config::system_account_name, core_sym::from_string("10000000000.0000") );
    issue(config::system_account_name, core_sym::from_string("1000000000.0000"));
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
-                        get_balance(config::system_account_name) + get_balance(N(eosio.ramfee)) + get_balance(N(eosio.stake)) + get_balance(N(eosio.ram)) );
+                        get_balance(config::system_account_name) + get_balance("eosio.ramfee"_n) + get_balance("eosio.stake"_n) + get_balance("eosio.ram"_n) );
 
    set_code( config::system_account_name, contracts::system_wasm() );
    set_abi( config::system_account_name, contracts::system_abi().data() );
-   base_tester::push_action( config::system_account_name, N(init),
+   base_tester::push_action( config::system_account_name, "init"_n,
                              config::system_account_name,  mutable_variant_object()
                               ("version", 0)
                               ("core", CORE_SYM_STR)
    );
    produce_blocks();
-   create_account_with_resources( N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false );
-   create_account_with_resources( N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false );
-   create_account_with_resources( N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false );
+   create_account_with_resources( "alice1111111"_n, "eosio"_n, core_sym::from_string("1.0000"), false );
+   create_account_with_resources( "bob111111111"_n, "eosio"_n, core_sym::from_string("0.4500"), false );
+   create_account_with_resources( "carol1111111"_n, "eosio"_n, core_sym::from_string("1.0000"), false );
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
-                        get_balance(config::system_account_name) + get_balance(N(eosio.ramfee)) + get_balance(N(eosio.stake)) + get_balance(N(eosio.ram)) );
+                        get_balance(config::system_account_name) + get_balance("eosio.ramfee"_n) + get_balance("eosio.stake"_n) + get_balance("eosio.ram"_n) );
 
-   vector<permission_level> perm = { { N(alice), config::active_name }, { N(bob), config::active_name },
-      {N(carol), config::active_name} };
+   vector<permission_level> perm = { { "alice"_n, config::active_name }, { "bob"_n, config::active_name },
+      {"carol"_n, config::active_name} };
 
-   vector<permission_level> action_perm = {{N(eosio), config::active_name}};
+   vector<permission_level> action_perm = {{"eosio"_n, config::active_name}};
 
    auto wasm = contracts::util::reject_all_wasm();
 
-   variant pretty_trx = fc::mutable_variant_object()
+   auto pretty_trx = fc::mutable_variant_object()
       ("expiration", "2020-01-01T00:30")
       ("ref_block_num", 2)
       ("ref_block_prefix", 3)
@@ -477,40 +477,85 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
    abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time));
 
    // propose action
-   push_action( N(alice), N(propose), mvo()
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
                   ("requested", perm)
    );
 
+   produce_blocks();
+   produce_blocks();
+
+   // verify the proposal 
+   const vector<char> proposal_first_bin = get_row_by_account( "eosio.msig"_n,  "alice"_n, "proposal"_n, "first"_n );
+   const auto proposal_first_result = abi_ser.binary_to_variant("proposal", 
+                                                                proposal_first_bin, 
+                                                                abi_serializer::create_yield_function( abi_serializer_max_time ) );
+     
+   const auto proposal_first_json = fc::json::to_pretty_string(proposal_first_result);
+   ilog("\nproposal first in json: \n" + proposal_first_json);
+   
+
+   const auto& proposal_first_object = proposal_first_result.get_object(); 
+
+   // make sure proposal is not empty
+   BOOST_REQUIRE(proposal_first_object.size() > 0);
+   // make sure proposal is found
+   BOOST_REQUIRE_EQUAL(proposal_first_object["proposal_name"], "first");  
+
    //approve by alice
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
    //approve by bob
-   push_action( N(bob), N(approve), mvo()
+   push_action( "bob"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(bob), config::active_name })
+                  ("level",         permission_level{ "bob"_n, config::active_name })
    );
    //approve by carol
-   push_action( N(carol), N(approve), mvo()
+   push_action( "carol"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(carol), config::active_name })
+                  ("level",         permission_level{ "carol"_n, config::active_name })
    );
+
+   produce_blocks();
+   produce_blocks();
+
+   // verify the approval from alice, bob, carol
+   const vector<char> approval2_first_bin = get_row_by_account( "eosio.msig"_n,  "alice"_n, "approvals2"_n, "first"_n );
+   const auto approval2_first_result = abi_ser.binary_to_variant("approvals_info", 
+                                                                 approval2_first_bin, 
+                                                                 abi_serializer::create_yield_function( abi_serializer_max_time ) );
+      
+   const auto approval2_first_json = fc::json::to_pretty_string(approval2_first_result);
+   ilog("\nproposal first approval in json: \n" + approval2_first_json);
+
+   const auto& approval2_first_object = approval2_first_result.get_object(); 
+   // make sure approval is not empty
+   BOOST_REQUIRE(approval2_first_object["provided_approvals"].size() > 0);
+   // make sure alice, bob, carol in approval list and is active
+   const auto& approval2_first_provided_approvals = approval2_first_object["provided_approvals"].get_array();
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[0]["level"]["actor"], "alice");  
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[0]["level"]["permission"], "active");  
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[1]["level"]["actor"], "bob");  
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[1]["level"]["permission"], "active");  
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[2]["level"]["actor"], "carol");  
+   BOOST_REQUIRE_EQUAL(approval2_first_provided_approvals[2]["level"]["permission"], "active");  
+
    // execute by alice to replace the eosio system contract
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
 
-   push_action( N(alice), N(exec), mvo()
+   push_action( "alice"_n, "exec"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("executer",      "alice")
@@ -522,7 +567,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_all_approve, eosio_msig_tester )
 
    // can't create account because system contract was replaced by the reject_all contract
 
-   BOOST_REQUIRE_EXCEPTION( create_account_with_resources( N(alice1111112), N(eosio), core_sym::from_string("1.0000"), false ),
+   BOOST_REQUIRE_EXCEPTION( create_account_with_resources( "alice1111112"_n, "eosio"_n, core_sym::from_string("1.0000"), false ),
                             eosio_assert_message_exception, eosio_assert_message_is("rejecting all actions")
 
    );
@@ -536,49 +581,49 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
       config::active_name,
       authority( 1,
                  vector<key_weight>{{get_private_key(config::system_account_name, "active").get_public_key(), 1}},
-                 vector<permission_level_weight>{{{N(eosio.prods), config::active_name}, 1}}
+                 vector<permission_level_weight>{{{"eosio.prods"_n, config::active_name}, 1}}
       ),
       config::owner_name,
       {{config::system_account_name, config::active_name}},
       {get_private_key(config::system_account_name, "active")}
    );
 
-   create_accounts( { N(apple) } );
-   set_producers( {N(alice),N(bob),N(carol), N(apple)} );
+   create_accounts( { "apple"_n } );
+   set_producers( {"alice"_n,"bob"_n,"carol"_n, "apple"_n} );
    produce_blocks(50);
 
-   create_accounts( { N(eosio.token), N(eosio.rex) } );
-   set_code( N(eosio.token), contracts::token_wasm() );
-   set_abi( N(eosio.token), contracts::token_abi().data() );
+   create_accounts( { "eosio.token"_n, "eosio.rex"_n } );
+   set_code( "eosio.token"_n, contracts::token_wasm() );
+   set_abi( "eosio.token"_n, contracts::token_abi().data() );
 
-   create_currency( N(eosio.token), config::system_account_name, core_sym::from_string("10000000000.0000") );
+   create_currency( "eosio.token"_n, config::system_account_name, core_sym::from_string("10000000000.0000") );
    issue(config::system_account_name, core_sym::from_string("1000000000.0000"));
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"), get_balance( config::system_account_name ) );
 
    set_code( config::system_account_name, contracts::system_wasm() );
    set_abi( config::system_account_name, contracts::system_abi().data() );
-   base_tester::push_action( config::system_account_name, N(init),
+   base_tester::push_action( config::system_account_name, "init"_n,
                              config::system_account_name,  mutable_variant_object()
                                  ("version", 0)
                                  ("core", CORE_SYM_STR)
    );
    produce_blocks();
 
-   create_account_with_resources( N(alice1111111), N(eosio), core_sym::from_string("1.0000"), false );
-   create_account_with_resources( N(bob111111111), N(eosio), core_sym::from_string("0.4500"), false );
-   create_account_with_resources( N(carol1111111), N(eosio), core_sym::from_string("1.0000"), false );
+   create_account_with_resources( "alice1111111"_n, "eosio"_n, core_sym::from_string("1.0000"), false );
+   create_account_with_resources( "bob111111111"_n, "eosio"_n, core_sym::from_string("0.4500"), false );
+   create_account_with_resources( "carol1111111"_n, "eosio"_n, core_sym::from_string("1.0000"), false );
 
    BOOST_REQUIRE_EQUAL( core_sym::from_string("1000000000.0000"),
-                        get_balance(config::system_account_name) + get_balance(N(eosio.ramfee)) + get_balance(N(eosio.stake)) + get_balance(N(eosio.ram)) );
+                        get_balance(config::system_account_name) + get_balance("eosio.ramfee"_n) + get_balance("eosio.stake"_n) + get_balance("eosio.ram"_n) );
 
-   vector<permission_level> perm = { { N(alice), config::active_name }, { N(bob), config::active_name },
-      {N(carol), config::active_name}, {N(apple), config::active_name}};
+   vector<permission_level> perm = { { "alice"_n, config::active_name }, { "bob"_n, config::active_name },
+      {"carol"_n, config::active_name}, {"apple"_n, config::active_name}};
 
-   vector<permission_level> action_perm = {{N(eosio), config::active_name}};
+   vector<permission_level> action_perm = {{"eosio"_n, config::active_name}};
 
    auto wasm = contracts::util::reject_all_wasm();
 
-   variant pretty_trx = fc::mutable_variant_object()
+   auto pretty_trx = fc::mutable_variant_object()
       ("expiration", "2020-01-01T00:30")
       ("ref_block_num", 2)
       ("ref_block_prefix", 3)
@@ -603,7 +648,7 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
    abi_serializer::from_variant(pretty_trx, trx, get_resolver(), abi_serializer::create_yield_function(abi_serializer_max_time));
 
    // propose action
-   push_action( N(alice), N(propose), mvo()
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
@@ -611,21 +656,21 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
    );
 
    //approve by alice
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
    //approve by bob
-   push_action( N(bob), N(approve), mvo()
+   push_action( "bob"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(bob), config::active_name })
+                  ("level",         permission_level{ "bob"_n, config::active_name })
    );
 
    // not enough approvers
    BOOST_REQUIRE_EXCEPTION(
-      push_action( N(alice), N(exec), mvo()
+      push_action( "alice"_n, "exec"_n, mvo()
                      ("proposer",      "alice")
                      ("proposal_name", "first")
                      ("executer",      "alice")
@@ -634,21 +679,21 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
    );
 
    //approve by apple
-   push_action( N(apple), N(approve), mvo()
+   push_action( "apple"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(apple), config::active_name })
+                  ("level",         permission_level{ "apple"_n, config::active_name })
    );
    // execute by alice to replace the eosio system contract
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
 
    // execute by another producer different from proposer
-   push_action( N(apple), N(exec), mvo()
+   push_action( "apple"_n, "exec"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("executer",      "apple")
@@ -660,24 +705,24 @@ BOOST_FIXTURE_TEST_CASE( update_system_contract_major_approve, eosio_msig_tester
 
    // can't create account because system contract was replaced by the reject_all contract
 
-   BOOST_REQUIRE_EXCEPTION( create_account_with_resources( N(alice1111112), N(eosio), core_sym::from_string("1.0000"), false ),
+   BOOST_REQUIRE_EXCEPTION( create_account_with_resources( "alice1111112"_n, "eosio"_n, core_sym::from_string("1.0000"), false ),
                             eosio_assert_message_exception, eosio_assert_message_is("rejecting all actions")
 
    );
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( propose_approve_invalidate, eosio_msig_tester ) try {
-   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   auto trx = reqauth( "alice"_n, {permission_level{"alice"_n, config::active_name}}, abi_serializer_max_time );
 
-   push_action( N(alice), N(propose), mvo()
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
-                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+                  ("requested", vector<permission_level>{{ "alice"_n, config::active_name }})
    );
 
    //fail to execute before approval
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+   BOOST_REQUIRE_EXCEPTION( push_action( "alice"_n, "exec"_n, mvo()
                                           ("proposer",      "alice")
                                           ("proposal_name", "first")
                                           ("executer",      "alice")
@@ -687,19 +732,19 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_invalidate, eosio_msig_tester ) try {
    );
 
    //approve
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
 
    //invalidate
-   push_action( N(alice), N(invalidate), mvo()
+   push_action( "alice"_n, "invalidate"_n, mvo()
                   ("account",      "alice")
    );
 
    //fail to execute after invalidation
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+   BOOST_REQUIRE_EXCEPTION( push_action( "alice"_n, "exec"_n, mvo()
                                           ("proposer",      "alice")
                                           ("proposal_name", "first")
                                           ("executer",      "alice")
@@ -710,17 +755,17 @@ BOOST_FIXTURE_TEST_CASE( propose_approve_invalidate, eosio_msig_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( propose_invalidate_approve, eosio_msig_tester ) try {
-   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   auto trx = reqauth( "alice"_n, {permission_level{"alice"_n, config::active_name}}, abi_serializer_max_time );
 
-   push_action( N(alice), N(propose), mvo()
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
-                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+                  ("requested", vector<permission_level>{{ "alice"_n, config::active_name }})
    );
 
    //fail to execute before approval
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+   BOOST_REQUIRE_EXCEPTION( push_action( "alice"_n, "exec"_n, mvo()
                                           ("proposer",      "alice")
                                           ("proposal_name", "first")
                                           ("executer",      "alice")
@@ -730,26 +775,26 @@ BOOST_FIXTURE_TEST_CASE( propose_invalidate_approve, eosio_msig_tester ) try {
    );
 
    //invalidate
-   push_action( N(alice), N(invalidate), mvo()
+   push_action( "alice"_n, "invalidate"_n, mvo()
                   ("account",      "alice")
    );
 
    //approve
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
 
    //successfully execute
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
 
-   push_action( N(bob), N(exec), mvo()
+   push_action( "bob"_n, "exec"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("executer",      "bob")
@@ -761,38 +806,38 @@ BOOST_FIXTURE_TEST_CASE( propose_invalidate_approve, eosio_msig_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( approve_execute_old, eosio_msig_tester ) try {
-   set_code( N(eosio.msig), contracts::util::msig_wasm_old() );
-   set_abi( N(eosio.msig), contracts::util::msig_abi_old().data() );
+   set_code( "eosio.msig"_n, contracts::util::msig_wasm_old() );
+   set_abi( "eosio.msig"_n, contracts::util::msig_abi_old().data() );
    produce_blocks();
 
    //propose with old version of eosio.msig
-   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
-   push_action( N(alice), N(propose), mvo()
+   auto trx = reqauth( "alice"_n, {permission_level{"alice"_n, config::active_name}}, abi_serializer_max_time );
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
-                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+                  ("requested", vector<permission_level>{{ "alice"_n, config::active_name }})
    );
 
-   set_code( N(eosio.msig), contracts::msig_wasm() );
-   set_abi( N(eosio.msig), contracts::msig_abi().data() );
+   set_code( "eosio.msig"_n, contracts::msig_wasm() );
+   set_abi( "eosio.msig"_n, contracts::msig_abi().data() );
    produce_blocks();
 
    //approve and execute with new version
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
 
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
 
-   push_action( N(alice), N(exec), mvo()
+   push_action( "alice"_n, "exec"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("executer",      "alice")
@@ -806,38 +851,38 @@ BOOST_FIXTURE_TEST_CASE( approve_execute_old, eosio_msig_tester ) try {
 
 
 BOOST_FIXTURE_TEST_CASE( approve_unapprove_old, eosio_msig_tester ) try {
-   set_code( N(eosio.msig), contracts::util::msig_wasm_old() );
-   set_abi( N(eosio.msig), contracts::util::msig_abi_old().data() );
+   set_code( "eosio.msig"_n, contracts::util::msig_wasm_old() );
+   set_abi( "eosio.msig"_n, contracts::util::msig_abi_old().data() );
    produce_blocks();
 
    //propose with old version of eosio.msig
-   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
-   push_action( N(alice), N(propose), mvo()
+   auto trx = reqauth( "alice"_n, {permission_level{"alice"_n, config::active_name}}, abi_serializer_max_time );
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
-                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+                  ("requested", vector<permission_level>{{ "alice"_n, config::active_name }})
    );
 
    //approve with old version
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
 
-   set_code( N(eosio.msig), contracts::msig_wasm() );
-   set_abi( N(eosio.msig), contracts::msig_abi().data() );
+   set_code( "eosio.msig"_n, contracts::msig_wasm() );
+   set_abi( "eosio.msig"_n, contracts::msig_abi().data() );
    produce_blocks();
 
    //unapprove with old version
-   push_action( N(alice), N(unapprove), mvo()
+   push_action( "alice"_n, "unapprove"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
 
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+   BOOST_REQUIRE_EXCEPTION( push_action( "alice"_n, "exec"_n, mvo()
                                           ("proposer",      "alice")
                                           ("proposal_name", "first")
                                           ("executer",      "alice")
@@ -849,31 +894,31 @@ BOOST_FIXTURE_TEST_CASE( approve_unapprove_old, eosio_msig_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( approve_by_two_old, eosio_msig_tester ) try {
-   set_code( N(eosio.msig), contracts::util::msig_wasm_old() );
-   set_abi( N(eosio.msig), contracts::util::msig_abi_old().data() );
+   set_code( "eosio.msig"_n, contracts::util::msig_wasm_old() );
+   set_abi( "eosio.msig"_n, contracts::util::msig_abi_old().data() );
    produce_blocks();
 
-   auto trx = reqauth( N(alice), vector<permission_level>{ { N(alice), config::active_name }, { N(bob), config::active_name } }, abi_serializer_max_time );
-   push_action( N(alice), N(propose), mvo()
+   auto trx = reqauth( "alice"_n, vector<permission_level>{ { "alice"_n, config::active_name }, { "bob"_n, config::active_name } }, abi_serializer_max_time );
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
-                  ("requested", vector<permission_level>{ { N(alice), config::active_name }, { N(bob), config::active_name } })
+                  ("requested", vector<permission_level>{ { "alice"_n, config::active_name }, { "bob"_n, config::active_name } })
    );
 
    //approve by alice
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
    );
 
-   set_code( N(eosio.msig), contracts::msig_wasm() );
-   set_abi( N(eosio.msig), contracts::msig_abi().data() );
+   set_code( "eosio.msig"_n, contracts::msig_wasm() );
+   set_abi( "eosio.msig"_n, contracts::msig_abi().data() );
    produce_blocks();
 
    //fail because approval by bob is missing
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(exec), mvo()
+   BOOST_REQUIRE_EXCEPTION( push_action( "alice"_n, "exec"_n, mvo()
                                           ("proposer",      "alice")
                                           ("proposal_name", "first")
                                           ("executer",      "alice")
@@ -883,20 +928,20 @@ BOOST_FIXTURE_TEST_CASE( approve_by_two_old, eosio_msig_tester ) try {
    );
 
    //approve and execute with new version
-   push_action( N(bob), N(approve), mvo()
+   push_action( "bob"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(bob), config::active_name })
+                  ("level",         permission_level{ "bob"_n, config::active_name })
    );
 
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
 
-   push_action( N(alice), N(exec), mvo()
+   push_action( "alice"_n, "exec"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("executer",      "alice")
@@ -909,22 +954,22 @@ BOOST_FIXTURE_TEST_CASE( approve_by_two_old, eosio_msig_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( approve_with_hash, eosio_msig_tester ) try {
-   auto trx = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   auto trx = reqauth( "alice"_n, {permission_level{"alice"_n, config::active_name}}, abi_serializer_max_time );
    auto trx_hash = fc::sha256::hash( trx );
    auto not_trx_hash = fc::sha256::hash( trx_hash );
 
-   push_action( N(alice), N(propose), mvo()
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx)
-                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+                  ("requested", vector<permission_level>{{ "alice"_n, config::active_name }})
    );
 
    //fail to approve with incorrect hash
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(approve), mvo()
+   BOOST_REQUIRE_EXCEPTION( push_action( "alice"_n, "approve"_n, mvo()
                                           ("proposer",      "alice")
                                           ("proposal_name", "first")
-                                          ("level",         permission_level{ N(alice), config::active_name })
+                                          ("level",         permission_level{ "alice"_n, config::active_name })
                                           ("proposal_hash", not_trx_hash)
                             ),
                             eosio::chain::crypto_api_exception,
@@ -932,21 +977,21 @@ BOOST_FIXTURE_TEST_CASE( approve_with_hash, eosio_msig_tester ) try {
    );
 
    //approve and execute
-   push_action( N(alice), N(approve), mvo()
+   push_action( "alice"_n, "approve"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
-                  ("level",         permission_level{ N(alice), config::active_name })
+                  ("level",         permission_level{ "alice"_n, config::active_name })
                   ("proposal_hash", trx_hash)
    );
 
    transaction_trace_ptr trace;
    control->applied_transaction.connect(
-   [&]( std::tuple<const transaction_trace_ptr&, const signed_transaction&> p ) {
+   [&]( std::tuple<const transaction_trace_ptr&, const packed_transaction_ptr&> p ) {
       const auto& t = std::get<0>(p);
       if( t->scheduled ) { trace = t; }
    } );
 
-   push_action( N(alice), N(exec), mvo()
+   push_action( "alice"_n, "exec"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("executer",      "alice")
@@ -958,40 +1003,40 @@ BOOST_FIXTURE_TEST_CASE( approve_with_hash, eosio_msig_tester ) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( switch_proposal_and_fail_approve_with_hash, eosio_msig_tester ) try {
-   auto trx1 = reqauth( N(alice), {permission_level{N(alice), config::active_name}}, abi_serializer_max_time );
+   auto trx1 = reqauth( "alice"_n, {permission_level{"alice"_n, config::active_name}}, abi_serializer_max_time );
    auto trx1_hash = fc::sha256::hash( trx1 );
 
-   push_action( N(alice), N(propose), mvo()
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx1)
-                  ("requested", vector<permission_level>{{ N(alice), config::active_name }})
+                  ("requested", vector<permission_level>{{ "alice"_n, config::active_name }})
    );
 
-   auto trx2 = reqauth( N(alice),
-                       { permission_level{N(alice), config::active_name},
-                         permission_level{N(alice), config::owner_name}  },
+   auto trx2 = reqauth( "alice"_n,
+                       { permission_level{"alice"_n, config::active_name},
+                         permission_level{"alice"_n, config::owner_name}  },
                        abi_serializer_max_time );
 
-   push_action( N(alice), N(cancel), mvo()
+   push_action( "alice"_n, "cancel"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("canceler",       "alice")
    );
 
-   push_action( N(alice), N(propose), mvo()
+   push_action( "alice"_n, "propose"_n, mvo()
                   ("proposer",      "alice")
                   ("proposal_name", "first")
                   ("trx",           trx2)
-                  ("requested", vector<permission_level>{ { N(alice), config::active_name },
-                                                          { N(alice), config::owner_name } })
+                  ("requested", vector<permission_level>{ { "alice"_n, config::active_name },
+                                                          { "alice"_n, config::owner_name } })
    );
 
    //fail to approve with hash meant for old proposal
-   BOOST_REQUIRE_EXCEPTION( push_action( N(alice), N(approve), mvo()
+   BOOST_REQUIRE_EXCEPTION( push_action( "alice"_n, "approve"_n, mvo()
                                           ("proposer",      "alice")
                                           ("proposal_name", "first")
-                                          ("level",         permission_level{ N(alice), config::active_name })
+                                          ("level",         permission_level{ "alice"_n, config::active_name })
                                           ("proposal_hash", trx1_hash)
                             ),
                             eosio::chain::crypto_api_exception,

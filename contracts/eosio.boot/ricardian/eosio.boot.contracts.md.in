@@ -72,17 +72,6 @@ icon: @ICON_BASE_URL@/@ADMIN_ICON_URI@
 
 Assert that the protocol feature with a digest of {{feature_digest}} has been activated.
 
-<h1 class="contract">reqauth</h1>
-
----
-spec_version: "0.2.0"
-title: Assert Authorization
-summary: 'Assert that authorization by {{nowrap from}} is provided'
-icon: @ICON_BASE_URL@/@ACCOUNT_ICON_URI@
----
-
-Assert that authorization by {{from}} is provided.
-
 <h1 class="contract">setabi</h1>
 
 ---
@@ -94,17 +83,6 @@ icon: @ICON_BASE_URL@/@ACCOUNT_ICON_URI@
 
 Deploy the ABI file associated with the contract on account {{account}}.
 
-<h1 class="contract">setalimits</h1>
-
----
-spec_version: "0.2.0"
-title: Adjust Resource Limits of Account
-summary: 'Adjust resource limits of account {{nowrap account}}'
-icon: @ICON_BASE_URL@/@ADMIN_ICON_URI@
----
-
-{{$action.account}} updates {{account}}’s resource limits to have a RAM quota of {{ram_bytes}} bytes, a NET bandwidth quota of {{net_weight}} and a CPU bandwidth quota of {{cpu_weight}}.
-
 <h1 class="contract">setcode</h1>
 
 ---
@@ -115,65 +93,6 @@ icon: @ICON_BASE_URL@/@ACCOUNT_ICON_URI@
 ---
 
 Deploy compiled contract code to the account {{account}}.
-
-<h1 class="contract">setparams</h1>
-
----
-spec_version: "0.2.0"
-title: Set System Parameters
-summary: 'Set system parameters'
-icon: @ICON_BASE_URL@/@ADMIN_ICON_URI@
----
-
-{{$action.account}} sets system parameters to:
-{{to_json params}}
-
-<h1 class="contract">setkvparams</h1>
-
----
-spec_version: "0.3.0"
-title: Set KV Parameters
-summary: 'Set KV parameters'
-icon: @ICON_BASE_URL@/@ADMIN_ICON_URI@
----
-
-{{$action.account}} sets KV parameters to:
-{{to_json params}}
-
-<h1 class="contract">setpriv</h1>
-
----
-spec_version: "0.2.0"
-title: Make an Account Privileged or Unprivileged
-summary: '{{#if is_priv}}Make {{nowrap account}} privileged{{else}}Remove privileged status of {{nowrap account}}{{/if}}'
-icon: @ICON_BASE_URL@/@ADMIN_ICON_URI@
----
-
-{{#if is_priv}}
-{{$action.account}} makes {{account}} privileged.
-{{else}}
-{{$action.account}} removes privileged status of {{account}}.
-{{/if}}
-
-<h1 class="contract">setprods</h1>
-
----
-spec_version: "0.2.0"
-title: Set Block Producers
-summary: 'Set block producer schedule'
-icon: @ICON_BASE_URL@/@ADMIN_ICON_URI@
----
-
-{{$action.account}} proposes a block producer schedule of:
-{{#each schedule}}
-  1. {{this.producer_name}}
-{{/each}}
-
-The block signing authorities of each of the producers in the above schedule are listed below:
-{{#each schedule}}
-### {{this.producer_name}}
-{{to_json this.authority}}
-{{/each}}
 
 <h1 class="contract">unlinkauth</h1>
 

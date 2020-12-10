@@ -6,6 +6,7 @@ function usage() {
   -e DIR      Directory where EOSIO is installed. (Default: $HOME/eosio/X.Y)
   -c DIR      Directory where EOSIO.CDT is installed. (Default: /usr/local/eosio.cdt)
   -t          Build unit tests.
+  -P          Build unit tests with pinned eos, currently only work with eos build folder. eg: ./build.sh -P -e $HOME/work/eos/build 
   -y          Noninteractive mode (Uses defaults for each prompt.)
   -h          Print this help menu.
    \\n" "$0" 1>&2
@@ -13,9 +14,9 @@ function usage() {
 }
 
 BUILD_TESTS=false
-
+BUILD_TESTS_PINNED=false
 if [ $# -ne 0 ]; then
-  while getopts "e:c:tyh" opt; do
+  while getopts "e:c:tyhP" opt; do
     case "${opt}" in
       e )
         EOSIO_DIR_PROMPT=$OPTARG
@@ -25,6 +26,10 @@ if [ $# -ne 0 ]; then
       ;;
       t )
         BUILD_TESTS=true
+      ;;
+      P )
+	BUILD_TESTS_PINNED=true
+	BUILD_TESTS=true
       ;;
       y )
         NONINTERACTIVE=true
@@ -79,6 +84,11 @@ NC='\033[0m'
 CPU_CORES=$(getconf _NPROCESSORS_ONLN)
 mkdir -p build
 pushd build &> /dev/null
-cmake -DBUILD_TESTS=${BUILD_TESTS} ../
+if [[ ${BUILD_TESTS_PINNED} == true ]]; then
+	cmake -DBUILD_TESTS=${BUILD_TESTS}  -DBUILD_TESTS_PINNED=1 -DEOSIO_DIR_PROMPT=${EOSIO_DIR_PROMPT}  ../
+else
+	cmake -DBUILD_TESTS=${BUILD_TESTS} ../
+fi
 make -j $CPU_CORES
 popd &> /dev/null
+
