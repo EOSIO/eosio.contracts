@@ -3,11 +3,7 @@ content_title: How to sign a multisig transaction with eosio.msig
 link_text: How to sign a multisig transaction with eosio.msig
 ---
 
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-### eosio.msig
-=======
 ## eosio.msig
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
 
 ### Prerequisites:
    - eosio.token contract installed to eosio.token account, eosio.msig contract installed on eosio.msig account which is a priviliged account.
@@ -16,30 +12,19 @@ link_text: How to sign a multisig transaction with eosio.msig
    - keys to accounts 'treasury' and 'tester' imported into local wallet, the wallet is unlocked.
 
 ### One user creates a proposal:
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-````
-$ cleos multisig propose test '[{"actor": "treasury", "permission": "active"}]' '[{"actor": "treasury", "permission": "active"}]' eosio.token issue '{"to": "tester", "quantity": "1000.0000 SYS", "memo": ""}' -p tester
-
-=======
 ```sh
 cleos multisig propose test '[{"actor": "treasury", "permission": "active"}]' '[{"actor": "treasury", "permission": "active"}]' eosio.token issue '{"to": "tester", "quantity": "1000.0000 SYS", "memo": ""}' -p tester
 ```
 ```console
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
 executed transaction: e26f3a3a7cba524a7b15a0b6c77c7daa73d3ba9bf84e83f9c2cdf27fcb183d61  336 bytes  107520 cycles
 #    eosio.msig <= eosio.msig::propose          {"proposer":"tester","proposal_name":"test","requested":[{"actor":"treasury","permission":"active"}]...
 ```
 
 ### Another user reviews the transaction:
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-````
-$ cleos multisig review tester test
-=======
 ```sh
 cleos multisig review tester test
 ```
 ```json
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
 {
   "proposal_name": "test",
   "requested_approvals": [{
@@ -76,15 +61,7 @@ cleos multisig review tester test
     ]
   }
 }
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-````
-
-### And then approves it:
-````
-$ cleos multisig approve tester test '{"actor": "treasury", "permission": "active"}' -p treasury
-=======
 ```
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
 
 ### And then approves it:
 ```sh
@@ -93,15 +70,7 @@ cleos multisig approve tester test '{"actor": "treasury", "permission": "active"
 ```console
 executed transaction: 475970a4b0016368d0503d1ce01577376f91f5a5ba63dd4353683bd95101b88d  256 bytes  108544 cycles
 #    eosio.msig <= eosio.msig::approve          {"proposer":"tester","proposal_name":"test","level":{"actor":"treasury","permission":"active"}}
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-````
-
-### First user initiates execution:
-````
-$ cleos multisig exec tester test -p tester
-=======
 ```
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
 
 ### First user initiates execution:
 ```sh
@@ -122,30 +91,19 @@ executed transaction: 64e5eaceb77362694055f572ae35876111e87b637a55250de315b1b55e
    - keys to accounts 'treasury' and 'tester' imported into local wallet, the wallet is unlocked.
 
 ### One user creates a proposal:
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-````
-$ cleos multisig propose test '[{"actor": "treasury", "permission": "active"}]' '[{"actor": "treasury", "permission": "active"}]' eosio.token transfer '{"from": "treasury", "to": "tester", "quantity": "1.0000 SYS", "memo": ""}' -p tester
-
-=======
 ```sh
 cleos multisig propose test '[{"actor": "treasury", "permission": "active"}]' '[{"actor": "treasury", "permission": "active"}]' eosio.token transfer '{"from": "treasury", "to": "tester", "quantity": "1.0000 SYS", "memo": ""}' -p tester
 ```
 ```console
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
 executed transaction: e26f3a3a7cba524a7b15a0b6c77c7daa73d3ba9bf84e83f9c2cdf27fcb183d61  336 bytes  107520 cycles
 #    eosio.msig <= eosio.msig::propose          {"proposer":"tester","proposal_name":"test","requested":[{"actor":"treasury","permission":"active"}]...
 ```
 
 ### Another user reviews the transaction:
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-````
-$ cleos multisig review tester test
-=======
 ```sh
 cleos multisig review tester test
 ```
 ```json
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
 {
   "proposal_name": "test",
   "requested_approvals": [{
@@ -183,15 +141,7 @@ cleos multisig review tester test
     ]
   }
 }
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-````
-
-### And then approves it:
-````
-$ cleos multisig approve tester test '{"actor": "treasury", "permission": "active"}' -p treasury
-=======
 ```
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
 
 ### And then approves it:
 ```sh
@@ -203,30 +153,17 @@ executed transaction: 475970a4b0016368d0503d1ce01577376f91f5a5ba63dd4353683bd951
 ```
 
 ### First user check account balance before executing the proposed transaction
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-````
-$ cleos get account tester
-=======
 ```sh
 cleos get account tester
 ```
 ```console
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
 ...
 SYS balances:
      liquid:            1.0487 SYS
      staked:            2.0000 SYS
      unstaking:         0.0000 SYS
      total:             4.0487 SYS
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-````
-
-### First user initiates execution of proposed transaction:
-````
-$ cleos multisig exec tester test -p tester
-=======
 ```
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
 
 ### First user initiates execution of proposed transaction:
 ```sh
@@ -238,23 +175,14 @@ executed transaction: 64e5eaceb77362694055f572ae35876111e87b637a55250de315b1b55e
 ```
 
 ### First user can check account balance, it should be increased by 1.0000 SYS
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-````
-$ cleos get account tester
-=======
 ```sh
 cleos get account tester
 ```
 ```console
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
 ...
 SYS balances:
      liquid:            2.0487 SYS
      staked:            2.0000 SYS
      unstaking:         0.0000 SYS
      total:             4.0487 SYS
-<<<<<<< HEAD:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
-````
-=======
 ```
->>>>>>> origin/develop:docs/04_guides/06_how-to-sign-a-multisig-transaction-with-eosio.msig.md
