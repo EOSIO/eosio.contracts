@@ -40,6 +40,8 @@ namespace eosiosystem {
    using eosio::time_point_sec;
    using eosio::unsigned_int;
 
+   inline constexpr int64_t powerup_frac = 1'000'000'000'000'000ll;  // 1.0 = 10^15
+
    template<typename E, typename F>
    static inline auto has_field( F flags, E field )
    -> std::enable_if_t< std::is_integral_v<F> && std::is_unsigned_v<F> &&
@@ -78,19 +80,20 @@ namespace eosiosystem {
    static constexpr int64_t  default_inflation_pay_factor  = 50000;   // producers pay share = 10000 / 50000 = 20% of the inflation
    static constexpr int64_t  default_votepay_factor        = 40000;   // per-block pay share = 10000 / 40000 = 25% of the producer pay
 
-   /**
-    * eosio.system contract
-    * 
-    * eosio.system contract defines the structures and actions needed for blockchain's core functionality.
-    * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
-    *    delegate their vote to a proxy.
-    * - Producers register in order to be voted for, and can claim per-block and per-vote rewards.
-    * - Users can buy and sell RAM at a market-determined price.
-    * - Users can bid on premium names.
-    * - A resource exchange system (REX) allows token holders to lend their tokens,
-    *    and users to rent CPU and Network resources in return for a market-determined fee.
-    */
-
+  /**
+   * The `eosio.system` smart contract is provided by `block.one` as a sample system contract, and it defines the structures and actions needed for blockchain's core functionality.
+   * 
+   * Just like in the `eosio.bios` sample contract implementation, there are a few actions which are not implemented at the contract level (`newaccount`, `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, `canceldelay`, `onerror`, `setabi`, `setcode`), they are just declared in the contract so they will show in the contract's ABI and users will be able to push those actions to the chain via the account holding the `eosio.system` contract, but the implementation is at the EOSIO core level. They are referred to as EOSIO native actions.
+   * 
+   * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
+   *    delegate their vote to a proxy.
+   * - Producers register in order to be voted for, and can claim per-block and per-vote rewards.
+   * - Users can buy and sell RAM at a market-determined price.
+   * - Users can bid on premium names.
+   * - A resource exchange system (REX) allows token holders to lend their tokens,
+   *    and users to rent CPU and Network resources in return for a market-determined fee.
+   */
+  
    // A name bid, which consists of:
    // - a `newname` name that the bid is for
    // - a `high_bidder` account name that is the one with the highest bid so far
@@ -522,8 +525,136 @@ namespace eosiosystem {
       asset stake_change;
    };
 
+   struct powerup_config_resource {
+      std::optional<int64_t>        current_weight_ratio;   // Immediately set weight_ratio to this amount. 1x = 10^15. 0.01x = 10^13.
+                                                            //    Do not specify to preserve the existing setting or use the default;
+                                                            //    this avoids sudden price jumps. For new chains which don't need
+                                                            //    to gradually phase out staking and REX, 0.01x (10^13) is a good
+                                                            //    value for both current_weight_ratio and target_weight_ratio.
+      std::optional<int64_t>        target_weight_ratio;    // Linearly shrink weight_ratio to this amount. 1x = 10^15. 0.01x = 10^13.
+                                                            //    Do not specify to preserve the existing setting or use the default.
+      std::optional<int64_t>        assumed_stake_weight;   // Assumed stake weight for ratio calculations. Use the sum of total
+                                                            //    staked and total rented by REX at the time the power market
+                                                            //    is first activated. Do not specify to preserve the existing
+                                                            //    setting (no default exists); this avoids sudden price jumps.
+                                                            //    For new chains which don't need to phase out staking and REX,
+                                                            //    10^12 is probably a good value.
+      std::optional<time_point_sec> target_timestamp;       // Stop automatic weight_ratio shrinkage at this time. Once this
+                                                            //    time hits, weight_ratio will be target_weight_ratio. Ignored
+                                                            //    if current_weight_ratio == target_weight_ratio. Do not specify
+                                                            //    this to preserve the existing setting (no default exists).
+      std::optional<double>         exponent;               // Exponent of resource price curve. Must be >= 1. Do not specify
+                                                            //    to preserve the existing setting or use the default.
+      std::optional<uint32_t>       decay_secs;             // Number of seconds for the gap between adjusted resource
+                                                            //    utilization and instantaneous resource utilization to shrink
+                                                            //    by 63%. Do not specify to preserve the existing setting or
+                                                            //    use the default.
+      std::optional<asset>          min_price;              // Fee needed to reserve the entire resource market weight at the
+                                                            //    minimum price. For example, this could be set to 0.005% of
+                                                            //    total token supply. Do not specify to preserve the existing
+                                                            //    setting or use the default.
+      std::optional<asset>          max_price;              // Fee needed to reserve the entire resource market weight at the
+                                                            //    maximum price. For example, this could be set to 10% of total
+                                                            //    token supply. Do not specify to preserve the existing
+                                                            //    setting (no default exists).
+
+      EOSLIB_SERIALIZE( powerup_config_resource, (current_weight_ratio)(target_weight_ratio)(assumed_stake_weight)
+                                                (target_timestamp)(exponent)(decay_secs)(min_price)(max_price)    )
+   };
+
+   struct powerup_config {
+      powerup_config_resource  net;             // NET market configuration
+      powerup_config_resource  cpu;             // CPU market configuration
+      std::optional<uint32_t> powerup_days;     // `powerup` `days` argument must match this. Do not specify to preserve the
+                                                //    existing setting or use the default.
+      std::optional<asset>    min_powerup_fee;  // Fees below this amount are rejected. Do not specify to preserve the
+                                                //    existing setting (no default exists).
+
+      EOSLIB_SERIALIZE( powerup_config, (net)(cpu)(powerup_days)(min_powerup_fee) )
+   };
+
+   struct powerup_state_resource {
+      static constexpr double   default_exponent   = 2.0;                  // Exponent of 2.0 means that the price to reserve a
+                                                                           //    tiny amount of resources increases linearly
+                                                                           //    with utilization.
+      static constexpr uint32_t default_decay_secs = 1 * seconds_per_day;  // 1 day; if 100% of bandwidth resources are in a
+                                                                           //    single loan, then, assuming no further powerup usage,
+                                                                           //    1 day after it expires the adjusted utilization
+                                                                           //    will be at approximately 37% and after 3 days
+                                                                           //    the adjusted utilization will be less than 5%.
+
+      uint8_t        version                 = 0;
+      int64_t        weight                  = 0;                  // resource market weight. calculated; varies over time.
+                                                                   //    1 represents the same amount of resources as 1
+                                                                   //    satoshi of SYS staked.
+      int64_t        weight_ratio            = 0;                  // resource market weight ratio:
+                                                                   //    assumed_stake_weight / (assumed_stake_weight + weight).
+                                                                   //    calculated; varies over time. 1x = 10^15. 0.01x = 10^13.
+      int64_t        assumed_stake_weight    = 0;                  // Assumed stake weight for ratio calculations.
+      int64_t        initial_weight_ratio    = powerup_frac;        // Initial weight_ratio used for linear shrinkage.
+      int64_t        target_weight_ratio     = powerup_frac / 100;  // Linearly shrink the weight_ratio to this amount.
+      time_point_sec initial_timestamp       = {};                 // When weight_ratio shrinkage started
+      time_point_sec target_timestamp        = {};                 // Stop automatic weight_ratio shrinkage at this time. Once this
+                                                                   //    time hits, weight_ratio will be target_weight_ratio.
+      double         exponent                = default_exponent;   // Exponent of resource price curve.
+      uint32_t       decay_secs              = default_decay_secs; // Number of seconds for the gap between adjusted resource
+                                                                   //    utilization and instantaneous utilization to shrink by 63%.
+      asset          min_price               = {};                 // Fee needed to reserve the entire resource market weight at
+                                                                   //    the minimum price (defaults to 0).
+      asset          max_price               = {};                 // Fee needed to reserve the entire resource market weight at
+                                                                   //    the maximum price.
+      int64_t        utilization             = 0;                  // Instantaneous resource utilization. This is the current
+                                                                   //    amount sold. utilization <= weight.
+      int64_t        adjusted_utilization    = 0;                  // Adjusted resource utilization. This is >= utilization and
+                                                                   //    <= weight. It grows instantly but decays exponentially.
+      time_point_sec utilization_timestamp   = {};                 // When adjusted_utilization was last updated
+   };
+
+   struct [[eosio::table("powup.state"),eosio::contract("eosio.system")]] powerup_state {
+      static constexpr uint32_t default_powerup_days = 30; // 30 day resource powerups
+
+      uint8_t                    version           = 0;
+      powerup_state_resource     net               = {};                     // NET market state
+      powerup_state_resource     cpu               = {};                     // CPU market state
+      uint32_t                   powerup_days      = default_powerup_days;   // `powerup` `days` argument must match this.
+      asset                      min_powerup_fee   = {};                     // fees below this amount are rejected
+
+      uint64_t primary_key()const { return 0; }
+   };
+
+   typedef eosio::singleton<"powup.state"_n, powerup_state> powerup_state_singleton;
+
+   struct [[eosio::table("powup.order"),eosio::contract("eosio.system")]] powerup_order {
+      uint8_t              version = 0;
+      uint64_t             id;
+      name                 owner;
+      int64_t              net_weight;
+      int64_t              cpu_weight;
+      time_point_sec       expires;
+
+      uint64_t primary_key()const { return id; }
+      uint64_t by_owner()const    { return owner.value; }
+      uint64_t by_expires()const  { return expires.utc_seconds; }
+   };
+
+   typedef eosio::multi_index< "powup.order"_n, powerup_order,
+                               indexed_by<"byowner"_n, const_mem_fun<powerup_order, uint64_t, &powerup_order::by_owner>>,
+                               indexed_by<"byexpires"_n, const_mem_fun<powerup_order, uint64_t, &powerup_order::by_expires>>
+                               > powerup_order_table;
+
    /**
-    * The EOSIO system contract. The EOSIO system contract governs ram market, voters, producers, global state.
+    * The `eosio.system` smart contract is provided by `block.one` as a sample system contract, and it defines the structures and actions needed for blockchain's core functionality.
+    *
+    * Just like in the `eosio.bios` sample contract implementation, there are a few actions which are not implemented at the contract level (`newaccount`, `updateauth`, `deleteauth`, `linkauth`, `unlinkauth`, `canceldelay`, `onerror`, `setabi`, `setcode`), they are just declared in the contract so they will show in the contract's ABI and users will be able to push those actions to the chain via the account holding the `eosio.system` contract, but the implementation is at the EOSIO core level. They are referred to as EOSIO native actions.
+    *
+    * - Users can stake tokens for CPU and Network bandwidth, and then vote for producers or
+    *    delegate their vote to a proxy.
+    * - Producers register in order to be voted for, and can claim per-block and per-vote rewards.
+    * - Users can buy and sell RAM at a market-determined price.
+    * - Users can bid on premium names.
+    * - A resource exchange system (REX) allows token holders to lend their tokens,
+    *    and users to rent CPU and Network resources in return for a market-determined fee.
+    * - A resource market separate from REX: `power`.
     */
    class [[eosio::contract("eosio.system")]] system_contract : public native {
 
@@ -558,6 +689,7 @@ namespace eosiosystem {
          static constexpr eosio::name names_account{"eosio.names"_n};
          static constexpr eosio::name saving_account{"eosio.saving"_n};
          static constexpr eosio::name rex_account{"eosio.rex"_n};
+         static constexpr eosio::name reserv_account{"eosio.reserv"_n};
          static constexpr eosio::name null_account{"eosio.null"_n};
          static constexpr symbol ramcore_symbol = symbol(symbol_code("RAMCORE"), 4);
          static constexpr symbol ram_symbol     = symbol(symbol_code("RAM"), 0);
@@ -1166,6 +1298,36 @@ namespace eosiosystem {
          [[eosio::action]]
          void setinflation( int64_t annual_rate, int64_t inflation_pay_factor, int64_t votepay_factor );
 
+         /**
+          * Configure the `power` market. The market becomes available the first time this
+          * action is invoked.
+          */
+         [[eosio::action]]
+         void cfgpowerup( powerup_config& args );
+
+         /**
+          * Process power queue and update state. Action does not execute anything related to a specific user.
+          *
+          * @param user - any account can execute this action
+          * @param max - number of queue items to process
+          */
+         [[eosio::action]]
+         void powerupexec( const name& user, uint16_t max );
+
+         /**
+          * Powerup NET and CPU resources by percentage
+          *
+          * @param payer - the resource buyer
+          * @param receiver - the resource receiver
+          * @param days - number of days of resource availability. Must match market configuration.
+          * @param net_frac - fraction of net (100% = 10^15) managed by this market
+          * @param cpu_frac - fraction of cpu (100% = 10^15) managed by this market
+          * @param max_payment - the maximum amount `payer` is willing to pay. Tokens are withdrawn from
+          *    `payer`'s token balance.
+          */
+         [[eosio::action]]
+         void powerup( const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac, const asset& max_payment );
+
          using init_action = eosio::action_wrapper<"init"_n, &system_contract::init>;
          using setacctram_action = eosio::action_wrapper<"setacctram"_n, &system_contract::setacctram>;
          using setacctnet_action = eosio::action_wrapper<"setacctnet"_n, &system_contract::setacctnet>;
@@ -1212,6 +1374,9 @@ namespace eosiosystem {
          using setalimits_action = eosio::action_wrapper<"setalimits"_n, &system_contract::setalimits>;
          using setparams_action = eosio::action_wrapper<"setparams"_n, &system_contract::setparams>;
          using setinflation_action = eosio::action_wrapper<"setinflation"_n, &system_contract::setinflation>;
+         using cfgpowerup_action = eosio::action_wrapper<"cfgpowerup"_n, &system_contract::cfgpowerup>;
+         using powerupexec_action = eosio::action_wrapper<"powerupexec"_n, &system_contract::powerupexec>;
+         using powerup_action = eosio::action_wrapper<"powerup"_n, &system_contract::powerup>;
 
       private:
          // Implementation details:
@@ -1236,7 +1401,7 @@ namespace eosiosystem {
                                         const char* error_msg = "must vote for at least 21 producers or for a proxy before buying REX" )const;
          rex_order_outcome fill_rex_order( const rex_balance_table::const_iterator& bitr, const asset& rex );
          asset update_rex_account( const name& owner, const asset& proceeds, const asset& unstake_quant, bool force_vote_update = false );
-         void channel_to_rex( const name& from, const asset& amount );
+         void channel_to_rex( const name& from, const asset& amount, bool required = false );
          void channel_namebid_to_rex( const int64_t highest_bid );
          template <typename T>
          int64_t rent_rex( T& table, const name& from, const name& receiver, const asset& loan_payment, const asset& loan_fund );
@@ -1312,6 +1477,13 @@ namespace eosiosystem {
          };
 
          registration<&system_contract::update_rex_stake> vote_stake_updater{ this };
+
+         // defined in power.cpp
+         void adjust_resources(name payer, name account, symbol core_symbol, int64_t net_delta, int64_t cpu_delta, bool must_not_be_managed = false);
+         void process_powerup_queue(
+            time_point_sec now, symbol core_symbol, powerup_state& state,
+            powerup_order_table& orders, uint32_t max_items, int64_t& net_delta_available,
+            int64_t& cpu_delta_available);
    };
 
 }
