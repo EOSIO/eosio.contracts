@@ -74,7 +74,7 @@ void system_contract::process_rentbw_queue(time_point_sec now, symbol core_symbo
    auto idx = orders.get_index<"byexpires"_n>();
    while (max_items--) {
       auto it = idx.begin();
-      if (it == idx.end() || it->expires > now)
+      if (it == idx.end())
          break;
       net_delta_available += it->net_weight;
       cpu_delta_available += it->cpu_weight;
@@ -333,6 +333,7 @@ void system_contract::rentbwexec(const name& user, uint16_t max) {
 void system_contract::rentbw(const name& payer, const name& receiver, uint32_t days, int64_t net_frac, int64_t cpu_frac,
                              const asset& max_payment) {
    require_auth(payer);
+   eosio::check(false, "rentbw is disabled during migration");
    rentbw_state_singleton state_sing{ get_self(), 0 };
    rentbw_order_table     orders{ get_self(), 0 };
    eosio::check(state_sing.exists(), "rentbw hasn't been initialized");
