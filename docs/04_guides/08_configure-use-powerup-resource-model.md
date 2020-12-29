@@ -5,6 +5,7 @@ link_text: How to configure PowerUp resource model
 # Configure and Use the PowerUp Resource Model
 
 ## Overview
+
 This new system will create a new optional NET and CPU marketplace which displaces (over time)
 the existing staking system and REX market. Under the old model, system token holders
 own NET and CPU and may choose to use it themselves, delegate it to others, or make
@@ -17,7 +18,6 @@ to profit off the new market.
 
 ### Definitions
 
-#### Configuration
 ```c++
 // configure the `powerup` market. The market becomes available the first time this action is invoked
 void cfgpowerup( powerup_config& args );
@@ -66,9 +66,11 @@ struct powerup_config {
                                               //    existing setting (no default exists).
 };
 ```
+
 #### State
 
 Definitions useful to help understand the configuration, including defaults:
+
 ```c++
 inline constexpr int64_t powerup_frac = 1'000'000'000'000'000ll;  // 1.0 = 10^15
 
@@ -123,6 +125,7 @@ struct powerup_state {
 ```
 
 ### Preparation for Upgrade
+
 1. Build [eosio.contracts](https://github.com/EOSIO/eosio.contracts) with `powerup` code. Version **1.9.x** or greater .
 2. Deploy eosio.system contract to `eosio`.
 3. Create account `eosio.reserv` and ensure the account has enough RAM, at least 4 KiB.
@@ -132,6 +135,7 @@ struct powerup_state {
 ### Configuring PowerUp
 
 #### Config file
+
 ```json
 # config.json
 {
@@ -161,15 +165,18 @@ struct powerup_state {
 ```
 
 #### cfgpowerup Action Call
+
 ```sh
 # call to `cfgpowerup`
 cleos push action eosio cfgpowerup "[`cat ./config.json`]" -p eosio
 ```
 
 #### Check state
+
 ```sh
 cleos get table eosio 0 powup.state
 ```
+
 ```json
 {
   "rows": [{
@@ -220,11 +227,14 @@ cleos get table eosio 0 powup.state
 ### Using PowerUp
 
 #### Executing an order
+
 The action to power up an account is `powerup`. It takes a `payer` of the fee and a `receiver` of the resources. The `days` must always match `state.powerup_days`. `net_frac` and `cpu_frac` are the percentage of the resources that you need. The easiest way to caclulate the percentage is to multiple 10^15 (100%) by the desired percentage. For example: 10^15 * 0.01 = 10^13.
+
 ```sh
 cleos push action eosio powerup '[user, user, 1, 10000000000000, 10000000000000, "1000.0000 TST"]' -p user
 ```
-```
+
+```console
 executed transaction: 82b7124601612b371b812e3bf65cf63bb44616802d3cd33a2c0422b58399f54f  144 bytes  521 us
 #         eosio <= eosio::powerup               {"payer":"user","receiver":"user","days":1,"net_frac":"10000000000000","cpu_frac":"10000000000000","...
 #   eosio.token <= eosio.token::transfer        {"from":"user","to":"eosio.rex","quantity":"999.9901 TST","memo":"transfer from user to eosio.rex"}
@@ -232,17 +242,21 @@ executed transaction: 82b7124601612b371b812e3bf65cf63bb44616802d3cd33a2c0422b583
 #          user <= eosio.token::transfer        {"from":"user","to":"eosio.rex","quantity":"999.9901 TST","memo":"transfer from user to eosio.rex"}
 #     eosio.rex <= eosio.token::transfer        {"from":"user","to":"eosio.rex","quantity":"999.9901 TST","memo":"transfer from user to eosio.rex"}
 ```
+
 You can see how much NET and CPU weight was received as well as the fee by looking at the `eosio.reserv::powupresult` informational action. 
 
 *It is worth mentioning that the network being used for the example has not fully transitioned so the available resources are minimal therefore 1% of the resources are quite expensive. As the system continues the transition more resources are available to the `PowerUp` resource model and will become more affordable.*
 
 #### Processing Expired Orders
+
 The resources in loans that expire do not automatically get reclaimed by the system. The expired loans sit in a queue that must be processed. Anyone calling the `powerup` action will help with processing this queue (limited to processing at most two expired loans at a time) so that normally the expired loans will be automatically processed in a timely manner. However, in some cases it may be necessary to manual process expired loans in the queue to make resources available to the system again and thus make prices cheaper. In such a scenario, any account may process up to an arbitrary number of expired loans by calling the `powerupexec` action.
 
 The orders table `powup.order` can be viewed by calling:
+
 ```sh
 cleos get table eosio 0 powup.order
 ```
+
 ```json
 {
   "rows": [{
@@ -264,6 +278,7 @@ Example `powerupexec` call:
 ```sh
 cleos push action eosio powerupexec '[user, 2]' -p user
 ```
+
 ```console
 executed transaction: 93ab4ac900a7902e4e59e5e925e8b54622715328965150db10774aa09855dc98  104 bytes  363 us
 #         eosio <= eosio::powerupexec           {"user":"user","max":2}
