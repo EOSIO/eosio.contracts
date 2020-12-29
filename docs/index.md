@@ -2,7 +2,7 @@
 content_title: About System Contracts
 ---
 
-The EOSIO blockchain platform is unique in that the features and characteristics of the blockchain built on it are flexible, that is, they can be changed, or modified completely to suit each business case requirement. Core blockchain features such as consensus, fee schedules, account creation and modification, token economics, block producer registration, voting, multi-sig, etc., are implemented inside smart contracts which are deployed on the blockchain built on the EOSIO platform.
+The EOSIO blockchain platform is unique in that the features and characteristics of the blockchain built on it are flexible, that is, they can be changed, or modified completely to suit each business case requirement. Core blockchain features such as consensus, fee schedules, account creation and modification, token economics, block producer registration, voting, multi-sig, etc., are implemented inside smart contracts which are deployed on the blockchain built on the EOSIO platform. Updates to the features and characteristics of the blockchain can be performed by updating the system contracts deployed on the blockchain avoiding this way hard forks and not perturbing the functionality of the blockchain.
 
 ## System contracts defined in eosio.contracts
 
