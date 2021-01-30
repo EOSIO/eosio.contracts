@@ -246,7 +246,7 @@ namespace eosiosystem {
           * @param code - the code content to be set, in the form of a blob binary..
           */
          [[eosio::action]]
-         void setcode( const name& account, uint8_t vmtype, uint8_t vmversion, const std::vector<char>& code ) {}
+         void setcode( ignore<name> account, ignore<uint8_t>vmtype, ignore<uint8_t> vmversion, ignore<std::vector<char>> code ) {}
 
          using newaccount_action = eosio::action_wrapper<"newaccount"_n, &native::newaccount>;
          using updateauth_action = eosio::action_wrapper<"updateauth"_n, &native::updateauth>;
