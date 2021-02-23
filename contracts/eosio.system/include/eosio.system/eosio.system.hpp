@@ -7,6 +7,8 @@
 #include <eosio/singleton.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/table.hpp>
 
 #include <eosio.system/exchange_state.hpp>
 #include <eosio.system/native.hpp>
@@ -308,6 +310,27 @@ namespace eosiosystem {
    typedef eosio::singleton< "global3"_n, eosio_global_state3 > global_state3_singleton;
 
    typedef eosio::singleton< "global4"_n, eosio_global_state4 > global_state4_singleton;
+
+   struct user_resource {
+      // add all the existing parameters in user_resources
+      name          owner;
+      asset         net_weight;
+      asset         cpu_weight;
+      int64_t       ram_bytes = 0;
+   };
+
+   struct [[eosio::table]] user_resources_kv : eosio::kv::table<user_resource, "kvuserres"_n> {
+         // unique index
+         KV_NAMED_INDEX("owner"_n, owner)
+         // non-unique indexes
+         KV_NAMED_INDEX("netweight"_n, net_weight)
+         KV_NAMED_INDEX("cpuweight"_n, cpu_weight)
+         KV_NAMED_INDEX("rambytes"_n, ram_bytes)
+
+         user_resources_kv(eosio::name contract_name) {
+            init(contract_name, owner, net_weight, cpu_weight, ram_bytes);
+         }
+   };
 
    struct [[eosio::table, eosio::contract("eosio.system")]] user_resources {
       name          owner;
