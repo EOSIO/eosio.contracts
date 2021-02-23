@@ -133,6 +133,10 @@ namespace eosiosystem {
       auto ritr = userres.find( account.value );
       check( ritr == userres.end(), "only supports unlimited accounts" );
 
+      user_resources_kv userres_kv("kvuserres"_n);
+      auto ritr_kv = userres_kv.owner_uidx.find( account );
+      check( ritr_kv != userres_kv.owner_uidx.end(), "KV only supports unlimited accounts" );
+
       auto vitr = _voters.find( account.value );
       if( vitr != _voters.end() ) {
          bool ram_managed = has_field( vitr->flags1, voter_info::flags1_fields::ram_managed );
@@ -163,6 +167,12 @@ namespace eosiosystem {
          ram = ram_gift_bytes;
          if( ritr != userres.end() ) {
             ram += ritr->ram_bytes;
+         }
+
+         user_resources_kv userres_kv("kvuserres"_n);
+         auto ritr_kv = userres_kv.owner_uidx.find( account );
+         if( ritr_kv !=  userres_kv.owner_uidx.end() ) {
+            ram += ritr_kv.value().ram_bytes;
          }
 
          _voters.modify( vitr, same_payer, [&]( auto& v ) {
@@ -209,6 +219,12 @@ namespace eosiosystem {
             net = ritr->net_weight.amount;
          }
 
+         user_resources_kv userres_kv("kvuserres"_n);
+         auto ritr_kv = userres_kv.owner_uidx.find( account );
+         if( ritr_kv !=  userres_kv.owner_uidx.end() ) {
+            net = ritr_kv.value().net_weight.amount;
+         }
+
          _voters.modify( vitr, same_payer, [&]( auto& v ) {
             v.flags1 = set_field( v.flags1, voter_info::flags1_fields::net_managed, false );
          });
@@ -251,6 +267,12 @@ namespace eosiosystem {
 
          if( ritr != userres.end() ) {
             cpu = ritr->cpu_weight.amount;
+         }
+
+         user_resources_kv userres_kv("kvuserres"_n);
+         auto ritr_kv = userres_kv.owner_uidx.find( account );
+         if( ritr_kv !=  userres_kv.owner_uidx.end() ) {
+            cpu = ritr_kv.value().cpu_weight.amount;
          }
 
          _voters.modify( vitr, same_payer, [&]( auto& v ) {
@@ -359,6 +381,9 @@ namespace eosiosystem {
         res.net_weight = asset( 0, system_contract::get_core_symbol() );
         res.cpu_weight = asset( 0, system_contract::get_core_symbol() );
       });
+
+      user_resources_kv userres_kv("kvuserres"_n);
+      userres_kv.put( {newact, asset(0, system_contract::get_core_symbol()), asset(0, system_contract::get_core_symbol()), 0}, get_self() );
 
       set_resource_limits( newact, 0, 0, 0 );
    }

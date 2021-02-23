@@ -320,15 +320,11 @@ namespace eosiosystem {
    };
 
    struct [[eosio::table]] user_resources_kv : eosio::kv::table<user_resource, "kvuserres"_n> {
-         // unique index
-         KV_NAMED_INDEX("owner"_n, owner)
-         // non-unique indexes
-         KV_NAMED_INDEX("netweight"_n, net_weight)
-         KV_NAMED_INDEX("cpuweight"_n, cpu_weight)
-         KV_NAMED_INDEX("rambytes"_n, ram_bytes)
+         // if set `asset` fields as index, "error: no member named '_bluegrass_meta_refl_field_names' in 'eosio::asset'"
+         index<name> owner_uidx { name{"owner"_n}, &user_resource::owner };
 
          user_resources_kv(eosio::name contract_name) {
-            init(contract_name, owner, net_weight, cpu_weight, ram_bytes);
+            init(contract_name, owner_uidx);
          }
    };
 

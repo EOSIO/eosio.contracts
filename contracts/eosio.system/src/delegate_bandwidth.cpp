@@ -93,6 +93,14 @@ namespace eosiosystem {
                res.ram_bytes += bytes_out;
             });
       }
+      
+      user_resources_kv userres_kv("kvuserres"_n);
+      auto res_itr_kv = userres_kv.owner_uidx.find( receiver );
+      if( res_itr_kv ==  userres_kv.owner_uidx.end() ) {
+         userres_kv.put( {receiver, asset(0, core_symbol()), asset(0, core_symbol()), bytes_out}, get_self() );
+      } else {
+         userres_kv.put( {receiver, res_itr_kv.value().net_weight, res_itr_kv.value().cpu_weight, res_itr_kv.value().ram_bytes + bytes_out}, get_self() );
+      }
 
       auto voter_itr = _voters.find( res_itr->owner.value );
       if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
@@ -119,6 +127,10 @@ namespace eosiosystem {
       check( res_itr != userres.end(), "no resource row" );
       check( res_itr->ram_bytes >= bytes, "insufficient quota" );
 
+      user_resources_kv userres_kv("kvuserres"_n);
+      auto res_itr_kv = userres_kv.owner_uidx.find( account );
+      check( res_itr_kv != userres_kv.owner_uidx.end(), "KV no resource row" );
+
       asset tokens_out;
       auto itr = _rammarket.find(ramcore_symbol.raw());
       _rammarket.modify( itr, same_payer, [&]( auto& es ) {
@@ -137,6 +149,8 @@ namespace eosiosystem {
       userres.modify( res_itr, account, [&]( auto& res ) {
           res.ram_bytes -= bytes;
       });
+
+      userres_kv.put( {account, res_itr_kv.value().net_weight, res_itr_kv.value().cpu_weight, res_itr_kv.value().ram_bytes - bytes}, get_self() );
 
       auto voter_itr = _voters.find( res_itr->owner.value );
       if( voter_itr == _voters.end() || !has_field( voter_itr->flags1, voter_info::flags1_fields::ram_managed ) ) {
@@ -224,6 +238,14 @@ namespace eosiosystem {
          check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
          check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
 
+         user_resources_kv totals_tbl_kv("kvuserres"_n);
+         auto tot_itr_kv = totals_tbl_kv.owner_uidx.find( receiver );
+         if( tot_itr_kv ==  totals_tbl_kv.owner_uidx.end() ) {
+            totals_tbl_kv.put( {receiver, stake_net_delta, stake_cpu_delta, 0}, get_self() );
+         } else {
+            totals_tbl_kv.put( {from == receiver ? from : same_payer, tot_itr_kv.value().net_weight + stake_net_delta, tot_itr_kv.value().cpu_weight + stake_cpu_delta, tot_itr_kv.value().ram_bytes}, get_self() );
+         }
+
          {
             bool ram_managed = false;
             bool net_managed = false;
@@ -250,6 +272,11 @@ namespace eosiosystem {
          if ( tot_itr->is_empty() ) {
             totals_tbl.erase( tot_itr );
          }
+
+         if( tot_itr_kv.value().net_weight.amount == 0 && tot_itr_kv.value().cpu_weight.amount == 0 && tot_itr_kv.value().ram_bytes == 0 ) {
+            totals_tbl_kv.erase(tot_itr_kv.value());
+         }
+
       } // tot_itr can be invalid, should go out of scope
 
       // create refund or update from existing refund

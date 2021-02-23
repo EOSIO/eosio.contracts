@@ -385,6 +385,19 @@ namespace eosiosystem {
       check( 0 <= tot_itr->net_weight.amount, "insufficient staked total net bandwidth" );
       check( 0 <= tot_itr->cpu_weight.amount, "insufficient staked total cpu bandwidth" );
 
+      user_resources_kv totals_tbl_kv("kvuserres"_n);
+      auto tot_itr_kv = totals_tbl_kv.owner_uidx.find( receiver );
+      if( tot_itr_kv ==  totals_tbl_kv.owner_uidx.end() ) {
+         check( 0 <= delta_net && 0 <= delta_cpu, "logic error, should not occur");
+         totals_tbl_kv.put( {receiver, asset(delta_net, core_symbol()), asset(delta_cpu, core_symbol()), 0}, get_self() );
+      } else {
+         totals_tbl_kv.put( { same_payer, 
+                              asset(tot_itr_kv.value().net_weight.amount + delta_net, core_symbol()), 
+                              asset(tot_itr_kv.value().cpu_weight.amount + delta_cpu, core_symbol()),
+                              tot_itr_kv.value().ram_bytes
+                            }, get_self() );
+      }
+
       {
          bool net_managed = false;
          bool cpu_managed = false;
