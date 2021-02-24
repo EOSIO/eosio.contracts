@@ -322,9 +322,10 @@ namespace eosiosystem {
    struct [[eosio::table]] user_resources_kv : eosio::kv::table<user_resource, "kvuserres"_n> {
          // if set `asset` fields as index, "error: no member named '_bluegrass_meta_refl_field_names' in 'eosio::asset'"
          index<name> owner_uidx { name{"owner"_n}, &user_resource::owner };
+         index<int64_t> ram_bytes_idx { name{"rambytes"_n}, &user_resource::ram_bytes };
 
          user_resources_kv(eosio::name contract_name) {
-            init(contract_name, owner_uidx);
+            init(contract_name, owner_uidx, ram_bytes_idx);
          }
    };
 
