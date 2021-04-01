@@ -5214,7 +5214,6 @@ BOOST_FIXTURE_TEST_CASE( update_rex, eosio_system_tester, * boost::unit_test::to
    BOOST_REQUIRE_EQUAL( get_voter_info( alice )["staked"].as<int64_t>(), init_stake + get_rex_vote_stake(alice).get_amount() );
    BOOST_TEST_REQUIRE( stake2votes( asset( get_voter_info( alice )["staked"].as<int64_t>(), symbol{CORE_SYM} ) )
                        == get_producer_info(producer_names[0])["total_votes"].as<double>() );
-
    produce_block( fc::days(31) );
    BOOST_REQUIRE_EQUAL( success(), sellrex( alice, get_rex_balance( alice ) ) );
    BOOST_REQUIRE_EQUAL( 0,         get_rex_balance( alice ).get_amount() );
@@ -5725,7 +5724,6 @@ BOOST_FIXTURE_TEST_CASE( rex_return, eosio_system_tester ) try {
    }
 
 } FC_LOG_AND_RETHROW()
-
 
 BOOST_AUTO_TEST_CASE( setabi_bios ) try {
    fc::temp_directory tempdir;
