@@ -34,7 +34,7 @@ namespace eosio {
           *
           * @pre Token symbol has to be valid,
           * @pre Token symbol must not be already created,
-          * @pre maximum_supply has to be smaller than the maximum supply allowed by the system: 1^62 - 1.
+          * @pre maximum_supply has to be smaller than the maximum supply allowed by the system: 2^62 - 1.
           * @pre Maximum supply must be positive;
           */
          [[eosio::action]]
