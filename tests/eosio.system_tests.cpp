@@ -3769,6 +3769,105 @@ BOOST_FIXTURE_TEST_CASE( ram_gift, eosio_system_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( rex_rounding_issue, eosio_system_tester ) try {
+   const std::vector<name> whales { N(whale1), N(whale2), N(whale3), N(whale4) , N(whale5)  };
+   const name bob{ N(bob) }, alice{ N(alice) };
+   const std::vector<name> accounts = {bob, alice};
+   const std::vector<name> rexborrowers = {N(rex1), N(rex2), N(rex3), N(rex4)};
+    const asset one_eos      = core_sym::from_string("1.0000");
+   const asset one_rex      = asset::from_string("1.0000 REX");
+   const asset init_balance = core_sym::from_string("1000.0000");
+   const asset whale_balance = core_sym::from_string("1000000.0000");
+
+   setup_rex_accounts( accounts, init_balance );
+   // create_accounts_with_resources({ bob, whale });
+   for (auto& w : whales) {
+      create_accounts_with_resources({ w });
+      stake_with_transfer(config::system_account_name, w, core_sym::from_string("1000.0000"), core_sym::from_string("1000.0000"));
+      issue_and_transfer(w, core_sym::from_string("100000000.0000"));
+      BOOST_REQUIRE_EQUAL( success(), vote( w, { }, N(proxyaccount) ) );
+      BOOST_REQUIRE_EQUAL( success(), push_action( w, N(deposit), mvo()("owner", w)("amount", core_sym::from_string("1000000.0000")) ) );
+      BOOST_REQUIRE_EQUAL( success(), push_action( w, N(buyrex), mvo()("from", w)("amount", core_sym::from_string("1000000.0000")) ) );
+   }
+
+   issue_and_transfer(bob, init_balance);
+
+
+   for(auto& rb : rexborrowers) {
+      create_accounts_with_resources({ rb });
+      buyram(config::system_account_name, rb, core_sym::from_string("10.0000"));
+      issue_and_transfer(rb, core_sym::from_string("1000000.0000"));
+      stake_with_transfer(config::system_account_name, rb, core_sym::from_string("1000.0000"), core_sym::from_string("1000.0000"));
+      BOOST_REQUIRE_EQUAL( success(), vote( rb, { }, N(proxyaccount) ) );
+      BOOST_REQUIRE_EQUAL( success(), push_action( rb, N(deposit), mvo()("owner", rb)("amount", core_sym::from_string("1000000.0000")) ) );
+   }
+   // get accounts into rex
+   for(auto& acct : accounts){
+      stake_with_transfer(config::system_account_name, acct, core_sym::from_string("1000.0000"), core_sym::from_string("1000.0000"));
+      issue_and_transfer(acct, core_sym::from_string("100.1239"));
+      BOOST_REQUIRE_EQUAL( success(), vote( acct, { }, N(proxyaccount) ) );
+      BOOST_REQUIRE_EQUAL( success(), push_action( acct, N(deposit), mvo()("owner", acct)("amount", core_sym::from_string("100.1239")) ) );
+      BOOST_REQUIRE_EQUAL( success(), push_action( acct, N(buyrex), mvo()("from", acct)("amount", core_sym::from_string("100.1239")) ) );
+   }
+
+   auto rent_and_go = [&] (int cnt) {
+      for(auto& rb : rexborrowers) {
+         BOOST_REQUIRE_EQUAL( success(),
+                        push_action( rb, N(rentcpu), 
+                        mvo()
+                        ("from", rb)
+                        ("receiver", rb)
+                        ("loan_payment", core_sym::from_string("100.0000"))
+                        ("loan_fund", core_sym::from_string("0.0000")) ) );
+      }
+      // exec and update
+      for(auto& acct : accounts) {
+         if(cnt % 10 == 0) {
+            BOOST_REQUIRE_EQUAL( success(), push_action( acct, N(rexexec), mvo()("user", acct)("max", 2) ) );
+            BOOST_REQUIRE_EQUAL( success(), push_action( acct, N(updaterex), mvo()("owner", acct) ) );
+         }
+         BOOST_REQUIRE_EQUAL( success(), push_action( acct, N(sellrex), mvo()("from", acct)("rex",one_rex) ) );
+         BOOST_REQUIRE_EQUAL( success(),
+                            push_action( acct, N(unstaketorex), mvo()("owner", acct)("receiver", acct)("from_net", one_eos)("from_cpu", one_eos) ) );
+      }
+
+      produce_block( fc::days(1) );
+   };
+   // BOOST_REQUIRE_EQUAL( get_rex_vote_stake( alice ),                init_rex_stake - core_sym::from_string("0.0006") );
+   auto check_tables = [&] (const name& acct, bool is_error=false) {
+      auto rex_stake = get_rex_vote_stake(acct);
+      auto vote_staked = get_voter_info(acct)["staked"];
+      auto delband = get_dbw_obj(acct, acct);
+      auto cpu_stake = delband["cpu_weight"].as<asset>();
+      auto net_stake = delband["net_weight"].as<asset>();
+      ilog( "voter:\t${voter}", ("voter", vote_staked));
+      ilog( "calc_vote:\t${calc_vote}", ("calc_vote", (rex_stake + cpu_stake + net_stake).get_amount()));
+      if(is_error){
+         BOOST_REQUIRE_EQUAL( vote_staked - (rex_stake + cpu_stake + net_stake).get_amount(), 1 );
+      }
+      else{
+         BOOST_REQUIRE_EQUAL( (rex_stake + cpu_stake + net_stake).get_amount(), vote_staked );
+      }
+   };
+   // move ahead 5 days to unlock rex
+   produce_block(fc::days(5));
+   for(int i = 0; i < 159; ++i){
+      rent_and_go(i);
+      if(i % 10 == 0)
+         for(auto& acct : accounts) {
+            ilog("${i}", ("i",i));
+            check_tables(acct);
+         }
+   }
+   // day 160 there is a divergence of voter.staked and (rex_bal + delband.cpu + delband.net)
+   rent_and_go(160);
+   for(auto& acct : accounts) {
+      check_tables(acct, true);
+   }
+   // vote
+
+
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( rex_auth, eosio_system_tester ) try {
 
