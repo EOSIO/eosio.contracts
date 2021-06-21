@@ -235,9 +235,9 @@ namespace eosiosystem {
          _voters.modify( voter, same_payer, [&]( auto& av ) {
             av.staked = new_staked;
          });
-
-         update_votes(voter_name, voter->proxy, voter->producers, true);
       }
+      
+      update_votes(voter_name, voter->proxy, voter->producers, true);
    } // voteupdate
 
 
