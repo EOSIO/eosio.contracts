@@ -19,8 +19,8 @@ find_package(eosio.cdt)
 
 message(STATUS "Building eosio.contracts v${VERSION_FULL}")
 
-set(EOSIO_CDT_VERSION_MIN "1.7")
-set(EOSIO_CDT_VERSION_SOFT_MAX "1.7")
+set(EOSIO_CDT_VERSION_MIN "1.8")
+set(EOSIO_CDT_VERSION_SOFT_MAX "1.8")
 #set(EOSIO_CDT_VERSION_HARD_MAX "")
 
 ### Check the version of eosio.cdt
@@ -78,6 +78,22 @@ string(REPLACE ";" "|" TEST_MODULE_PATH "${CMAKE_MODULE_PATH}")
 set(BUILD_TESTS FALSE CACHE BOOL "Build unit tests")
 
 if(BUILD_TESTS)
+   find_package(Git REQUIRED)
+   set(EOSIO_SYSTEM_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/eosio.system")
+   
+   # pull down and build eosio.token contract
+   ExternalProject_Add(
+      eosio.system
+      PREFIX ${EOSIO_SYSTEM_PREFIX}
+      GIT_REPOSITORY https://github.com/EOSIO/eosio.system.git
+      TIMEOUT 10
+      UPDATE_COMMAND ${GIT_EXECUTABLE} checkout
+      GIT_TAG "refs/tags/v2.0.0-rc1"
+      INSTALL_COMMAND ""
+      LOG_DOWNLOAD ON
+      BUILD_BYPRODUCTS ${EOSIO_SYSTEM_PREFIX}/src/eosio.system-build/contracts/eosio.system/eosio.system.wasm
+   )
+
    message(STATUS "Building unit tests.")
    ExternalProject_Add(
      contracts_unit_tests
