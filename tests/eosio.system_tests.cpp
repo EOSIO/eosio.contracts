@@ -3864,8 +3864,16 @@ BOOST_FIXTURE_TEST_CASE( rex_rounding_issue, eosio_system_tester ) try {
    for(auto& acct : accounts) {
       check_tables(acct, true);
    }
-   // vote
-
+   // update vote
+   std::vector<name> delegates = {};
+   for(auto& acct : accounts) {
+      BOOST_REQUIRE_EQUAL( success(),
+                            push_action( acct, N(voteupdate), mvo()("voter_name", acct) ) );
+   }
+   // check that values are equal
+   for(auto& acct : accounts) {
+      check_tables(acct, false);
+   }
 
 } FC_LOG_AND_RETHROW()
 

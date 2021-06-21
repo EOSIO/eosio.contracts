@@ -209,6 +209,38 @@ namespace eosiosystem {
       }
    }
 
+   void system_contract::voteupdate( const name& voter_name ) {
+      auto voter = _voters.find( voter_name.value );
+      check( voter != _voters.end(), "no voter found" );
+
+      int64_t new_staked = 0;
+      
+      updaterex(voter_name);
+      
+      // get rex bal
+      auto rex_itr = _rexbalance.find( voter_name.value );
+      if( rex_itr != _rexbalance.end() && rex_itr->rex_balance.amount > 0 ) {
+         new_staked += rex_itr->vote_stake.amount;
+      }
+      del_bandwidth_table     del_tbl( get_self(), voter_name.value );
+
+      auto del_itr = del_tbl.begin();
+      while(del_itr != del_tbl.end()) {
+         new_staked += del_itr->net_weight.amount + del_itr->cpu_weight.amount;
+         del_itr++;
+      }
+
+      if( voter->staked != new_staked){
+         // check if staked and new_staked are different and only
+         _voters.modify( voter, same_payer, [&]( auto& av ) {
+            av.staked = new_staked;
+         });
+
+         update_votes(voter_name, voter->proxy, voter->producers, true);
+      }
+   } // voteupdate
+
+
    void system_contract::update_votes( const name& voter_name, const name& proxy, const std::vector<name>& producers, bool voting ) {
       //validate input
       if ( proxy ) {

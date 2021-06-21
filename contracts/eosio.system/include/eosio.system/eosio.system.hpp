@@ -1196,6 +1196,19 @@ namespace eosiosystem {
          void voteproducer( const name& voter, const name& proxy, const std::vector<name>& producers );
 
          /**
+          * Update the vote weight for the producers or proxy `voter_name` currently votes for. This will also
+          * update the `staked` value for the `voter_name` by checking `rexbal` and all delegated NET and CPU. 
+          * 
+          * @param voter_name - the account to update the votes for,
+          * 
+          * @post the voter.staked will be updated
+          * @post previously voted for producers vote weight will be updated with new weight
+          * @post previously voted for proxy vote weight will be updated with new weight
+          */
+         [[eosio::action]]
+         void voteupdate( const name& voter_name );
+
+         /**
           * Register proxy action, sets `proxy` account as proxy.
           * An account marked as a proxy can vote with the weight of other accounts which
           * have selected it as a proxy. Other accounts must refresh their voteproducer to
@@ -1364,6 +1377,7 @@ namespace eosiosystem {
          using setram_action = eosio::action_wrapper<"setram"_n, &system_contract::setram>;
          using setramrate_action = eosio::action_wrapper<"setramrate"_n, &system_contract::setramrate>;
          using voteproducer_action = eosio::action_wrapper<"voteproducer"_n, &system_contract::voteproducer>;
+         using voteupdate_action = eosio::action_wrapper<"voteupdate"_n, &system_contract::voteupdate>;
          using regproxy_action = eosio::action_wrapper<"regproxy"_n, &system_contract::regproxy>;
          using claimrewards_action = eosio::action_wrapper<"claimrewards"_n, &system_contract::claimrewards>;
          using rmvproducer_action = eosio::action_wrapper<"rmvproducer"_n, &system_contract::rmvproducer>;
