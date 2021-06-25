@@ -110,9 +110,9 @@ namespace eosiosystem {
 
       using value_type = std::pair<eosio::producer_authority, uint16_t>;
       std::vector< value_type > top_producers;
-      top_producers.reserve(15);
+      top_producers.reserve(5);
 
-      for( auto it = idx.cbegin(); it != idx.cend() && top_producers.size() < 15 && 0 < it->total_votes && it->active(); ++it ) {
+      for( auto it = idx.cbegin(); it != idx.cend() && top_producers.size() < 5 && 0 < it->total_votes && it->active(); ++it ) {
          top_producers.emplace_back(
             eosio::producer_authority{
                .producer_name = it->owner,
@@ -205,7 +205,7 @@ namespace eosiosystem {
       update_votes( voter_name, proxy, producers, true );
       auto rex_itr = _rexbalance.find( voter_name.value );
       if( rex_itr != _rexbalance.end() && rex_itr->rex_balance.amount > 0 ) {
-         check_voting_requirement( voter_name, "voter holding REX tokens must vote for at least 15 producers or for a proxy" );
+         check_voting_requirement( voter_name, "voter holding REX tokens must vote for at least 5 producers or for a proxy" );
       }
    }
 

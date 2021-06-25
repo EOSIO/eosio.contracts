@@ -73,7 +73,7 @@ The naming convention is codeaccount::actionname followed by a list of paramters
    - **from** owner account name
    - **amount** amount of tokens to be used for purchase
    - 'amount' tokens are taken out of 'from' REX fund.
-   - User must vote for at least 15 producers or delegate vote to proxy before buying REX.
+   - User must vote for at least 5 producers or delegate vote to proxy before buying REX.
    - Tokens used in purchase are added to user's voting power.
    - Bought REX cannot be sold before 4 days counting from end of day of purchase.
    - Storage change is billed to 'from' account.
@@ -85,7 +85,7 @@ The naming convention is codeaccount::actionname followed by a list of paramters
    - **receiver** account name that tokens have previously been staked to
    - **from_net** amount of tokens to be unstaked from NET bandwidth and used for REX purchase
    - **from_cpu** amount of tokens to be unstaked from CPU bandwidth and used for REX purchase
-   - User must vote for at least 15 producers or delegate vote to proxy before buying REX.
+   - User must vote for at least 5 producers or delegate vote to proxy before buying REX.
    - Tokens used in purchase are added to user's voting power.
    - Bought REX cannot be sold before 4 days counting from end of day of purchase.
    - Storage change is billed to 'owner' account.
