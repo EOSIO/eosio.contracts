@@ -14,16 +14,11 @@ namespace eosio {
    using std::string;
 
    /**
-    * @defgroup eosiotoken extended
-    * @ingroup eosiocontracts
+    * eosio.token customized contract
     *
-    * extended contract
-    *
-    * @details extended contract defines the structures and actions that allow users to create, issue, and manage
-    * tokens on eosio based blockchains.
-    * @{
+    * @details the eosio.token customized contract defines the structures and actions that allow users to interact with the NEWT tokens
     */
-   class [[eosio::contract("extended")]] token : public contract {
+   class [[eosio::contract("newt")]] token : public contract {
       public:
          using contract::contract;
 
@@ -116,7 +111,7 @@ namespace eosio {
          void close( const name& owner, const symbol& symbol );
 
          [[eosio::action]]
-         void airgrab(const name &owner, const asset &value);
+         void airgrab(const name &owner);
 
          /**
           * Get supply method.
@@ -185,5 +180,4 @@ namespace eosio {
          void sub_balance( const name& owner, const asset& value );
          void add_balance( const name& owner, const asset& value, const name& ram_payer );
    };
-   /** @}*/ // end of @defgroup eosiotoken extended
-} /// namespace eosio
+}

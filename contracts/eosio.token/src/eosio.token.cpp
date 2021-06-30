@@ -1,20 +1,17 @@
-#include "<extended/extended.hpp>"
+#include <eosio.token/eosio.token.hpp>
 
 namespace eosio
 {
-   void token::create(const name &issuer,
-                      const asset &maximum_supply)
+   void token::create()
    {
       require_auth(get_self());
 
-      auto sym = maximum_supply.symbol;
-      check(sym.is_valid(), "invalid symbol name");
-      check(maximum_supply.is_valid(), "invalid supply");
-      check(maximum_supply.amount > 0, "max-supply must be positive");
+      auto newtsym_code = symbol.code("NEWT", 4); // NEWT is the token symbol with precisin 4
+      check(sym.code() == newtsym_code, "You can't create but NEWT token.")
 
       stats statstable(get_self(), sym.code().raw());
       auto existing = statstable.find(sym.code().raw());
-      check(existing == statstable.end(), "token with symbol already exists");
+      check(existing == statstable.end(), "token with symbol already created");
 
       statstable.emplace(get_self(), [&](auto &s) {
          s.supply.symbol = maximum_supply.symbol;
@@ -23,24 +20,28 @@ namespace eosio
       });
    }
 
-   void token::issue(const name &to, const asset &quantity, const string &memo)
+   void token::issue(const asset &quantity, const string &memo)
    {
+      require_auth(get_self());
+
       auto sym = quantity.symbol;
+      auto newtsym_code = symbol.code("NEWT", 4); // NEWT is the token symbol with precisin 4
+      check(sym.code() == newtsym_code, "You can't create but NEWT token.")
       check(sym.is_valid(), "invalid symbol name");
       check(memo.size() <= 256, "memo has more than 256 bytes");
 
       stats statstable(get_self(), sym.code().raw());
       auto existing = statstable.find(sym.code().raw());
       check(existing != statstable.end(), "token with symbol does not exist, create token before issue");
-      const auto &st = *existing;
-      check(to == st.issuer, "tokens can only be issued to issuer account");
 
-      require_auth(st.issuer);
+      const auto& existing_token = *existing;
+      require_auth( existing_token.issuer );
+
       check(quantity.is_valid(), "invalid quantity");
       check(quantity.amount > 0, "must issue positive quantity");
-
-      check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
-      check(quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
+      check(quantity.symbol == existing_token.supply.symbol, "symbol precision mismatch");
+      check(quantity.amount <= existing_token.max_supply.amount - existing_token.supply.amount, 
+                                 "quantity exceeds available supply");
 
       statstable.modify(st, same_payer, [&](auto &s) {
          s.supply += quantity;
@@ -54,6 +55,9 @@ namespace eosio
       auto sym = quantity.symbol;
       check(sym.is_valid(), "invalid symbol name");
       check(memo.size() <= 256, "memo has more than 256 bytes");
+
+      auto newtsym_code = symbol.code("NEWT", 4); // NEWT is the token symbol with precisin 4
+      check(sym.code() == newtsym_code, "You can't retire but NEWT token.")
 
       stats statstable(get_self(), sym.code().raw());
       auto existing = statstable.find(sym.code().raw());
@@ -82,6 +86,10 @@ namespace eosio
       require_auth(from);
       check(is_account(to), "to account does not exist");
       auto sym = quantity.symbol.code();
+
+      auto newtsym_code = symbol.code("NEWT", 4); // NEWT is the token symbol with precisin 4
+      check(sym == newtsym_code, "You can't create but NEWT token.")
+
       stats statstable(get_self(), sym.raw());
       const auto &st = statstable.get(sym.raw());
 
@@ -158,51 +166,6 @@ namespace eosio
       check(it != acnts.end(), "Balance row already deleted or never existed. Action won't have any effect.");
       check(it->balance.amount == 0, "Cannot close because the balance is not zero.");
       acnts.erase(it);
-   }
-
-   void token::airgrabV0(const name &owner, const asset &value)
-   {
-      require_auth(owner);
-      require_recipient(owner);
-
-      // Check for valid token amount. Ex: user can airgrab only N tokens
-      check(value.amount == 100, "Invalid token amount");
-
-      auto sym = value.symbol.code();
-      stats statstable(get_self(), sym.raw());
-      const auto &st = statstable.get(sym.raw());
-
-      check(value.is_valid(), "invalid quantity");
-      check(value.symbol == st.supply.symbol, "symbol precision mismatch");
-      check(value.symbol.is_valid(), "invalid symbol name");
-
-      // Check if the user have airgrabbed their tokens
-      airgrabs airgrab_table(get_self(), sym.raw());
-
-      auto it = airgrab_table.find(owner.value);
-      check(it == airgrab_table.end(), "You have already airgrabbed your tokens");
-
-      accounts to_acnts(get_self(), owner.value);
-      auto to = to_acnts.find(value.symbol.code().raw());
-
-      if (it == airgrab_table.end())
-      {
-         if (to == to_acnts.end())
-         {
-            to_acnts.emplace(owner, [&](auto &row) {
-               row.balance = value;
-            });
-         }
-
-         action(permission_level{_self, "active"_n}, "extended"_n, "transfer"_n,
-                std::make_tuple(_self, owner, value, std::string("Airgrab sent")))
-             .send();
-
-         // Marking the account once he airgrabbed his tokens
-         airgrab_table.emplace(owner, [&](auto &row) {
-            row.account = owner;
-         });
-      }
    }
 
    void token::airgrab(const name &owner)
