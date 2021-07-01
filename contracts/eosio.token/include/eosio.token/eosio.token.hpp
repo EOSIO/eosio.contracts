@@ -37,8 +37,7 @@ namespace eosio {
           * If validation is successful a new entry in statstable for token symbol scope gets created.
           */
          [[eosio::action]]
-         void create( const name&   issuer,
-                      const asset&  maximum_supply);
+         void create();
          /**
           * Issue action.
           *
@@ -49,7 +48,7 @@ namespace eosio {
           * @memo - the memo string that accompanies the token issue transaction.
           */
          [[eosio::action]]
-         void issue( const name& to, const asset& quantity, const string& memo );
+         void issue( const asset& quantity, const string& memo );
 
          /**
           * Retire action.

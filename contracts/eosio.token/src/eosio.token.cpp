@@ -6,17 +6,17 @@ namespace eosio
    {
       require_auth(get_self());
 
-      auto newtsym_code = symbol.code("NEWT", 4); // NEWT is the token symbol with precisin 4
-      check(sym.code() == newtsym_code, "You can't create but NEWT token.")
+      auto sym = symbol(symbol_code("NEWT"),4); // NEWT is the token symbol with precision 4
+      auto maximum_supply = asset(21000000, sym);
 
       stats statstable(get_self(), sym.code().raw());
       auto existing = statstable.find(sym.code().raw());
       check(existing == statstable.end(), "token with symbol already created");
 
       statstable.emplace(get_self(), [&](auto &s) {
-         s.supply.symbol = maximum_supply.symbol;
+         s.supply.symbol = sym;
          s.max_supply = maximum_supply;
-         s.issuer = issuer;
+         s.issuer = get_self();
       });
    }
 
@@ -25,8 +25,8 @@ namespace eosio
       require_auth(get_self());
 
       auto sym = quantity.symbol;
-      auto newtsym_code = symbol.code("NEWT", 4); // NEWT is the token symbol with precisin 4
-      check(sym.code() == newtsym_code, "You can't create but NEWT token.")
+      auto newtsym_code = symbol("NEWT", 4); // NEWT is the token symbol with precisin 4
+      check(sym.code() == newtsym_code.code(), "You can't create but NEWT token.");
       check(sym.is_valid(), "invalid symbol name");
       check(memo.size() <= 256, "memo has more than 256 bytes");
 
@@ -43,11 +43,11 @@ namespace eosio
       check(quantity.amount <= existing_token.max_supply.amount - existing_token.supply.amount, 
                                  "quantity exceeds available supply");
 
-      statstable.modify(st, same_payer, [&](auto &s) {
+      statstable.modify(existing_token, same_payer, [&](auto &s) {
          s.supply += quantity;
       });
 
-      add_balance(st.issuer, quantity, st.issuer);
+      add_balance(existing_token.issuer, quantity, existing_token.issuer);
    }
 
    void token::retire(const asset &quantity, const string &memo)
@@ -56,8 +56,8 @@ namespace eosio
       check(sym.is_valid(), "invalid symbol name");
       check(memo.size() <= 256, "memo has more than 256 bytes");
 
-      auto newtsym_code = symbol.code("NEWT", 4); // NEWT is the token symbol with precisin 4
-      check(sym.code() == newtsym_code, "You can't retire but NEWT token.")
+      auto newtsym_code = symbol("NEWT", 4); // NEWT is the token symbol with precisin 4
+      check(sym.code() == newtsym_code.code(), "You can't create but NEWT token.");
 
       stats statstable(get_self(), sym.code().raw());
       auto existing = statstable.find(sym.code().raw());
@@ -87,8 +87,8 @@ namespace eosio
       check(is_account(to), "to account does not exist");
       auto sym = quantity.symbol.code();
 
-      auto newtsym_code = symbol.code("NEWT", 4); // NEWT is the token symbol with precisin 4
-      check(sym == newtsym_code, "You can't create but NEWT token.")
+      auto newtsym_code = symbol("NEWT", 4); // NEWT is the token symbol with precisin 4
+      check(sym == newtsym_code.code(), "You can't create but NEWT token.");
 
       stats statstable(get_self(), sym.raw());
       const auto &st = statstable.get(sym.raw());
@@ -173,9 +173,9 @@ namespace eosio
       require_auth(owner);
       require_recipient(owner);
 
-      auto sym = symbol.code("NEWT", 4); // NEWT is the token symbol with precisin 4
+      auto sym = symbol("NEWT", 4); // NEWT is the token symbol with precisin 4
       asset newtasset(100, sym);         // allow 100 tokens to be airgragbed 
-      
+
       // Check if the user have airgrabbed their tokens
       airgrabs airgrab_table(get_self(), sym.raw());
 
