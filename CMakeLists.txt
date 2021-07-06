@@ -77,23 +77,38 @@ string(REPLACE ";" "|" TEST_MODULE_PATH "${CMAKE_MODULE_PATH}")
 
 set(BUILD_TESTS FALSE CACHE BOOL "Build unit tests")
 
-if(BUILD_TESTS)
-   find_package(Git REQUIRED)
-   set(EOSIO_SYSTEM_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/eosio.system")
-   
-   # pull down and build eosio.token contract
-   ExternalProject_Add(
-      eosio.system
-      PREFIX ${EOSIO_SYSTEM_PREFIX}
-      GIT_REPOSITORY https://github.com/EOSIO/eosio.system.git
-      TIMEOUT 10
-      UPDATE_COMMAND ${GIT_EXECUTABLE} checkout
-      GIT_TAG "refs/tags/v2.0.0-rc1"
-      INSTALL_COMMAND ""
-      LOG_DOWNLOAD ON
-      BUILD_BYPRODUCTS ${EOSIO_SYSTEM_PREFIX}/src/eosio.system-build/contracts/eosio.system/eosio.system.wasm
-   )
+find_package(Git REQUIRED)
+set(EOSIO_SYSTEM_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/eosio.system")
 
+# pull down and build eosio.system contract (this will pull down eosio.token as well)
+ExternalProject_Add(
+   eosio.system
+   DEPENDS contracts_project
+   PREFIX ${EOSIO_SYSTEM_PREFIX}
+   GIT_REPOSITORY https://github.com/EOSIO/eosio.system.git
+   TIMEOUT 10
+   UPDATE_COMMAND ${GIT_EXECUTABLE} checkout
+   GIT_TAG "refs/tags/v2.0.0-rc1"
+   INSTALL_COMMAND ""
+   LOG_DOWNLOAD ON
+   BUILD_BYPRODUCTS ${EOSIO_SYSTEM_PREFIX}/src/eosio.system-build/contracts/eosio.system/eosio.system.wasm
+)
+
+# copy eosio.system
+add_custom_command(TARGET eosio.system POST_BUILD
+                  COMMAND ${CMAKE_COMMAND} -E copy_directory
+                  ${EOSIO_SYSTEM_PREFIX}/src/eosio.system-build/contracts/eosio.system 
+                  ${CMAKE_CURRENT_BINARY_DIR}/contracts/eosio.system
+                  COMMENT "Copy eosio.system to build/contracts")
+
+# copy eosio.token
+add_custom_command(TARGET eosio.system POST_BUILD
+                  COMMAND ${CMAKE_COMMAND} -E copy_directory
+                  ${EOSIO_SYSTEM_PREFIX}/src/eosio.system-build/eosio.token/src/eosio.token-build/contracts/eosio.token 
+                  ${CMAKE_CURRENT_BINARY_DIR}/contracts/eosio.token
+                  COMMENT "Copy eosio.token to build/contracts")
+
+if(BUILD_TESTS)
    message(STATUS "Building unit tests.")
    ExternalProject_Add(
      contracts_unit_tests
