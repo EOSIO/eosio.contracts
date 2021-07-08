@@ -4,10 +4,10 @@
 namespace eosio { namespace testing {
 
 struct contracts {
-   static std::vector<uint8_t> system_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.system/src/eosio.system-build/contracts/eosio.system/eosio.system.wasm"); }
-   static std::vector<char>    system_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.system/src/eosio.system-build/contracts/eosio.system/eosio.system.abi"); }
-   static std::vector<uint8_t> token_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../eosio.system/src/eosio.system-build/eosio.token/src/eosio.token-build/contracts/eosio.token/eosio.token.wasm"); }
-   static std::vector<char>    token_abi() { return read_abi("${CMAKE_BINARY_DIR}/../eosio.system/src/eosio.system-build/eosio.token/src/eosio.token-build/contracts/eosio.token/eosio.token.abi"); }
+   static std::vector<uint8_t> system_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/eosio.system/eosio.system.wasm"); }
+   static std::vector<char>    system_abi() { return read_abi("${CMAKE_BINARY_DIR}/../contracts/eosio.system/eosio.system.abi"); }
+   static std::vector<uint8_t> token_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/eosio.token/eosio.token.wasm"); }
+   static std::vector<char>    token_abi() { return read_abi("${CMAKE_BINARY_DIR}/../contracts/eosio.token/eosio.token.abi"); }
    static std::vector<uint8_t> msig_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/eosio.msig/eosio.msig.wasm"); }
    static std::vector<char>    msig_abi() { return read_abi("${CMAKE_BINARY_DIR}/../contracts/eosio.msig/eosio.msig.abi"); }
    static std::vector<uint8_t> wrap_wasm() { return read_wasm("${CMAKE_BINARY_DIR}/../contracts/eosio.wrap/eosio.wrap.wasm"); }
