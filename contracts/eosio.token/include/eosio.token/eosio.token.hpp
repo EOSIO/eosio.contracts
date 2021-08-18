@@ -3,7 +3,8 @@
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
 
-#include <string>
+// #include <string>
+#include <eosio/string.hpp>
 
 namespace eosiosystem {
    class system_contract;
@@ -11,7 +12,8 @@ namespace eosiosystem {
 
 namespace eosio {
 
-   using std::string;
+   // using std::string;
+   using eosio::string;
 
    /**
     * The `eosio.token` sample system contract defines the structures and actions that allow users to create, issue, and manage tokens for EOSIO based blockchains. It demonstrates one way to implement a smart contract which allows for creation and management of tokens. It is possible for one to create a similar contract which suits different needs. However, it is recommended that if one only needs a token with the below listed actions, that one uses the `eosio.token` contract instead of developing their own.
