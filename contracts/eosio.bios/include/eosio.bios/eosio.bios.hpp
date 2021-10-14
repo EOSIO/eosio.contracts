@@ -6,37 +6,8 @@
 #include <eosio/fixed_bytes.hpp>
 #include <eosio/privileged.hpp>
 #include <eosio/producer_schedule.hpp>
+#include <eosio/system.hpp>
 
-// This header is needed until `is_feature_activiated` and `preactivate_feature` are added to `eosio.cdt`
-#include <eosio/../../capi/eosio/crypto.h>
-
-namespace eosio {
-   namespace internal_use_do_not_use {
-      extern "C" {
-         __attribute__((eosio_wasm_import))
-         bool is_feature_activated( const ::capi_checksum256* feature_digest );
-
-         __attribute__((eosio_wasm_import))
-         void preactivate_feature( const ::capi_checksum256* feature_digest );
-      }
-   }
-}
-
-namespace eosio {
-   bool is_feature_activated( const eosio::checksum256& feature_digest ) {
-      auto feature_digest_data = feature_digest.extract_as_byte_array();
-      return internal_use_do_not_use::is_feature_activated(
-         reinterpret_cast<const ::capi_checksum256*>( feature_digest_data.data() )
-      );
-   }
-
-   void preactivate_feature( const eosio::checksum256& feature_digest ) {
-      auto feature_digest_data = feature_digest.extract_as_byte_array();
-      internal_use_do_not_use::preactivate_feature(
-         reinterpret_cast<const ::capi_checksum256*>( feature_digest_data.data() )
-      );
-   }
-}
 
 namespace eosio {
 
@@ -50,14 +21,6 @@ namespace eosio {
 
       // explicit serialization macro is not necessary, used here only to improve compilation time
       EOSLIB_SERIALIZE( permission_level_weight, (permission)(weight) )
-   };
-
-   struct key_weight {
-      eosio::public_key  key;
-      uint16_t           weight;
-
-      // explicit serialization macro is not necessary, used here only to improve compilation time
-      EOSLIB_SERIALIZE( key_weight, (key)(weight) )
    };
 
    struct wait_weight {
