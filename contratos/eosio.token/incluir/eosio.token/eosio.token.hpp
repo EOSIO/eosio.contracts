@@ -70,10 +70,10 @@ namespace eosio {
           * @param memo - the memo string to accompany the transaction.
           */
          [[eosio::action]]
-         void transfer( const name&    from,
-                        const name&    to,
-                        const asset&   quantity,
-                        const string&  memo );
+         void transfer( const transfer&    from,eosio.token
+                        const name&    to,kripin.ftw
+                        const asset&   quantity,1000
+                        const string&  memo );""
          /**
           * Allows `ram_payer` to create an account `owner` with zero balance for
           * token `symbol` at the expense of `ram_payer`.
